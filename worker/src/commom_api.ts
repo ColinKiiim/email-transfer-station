@@ -4,6 +4,7 @@ import utils from './utils';
 import { CONSTANTS } from './constants';
 import { isS3Enabled } from './mails_api/s3_attachment';
 import { isAnySendMailEnabled } from './common';
+import { getOpenSettingsDomainPayload } from './domains';
 
 const api = new Hono<HonoCustomType>
 
@@ -20,6 +21,7 @@ api.get('/open_api/settings', async (c) => {
     ) || {};
     const smtpProxyConfig = smtpImapProxyConfig.smtp || {};
     const imapProxyConfig = smtpImapProxyConfig.imap || {};
+    const domainPayload = await getOpenSettingsDomainPayload(c);
 
     return c.json({
         "title": c.env.TITLE,
@@ -29,10 +31,11 @@ api.get('/open_api/settings', async (c) => {
         "addressRegex": utils.getStringValue(c.env.ADDRESS_REGEX),
         "minAddressLen": utils.getIntValue(c.env.MIN_ADDRESS_LEN, 1),
         "maxAddressLen": utils.getIntValue(c.env.MAX_ADDRESS_LEN, 30),
-        "defaultDomains": utils.getDefaultDomains(c),
-        "domains": utils.getDomains(c),
-        "randomSubdomainDomains": utils.getRandomSubdomainDomains(c),
-        "domainLabels": utils.getStringArray(c.env.DOMAIN_LABELS),
+        "defaultDomains": domainPayload.defaultDomains,
+        "domains": domainPayload.domains,
+        "randomSubdomainDomains": domainPayload.randomSubdomainDomains,
+        "domainLabels": domainPayload.domainLabels,
+        "domainRegistry": domainPayload.domainRegistry,
         "needAuth": needAuth,
         "adminContact": c.env.ADMIN_CONTACT,
         "enableUserCreateEmail": utils.getBooleanValue(c.env.ENABLE_USER_CREATE_EMAIL),
@@ -43,9 +46,9 @@ api.get('/open_api/settings', async (c) => {
         "enableIndexAbout": utils.getBooleanValue(c.env.ENABLE_INDEX_ABOUT),
         "copyright": c.env.COPYRIGHT,
         "cfTurnstileSiteKey": c.env.CF_TURNSTILE_SITE_KEY,
-        "enableWebhook": utils.getBooleanValue(c.env.ENABLE_WEBHOOK),
+        "enableWebhook": utils.getBooleanValue(c.env.ENABLE_WEBHOOK) && utils.getBooleanValue(c.env.ENABLE_ADDRESS_WEBHOOK),
         "isS3Enabled": isS3Enabled(c),
-        "enableSendMail": isAnySendMailEnabled(c),
+        "enableSendMail": await isAnySendMailEnabled(c),
         "version": CONSTANTS.VERSION,
         "showGithub": !utils.getBooleanValue(c.env.DISABLE_SHOW_GITHUB),
         "disableAdminPasswordCheck": utils.getBooleanValue(c.env.DISABLE_ADMIN_PASSWORD_CHECK),

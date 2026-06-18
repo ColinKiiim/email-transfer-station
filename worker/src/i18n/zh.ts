@@ -63,6 +63,7 @@ const messages: LocaleMessages = {
     AddressNotBindedMsg: "邮箱地址未绑定",
     AddressAlreadyBindedMsg: "邮箱地址已绑定, 请先解绑",
     TargetUserNotFoundMsg: "目标用户不存在",
+    ShareTokenNotFoundMsg: "分享链接记录不存在",
 
     // Send mail related
     NoBalanceMsg: "余额不足",
@@ -111,6 +112,7 @@ const messages: LocaleMessages = {
     // Bind address related
     NoAddressOrUserTokenMsg: "缺少地址或用户令牌",
     InvalidAddressOrUserTokenMsg: "无效的地址或用户令牌",
+    UserSelfManageAddressDisabledMsg: "此账号不允许自行转移或解绑邮箱地址",
 
     // Pagination related
     InvalidLimitMsg: "无效的 limit 参数",

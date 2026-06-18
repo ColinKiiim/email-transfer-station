@@ -5,6 +5,7 @@ import { Jwt } from 'hono/utils/jwt'
 
 import { api as commonApi } from './commom_api';
 import { api as openAuthApi } from './open_api/auth';
+import { api as openShareApi } from './open_api/share';
 import { api as mailsApi } from './mails_api'
 import { api as userApi } from './user_api';
 import { api as adminApi } from './admin_api';
@@ -16,6 +17,8 @@ import { email } from './email';
 import { scheduled } from './scheduled';
 import { getPasswords, getBooleanValue, getStringArray, checkIsAdmin } from './utils';
 import { checkAccessControl } from './ip_blacklist';
+import { queueAccessEvent } from './audit';
+import { getAddressCreationDomainNames } from './domains';
 
 const API_PATHS = [
 	"/api/",
@@ -95,6 +98,12 @@ app.use('/*', async (c, next) => {
 		if (!getBooleanValue(c.env.ENABLE_WEBHOOK)) {
 			return c.text(msgs.WebhookNotEnabledMsg, 403);
 		}
+		if (
+			c.req.path.startsWith("/api/webhook")
+			&& !getBooleanValue(c.env.ENABLE_ADDRESS_WEBHOOK)
+		) {
+			return c.text(msgs.WebhookNotEnabledMsg, 403);
+		}
 	}
 	if (!c.env.DB) {
 		return c.text(msgs.DBNotAvailableMsg, 400);
@@ -144,6 +153,38 @@ const checkoutUserRolePayload = async (
 	}
 }
 
+const validateAddressJwtPayload = async (
+	c: Context<HonoCustomType>,
+	payload: JwtPayload
+): Promise<boolean> => {
+	if (!payload?.address || !payload?.address_id) return false;
+	const row = await c.env.DB.prepare(
+		`SELECT name, COALESCE(credential_version, 1) AS credential_version`
+		+ ` FROM address WHERE id = ?`
+	).bind(payload.address_id).first<{ name: string, credential_version: number }>();
+	if (!row || row.name !== payload.address) return false;
+	const payloadVersion = Number(payload.credential_version ?? 1);
+	return Number(row.credential_version || 1) === payloadVersion;
+}
+
+const validateShareJwtPayload = async (
+	c: Context<HonoCustomType>,
+	payload: JwtPayload
+): Promise<boolean> => {
+	if (!payload?.share_token_id || !payload?.address_id) return false;
+	const row = await c.env.DB.prepare(
+		`SELECT t.id`
+		+ ` FROM address_share_tokens t`
+		+ ` JOIN address a ON a.id = t.address_id`
+		+ ` WHERE t.id = ?`
+		+ ` AND t.address_id = ?`
+		+ ` AND a.name = ?`
+		+ ` AND t.revoked_at IS NULL`
+		+ ` AND (t.expires_at IS NULL OR t.expires_at > datetime('now'))`
+	).bind(payload.share_token_id, payload.address_id, payload.address).first("id");
+	return !!row;
+}
+
 // api auth
 app.use('/api/*', async (c, next) => {
 	if (c.req.path.startsWith("/api/new_address")) {
@@ -162,11 +203,82 @@ app.use('/api/*', async (c, next) => {
 	}
 
 	try {
-		return await jwt({ secret: c.env.JWT_SECRET, alg: "HS256" })(c, next);
+		let shareTokenReadOnlyDenied = false;
+		let credentialDenied = false;
+		await jwt({ secret: c.env.JWT_SECRET, alg: "HS256" })(c, async () => {
+			const payload = c.get("jwtPayload") as JwtPayload;
+			const credentialValid = payload?.share_token_id
+				? await validateShareJwtPayload(c, payload)
+				: await validateAddressJwtPayload(c, payload);
+			if (!credentialValid) {
+				credentialDenied = true;
+				return;
+			}
+			if (payload?.share_token_id) {
+				const path = c.req.path;
+				const method = c.req.method.toUpperCase();
+				const shareReadAllowed = (
+					(method === "GET" && (
+						path === "/api/settings"
+						|| path === "/api/mails"
+						|| path.startsWith("/api/mails?")
+						|| path.startsWith("/api/mail/")
+						|| path === "/api/parsed_mails"
+						|| path.startsWith("/api/parsed_mails?")
+						|| path.startsWith("/api/parsed_mail/")
+						|| path === "/api/attachment/list"
+					))
+					|| (method === "POST" && path === "/api/attachment/get_url")
+				);
+				if (!shareReadAllowed) {
+					shareTokenReadOnlyDenied = true;
+					return;
+				}
+			}
+			await next();
+		});
+		if (shareTokenReadOnlyDenied) {
+			const payload = c.get("jwtPayload") as JwtPayload | undefined;
+			queueAccessEvent(c, {
+				event_type: "share.access.denied",
+				actor_type: "share_token",
+				actor_id: payload?.share_token_id || null,
+				actor_label: payload?.address || null,
+				resource_type: "address",
+				resource_id: payload?.address_id || null,
+				resource_label: payload?.address || null,
+				status: "denied",
+				failure_reason: "share_token_read_only",
+			});
+			return c.text("Share token is read-only", 403);
+		}
+		if (credentialDenied) {
+			const lang = c.get("lang") || c.env.DEFAULT_LANG;
+			const msgs = i18n.getMessages(lang);
+			const payload = c.get("jwtPayload") as JwtPayload | undefined;
+			queueAccessEvent(c, {
+				event_type: "address.access.denied",
+				actor_type: payload?.share_token_id ? "share_token" : "address",
+				actor_id: payload?.share_token_id || payload?.address_id || null,
+				actor_label: payload?.address || null,
+				resource_type: "address",
+				resource_id: payload?.address_id || null,
+				resource_label: payload?.address || null,
+				status: "denied",
+				failure_reason: "invalid_credential",
+			});
+			return c.text(msgs.InvalidAddressCredentialMsg, 401);
+		}
 	} catch (e) {
 		console.warn(e);
 		const lang = c.get("lang") || c.env.DEFAULT_LANG;
 		const msgs = i18n.getMessages(lang);
+		queueAccessEvent(c, {
+			event_type: "address.access.denied",
+			actor_type: "address",
+			status: "denied",
+			failure_reason: "invalid_or_missing_credential",
+		});
 		return c.text(msgs.InvalidAddressCredentialMsg, 401)
 	}
 });
@@ -217,6 +329,14 @@ app.use('/admin/*', async (c, next) => {
 
 	// check header x-admin-auth
 	if (checkIsAdmin(c)) {
+		queueAccessEvent(c, {
+			event_type: "admin.access.granted",
+			actor_type: "admin",
+			actor_label: "x-admin-auth",
+			resource_type: "admin_api",
+			resource_label: c.req.path,
+			status: "success",
+		});
 		await next();
 		return;
 	}
@@ -228,14 +348,54 @@ app.use('/admin/*', async (c, next) => {
 		try {
 			const payload = await Jwt.verify(access_token, c.env.JWT_SECRET, "HS256");
 			// check expired
-			if (!payload.exp) return c.text(msgs.UserAcceesTokenExpiredMsg, 401);
+			if (!payload.exp) {
+				queueAccessEvent(c, {
+					event_type: "admin.access.denied",
+					actor_type: "user",
+					resource_type: "admin_api",
+					resource_label: c.req.path,
+					status: "denied",
+					failure_reason: "user_access_token_expired",
+				});
+				return c.text(msgs.UserAcceesTokenExpiredMsg, 401);
+			}
 			// exp is in seconds
 			if (payload.exp < Math.floor(Date.now() / 1000)) {
+				queueAccessEvent(c, {
+					event_type: "admin.access.denied",
+					actor_type: "user",
+					actor_id: payload.user_id as number | undefined,
+					actor_label: payload.user_email as string | undefined,
+					resource_type: "admin_api",
+					resource_label: c.req.path,
+					status: "denied",
+					failure_reason: "user_access_token_expired",
+				});
 				return c.text(msgs.UserAcceesTokenExpiredMsg, 401)
 			}
 			if (payload.user_role !== c.env.ADMIN_USER_ROLE) {
+				queueAccessEvent(c, {
+					event_type: "admin.access.denied",
+					actor_type: "user",
+					actor_id: payload.user_id as number | undefined,
+					actor_label: payload.user_email as string | undefined,
+					resource_type: "admin_api",
+					resource_label: c.req.path,
+					status: "denied",
+					failure_reason: "user_role_not_admin",
+				});
 				return c.text(msgs.UserRoleIsNotAdminMsg, 401)
 			}
+			queueAccessEvent(c, {
+				event_type: "admin.access.granted",
+				actor_type: "user",
+				actor_id: payload.user_id as number | undefined,
+				actor_label: payload.user_email as string | undefined,
+				resource_type: "admin_api",
+				resource_label: c.req.path,
+				status: "success",
+				metadata: { user_role: payload.user_role },
+			});
 			await next();
 			return;
 		} catch (e) {
@@ -245,16 +405,33 @@ app.use('/admin/*', async (c, next) => {
 
 	// disable admin api check
 	if (getBooleanValue(c.env.DISABLE_ADMIN_PASSWORD_CHECK)) {
+		queueAccessEvent(c, {
+			event_type: "admin.access.granted",
+			actor_type: "admin",
+			actor_label: "admin_check_disabled",
+			resource_type: "admin_api",
+			resource_label: c.req.path,
+			status: "success",
+		});
 		await next();
 		return;
 	}
 
+	queueAccessEvent(c, {
+		event_type: "admin.access.denied",
+		actor_type: "admin",
+		resource_type: "admin_api",
+		resource_label: c.req.path,
+		status: "denied",
+		failure_reason: "missing_admin_auth",
+	});
 	return c.text(msgs.NeedAdminPasswordMsg, 401)
 });
 
 
 app.route('/', commonApi)
 app.route('/', openAuthApi)
+app.route('/', openShareApi)
 app.route('/', mailsApi)
 app.route('/', userApi)
 app.route('/', adminApi)
@@ -270,7 +447,7 @@ const health_check = async (c: Context<HonoCustomType>) => {
 	if (!c.env.JWT_SECRET) {
 		return c.text(msgs.JWTSecretNotSetMsg, 400);
 	}
-	if (getStringArray(c.env.DOMAINS).length === 0) {
+	if ((await getAddressCreationDomainNames(c)).length === 0) {
 		return c.text(msgs.DomainsNotSetMsg, 400);
 	}
 	return c.text("OK");

@@ -193,7 +193,7 @@ export type SendMailLimitConfig = {
 
 export type RoleConfig = {
     maxAddressCount?: number;
-    // future configs can be added here
+    canCreateAddress?: boolean;
 }
 
 export type RoleAddressConfig = Record<string, RoleConfig>;

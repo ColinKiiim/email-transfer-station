@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, h } from 'vue';
 import { useScopedI18n } from '@/i18n/app'
-import { NInputNumber, NTag, NSpace, NButton } from 'naive-ui';
+import { NInputNumber, NTag, NSpace, NButton, NSwitch } from 'naive-ui';
 
 import { useGlobalState } from '../../store'
 import { api } from '../../api'
@@ -30,6 +30,7 @@ const fetchRoleConfigs = async () => {
         tableData.value = systemRoles.value.map(roleObj => ({
             role: roleObj.role,
             max_address_count: configs[roleObj.role]?.maxAddressCount ?? null,
+            can_create_address: configs[roleObj.role]?.canCreateAddress ?? true,
         }));
     } catch (error) {
         console.log(error)
@@ -42,8 +43,11 @@ const saveConfig = async () => {
         // convert tableData to object with nested structure
         const configs = {};
         tableData.value.forEach(row => {
+            configs[row.role] = {
+                canCreateAddress: row.can_create_address !== false,
+            };
             if (row.max_address_count !== null && row.max_address_count !== undefined) {
-                configs[row.role] = { maxAddressCount: row.max_address_count };
+                configs[row.role].maxAddressCount = row.max_address_count;
             }
         });
 
@@ -89,6 +93,22 @@ const columns = [
                 }
             })
         }
+    },
+    {
+        title: t('canCreateAddress'),
+        key: 'can_create_address',
+        width: 180,
+        render(row) {
+            return h(NSwitch, {
+                value: row.can_create_address,
+                onUpdateValue: (value) => {
+                    row.can_create_address = value;
+                }
+            }, {
+                checked: () => t('allowed'),
+                unchecked: () => t('adminOnly')
+            })
+        }
     }
 ]
 
@@ -127,6 +147,6 @@ onMounted(async () => {
 
 <style scoped>
 .n-data-table {
-    min-width: 600px;
+    min-width: 760px;
 }
 </style>

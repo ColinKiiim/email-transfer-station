@@ -10,6 +10,7 @@ import {
     validateSendMailLimitConfig
 } from '../mails_api/send_mail_limit_utils'
 import { EmailRuleSettings } from '../models'
+import { recordAuditEvent } from '../audit'
 
 const normalizeAddressCreationSettingsUpdate = (
     value: unknown
@@ -125,6 +126,22 @@ const save = async (c: Context<HonoCustomType>) => {
             JSON.stringify(sendMailLimitConfigToSave)
         )
     }
+    await recordAuditEvent(c, {
+        action: "account.settings.update",
+        actor_type: "admin",
+        actor_label: "admin",
+        resource_type: "account_settings",
+        status: "success",
+        metadata: {
+            block_list_count: blockList.length,
+            send_block_list_count: sendBlockList.length,
+            verified_address_count: verifiedAddressList.length,
+            from_block_list_count: fromBlockList?.length || 0,
+            no_limit_send_address_count: noLimitSendAddressList?.length || 0,
+            address_creation_subdomain_match_updated: addressCreationSettingsUpdate.shouldUpdate,
+            send_mail_limit_updated: !!sendMailLimitConfigToSave,
+        },
+    });
     return c.json({ success: true });
 };
 

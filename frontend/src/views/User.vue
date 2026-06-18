@@ -1,4 +1,5 @@
 <script setup>
+import { computed, watch } from 'vue';
 import { useScopedI18n } from '@/i18n/app'
 
 import { useGlobalState } from '../store'
@@ -15,6 +16,18 @@ const {
 
 const { t } = useScopedI18n('views.User')
 
+const canCreateOrBindAddress = computed(() =>
+    userSettings.value.is_admin
+    || userSettings.value.can_bind_address === true
+    || userSettings.value.can_create_address === true
+)
+
+watch(canCreateOrBindAddress, (allowed) => {
+    if (!allowed && userTab.value === 'bind_address') {
+        userTab.value = 'address_management'
+    }
+}, { immediate: true })
+
 </script>
 
 <template>
@@ -30,7 +43,7 @@ const { t } = useScopedI18n('views.User')
             <n-tab-pane name="user_settings" :tab="t('user_settings')">
                 <UserSettingsPage />
             </n-tab-pane>
-            <n-tab-pane name="bind_address" :tab="t('bind_address')">
+            <n-tab-pane v-if="canCreateOrBindAddress" name="bind_address" :tab="t('bind_address')">
                 <BindAddress />
             </n-tab-pane>
         </n-tabs>

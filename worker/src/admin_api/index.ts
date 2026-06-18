@@ -18,20 +18,46 @@ import db_api from './db_api'
 import ip_blacklist_settings from './ip_blacklist_settings'
 import ai_extract_settings from './ai_extract_settings'
 import e2e_test_api from './e2e_test_api'
+import share_tokens from './share_tokens'
+import events from './events'
+import access_packages from './access_packages'
+import domains from './domains'
 
 export const api = new Hono<HonoCustomType>()
 
 // address
 api.get('/admin/address', address_api.listAddresses)
+api.get('/admin/address_labels', address_api.listAddressLabels)
+api.delete('/admin/address_labels', address_api.deleteAddressLabel)
+api.patch('/admin/address/:id', address_api.updateAddress)
 api.post('/admin/new_address', address_api.createNewAddress)
 api.delete('/admin/delete_address/:id', address_api.deleteAddress)
 api.delete('/admin/clear_inbox/:id', address_api.clearInbox)
 api.delete('/admin/clear_sent_items/:id', address_api.clearSentItems)
 api.get('/admin/show_password/:id', address_api.showPassword)
 api.post('/admin/address/:id/reset_password', address_api.resetPassword)
+api.post('/admin/address/:id/rotate_credential', address_api.rotateCredential)
+api.get('/admin/address/:id/share_tokens', share_tokens.list)
+api.post('/admin/address/:id/share_tokens', share_tokens.create)
+api.delete('/admin/address/:id/share_tokens', share_tokens.revokeAll)
+api.patch('/admin/address_share_tokens/:token_id', share_tokens.update)
+api.delete('/admin/address_share_tokens/:token_id', share_tokens.revoke)
+api.get('/admin/access_packages', access_packages.list)
+api.get('/admin/domains', domains.list)
+api.post('/admin/domains', domains.create)
+api.patch('/admin/domains/:id', domains.update)
+api.get('/admin/domains/:id/impact', domains.impact)
+api.delete('/admin/domains/:id', domains.disable)
+api.post('/admin/domains/import_env', domains.importEnv)
+api.post('/admin/domains/:id/verify/start', domains.startVerification)
+api.post('/admin/domains/:id/verify/check', domains.checkVerification)
+api.post('/admin/domains/:id/cloudflare/check', domains.cloudflareCheck)
+api.post('/admin/domains/:id/cloudflare/setup', domains.cloudflareSetup)
 
 // mail api
 api.get('/admin/mails', admin_mail_api.getMails)
+api.get('/admin/mail_domains', admin_mail_api.getDomains)
+api.get('/admin/mail_addresses', admin_mail_api.getAddresses)
 api.get('/admin/mails_unknow', admin_mail_api.getUnknowMails)
 api.delete('/admin/mails/:id', admin_mail_api.deleteMail)
 
@@ -46,6 +72,9 @@ api.delete('/admin/sendbox/:id', sendbox_api.remove)
 
 // statistics
 api.get('/admin/statistics', statistics_api.get)
+api.get('/admin/overview', events.getOverview)
+api.get('/admin/audit_events', events.listAuditEvents)
+api.get('/admin/access_events', events.listAccessEvents)
 
 // account settings
 api.get('/admin/account_settings', account_settings_api.get)
@@ -60,6 +89,7 @@ api.post('/admin/auto_cleanup', cleanup_api.saveCleanup)
 api.get('/admin/user_settings', admin_user_api.getSetting)
 api.post('/admin/user_settings', admin_user_api.saveSetting)
 api.get('/admin/users', admin_user_api.getUsers)
+api.delete('/admin/users/bind_address', admin_user_api.unbindAddress)
 api.delete('/admin/users/:user_id', admin_user_api.deleteUser)
 api.post('/admin/users', admin_user_api.createUser)
 api.post('/admin/users/:user_id/reset_password', admin_user_api.resetPassword)

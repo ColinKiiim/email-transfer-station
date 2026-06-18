@@ -4,6 +4,7 @@ import { AdminWebhookSettings, WebhookSettings, RawMailRow } from "../models";
 import { commonParseMail, sendWebhook } from "../common";
 import { resolveRawEmail } from "../gzip";
 import i18n from "../i18n";
+import { recordAuditEvent } from "../audit";
 
 
 async function getWebhookSettings(c: Context<HonoCustomType>): Promise<Response> {
@@ -31,6 +32,18 @@ async function saveWebhookSettings(c: Context<HonoCustomType>): Promise<Response
     await c.env.KV.put(
         `${CONSTANTS.WEBHOOK_KV_USER_SETTINGS_KEY}:${address}`,
         JSON.stringify(settings));
+    await recordAuditEvent(c, {
+        action: "webhook.address_settings.update",
+        actor_type: "address",
+        actor_label: address,
+        resource_type: "address_webhook_settings",
+        resource_label: address,
+        status: "success",
+        metadata: {
+            enabled: settings.enabled,
+            method: settings.method,
+        },
+    });
     return c.json({ success: true })
 }
 

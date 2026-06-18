@@ -2,7 +2,7 @@ import { Context } from "hono";
 
 import i18n from "../i18n";
 import { UserOauth2Settings, UserSettings } from "../models";
-import { getJsonSetting, getUserRoles } from "../utils"
+import { getJsonSetting, canUserCreateAddress, getBooleanValue } from "../utils"
 import { CONSTANTS } from "../constants";
 import { commonGetUserRole } from "../common";
 import { Jwt } from "hono/utils/jwt";
@@ -75,12 +75,22 @@ export default {
                 console.warn("[user_api/settings] updateAddressUpdatedAt failed:", user.user_id, e);
             }
         })());
+        const roleCanCreateAddress = await canUserCreateAddress(c, user_role?.role);
+        const globalCanCreateAddress = getBooleanValue(c.env.ENABLE_USER_CREATE_EMAIL);
+        const can_create_address = !!is_admin || (globalCanCreateAddress && roleCanCreateAddress);
+        const can_manage_assigned_address = !!is_admin;
         return c.json({
             ...user,
             is_admin: is_admin,
             access_token: access_token,
             new_user_token: new_user_token,
-            user_role: user_role
+            user_role: user_role,
+            can_create_address,
+            can_bind_address: can_create_address,
+            can_transfer_address: can_manage_assigned_address,
+            can_unbind_address: can_manage_assigned_address,
+            can_manage_assigned_address,
+            can_delete_mail: !!is_admin || getBooleanValue(c.env.ENABLE_USER_DELETE_EMAIL),
         });
     },
 }

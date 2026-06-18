@@ -11,6 +11,7 @@ import { Passkey } from '../models';
 import type { PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/server';
 import { isoBase64URL } from '@simplewebauthn/server/helpers';
 import i18n from '../i18n';
+import { recordAccessEvent, recordAuditEvent } from '../audit';
 
 export default {
     getPassKeys: async (c: Context<HonoCustomType>) => {
@@ -30,6 +31,16 @@ export default {
         const { success } = await c.env.DB.prepare(
             `UPDATE user_passkeys SET passkey_name = ? WHERE user_id = ? AND passkey_id = ?`
         ).bind(passkey_name, user.user_id, passkey_id).run();
+        if (success) {
+            await recordAuditEvent(c, {
+                action: "user.passkey.rename",
+                actor_type: "user",
+                actor_id: user.user_id,
+                resource_type: "passkey",
+                resource_id: passkey_id,
+                status: "success",
+            });
+        }
         return c.json({ success });
     },
     deletePassKey: async (c: Context<HonoCustomType>) => {
@@ -38,6 +49,16 @@ export default {
         const { success } = await c.env.DB.prepare(
             `DELETE FROM user_passkeys WHERE user_id = ? AND passkey_id = ?`
         ).bind(user.user_id, passkey_id).run();
+        if (success) {
+            await recordAuditEvent(c, {
+                action: "user.passkey.delete",
+                actor_type: "user",
+                actor_id: user.user_id,
+                resource_type: "passkey",
+                resource_id: passkey_id,
+                status: "success",
+            });
+        }
         return c.json({ success });
     },
     registerRequest: async (c: Context<HonoCustomType>) => {
@@ -119,6 +140,16 @@ export default {
             `INSERT INTO user_passkeys (user_id, passkey_name, passkey_id, passkey, counter) VALUES (?, ?, ?, ?, ?)`
         ).bind(user.user_id, passkey_name, credentialID, JSON.stringify(newPasskey), counter).run();
 
+        if (success) {
+            await recordAuditEvent(c, {
+                action: "user.passkey.create",
+                actor_type: "user",
+                actor_id: user.user_id,
+                resource_type: "passkey",
+                resource_id: credentialID,
+                status: "success",
+            });
+        }
         return c.json({ success });
     },
     authenticateRequest: async (c: Context<HonoCustomType>) => {
@@ -139,6 +170,12 @@ export default {
         const { domain, credential, origin } = await c.req.json();
         const passkey_id = credential?.id;
         if (!passkey_id) {
+            await recordAccessEvent(c, {
+                event_type: "user.passkey_login.failed",
+                actor_type: "user",
+                status: "failed",
+                failure_reason: "missing_passkey_id",
+            });
             return c.text(msgs.InvalidInputMsg, 400);
         }
         const { user_id, counter, passkey } = await c.env.DB.prepare(
@@ -147,6 +184,14 @@ export default {
             counter: number; passkey: string; user_id: number;
         }>() || {};
         if (!passkey) {
+            await recordAccessEvent(c, {
+                event_type: "user.passkey_login.failed",
+                actor_type: "user",
+                resource_type: "passkey",
+                resource_id: passkey_id,
+                status: "failed",
+                failure_reason: "passkey_not_found",
+            });
             return c.text(msgs.PasskeyNotFoundMsg, 404);
         }
         const passkeyData = JSON.parse(passkey) as Passkey;
@@ -172,6 +217,15 @@ export default {
         });
         const { verified, authenticationInfo } = verification;
         if (!verified) {
+            await recordAccessEvent(c, {
+                event_type: "user.passkey_login.failed",
+                actor_type: "user",
+                actor_id: user_id,
+                resource_type: "passkey",
+                resource_id: passkey_id,
+                status: "failed",
+                failure_reason: "authentication_failed",
+            });
             return c.text(msgs.AuthenticationFailedMsg, 400);
         }
 
@@ -192,6 +246,15 @@ export default {
             `SELECT user_email FROM users WHERE id = ?`
         ).bind(user_id).first<{ user_email: string }>() || {};
         if (!user_email) {
+            await recordAccessEvent(c, {
+                event_type: "user.passkey_login.failed",
+                actor_type: "user",
+                actor_id: user_id,
+                resource_type: "passkey",
+                resource_id: passkey_id,
+                status: "failed",
+                failure_reason: "user_not_found",
+            });
             return c.text(msgs.UserNotFoundMsg, 404);
         }
         // create jwt
@@ -202,6 +265,15 @@ export default {
             exp: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
             iat: Math.floor(Date.now() / 1000),
         }, c.env.JWT_SECRET, "HS256")
+        await recordAccessEvent(c, {
+            event_type: "user.passkey_login.success",
+            actor_type: "user",
+            actor_id: user_id,
+            actor_label: user_email,
+            resource_type: "passkey",
+            resource_id: passkey_id,
+            status: "success",
+        });
         return c.json({
             jwt: jwt
         })

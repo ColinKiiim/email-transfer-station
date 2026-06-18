@@ -5,6 +5,7 @@ import i18n from '../i18n';
 import { getJsonSetting, getStringValue, getUserRoles } from '../utils';
 import { UserOauth2Settings } from '../models';
 import { CONSTANTS } from '../constants';
+import { recordAccessEvent } from '../audit';
 
 
 export default {
@@ -23,11 +24,23 @@ export default {
         const { clientID, code } = await c.req.json<{ clientID?: string, code?: string }>();
         const msgs = i18n.getMessagesbyContext(c);
         if (!clientID || !code) {
+            await recordAccessEvent(c, {
+                event_type: "user.oauth_login.failed",
+                actor_type: "user",
+                status: "failed",
+                failure_reason: "missing_client_id_or_code",
+            });
             return c.text(msgs.Oauth2CliendIDOrCodeMissingMsg, 400);
         }
         const settings = await getJsonSetting<UserOauth2Settings[]>(c, CONSTANTS.OAUTH2_SETTINGS_KEY);
         const setting = settings?.find(s => s.clientID === clientID);
         if (!setting) {
+            await recordAccessEvent(c, {
+                event_type: "user.oauth_login.failed",
+                actor_type: "user",
+                status: "failed",
+                failure_reason: "client_not_found",
+            });
             return c.text(msgs.Oauth2ClientIDNotFoundMsg, 400);
         }
         const params = {
@@ -51,6 +64,12 @@ export default {
         })
         if (!res.ok) {
             console.error(`Failed to get access token: ${res.status} ${res.statusText} ${await res.text()}`)
+            await recordAccessEvent(c, {
+                event_type: "user.oauth_login.failed",
+                actor_type: "user",
+                status: "failed",
+                failure_reason: "failed_get_access_token",
+            });
             return c.text(msgs.Oauth2FailedGetAccessTokenMsg, 400);
         }
         const resJson = await res.json();
@@ -64,6 +83,12 @@ export default {
         })
         if (!userRes.ok) {
             console.error(`Failed to get user info: ${userRes.status} ${userRes.statusText} ${await userRes.text()}`)
+            await recordAccessEvent(c, {
+                event_type: "user.oauth_login.failed",
+                actor_type: "user",
+                status: "failed",
+                failure_reason: "failed_get_user_info",
+            });
             return c.text(msgs.Oauth2FailedGetUserInfoMsg, 400);
         }
         const userInfo = await userRes.json<any>()
@@ -84,6 +109,12 @@ export default {
         })()
 
         if (!rawEmail) {
+            await recordAccessEvent(c, {
+                event_type: "user.oauth_login.failed",
+                actor_type: "user",
+                status: "failed",
+                failure_reason: "missing_user_email",
+            });
             return c.text(msgs.Oauth2FailedGetUserEmailMsg, 400);
         }
 
@@ -104,11 +135,26 @@ export default {
         })();
 
         if (!email) {
+            await recordAccessEvent(c, {
+                event_type: "user.oauth_login.failed",
+                actor_type: "user",
+                status: "failed",
+                failure_reason: "missing_user_email",
+            });
             return c.text(msgs.Oauth2FailedGetUserEmailMsg, 400);
         }
         // check email in mail allow list
         const mailDomain = email.split("@")[1];
         if (setting.enableMailAllowList && !setting.mailAllowList?.includes(mailDomain)) {
+            await recordAccessEvent(c, {
+                event_type: "user.oauth_login.failed",
+                actor_type: "user",
+                actor_label: email,
+                resource_type: "user",
+                resource_label: email,
+                status: "failed",
+                failure_reason: "mail_domain_not_allowed",
+            });
             return c.text(`${msgs.UserMailDomainMustInMsg} ${JSON.stringify(setting.mailAllowList, null, 2)}`, 400)
         }
         // insert or update user
@@ -153,6 +199,17 @@ export default {
             exp: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
             iat: Math.floor(Date.now() / 1000),
         }, c.env.JWT_SECRET, "HS256")
+        await recordAccessEvent(c, {
+            event_type: "user.oauth_login.success",
+            actor_type: "user",
+            actor_id: user_id as number,
+            actor_label: email,
+            resource_type: "user",
+            resource_id: user_id as number,
+            resource_label: email,
+            status: "success",
+            metadata: { provider: setting.name },
+        });
         return c.json({
             jwt: jwt
         })

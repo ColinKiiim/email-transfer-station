@@ -6,6 +6,7 @@ import utils, { checkCfTurnstile, getJsonSetting, checkUserPassword, getUserRole
 import { CONSTANTS } from "../constants";
 import { GeoData, UserInfo, UserSettings } from "../models";
 import { sendMail } from "../mails_api/send_mail_api";
+import { recordAccessEvent, recordAuditEvent } from "../audit";
 
 export default {
     verifyCode: async (c: Context<HonoCustomType>) => {
@@ -143,6 +144,19 @@ export default {
                 }
                 return c.text(`${msgs.FailedToRegisterMsg}: ${error.message}`, 500)
             }
+            const user_id = await c.env.DB.prepare(
+                `SELECT id FROM users where user_email = ?`
+            ).bind(email).first<number | undefined | null>("id");
+            await recordAuditEvent(c, {
+                action: "user.register",
+                actor_type: "user",
+                actor_id: user_id || null,
+                actor_label: email,
+                resource_type: "user",
+                resource_id: user_id || null,
+                resource_label: email,
+                status: "success",
+            });
             return c.json({ success: true })
         }
         // if enable mail verify, on conflict update
@@ -157,18 +171,29 @@ export default {
         if (!success) {
             return c.text(msgs.FailedToRegisterMsg, 400);
         }
-        const defaultRole = getStringValue(c.env.USER_DEFAULT_ROLE);
-        if (!defaultRole) return c.json({ success: true })
-        const user_roles = getUserRoles(c);
-        if (!user_roles.find((r) => r.role === defaultRole)) {
-            return c.text(msgs.InvalidUserDefaultRoleMsg, 500);
-        }
-        // find user_id
         const user_id = await c.env.DB.prepare(
             `SELECT id FROM users where user_email = ?`
         ).bind(email).first<number | undefined | null>("id");
         if (!user_id) {
             return c.text(msgs.UserNotFoundMsg, 500);
+        }
+        const defaultRole = getStringValue(c.env.USER_DEFAULT_ROLE);
+        if (!defaultRole) {
+            await recordAuditEvent(c, {
+                action: "user.register",
+                actor_type: "user",
+                actor_id: user_id,
+                actor_label: email,
+                resource_type: "user",
+                resource_id: user_id,
+                resource_label: email,
+                status: "success",
+            });
+            return c.json({ success: true })
+        }
+        const user_roles = getUserRoles(c);
+        if (!user_roles.find((r) => r.role === defaultRole)) {
+            return c.text(msgs.InvalidUserDefaultRoleMsg, 500);
         }
         // update user roles
         const { success: success2 } = await c.env.DB.prepare(
@@ -179,17 +204,48 @@ export default {
         if (!success2) {
             return c.text(msgs.FailedUpdateUserDefaultRoleMsg, 500);
         }
+        await recordAuditEvent(c, {
+            action: "user.register",
+            actor_type: "user",
+            actor_id: user_id,
+            actor_label: email,
+            resource_type: "user",
+            resource_id: user_id,
+            resource_label: email,
+            status: "success",
+            metadata: { default_role: defaultRole },
+        });
         return c.json({ success: true })
     },
     login: async (c: Context<HonoCustomType>) => {
         const { email, password, cf_token } = await c.req.json();
         const msgs = i18n.getMessagesbyContext(c);
-        if (!email || !password) return c.text(msgs.InvalidEmailOrPasswordMsg, 400);
+        if (!email || !password) {
+            await recordAccessEvent(c, {
+                event_type: "user.login.failed",
+                actor_type: "user",
+                actor_label: email || null,
+                resource_type: "user",
+                resource_label: email || null,
+                status: "failed",
+                failure_reason: "missing_email_or_password",
+            });
+            return c.text(msgs.InvalidEmailOrPasswordMsg, 400);
+        }
         // check cf turnstile if global turnstile is enabled
         if (utils.isGlobalTurnstileEnabled(c)) {
             try {
                 await checkCfTurnstile(c, cf_token);
             } catch (error) {
+                await recordAccessEvent(c, {
+                    event_type: "user.login.failed",
+                    actor_type: "user",
+                    actor_label: email,
+                    resource_type: "user",
+                    resource_label: email,
+                    status: "failed",
+                    failure_reason: "turnstile_failed",
+                });
                 return c.text(msgs.TurnstileCheckFailedMsg, 400)
             }
         }
@@ -197,10 +253,30 @@ export default {
             `SELECT id, password FROM users where user_email = ?`
         ).bind(email).first() || {};
         if (!dbPassword) {
+            await recordAccessEvent(c, {
+                event_type: "user.login.failed",
+                actor_type: "user",
+                actor_label: email,
+                resource_type: "user",
+                resource_label: email,
+                status: "failed",
+                failure_reason: "user_not_found",
+            });
             return c.text(msgs.UserNotFoundMsg, 400)
         }
         // TODO: need check password use random salt
         if (dbPassword != password) {
+            await recordAccessEvent(c, {
+                event_type: "user.login.failed",
+                actor_type: "user",
+                actor_id: user_id,
+                actor_label: email,
+                resource_type: "user",
+                resource_id: user_id,
+                resource_label: email,
+                status: "failed",
+                failure_reason: "invalid_password",
+            });
             return c.text(msgs.InvalidEmailOrPasswordMsg, 400)
         }
         // create jwt
@@ -211,6 +287,16 @@ export default {
             exp: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
             iat: Math.floor(Date.now() / 1000),
         }, c.env.JWT_SECRET, "HS256")
+        await recordAccessEvent(c, {
+            event_type: "user.login.success",
+            actor_type: "user",
+            actor_id: user_id,
+            actor_label: email,
+            resource_type: "user",
+            resource_id: user_id,
+            resource_label: email,
+            status: "success",
+        });
         return c.json({
             jwt: jwt
         })

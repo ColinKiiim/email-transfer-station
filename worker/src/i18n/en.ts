@@ -63,6 +63,7 @@ const messages: LocaleMessages = {
     AddressNotBindedMsg: "Address is not binded",
     AddressAlreadyBindedMsg: "Address is already binded, please unbind first",
     TargetUserNotFoundMsg: "Target user not found",
+    ShareTokenNotFoundMsg: "Share link record not found",
 
     // Send mail related
     NoBalanceMsg: "No balance",
@@ -111,6 +112,7 @@ const messages: LocaleMessages = {
     // Bind address related
     NoAddressOrUserTokenMsg: "No address or user token",
     InvalidAddressOrUserTokenMsg: "Invalid address or user token",
+    UserSelfManageAddressDisabledMsg: "This account cannot transfer or unbind assigned addresses",
 
     // Pagination related
     InvalidLimitMsg: "Invalid limit",

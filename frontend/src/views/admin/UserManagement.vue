@@ -1,8 +1,8 @@
 <script setup>
 import { ref, h, onMounted, watch, computed } from 'vue';
 import { useScopedI18n } from '@/i18n/app'
-import { NMenu, NButton, NBadge, NTag } from 'naive-ui';
-import { MenuFilled } from '@vicons/material'
+import { NButton, NDropdown, NIcon, NTag, NTooltip, useMessage } from 'naive-ui';
+import { EditOutlined, MenuFilled } from '@vicons/material'
 
 import { useGlobalState } from '../../store'
 import { api } from '../../api'
@@ -27,10 +27,13 @@ const curUserId = ref(0)
 const showCreateUser = ref(false)
 const user = ref({
     email: "",
+    username: "",
+    display_name: "",
     password: ""
 })
 const showChangeRole = ref(false)
 const showUserAddressManagement = ref(false)
+const curUserEmail = ref('')
 const userRoles = ref([])
 const curUserRole = ref('')
 const userRolesOptions = computed(() => {
@@ -101,11 +104,17 @@ const createUser = async () => {
             method: "POST",
             body: JSON.stringify({
                 email: user.value.email,
+                username: user.value.username,
+                display_name: user.value.display_name,
                 password: await hashPassword(user.value.password)
             })
         });
         message.success(t('success'));
         await fetchData();
+        user.value.email = '';
+        user.value.username = '';
+        user.value.display_name = '';
+        user.value.password = '';
         showCreateUser.value = false;
     } catch (error) {
         console.log(error)
@@ -144,18 +153,98 @@ const changeRole = async () => {
     }
 }
 
+const openUserAddressManagement = (row) => {
+    curUserId.value = row.id;
+    curUserEmail.value = row.user_email;
+    showUserAddressManagement.value = true;
+}
+
+const buildUserActionOptions = () => [
+    { label: t('userAddressManagement'), key: 'addresses' },
+    { label: t('changeRole'), key: 'role' },
+    { label: t('resetPassword'), key: 'resetPassword' },
+    { type: 'divider', key: 'divider' },
+    { label: t('delete'), key: 'delete' },
+]
+
+const handleUserActionSelect = (key, row) => {
+    if (key === 'addresses') {
+        openUserAddressManagement(row)
+        return
+    }
+    if (key === 'role') {
+        curUserId.value = row.id;
+        curUserRole.value = row.role_text;
+        showChangeRole.value = true;
+        return
+    }
+    if (key === 'resetPassword') {
+        curUserId.value = row.id;
+        newResetPassword.value = '';
+        showResetPassword.value = true;
+        return
+    }
+    if (key === 'delete') {
+        curUserId.value = row.id;
+        user.value.email = '';
+        user.value.username = '';
+        user.value.display_name = '';
+        user.value.password = '';
+        showDeleteUser.value = true;
+    }
+}
+
+const renderUserActionMenuButton = (row) => h('div', { class: 'action-menu-cell' }, [
+    h(NDropdown, {
+        trigger: 'click',
+        placement: 'bottom-end',
+        options: buildUserActionOptions(),
+        onSelect: (key) => handleUserActionSelect(key, row),
+    }, {
+        default: () => h(NButton, {
+            quaternary: true,
+            circle: true,
+            size: 'small',
+            class: 'action-menu-trigger',
+            'aria-label': t('actions'),
+        }, {
+            icon: () => h(NIcon, null, { default: () => h(MenuFilled) })
+        })
+    })
+])
+
 const columns = [
     {
         title: "ID",
-        key: "id"
+        key: "id",
+        width: 72,
+        align: "center"
     },
     {
         title: t('user_email'),
-        key: "user_email"
+        key: "user_email",
+        minWidth: 260,
+        ellipsis: {
+            tooltip: true
+        }
+    },
+    {
+        title: t('user_identity'),
+        key: "user_identity",
+        minWidth: 180,
+        render(row) {
+            const primary = row.display_name || row.username || '-';
+            const secondary = row.username && row.display_name ? `@${row.username}` : '';
+            return h('div', { class: 'user-identity-cell' }, [
+                h('div', { class: 'user-identity-primary' }, primary),
+                secondary ? h('div', { class: 'user-identity-secondary' }, secondary) : null
+            ])
+        }
     },
     {
         title: t('role'),
         key: "role_text",
+        width: 120,
         render(row) {
             if (!row.role_text) return null;
             return h(NTag, {
@@ -169,103 +258,40 @@ const columns = [
     {
         title: t('address_count'),
         key: "address_count",
+        width: 150,
         render(row) {
-            return h(NButton,
-                {
-                    text: true,
-                    onClick: () => {
-                        if (row.address_count <= 0) return;
-                        curUserId.value = row.id;
-                        showUserAddressManagement.value = true;
-                    }
-                },
-                {
-                    icon: () => h(NBadge, {
-                        value: row.address_count,
-                        'show-zero': true,
-                        max: 99,
-                        type: "success"
+            return h('div', { class: 'address-count-cell' }, [
+                h(NTag, {
+                    size: 'small',
+                    bordered: false,
+                    type: row.address_count > 0 ? 'success' : 'default'
+                }, { default: () => String(row.address_count || 0) }),
+                h(NTooltip, { trigger: 'hover' }, {
+                    trigger: () => h(NButton, {
+                        text: true,
+                        size: 'tiny',
+                        class: 'address-edit-button',
+                        'aria-label': t('userAddressManagement'),
+                        onClick: () => openUserAddressManagement(row)
+                    }, {
+                        icon: () => h(NIcon, null, { default: () => h(EditOutlined) })
                     }),
-                    default: () => row.address_count > 0 ? t('userAddressManagement') : ""
-                }
-            )
+                    default: () => t('userAddressManagement')
+                })
+            ])
         }
     },
     {
         title: t('created_at'),
-        key: "created_at"
+        key: "created_at",
+        width: 180
     },
     {
         title: t('actions'),
         key: 'actions',
+        width: 100,
         render(row) {
-            return h('div', [
-                h(NMenu, {
-                    mode: "horizontal",
-                    options: [
-                        {
-                            label: t('actions'),
-                            icon: () => h(MenuFilled),
-                            key: "action",
-                            children: [
-                                {
-                                    label: () => h(NButton,
-                                        {
-                                            text: true,
-                                            onClick: () => {
-                                                curUserId.value = row.id;
-                                                showUserAddressManagement.value = true;
-                                            }
-                                        },
-                                        { default: () => t('userAddressManagement') }
-                                    ),
-                                    show: row.address_count > 0
-                                },
-                                {
-                                    label: () => h(NButton,
-                                        {
-                                            text: true,
-                                            onClick: () => {
-                                                curUserId.value = row.id;
-                                                curUserRole.value = row.role_text;
-                                                showChangeRole.value = true;
-                                            }
-                                        },
-                                        { default: () => t('changeRole') }
-                                    ),
-                                },
-                                {
-                                    label: () => h(NButton,
-                                        {
-                                            text: true,
-                                            onClick: () => {
-                                                curUserId.value = row.id;
-                                                newResetPassword.value = '';
-                                                showResetPassword.value = true;
-                                            }
-                                        },
-                                        { default: () => t('resetPassword') }
-                                    ),
-                                },
-                                {
-                                    label: () => h(NButton,
-                                        {
-                                            text: true,
-                                            onClick: () => {
-                                                curUserId.value = row.id;
-                                                user.value.email = '';
-                                                user.value.password = '';
-                                                showDeleteUser.value = true;
-                                            }
-                                        },
-                                        { default: () => t('delete') }
-                                    )
-                                }
-                            ]
-                        }
-                    ]
-                })
-            ])
+            return renderUserActionMenuButton(row)
         }
     }
 ]
@@ -302,6 +328,12 @@ onMounted(async () => {
             <n-form>
                 <n-form-item-row :label="t('email')" required>
                     <n-input v-model:value="user.email" />
+                </n-form-item-row>
+                <n-form-item-row :label="t('username')">
+                    <n-input v-model:value="user.username" />
+                </n-form-item-row>
+                <n-form-item-row :label="t('display_name')">
+                    <n-input v-model:value="user.display_name" />
                 </n-form-item-row>
                 <n-form-item-row :label="t('password')" required>
                     <n-input v-model:value="user.password" type="password" show-password-on="click"
@@ -348,7 +380,7 @@ onMounted(async () => {
         </n-modal>
         <n-modal v-model:show="showUserAddressManagement" preset="card" :title="t('userAddressManagement')"
             style="width: 720px;">
-            <UserAddressManagement :user_id="curUserId" />
+            <UserAddressManagement :user_id="curUserId" :user_email="curUserEmail" @changed="fetchData" />
         </n-modal>
         <n-input-group>
             <n-input v-model:value="userQuery" @keydown.enter="fetchData" />
@@ -383,6 +415,46 @@ onMounted(async () => {
 }
 
 .n-data-table {
-    min-width: 800px;
+    min-width: 920px;
+}
+
+.address-count-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.address-edit-button {
+    color: var(--n-text-color-3);
+    cursor: pointer;
+}
+
+.action-menu-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.action-menu-trigger {
+    color: var(--n-text-color-2);
+    cursor: pointer;
+}
+
+.user-identity-cell {
+    min-width: 0;
+}
+
+.user-identity-primary {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.user-identity-secondary {
+    color: var(--n-text-color-3);
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 </style>

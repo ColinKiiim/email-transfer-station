@@ -5,6 +5,7 @@ import axios from 'axios'
 import i18n from '../i18n'
 import { getFingerprint } from '../utils/fingerprint'
 import { safeBearerHeader, safeHeaderValue } from '../utils/headers'
+import { ApiRequestError, formatApiErrorData } from '../utils/api-error'
 
 const API_BASE = import.meta.env.VITE_API_BASE || "";
 const {
@@ -41,7 +42,7 @@ const apiFetch = async (path, options = {}) => {
         if (customAuthHeader) headers['x-custom-auth'] = customAuthHeader;
         const adminAuthHeader = safeHeaderValue(adminAuth.value);
         if (adminAuthHeader) headers['x-admin-auth'] = adminAuthHeader;
-        const authorizationHeader = safeBearerHeader(jwt.value);
+        const authorizationHeader = safeBearerHeader(options.jwt || jwt.value);
         if (authorizationHeader) headers['Authorization'] = authorizationHeader;
 
         const response = await instance.request(path, {
@@ -56,15 +57,18 @@ const apiFetch = async (path, options = {}) => {
             showAuth.value = true;
         }
         if (response.status >= 300) {
-            throw new Error(`[${response.status}]: ${response.data}` || "error");
+            throw new ApiRequestError(response.status, response.data);
         }
         const data = response.data;
         return data;
     } catch (error) {
-        if (error.response) {
-            throw new Error(`Code ${error.response.status}: ${error.response.data}` || "error");
+        if (error instanceof ApiRequestError) {
+            throw error;
         }
-        throw error;
+        if (error.response) {
+            throw new ApiRequestError(error.response.status, error.response.data);
+        }
+        throw new Error(error?.message || formatApiErrorData(error));
     } finally {
         loading.value = false;
     }
@@ -93,6 +97,7 @@ const getOpenSettings = async (message, notification) => {
                     value: domain
                 }
             }),
+            domainRegistry: Array.isArray(res["domainRegistry"]) ? res["domainRegistry"] : [],
             adminContact: res["adminContact"] || "",
             enableUserCreateEmail: res["enableUserCreateEmail"] || false,
             disableAnonymousUserCreateEmail: res["disableAnonymousUserCreateEmail"] || false,

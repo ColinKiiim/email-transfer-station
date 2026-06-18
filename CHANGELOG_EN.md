@@ -6,18 +6,34 @@
   <a href="CHANGELOG_EN.md">English</a>
 </p>
 
-## v1.9.0(main)
+## v0.0.0-test
 
 ### Features
 
+- feat: |Webhook| Configure external Webhook URL: admins can set a mail Webhook target URL, and incoming mail will automatically trigger an HTTP request to the configured URL for third-party service integration
+
+- feat: |Address Share| Add address share tokens: admins can create one-time-displayed share links for a single address, and `/i/:token` resolves to a short-lived read-only address session instead of exposing long-lived Address JWTs
+- feat: |Credential Rotation| Add manual address-credential rotation: admins can rotate the Address JWT for a single address, immediately invalidating old credential auto-login links
+- feat: |Ingress| Add ImprovMX free-forwarding bridge support: when mail lands on a configured collector address, the Worker recovers the original recipient from forwarding headers and stores mail by original domain/address
+- feat: |Admin| Add domain, address, and address-prefix filters to the admin mail APIs, plus a grouped frontend mail view for mailbox inspection
+- feat: |Admin| Add address labels, owner notes, share-record list, share-link expiration, and single share-record revocation to admin address management
+- feat: |Forwarding| Add a Gmail copy shortcut in account settings, backed by the existing mail forwarding rules
 - feat: |Frontend| Upgrade the address credential dialog to "Address Credentials & Connection Methods" and reuse it for both normal users and admin-created addresses; support showing AI Agent access via `ENABLE_AGENT_EMAIL_INFO` and SMTP/IMAP client settings via `SMTP_IMAP_PROXY_CONFIG`
 
 ### Bug Fixes
 
 - fix: |Admin| Hash address passwords in the frontend before admin reset requests, and make the backend accept and store only the hash instead of plaintext
 - fix: |Address| Stop returning stored address password hashes from the admin address list and user bound-address list APIs to avoid exposing sensitive fields
+- fix: |Address Share| Fix share-token write requests returning 500; they now consistently return 403 `Share token is read-only`
 
 ### Improvements
+
+- improve: |Email Transfer Station| Default to admin-created addresses: public creation, anonymous creation, and non-admin mail deletion are disabled; share-token inbox pages use a share-only shell without the user entry or global footer
+- improve: |Address Share| Let admins revoke all share links for an address; short-lived read-only sessions issued from share links now re-check that the original token is still active on every mailbox request
+- improve: |Email Transfer Station| Hide the user entry by default on the root page, normal mailbox pages, and `?jwt=` credential auto-login pages; expose it only when visiting `/user` directly
+- improve: |Email Transfer Station| Hide the global footer copyright and Header version/GitHub entry, and replace the default top-left brand with `Email Transfer Station` and a project-owned icon
+- improve: |Release| Disable inherited GitHub Actions, remove inherited Claude release skills, and align package names, README files, and runtime version with the Email Transfer Station `0.0.0-test` release boundary
+- improve: |Routing| Add `DOMAIN_ROUTING_STATUS` to the Worker config API to distinguish Cloudflare-native and ImprovMX-collector domains
 
 ## v1.8.0
 

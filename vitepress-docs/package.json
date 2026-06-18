@@ -1,7 +1,7 @@
 {
-  "name": "temp-mail-docs",
+  "name": "email-transfer-station-docs",
   "private": true,
-  "version": "1.9.0",
+  "version": "0.0.0-test",
   "type": "module",
   "devDependencies": {
     "@types/node": "^25.6.0",
@@ -12,7 +12,7 @@
     "dev": "vitepress dev docs",
     "build": "vitepress build docs",
     "preview": "vitepress preview docs",
-    "deploy": "npm run build && wrangler pages deploy ./docs/.vitepress/dist --project-name=temp-mail-docs --branch production"
+    "deploy": "echo \"Email Transfer Station docs are not release-ready yet\" && exit 1"
   },
   "dependencies": {
     "jszip": "^3.10.1"

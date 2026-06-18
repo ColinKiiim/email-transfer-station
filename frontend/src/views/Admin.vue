@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watchEffect } from 'vue';
 import { useScopedI18n } from '@/i18n/app'
 import { useRouter } from 'vue-router'
 
@@ -9,7 +9,9 @@ import { getRouterPathWithLang, hashPassword } from '../utils'
 import Turnstile from '../components/Turnstile.vue'
 
 import SenderAccess from './admin/SenderAccess.vue'
-import Statistics from "./admin/Statistics.vue"
+import StationOverview from "./admin/StationOverview.vue"
+import Governance from "./admin/Governance.vue"
+import QuickSetup from "./admin/QuickSetup.vue"
 import SendBox from './admin/SendBox.vue';
 import Account from './admin/Account.vue';
 import CreateAccount from './admin/CreateAccount.vue';
@@ -30,9 +32,11 @@ import MailWebhook from './admin/MailWebhook.vue';
 import WorkerConfig from './admin/WorkerConfig.vue';
 import IpBlacklistSettings from './admin/IpBlacklistSettings.vue';
 import AiExtractSettings from './admin/AiExtractSettings.vue';
+import Domains from './admin/Domains.vue';
 
 const {
   adminAuth, showAdminAuth, adminTab, loading,
+  adminAccountTab, adminUserTab, adminMailsTab, adminMaintenanceTab,
   globalTabplacement, showAdminPage, userSettings,
   openSettings
 } = useGlobalState()
@@ -82,6 +86,47 @@ const { t, locale } = useScopedI18n('views.Admin')
 
 const showAdminPasswordModal = computed(() => !showAdminPage.value || showAdminAuth.value)
 const tmpAdminAuth = ref('')
+const validAdminTabs = new Set([
+  'qucickSetup',
+  'stationOverview',
+  'account',
+  'user',
+  'mails',
+  'telegram',
+  'governance',
+  'maintenance',
+  'appearance',
+  'adminAccount',
+  'about',
+])
+const validAccountTabs = new Set([
+  'account',
+  'account_create',
+  'account_settings',
+  'senderAccess',
+  'ipBlacklistSettings',
+  'aiExtractSettings',
+  'webhook',
+])
+const validUserTabs = new Set([
+  'user_management',
+  'user_settings',
+  'userOauth2Settings',
+  'roleAddressConfig',
+])
+const validMailsTabs = new Set(['mails', 'unknow', 'sendBox', 'sendMail', 'mailWebhook'])
+const validMaintenanceTabs = new Set(['domains', 'database', 'workerconfig', 'maintenance'])
+
+watchEffect(() => {
+  if (showAdminPage.value && !validAdminTabs.has(adminTab.value)) {
+    adminTab.value = 'stationOverview'
+  }
+  if (!validAccountTabs.has(adminAccountTab.value)) adminAccountTab.value = 'account'
+  if (!validUserTabs.has(adminUserTab.value)) adminUserTab.value = 'user_management'
+  if (!validMailsTabs.has(adminMailsTab.value)) adminMailsTab.value = 'mails'
+  if (!validMaintenanceTabs.has(adminMaintenanceTab.value)) adminMaintenanceTab.value = 'domains'
+})
+
 // 判断是否通过 admin password 登录（而非用户管理员权限）
 const isAdminPasswordLogin = computed(() => !!adminAuth.value)
 
@@ -120,23 +165,13 @@ onMounted(async () => {
     </n-modal>
     <n-tabs v-if="showAdminPage" type="card" v-model:value="adminTab" :placement="globalTabplacement">
       <n-tab-pane name="qucickSetup" :tab="t('qucickSetup')">
-        <n-tabs type="bar" justify-content="center" animated>
-          <n-tab-pane name="database" :tab="t('database')">
-            <DatabaseManager />
-          </n-tab-pane>
-          <n-tab-pane name="account_settings" :tab="t('account_settings')">
-            <AccountSettings />
-          </n-tab-pane>
-          <n-tab-pane name="user_settings" :tab="t('user_settings')">
-            <UserSettings />
-          </n-tab-pane>
-          <n-tab-pane name="workerconfig" :tab="t('workerconfig')">
-            <WorkerConfig />
-          </n-tab-pane>
-        </n-tabs>
+        <QuickSetup />
+      </n-tab-pane>
+      <n-tab-pane name="stationOverview" :tab="t('stationOverview')">
+        <StationOverview />
       </n-tab-pane>
       <n-tab-pane name="account" :tab="t('account')">
-        <n-tabs type="bar" justify-content="center" animated>
+        <n-tabs v-model:value="adminAccountTab" type="bar" justify-content="center" animated>
           <n-tab-pane name="account" :tab="t('account')">
             <Account />
           </n-tab-pane>
@@ -161,7 +196,7 @@ onMounted(async () => {
         </n-tabs>
       </n-tab-pane>
       <n-tab-pane name="user" :tab="t('user')">
-        <n-tabs type="bar" justify-content="center" animated>
+        <n-tabs v-model:value="adminUserTab" type="bar" justify-content="center" animated>
           <n-tab-pane name="user_management" :tab="t('user_management')">
             <UserManagement />
           </n-tab-pane>
@@ -177,7 +212,7 @@ onMounted(async () => {
         </n-tabs>
       </n-tab-pane>
       <n-tab-pane name="mails" :tab="t('mails')">
-        <n-tabs type="bar" justify-content="center" animated>
+        <n-tabs v-model:value="adminMailsTab" type="bar" justify-content="center" animated>
           <n-tab-pane name="mails" :tab="t('mails')">
             <Mails />
           </n-tab-pane>
@@ -198,11 +233,14 @@ onMounted(async () => {
       <n-tab-pane name="telegram" :tab="t('telegram')">
         <Telegram />
       </n-tab-pane>
-      <n-tab-pane name="statistics" :tab="t('statistics')">
-        <Statistics />
+      <n-tab-pane name="governance" :tab="t('governance')">
+        <Governance />
       </n-tab-pane>
       <n-tab-pane name="maintenance" :tab="t('maintenance')">
-        <n-tabs type="bar" justify-content="center" animated>
+        <n-tabs v-model:value="adminMaintenanceTab" type="bar" justify-content="center" animated>
+          <n-tab-pane name="domains" :tab="t('domains')">
+            <Domains />
+          </n-tab-pane>
           <n-tab-pane name="database" :tab="t('database')">
             <DatabaseManager />
           </n-tab-pane>

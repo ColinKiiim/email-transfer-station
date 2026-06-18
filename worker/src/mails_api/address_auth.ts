@@ -1,7 +1,8 @@
 import { Context } from 'hono';
 import i18n from '../i18n';
 import utils, { getBooleanValue, hashPassword, checkCfTurnstile } from '../utils';
-import { Jwt } from 'hono/utils/jwt';
+import { issueAddressJwt } from '../common';
+import { recordAccessEvent, recordAuditEvent } from '../audit';
 
 export default {
     // 修改地址密码
@@ -32,6 +33,17 @@ export default {
             return c.text(msgs.FailedUpdatePasswordMsg, 500);
         }
 
+        await recordAuditEvent(c, {
+            action: "address.password.change",
+            actor_type: "address",
+            actor_id: address_id,
+            actor_label: address,
+            resource_type: "address",
+            resource_id: address_id,
+            resource_label: address,
+            status: "success",
+        });
+
         return c.json({ success: true });
     },
 
@@ -42,10 +54,28 @@ export default {
 
         // 检查功能是否启用
         if (!getBooleanValue(c.env.ENABLE_ADDRESS_PASSWORD)) {
+            await recordAccessEvent(c, {
+                event_type: "address.password_login.failed",
+                actor_type: "address",
+                actor_label: email || null,
+                resource_type: "address",
+                resource_label: email || null,
+                status: "failed",
+                failure_reason: "password_login_disabled",
+            });
             return c.text(msgs.PasswordLoginDisabledMsg, 403);
         }
 
         if (!email || !password) {
+            await recordAccessEvent(c, {
+                event_type: "address.password_login.failed",
+                actor_type: "address",
+                actor_label: email || null,
+                resource_type: "address",
+                resource_label: email || null,
+                status: "failed",
+                failure_reason: "missing_email_or_password",
+            });
             return c.text(msgs.EmailPasswordRequiredMsg, 400);
         }
 
@@ -54,6 +84,15 @@ export default {
             try {
                 await checkCfTurnstile(c, cf_token);
             } catch (error) {
+                await recordAccessEvent(c, {
+                    event_type: "address.password_login.failed",
+                    actor_type: "address",
+                    actor_label: email,
+                    resource_type: "address",
+                    resource_label: email,
+                    status: "failed",
+                    failure_reason: "turnstile_failed",
+                });
                 return c.text(msgs.TurnstileCheckFailedMsg, 400)
             }
         }
@@ -64,19 +103,45 @@ export default {
         ).bind(email).first();
 
         if (!address) {
+            await recordAccessEvent(c, {
+                event_type: "address.password_login.failed",
+                actor_type: "address",
+                actor_label: email,
+                resource_type: "address",
+                resource_label: email,
+                status: "failed",
+                failure_reason: "address_not_found",
+            });
             return c.text(msgs.AddressNotFoundMsg, 404);
         }
 
         // NOTE: password is the frontend SHA-256 hash, compared directly with address.password.
         if (address.password !== password) {
+            await recordAccessEvent(c, {
+                event_type: "address.password_login.failed",
+                actor_type: "address",
+                actor_id: address.id as number,
+                actor_label: address.name as string,
+                resource_type: "address",
+                resource_id: address.id as number,
+                resource_label: address.name as string,
+                status: "failed",
+                failure_reason: "invalid_password",
+            });
             return c.text(msgs.InvalidEmailOrPasswordMsg, 401);
         }
 
-        // 创建JWT
-        const jwt = await Jwt.sign({
-            address: address.name,
-            address_id: address.id
-        }, c.env.JWT_SECRET, "HS256");
+        const jwt = await issueAddressJwt(c, address.name, address.id, address.credential_version);
+        await recordAccessEvent(c, {
+            event_type: "address.password_login.success",
+            actor_type: "address",
+            actor_id: address.id as number,
+            actor_label: address.name as string,
+            resource_type: "address",
+            resource_id: address.id as number,
+            resource_label: address.name as string,
+            status: "success",
+        });
 
         return c.json({
             jwt: jwt,

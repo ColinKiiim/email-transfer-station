@@ -1,16 +1,35 @@
 import { Context } from 'hono';
-import { Jwt } from 'hono/utils/jwt'
 
 import { isAddressCountLimitReached } from "../utils"
 import { unbindTelegramByAddress } from '../telegram_api/common';
 import i18n from '../i18n';
-import { updateAddressUpdatedAt, commonGetUserRole, hideObjectFields } from '../common';
+import { updateAddressUpdatedAt, commonGetUserRole, hideObjectFields, issueAddressJwt } from '../common';
+import { recordAuditEvent } from '../audit';
+
+const canManageAssignedAddress = async (
+    c: Context<HonoCustomType>,
+    userId: number | string
+): Promise<boolean> => {
+    if (!c.env.ADMIN_USER_ROLE) return false;
+    const userRole = await commonGetUserRole(c, userId);
+    return userRole?.role === c.env.ADMIN_USER_ROLE;
+}
 
 const UserBindAddressModule = {
     bind: async (c: Context<HonoCustomType>) => {
         const { user_id } = c.get("userPayload");
         const { address_id } = c.get("jwtPayload");
-        return await UserBindAddressModule.bindByID(c, user_id, address_id)
+        const response = await UserBindAddressModule.bindByID(c, user_id, address_id);
+        await recordAuditEvent(c, {
+            action: "user_address.bind",
+            actor_type: "user",
+            actor_id: user_id,
+            resource_type: "user_address",
+            resource_id: address_id,
+            status: response.status < 400 ? "success" : "failed",
+            metadata: { user_id, address_id },
+        });
+        return response;
     },
     bindByID: async (
         c: Context<HonoCustomType>,
@@ -82,6 +101,9 @@ const UserBindAddressModule = {
         if (!db_user_id) {
             return c.text(msgs.UserNotFoundMsg, 400)
         }
+        if (!await canManageAssignedAddress(c, user_id)) {
+            return c.text(msgs.UserSelfManageAddressDisabledMsg, 403)
+        }
         // unbind
         try {
             const { success } = await c.env.DB.prepare(
@@ -93,6 +115,15 @@ const UserBindAddressModule = {
         } catch (e) {
             return c.text(msgs.OperationFailedMsg, 500)
         }
+        await recordAuditEvent(c, {
+            action: "user_address.unbind",
+            actor_type: "user",
+            actor_id: user_id,
+            resource_type: "user_address",
+            resource_id: address_id,
+            status: "success",
+            metadata: { user_id, address_id },
+        });
         return c.json({ success: true })
     },
     getBindedAddresses: async (c: Context<HonoCustomType>) => {
@@ -157,14 +188,13 @@ const UserBindAddressModule = {
         if (!db_user_id) {
             return c.text(msgs.AddressNotBindedMsg, 400)
         }
-        // generate jwt
-        const name = await c.env.DB.prepare(
-            `SELECT name FROM address WHERE id = ? `
-        ).bind(address_id).first("name");
-        const jwt = await Jwt.sign({
-            address: name,
-            address_id: address_id
-        }, c.env.JWT_SECRET, "HS256")
+        const address = await c.env.DB.prepare(
+            `SELECT name, COALESCE(credential_version, 1) AS credential_version FROM address WHERE id = ? `
+        ).bind(address_id).first<{ name: string, credential_version: number }>();
+        if (!address) {
+            return c.text(msgs.AddressNotFoundMsg, 400)
+        }
+        const jwt = await issueAddressJwt(c, address.name, address_id, address.credential_version);
         return c.json({
             jwt: jwt
         })
@@ -186,6 +216,9 @@ const UserBindAddressModule = {
         ).bind(user_id).first("id");
         if (!db_user_id) {
             return c.text(msgs.UserNotFoundMsg, 400)
+        }
+        if (!await canManageAssignedAddress(c, user_id)) {
+            return c.text(msgs.UserSelfManageAddressDisabledMsg, 403)
         }
         // check if target user exists
         const target_user_id = await c.env.DB.prepare(

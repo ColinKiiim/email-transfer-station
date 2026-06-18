@@ -3,6 +3,7 @@ import { useScopedI18n } from '@/i18n/app'
 
 import { useGlobalState } from '../../store'
 import { api } from '../../api'
+import { normalizeFilterValue } from '../../utils/domain-ui'
 import SendBox from '../../components/SendBox.vue';
 
 const { adminSendBoxTabAddress } = useGlobalState()
@@ -10,7 +11,7 @@ const { adminSendBoxTabAddress } = useGlobalState()
 const { t } = useScopedI18n('views.admin.SendBox')
 
 const fetchData = async (limit, offset) => {
-    adminSendBoxTabAddress.value = adminSendBoxTabAddress.value.trim();
+    adminSendBoxTabAddress.value = normalizeFilterValue(adminSendBoxTabAddress.value);
     return await api.fetch(
         `/admin/sendbox?limit=${limit}&offset=${offset}`
         + (adminSendBoxTabAddress.value ? `&address=${adminSendBoxTabAddress.value}` : '')

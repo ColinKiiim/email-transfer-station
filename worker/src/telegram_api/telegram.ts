@@ -4,7 +4,7 @@ import { Telegraf, Context as TgContext, Markup } from "telegraf";
 import { callbackQuery } from "telegraf/filters";
 
 import { CONSTANTS } from "../constants";
-import { getBooleanValue, getDomains, getJsonObjectValue, getStringValue } from '../utils';
+import { getBooleanValue, getJsonObjectValue, getStringValue } from '../utils';
 import { TelegramSettings } from "./settings";
 import { sendTelegramAttachments } from "./tg_file_upload";
 import { bindTelegramAddress, deleteTelegramAddress, jwtListToAddressData, tgUserNewAddress, unbindTelegramAddress, unbindTelegramByAddress } from "./common";
@@ -14,6 +14,7 @@ import { RawMailRow } from "../models";
 import { UserFromGetMe } from "telegraf/types";
 import i18n from "../i18n";
 import { LocaleMessages } from "../i18n/type";
+import { getAddressCreationDomainNames } from "../domains";
 
 
 // Helper to get messages by userId
@@ -118,7 +119,7 @@ export function newTelegramBot(c: Context<HonoCustomType>, token: string): Teleg
     bot.command("start", async (ctx: TgContext) => {
         const msgs = await getTgMessages(c, ctx);
         const prefix = getStringValue(c.env.PREFIX)
-        const domains = getDomains(c);
+        const domains = await getAddressCreationDomainNames(c);
         const commands = getTelegramCommands(c);
         return await ctx.reply(
             `${msgs.TgWelcomeMsg}\n\n`

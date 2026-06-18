@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 import { useRouter } from 'vue-router'
 import { User, ExchangeAlt } from '@vicons/fa'
@@ -24,6 +24,7 @@ const {
 const { locale, t } = useScopedI18n('views.index.AddressBar')
 
 const showAddressManage = ref(false)
+const showUserEntry = computed(() => false)
 
 const onUserLogin = async () => {
     await router.push(getRouterPathWithLang("/user", locale.value))
@@ -67,7 +68,7 @@ onMounted(async () => {
                 </n-alert>
                 <Login />
                 <n-divider />
-                <n-button @click="onUserLogin" type="primary" block secondary strong>
+                <n-button v-if="showUserEntry" @click="onUserLogin" type="primary" block secondary strong>
                     <template #icon>
                         <n-icon :component="User" />
                     </template>

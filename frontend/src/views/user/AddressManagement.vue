@@ -1,5 +1,5 @@
 <script setup>
-import { ref, h, onMounted } from 'vue';
+import { ref, h, onMounted, computed, watch } from 'vue';
 import { useScopedI18n } from '@/i18n/app'
 import { useRouter } from 'vue-router';
 import { NBadge, NPopconfirm, NButton } from 'naive-ui'
@@ -10,7 +10,7 @@ import { getRouterPathWithLang } from '../../utils'
 
 import Login from '../common/Login.vue';
 
-const { jwt } = useGlobalState()
+const { jwt, userSettings, loading } = useGlobalState()
 const message = useMessage()
 const router = useRouter()
 
@@ -21,6 +21,24 @@ const showTranferAddress = ref(false)
 const currentAddress = ref("")
 const currentAddressId = ref(0)
 const targetUserEmail = ref('')
+
+const canManageAssignedAddress = computed(() =>
+    userSettings.value.is_admin
+    || userSettings.value.can_manage_assigned_address === true
+)
+const canTransferAddress = computed(() =>
+    canManageAssignedAddress.value
+    && userSettings.value.can_transfer_address === true
+)
+const canUnbindAddress = computed(() =>
+    canManageAssignedAddress.value
+    && userSettings.value.can_unbind_address === true
+)
+const canCreateOrBindAddress = computed(() =>
+    userSettings.value.is_admin
+    || userSettings.value.can_bind_address === true
+    || userSettings.value.can_create_address === true
+)
 
 const changeMailAddress = async (address_id) => {
     try {
@@ -94,7 +112,7 @@ const fetchData = async () => {
     }
 }
 
-const columns = [
+const columns = computed(() => [
     {
         title: t('name'),
         key: "name"
@@ -127,7 +145,7 @@ const columns = [
         title: t('actions'),
         key: 'actions',
         render(row) {
-            return h('div', [
+            const actions = [
                 h(NPopconfirm,
                     {
                         onPositiveClick: () => changeMailAddress(row.id)
@@ -143,37 +161,52 @@ const columns = [
                         default: () => `${t('changeMailAddress')}?`
                     }
                 ),
-                h(NButton,
-                    {
-                        tertiary: true,
-                        type: "primary",
-                        onClick: () => {
-                            currentAddressId.value = row.id;
-                            currentAddress.value = row.name;
-                            showTranferAddress.value = true;
+            ];
+            if (canTransferAddress.value) {
+                actions.push(
+                    h(NButton,
+                        {
+                            tertiary: true,
+                            type: "primary",
+                            onClick: () => {
+                                currentAddressId.value = row.id;
+                                currentAddress.value = row.name;
+                                showTranferAddress.value = true;
+                            }
+                        },
+                        { default: () => t('transferAddress') }
+                    )
+                );
+            }
+            if (canUnbindAddress.value) {
+                actions.push(
+                    h(NPopconfirm,
+                        {
+                            onPositiveClick: () => unbindAddress(row.id)
+                        },
+                        {
+                            trigger: () => h(NButton,
+                                {
+                                    tertiary: true,
+                                    type: "error",
+                                },
+                                { default: () => t('unbindAddress') }
+                            ),
+                            default: () => t('unbindAddressTip')
                         }
-                    },
-                    { default: () => t('transferAddress') }
-                ),
-                h(NPopconfirm,
-                    {
-                        onPositiveClick: () => unbindAddress(row.id)
-                    },
-                    {
-                        trigger: () => h(NButton,
-                            {
-                                tertiary: true,
-                                type: "error",
-                            },
-                            { default: () => t('unbindAddress') }
-                        ),
-                        default: () => t('unbindAddressTip')
-                    }
-                ),
-            ])
+                    )
+                );
+            }
+            return h('div', { class: 'user-action-cell' }, actions)
         }
     }
-]
+])
+
+watch(canCreateOrBindAddress, (allowed) => {
+    if (!allowed && showTranferAddress.value) {
+        showTranferAddress.value = false;
+    }
+})
 
 onMounted(async () => {
     await fetchData()
@@ -194,13 +227,17 @@ onMounted(async () => {
                 </n-button>
             </template>
         </n-modal>
+        <n-alert class="portal-tip" type="info" :show-icon="false" :bordered="false">
+            {{ canCreateOrBindAddress ? t('portalTipWithCreate') : t('portalTipAssignedOnly') }}
+        </n-alert>
         <n-tabs type="segment">
-            <n-tab-pane name="address" :tab="t('address')">
+            <n-tab-pane name="address" :tab="t('assignedAddress')">
                 <div class="address-table-scroll">
                     <n-data-table :columns="columns" :data="data" :bordered="false" embedded />
                 </div>
+                <n-empty v-if="data.length === 0" class="empty-addresses" :description="t('emptyAssignedAddress')" />
             </n-tab-pane>
-            <n-tab-pane name="create_or_bind" :tab="t('create_or_bind')">
+            <n-tab-pane v-if="canCreateOrBindAddress" name="create_or_bind" :tab="t('create_or_bind')">
                 <Login />
             </n-tab-pane>
         </n-tabs>
@@ -215,5 +252,20 @@ onMounted(async () => {
 .address-table-scroll {
     max-width: 100%;
     overflow-x: auto;
+}
+
+.portal-tip {
+    margin-bottom: 12px;
+}
+
+.empty-addresses {
+    margin: 36px 0 20px;
+}
+
+:deep(.user-action-cell) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
 }
 </style>

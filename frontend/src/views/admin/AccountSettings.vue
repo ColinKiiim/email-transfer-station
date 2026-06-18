@@ -61,6 +61,7 @@ const subdomainMatchModeOptions = computed(() => {
 
 const showEmailForwardingModal = ref(false)
 const emailForwardingList = ref([])
+const gmailCopyAddress = ref('')
 
 
 const emailForwardingColumns = [
@@ -166,6 +167,26 @@ const addNewEmailForwardingItem = () => {
             sourceMatchMode: 'any'
         }
     ]
+}
+
+const addGmailCopyRule = () => {
+    const forward = gmailCopyAddress.value.trim()
+    if (!forward) {
+        message.error(t('forward_address_required'))
+        return
+    }
+    emailForwardingList.value = [
+        ...emailForwardingList.value,
+        {
+            domains: [],
+            forward,
+            sourcePatterns: [],
+            sourceMatchMode: 'any',
+            label: 'gmail-copy'
+        }
+    ]
+    gmailCopyAddress.value = ''
+    message.success(t('gmail_copy_rule_added'))
 }
 
 const MAX_REGEX_LENGTH = 200
@@ -469,6 +490,12 @@ onMounted(async () => {
                 <br />
                 <span>{{ t('source_patterns_tip') }}</span>
             </n-alert>
+            <n-input-group>
+                <n-input v-model:value="gmailCopyAddress" :placeholder="t('gmail_copy_placeholder')" />
+                <n-button @click="addGmailCopyRule" type="primary" tertiary>
+                    {{ t('add_gmail_copy_rule') }}
+                </n-button>
+            </n-input-group>
             <n-space justify="end">
                 <n-button @click="addNewEmailForwardingItem">{{ t('add') }}</n-button>
             </n-space>

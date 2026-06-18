@@ -5,10 +5,10 @@ import {
 import { computed, onMounted, watchEffect } from 'vue'
 import { useScript } from '@unhead/vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute } from 'vue-router'
 import { useGlobalState } from './store'
 import { useIsMobile } from './utils/composables'
 import Header from './views/Header.vue';
-import Footer from './views/Footer.vue';
 import { api } from './api'
 import { getNaiveLocaleConfig } from './i18n/naive-locale'
 import { DEFAULT_LOCALE, isSupportedLocale } from './i18n/utils'
@@ -19,11 +19,14 @@ const {
 const adClient = import.meta.env.VITE_GOOGLE_AD_CLIENT;
 const adSlot = import.meta.env.VITE_GOOGLE_AD_SLOT;
 const { locale } = useI18n({ useScope: 'global' });
+const route = useRoute()
 const theme = computed(() => isDark.value ? darkTheme : null)
 const localeConfig = computed(() => getNaiveLocaleConfig(isSupportedLocale(locale.value) ? locale.value : DEFAULT_LOCALE))
 const isMobile = useIsMobile()
-const showSideMargin = computed(() => !isMobile.value && useSideMargin.value);
-const showAd = computed(() => !isMobile.value && adClient && adSlot);
+const isShareOnlyRoute = computed(() => route.meta?.shareOnly === true)
+const showAppChrome = computed(() => !isShareOnlyRoute.value)
+const showSideMargin = computed(() => showAppChrome.value && !isMobile.value && useSideMargin.value);
+const showAd = computed(() => showAppChrome.value && !isMobile.value && adClient && adSlot);
 const gridMaxCols = computed(() => showAd.value ? 8 : 12);
 
 watchEffect(() => {
@@ -41,10 +44,12 @@ if (showAd.value) {
 }
 
 onMounted(async () => {
-  try {
-    await api.getUserSettings();
-  } catch (error) {
-    console.error(error);
+  if (showAppChrome.value) {
+    try {
+      await api.getUserSettings();
+    } catch (error) {
+      console.error(error);
+    }
   }
 
   const token = import.meta.env.VITE_CF_WEB_ANALY_TOKEN;
@@ -102,10 +107,9 @@ onMounted(async () => {
               <div class="main">
                 <n-space vertical>
                   <n-layout style="min-height: 80vh;">
-                    <Header />
+                    <Header v-if="showAppChrome" />
                     <router-view></router-view>
                   </n-layout>
-                  <Footer />
                 </n-space>
               </div>
             </n-gi>

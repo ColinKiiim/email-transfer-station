@@ -38,6 +38,14 @@ const router = createRouter({
             component: () => import('../views/Admin.vue')
         },
         {
+            path: '/i/:token',
+            alias: '/:lang/i/:token',
+            component: () => import('../views/TokenInbox.vue'),
+            meta: {
+                shareOnly: true
+            }
+        },
+        {
             path: '/telegram_mail',
             alias: '/:lang/telegram_mail',
             component: () => import('../views/telegram/Mail.vue')

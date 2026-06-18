@@ -380,6 +380,18 @@ export const getMaxAddressCount = async (
     return roleMaxCount;
 };
 
+export const canUserCreateAddress = async (
+    c: Context<HonoCustomType>,
+    userRole: string | null | undefined
+): Promise<boolean> => {
+    if (!userRole) return true;
+    const roleConfigs = await getJsonSetting<RoleAddressConfig>(c, CONSTANTS.ROLE_ADDRESS_CONFIG_KEY);
+    if (!roleConfigs) return true;
+    const canCreateAddress = roleConfigs[userRole]?.canCreateAddress;
+    if (typeof canCreateAddress !== 'boolean') return true;
+    return canCreateAddress;
+};
+
 /**
  * 检查用户是否已达到地址数量限制
  * @param c - Hono Context
@@ -427,6 +439,7 @@ export default {
     isGlobalTurnstileEnabled,
     checkCfTurnstile,
     checkUserPassword,
+    canUserCreateAddress,
     getJsonSetting,
     getJsonValue: getJsonObjectValue,
     getStringList: getStringArray

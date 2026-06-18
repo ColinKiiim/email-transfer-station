@@ -61,6 +61,7 @@ export type LocaleMessages = {
     AddressNotBindedMsg: string
     AddressAlreadyBindedMsg: string
     TargetUserNotFoundMsg: string
+    ShareTokenNotFoundMsg: string
 
     // Send mail related
     NoBalanceMsg: string
@@ -109,6 +110,7 @@ export type LocaleMessages = {
     // Bind address related
     NoAddressOrUserTokenMsg: string
     InvalidAddressOrUserTokenMsg: string
+    UserSelfManageAddressDisabledMsg: string
 
     // Pagination related
     InvalidLimitMsg: string

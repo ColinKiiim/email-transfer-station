@@ -12,6 +12,12 @@ import { forwardEmail } from "./forward";
 import { EmailRuleSettings } from "../models";
 import { CONSTANTS } from "../constants";
 import { compressText } from "../gzip";
+import { resolveInboundRecipient } from "./recipient";
+import {
+    getCollectorAddresses,
+    getManagedReceiveDomains,
+    getPendingVerificationRecipients,
+} from "../domains";
 
 
 async function email(message: ForwardableEmailMessage, env: Bindings, ctx: ExecutionContext) {
@@ -24,13 +30,19 @@ async function email(message: ForwardableEmailMessage, env: Bindings, ctx: Execu
     const parsedEmailContext: ParsedEmailContext = {
         rawEmail: rawEmail
     };
+    const domainContext = { env } as Context<HonoCustomType>;
+    const inboundRecipient = resolveInboundRecipient(message, rawEmail, {
+        collectorAddresses: await getCollectorAddresses(domainContext),
+        managedReceiveDomains: await getManagedReceiveDomains(domainContext),
+        verificationRecipients: await getPendingVerificationRecipients(domainContext),
+    });
 
     // check if junk mail
     try {
-        const is_junk = await check_if_junk_mail(env, message.to, parsedEmailContext, message.headers.get("Message-ID"));
+        const is_junk = await check_if_junk_mail(env, inboundRecipient.address, parsedEmailContext, message.headers.get("Message-ID"));
         if (is_junk) {
             message.setReject("Junk mail");
-            console.log(`Junk mail from ${message.from} to ${message.to}`);
+            console.log(`Junk mail from ${message.from} to ${inboundRecipient.address}`);
             return;
         }
     } catch (error) {
@@ -42,13 +54,13 @@ async function email(message: ForwardableEmailMessage, env: Bindings, ctx: Execu
         const emailRuleSettings = await getJsonSetting<EmailRuleSettings>(
             { env: env } as Context<HonoCustomType>, CONSTANTS.EMAIL_RULE_SETTINGS_KEY
         );
-        if (emailRuleSettings?.blockReceiveUnknowAddressEmail) {
+        if (emailRuleSettings?.blockReceiveUnknowAddressEmail && !inboundRecipient.isVerificationRecipient) {
             const db_address_id = await env.DB.prepare(
                 `SELECT id FROM address where name = ? `
-            ).bind(message.to).first("id");
+            ).bind(inboundRecipient.address).first("id");
             if (!db_address_id) {
                 message.setReject("Unknown address");
-                console.log(`Unknown address mail from ${message.from} to ${message.to}`);
+                console.log(`Unknown address mail from ${message.from} to ${inboundRecipient.address}`);
                 return;
             }
         }
@@ -58,12 +70,75 @@ async function email(message: ForwardableEmailMessage, env: Bindings, ctx: Execu
 
     // remove attachment if configured or size > 2MB
     try {
-        await remove_attachment_if_need(env, parsedEmailContext, message.from, message.to, message.rawSize);
+        await remove_attachment_if_need(env, parsedEmailContext, message.from, inboundRecipient.address, message.rawSize);
     } catch (error) {
         console.error("remove attachment error", error);
     }
 
     const message_id = message.headers.get("Message-ID");
+    const savePlaintext = async (): Promise<{ success: boolean }> => {
+        try {
+            return await env.DB.prepare(
+                `INSERT INTO raw_mails`
+                + ` (source, address, original_recipient, collector_address, original_domain, ingress_source, recipient_confidence, raw, message_id)`
+                + ` VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).bind(
+                message.from,
+                inboundRecipient.address,
+                inboundRecipient.originalRecipient,
+                inboundRecipient.collectorAddress,
+                inboundRecipient.originalDomain,
+                inboundRecipient.ingressSource,
+                inboundRecipient.recipientConfidence,
+                parsedEmailContext.rawEmail,
+                message_id
+            ).run();
+        } catch (dbError) {
+            const errMsg = String(dbError);
+            if (
+                errMsg.includes('original_recipient')
+                || errMsg.includes('collector_address')
+                || errMsg.includes('original_domain')
+                || errMsg.includes('ingress_source')
+                || errMsg.includes('recipient_confidence')
+                || errMsg.includes('no such column')
+            ) {
+                console.error("ingress metadata columns missing, falling back to legacy raw_mails insert", dbError);
+                return await env.DB.prepare(
+                    `INSERT INTO raw_mails (source, address, raw, message_id) VALUES (?, ?, ?, ?)`
+                ).bind(
+                    message.from, inboundRecipient.address, parsedEmailContext.rawEmail, message_id
+                ).run();
+            }
+            throw dbError;
+        }
+    };
+    const saveCompressed = async (compressed: ArrayBuffer): Promise<{ success: boolean }> => {
+        try {
+            return await env.DB.prepare(
+                `INSERT INTO raw_mails`
+                + ` (source, address, original_recipient, collector_address, original_domain, ingress_source, recipient_confidence, raw_blob, message_id)`
+                + ` VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).bind(
+                message.from,
+                inboundRecipient.address,
+                inboundRecipient.originalRecipient,
+                inboundRecipient.collectorAddress,
+                inboundRecipient.originalDomain,
+                inboundRecipient.ingressSource,
+                inboundRecipient.recipientConfidence,
+                compressed,
+                message_id
+            ).run();
+        } catch (dbError) {
+            const errMsg = String(dbError);
+            if (errMsg.includes('raw_blob') || errMsg.includes('no such column')) {
+                console.error("raw_blob column missing, falling back to plaintext", dbError);
+                return await savePlaintext();
+            }
+            throw dbError;
+        }
+    };
     // save email
     try {
         let success = false;
@@ -75,43 +150,16 @@ async function email(message: ForwardableEmailMessage, env: Bindings, ctx: Execu
                 console.error("gzip compression failed, falling back to plaintext", gzipError);
             }
             if (compressed) {
-                try {
-                    ({ success } = await env.DB.prepare(
-                        `INSERT INTO raw_mails (source, address, raw_blob, message_id) VALUES (?, ?, ?, ?)`
-                    ).bind(
-                        message.from, message.to, compressed, message_id
-                    ).run());
-                } catch (dbError) {
-                    // Fallback to plaintext only if raw_blob column is missing (migration not applied)
-                    const errMsg = String(dbError);
-                    if (errMsg.includes('raw_blob') || errMsg.includes('no such column')) {
-                        console.error("raw_blob column missing, falling back to plaintext", dbError);
-                        ({ success } = await env.DB.prepare(
-                            `INSERT INTO raw_mails (source, address, raw, message_id) VALUES (?, ?, ?, ?)`
-                        ).bind(
-                            message.from, message.to, parsedEmailContext.rawEmail, message_id
-                        ).run());
-                    } else {
-                        throw dbError;
-                    }
-                }
+                ({ success } = await saveCompressed(compressed));
             } else {
-                ({ success } = await env.DB.prepare(
-                    `INSERT INTO raw_mails (source, address, raw, message_id) VALUES (?, ?, ?, ?)`
-                ).bind(
-                    message.from, message.to, parsedEmailContext.rawEmail, message_id
-                ).run());
+                ({ success } = await savePlaintext());
             }
         } else {
-            ({ success } = await env.DB.prepare(
-                `INSERT INTO raw_mails (source, address, raw, message_id) VALUES (?, ?, ?, ?)`
-            ).bind(
-                message.from, message.to, parsedEmailContext.rawEmail, message_id
-            ).run());
+            ({ success } = await savePlaintext());
         }
         if (!success) {
-            message.setReject(`Failed save message to ${message.to}`);
-            console.error(`Failed save message from ${message.from} to ${message.to}`);
+            message.setReject(`Failed save message to ${inboundRecipient.address}`);
+            console.error(`Failed save message from ${message.from} to ${inboundRecipient.address}`);
         }
     }
     catch (error) {
@@ -119,13 +167,13 @@ async function email(message: ForwardableEmailMessage, env: Bindings, ctx: Execu
     }
 
     // forward email
-    await forwardEmail(message, env);
+    await forwardEmail(message, env, inboundRecipient.address);
 
     // send email to telegram
     try {
         await sendMailToTelegram(
             { env: env } as Context<HonoCustomType>,
-            message.to, parsedEmailContext, message_id);
+            inboundRecipient.address, parsedEmailContext, message_id);
     } catch (error) {
         console.error("send mail to telegram error", error);
     }
@@ -134,7 +182,7 @@ async function email(message: ForwardableEmailMessage, env: Bindings, ctx: Execu
     try {
         await triggerWebhook(
             { env: env } as Context<HonoCustomType>,
-            message.to, parsedEmailContext, message_id
+            inboundRecipient.address, parsedEmailContext, message_id
         );
     } catch (error) {
         console.error("send webhook error", error);
@@ -146,7 +194,7 @@ async function email(message: ForwardableEmailMessage, env: Bindings, ctx: Execu
         const parsedText = parsedEmail?.text ?? ""
         const rpcEmail: RPCEmailMessage = {
             from: message.from,
-            to: message.to,
+            to: inboundRecipient.address,
             rawEmail: rawEmail,
             headers: message.headers
         }
@@ -156,10 +204,10 @@ async function email(message: ForwardableEmailMessage, env: Bindings, ctx: Execu
     }
 
     // auto reply email
-    await auto_reply(message, env);
+    await auto_reply(message, env, inboundRecipient.address);
 
     // AI email content extraction
-    await extractEmailInfo(parsedEmailContext, env, message_id, message.to);
+    await extractEmailInfo(parsedEmailContext, env, message_id, inboundRecipient.address);
 }
 
 export { email }

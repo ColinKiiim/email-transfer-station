@@ -32,7 +32,9 @@ export const useGlobalState = createGlobalState(
             randomSubdomainDomains: [],
             /** @type {Array<{label: string, value: string}>} */
             domains: [],
-            copyright: 'Dream Hunter',
+            /** @type {Array<Record<string, unknown>>} */
+            domainRegistry: [],
+            copyright: '',
             cfTurnstileSiteKey: '',
             enableWebhook: false,
             isS3Enabled: false,
@@ -84,6 +86,10 @@ export const useGlobalState = createGlobalState(
         const jwt = useStorage('jwt', '');
         const addressPassword = useSessionStorage('addressPassword', '');
         const adminTab = useSessionStorage('adminTab', "account");
+        const adminAccountTab = useSessionStorage('adminAccountTab', "account");
+        const adminUserTab = useSessionStorage('adminUserTab', "user_management");
+        const adminMailsTab = useSessionStorage('adminMailsTab', "mails");
+        const adminMaintenanceTab = useSessionStorage('adminMaintenanceTab', "domains");
         const adminMailTabAddress = ref("");
         const adminSendBoxTabAddress = ref("");
         const mailboxSplitSize = useStorage('mailboxSplitSize', 0.25);
@@ -120,6 +126,18 @@ export const useGlobalState = createGlobalState(
             new_user_token: null,
             /** @type {null | {domains: string[] | undefined | null, role: string, prefix: string | undefined | null}} */
             user_role: null,
+            /** @type {boolean} */
+            can_create_address: true,
+            /** @type {boolean} */
+            can_bind_address: true,
+            /** @type {boolean} */
+            can_transfer_address: false,
+            /** @type {boolean} */
+            can_unbind_address: false,
+            /** @type {boolean} */
+            can_manage_assigned_address: false,
+            /** @type {boolean} */
+            can_delete_mail: false,
         });
         const showAdminPage = computed(() =>
             !!adminAuth.value
@@ -156,6 +174,10 @@ export const useGlobalState = createGlobalState(
             adminAuth,
             showAdminAuth,
             adminTab,
+            adminAccountTab,
+            adminUserTab,
+            adminMailsTab,
+            adminMaintenanceTab,
             adminMailTabAddress,
             adminSendBoxTabAddress,
             mailboxSplitSize,

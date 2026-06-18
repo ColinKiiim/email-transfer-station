@@ -10,8 +10,8 @@
 | `DOMAINS`                  | JSON        | 用于临时邮箱的所有域名, 支持多个域名       | `["awsl.uk", "dreamhunter2333.xyz"]` |
 | `JWT_SECRET`               | 文本/Secret | 用于签名 JWT 的密钥，JWT 用于登录鉴权。请使用随机字符串，例如通过 `openssl rand -hex 32` 生成  | `a1b2c3d4...`                        |
 | `ADMIN_PASSWORDS`          | JSON        | admin 控制台密码, 不配置则不允许访问控制台 | `["123", "456"]`                     |
-| `ENABLE_USER_CREATE_EMAIL` | 文本/JSON   | 是否允许用户创建邮箱, 不配置则不允许       | `true`                               |
-| `ENABLE_USER_DELETE_EMAIL` | 文本/JSON   | 是否允许用户删除邮件, 不配置则不允许       | `true`                               |
+| `ENABLE_USER_CREATE_EMAIL` | 文本/JSON   | 是否允许用户通过公开接口创建邮箱。Email Transfer Station 默认建议关闭，只允许管理员创建地址 | `false`                              |
+| `ENABLE_USER_DELETE_EMAIL` | 文本/JSON   | 是否允许用户删除邮件。Email Transfer Station 默认建议关闭 | `false`                              |
 
 > [!IMPORTANT] DOMAINS 与 DEFAULT_DOMAINS 必须先在 Cloudflare 配置好
 > 这里填写的所有域名（包括下文「邮箱相关变量」里的 `DEFAULT_DOMAINS`、`USER_ROLES.domains`、`RANDOM_SUBDOMAIN_DOMAINS` 等）必须是你**已经在 Cloudflare Email Routing 中启用并完成邮件 DNS 记录下发**的域名。Worker 部署完成后，还需要把该域名的 Catch-all 规则绑定到这个 Worker，否则邮件无法投递到 Worker。
@@ -85,12 +85,18 @@
 | `JUNK_MAIL_CHECK_LIST`          | JSON      | 垃圾邮件检查配置, 任何一项 `存在` 且 `不通过` 则被判定为垃圾邮件           | `["spf", "dkim", "dmarc"]` |
 | `JUNK_MAIL_FORCE_PASS_LIST`     | JSON      | 垃圾邮件检查配置, 任何一项 `不存在` 或者 `不通过` 则被判定为垃圾邮件       | `["spf", "dkim", "dmarc"]` |
 | `FORWARD_ADDRESS_LIST`          | JSON      | 全局转发地址列表，如果不配置则不启用，启用后所有邮件都会转发到列表中的地址 | `["xxx@xxx.com"]`          |
+| `COLLECTOR_ADDRESSES`           | JSON/文本 | 作为非 Cloudflare 域名转发入口的收集邮箱列表。邮件投递到这些地址时，Worker 会尝试从转发头里解析原始收件人 | `["mx-colin-fnrry-com@20030405.xyz", "mx-colin-cmd-gd@20030405.xyz"]` |
+| `MANAGED_RECEIVE_DOMAINS`       | JSON/文本 | 通过转发桥接进来的原始收件域名列表。只会把这些域名下的地址识别为原始收件人 | `["colin.fnrry.com", "colin.cmd.gd"]` |
 | `REMOVE_EXCEED_SIZE_ATTACHMENT` | 文本/JSON | 如果附件大小超过 2MB，则删除附件，邮件可能由于解析而丢失一些信息           | `true`                     |
 | `REMOVE_ALL_ATTACHMENT`         | 文本/JSON | 移除所有附件，邮件可能由于解析而丢失一些信息                               | `true`                     |
 | `ENABLE_MAIL_GZIP`             | 文本/JSON | 启用后新邮件将 Gzip 压缩存储到 `raw_blob` 字段，可节省 D1 数据库空间。已有明文 `raw` 数据自动兼容读取。**启用前请先执行数据库迁移（`Admin -> 快速设置 -> 数据库 -> 升级数据库 Schema` 或 `POST /admin/db_migration`），确保 `raw_blob` 列已创建。该功能会增加压缩/解压 CPU 开销，建议使用 Cloudflare Worker 付费 Plan 再开启。** | `true`                     |
 
 > [!NOTE]
 > `ENABLE_MAIL_GZIP` 会增加邮件写入压缩与读取解压的 CPU 消耗，免费版 Worker 更容易触发 CPU 限制，建议付费 Plan 再开启
+>
+> `COLLECTOR_ADDRESSES` / `MANAGED_RECEIVE_DOMAINS` 用于免费转发桥接场景，例如
+> `colin.cmd.gd -> ImprovMX -> mx-colin-cmd-gd@20030405.xyz -> Cloudflare Email Routing -> Worker`。
+> 如果未配置收集邮箱，Worker 会继续按 Cloudflare 原生 `message.to` 保存邮件。
 >
 > `垃圾邮件检查` 和 `移除附件功能` 需要解析邮件，免费版 CPU 有限，可能会导致大邮件解析超时
 >

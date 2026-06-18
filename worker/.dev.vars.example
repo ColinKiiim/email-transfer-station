@@ -1,0 +1,5 @@
+# Optional. Required only for Admin -> Domains -> Cloudflare one-click setup.
+# Do not put real tokens in tracked files.
+CLOUDFLARE_API_TOKEN=
+CLOUDFLARE_ACCOUNT_ID=
+CLOUDFLARE_EMAIL_WORKER_NAME=email-transfer-station-api

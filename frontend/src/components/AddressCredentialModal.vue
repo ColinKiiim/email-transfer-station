@@ -26,7 +26,7 @@ const props = defineProps({
 const emit = defineEmits(['update:show'])
 
 const { openSettings, auth } = useGlobalState()
-const { locale, t } = useScopedI18n('components.AddressCredentialModal')
+const { t } = useScopedI18n('components.AddressCredentialModal')
 const message = useMessage()
 
 const modalShow = computed({
@@ -37,11 +37,12 @@ const modalShow = computed({
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE || ''
 const frontendBaseUrl = computed(() => window.location.origin)
 const apiBaseUrl = computed(() => (configuredApiBaseUrl || frontendBaseUrl.value).replace(/\/$/, ''))
-const docLocale = computed(() => locale.value === 'zh' ? 'zh' : 'en')
-const agentDocUrl = computed(() => `https://temp-mail-docs.awsl.uk/${docLocale.value}/guide/feature/agent-email.html`)
-const smtpImapDocUrl = computed(() => `https://temp-mail-docs.awsl.uk/${docLocale.value}/guide/feature/config-smtp-proxy.html`)
-const agentSkillUrl = 'https://github.com/dreamhunter2333/cloudflare_temp_email/blob/main/skills/cf-temp-mail-agent-mail/SKILL.md'
+const agentSkillName = 'Email Transfer Station mailbox agent skill'
 const autoLoginUrl = computed(() => `${frontendBaseUrl.value}/?jwt=${encodeURIComponent(props.jwt)}`)
+const shareMessageText = computed(() => [
+  `${t('shareMessageAddress')}：${props.address || '-'}`,
+  `${t('shareMessageLoginLink')}：${autoLoginUrl.value}`,
+].join('\n'))
 const showAgent = computed(() => !!openSettings.value.enableAgentEmailInfo)
 const smtpImapConfig = computed(() => openSettings.value.smtpImapProxyConfig || {})
 const smtpConfig = computed(() => smtpImapConfig.value.smtp || {})
@@ -58,7 +59,7 @@ const agentConfigJson = computed(() => JSON.stringify({
 const agentText = computed(() => [
   `${t('currentAddress')}: ${props.address || '-'}`,
   `${t('apiBase')}: ${apiBaseUrl.value}`,
-  `${t('agentSkill')}: ${agentSkillUrl}`,
+  `${t('agentSkill')}: ${agentSkillName}`,
   `${t('agentConfig')}:`,
   agentConfigJson.value,
 ].join('\n'))
@@ -155,17 +156,12 @@ const copyText = async (text) => {
           <div class="credential-field">
             <span class="credential-label">{{ t('agentSkill') }}</span>
             <code class="credential-code">
-              <a :href="agentSkillUrl" target="_blank" rel="noopener noreferrer">{{ agentSkillUrl }}</a>
+              {{ agentSkillName }}
             </code>
           </div>
           <div class="credential-field">
             <span class="credential-label">{{ t('agentConfig') }}</span>
             <pre class="credential-code credential-code-block">{{ agentConfigJson }}</pre>
-          </div>
-          <div class="credential-actions">
-            <n-button tag="a" :href="agentDocUrl" target="_blank" rel="noopener noreferrer" text type="primary">
-              {{ t('docs') }}
-            </n-button>
           </div>
         </div>
       </n-collapse-item>
@@ -208,27 +204,44 @@ const copyText = async (text) => {
             <span class="credential-label">{{ t('password') }}</span>
             <code class="credential-code">{{ jwt }}</code>
           </div>
-          <div class="credential-actions">
-            <n-button tag="a" :href="smtpImapDocUrl" target="_blank" rel="noopener noreferrer" text type="primary">
-              {{ t('docs') }}
-            </n-button>
-          </div>
         </div>
       </n-collapse-item>
 
-      <n-collapse-item name="share-link" :title="t('autoLoginLink')">
+      <n-collapse-item name="credential-link" :title="t('autoLoginLink')">
         <template #header-extra>
           <n-button size="tiny" tertiary type="primary" @click.stop="copyText(autoLoginUrl)">
             {{ t('copySection') }}
           </n-button>
         </template>
         <div class="credential-section">
+          <p class="credential-tip">{{ t('autoLoginLinkTip') }}</p>
           <div class="credential-field">
             <code class="credential-code">{{ autoLoginUrl }}</code>
           </div>
         </div>
       </n-collapse-item>
+
+      <n-collapse-item name="recipient-share" :title="t('recipientShare')">
+        <template #header-extra>
+          <n-button size="tiny" tertiary type="primary" @click.stop="copyText(shareMessageText)">
+            {{ t('copySection') }}
+          </n-button>
+        </template>
+        <div class="credential-section">
+          <p class="credential-tip">{{ t('recipientShareTip') }}</p>
+          <pre class="credential-code credential-code-block">{{ shareMessageText }}</pre>
+        </div>
+      </n-collapse-item>
     </n-collapse>
+    <div v-if="$slots.actions" class="credential-security-actions">
+      <div>
+        <h3 class="credential-security-title">{{ t('securityActions') }}</h3>
+        <p class="credential-security-tip">{{ t('securityActionsTip') }}</p>
+      </div>
+      <div class="credential-actions">
+        <slot name="actions" />
+      </div>
+    </div>
   </n-modal>
 </template>
 
@@ -303,6 +316,29 @@ const copyText = async (text) => {
   white-space: pre-wrap;
 }
 
+.credential-security-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  margin-top: 16px;
+  border-top: 1px solid var(--n-border-color);
+  padding-top: 14px;
+}
+
+.credential-security-title {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.credential-security-tip {
+  margin: 0;
+  color: var(--n-text-color-3);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .credential-actions {
   display: flex;
   flex-wrap: wrap;
@@ -317,6 +353,14 @@ const copyText = async (text) => {
 
   .credential-copy-row {
     grid-template-columns: 1fr;
+  }
+
+  .credential-security-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .credential-actions {
+    justify-content: flex-start;
   }
 }
 </style>

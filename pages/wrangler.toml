@@ -1,8 +1,8 @@
-name = "temp-email-pages"
+name = "email-transfer-station-pages"
 pages_build_output_dir = "../frontend/dist"
 compatibility_date = "2024-05-13"
 
 [[services]]
 binding = "BACKEND"
-service = "cloudflare_temp_email"
+service = "email-transfer-station-api"
 environment = "production"

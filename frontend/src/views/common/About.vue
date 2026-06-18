@@ -1,5 +1,4 @@
 <script setup>
-import { GithubAlt, Discord, Telegram } from '@vicons/fa'
 import { useGlobalState } from '../../store'
 const { announcement } = useGlobalState()
 </script>
@@ -8,24 +7,8 @@ const { announcement } = useGlobalState()
     <div class="center">
         <n-card :bordered="false" embedded>
             <div v-html="announcement"></div>
-            <n-button tag="a" target="_blank" href="https://github.com/dreamhunter2333/cloudflare_temp_email">
-                <template #icon>
-                    <n-icon :component="GithubAlt" />
-                </template>
-                Github
-            </n-button>
-            <n-button tag="a" target="_blank" href="https://discord.gg/dQEwTWhA6Q">
-                <template #icon>
-                    <n-icon :component="Discord" />
-                </template>
-                Discord
-            </n-button>
-            <n-button tag="a" target="_blank" href="https://t.me/cloudflare_temp_email">
-                <template #icon>
-                    <n-icon :component="Telegram" />
-                </template>
-                Telegram
-            </n-button>
+            <h2>Email Transfer Station</h2>
+            <p>Private mailbox transfer and token-based inbox sharing.</p>
         </n-card>
     </div>
 </template>
@@ -40,8 +23,8 @@ const { announcement } = useGlobalState()
     max-width: 800px;
 }
 
-.n-button {
-    margin-top: 10px;
-    margin-left: 10px;
+p {
+    margin: 0;
+    color: var(--n-text-color-2);
 }
 </style>

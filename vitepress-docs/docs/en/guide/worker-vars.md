@@ -10,8 +10,8 @@
 | `DOMAINS`                  | JSON        | All domains for temporary email, supports multiple domains             | `["awsl.uk", "dreamhunter2333.xyz"]` |
 | `JWT_SECRET`               | Text/Secret | Secret key for signing JWTs used in login and authentication. Use a random string, e.g. generated via `openssl rand -hex 32` | `a1b2c3d4...`                        |
 | `ADMIN_PASSWORDS`          | JSON        | Admin console passwords, console access disabled if not configured     | `["123", "456"]`                     |
-| `ENABLE_USER_CREATE_EMAIL` | Text/JSON   | Whether to allow users to create mailboxes, disabled if not configured | `true`                               |
-| `ENABLE_USER_DELETE_EMAIL` | Text/JSON   | Whether to allow users to delete emails, disabled if not configured    | `true`                               |
+| `ENABLE_USER_CREATE_EMAIL` | Text/JSON   | Whether to allow users to create mailboxes through the public API. Email Transfer Station defaults to admin-created addresses only | `false`                              |
+| `ENABLE_USER_DELETE_EMAIL` | Text/JSON   | Whether to allow users to delete emails. Email Transfer Station defaults to disabling this for non-admin users | `false`                              |
 
 > [!IMPORTANT] `DOMAINS` and `DEFAULT_DOMAINS` must already be set up in Cloudflare
 > Every domain you put here (including `DEFAULT_DOMAINS`, `USER_ROLES.domains`, `RANDOM_SUBDOMAIN_DOMAINS` further below) **must already have Cloudflare Email Routing enabled and its email DNS records provisioned**. After the Worker is deployed, bind the domain's Catch-all rule to that Worker; otherwise inbound mail will never reach the Worker.
@@ -89,12 +89,18 @@
 | `JUNK_MAIL_CHECK_LIST`          | JSON      | Junk mail check configuration, marked as junk if any item `exists` and `fails`                                         | `["spf", "dkim", "dmarc"]` |
 | `JUNK_MAIL_FORCE_PASS_LIST`     | JSON      | Junk mail check configuration, marked as junk if any item `does not exist` or `fails`                                  | `["spf", "dkim", "dmarc"]` |
 | `FORWARD_ADDRESS_LIST`          | JSON      | Global forward address list, disabled if not configured, all emails will be forwarded to listed addresses when enabled | `["xxx@xxx.com"]`          |
+| `COLLECTOR_ADDRESSES`           | JSON/Text | Collector mailboxes used as forwarding ingress for non-Cloudflare domains. When mail arrives at these addresses, the Worker tries to recover the original recipient from forwarding headers | `["mx-colin-fnrry-com@20030405.xyz", "mx-colin-cmd-gd@20030405.xyz"]` |
+| `MANAGED_RECEIVE_DOMAINS`       | JSON/Text | Original recipient domains accepted through the forwarding bridge. Only addresses under these domains are treated as original recipients | `["colin.fnrry.com", "colin.cmd.gd"]` |
 | `REMOVE_EXCEED_SIZE_ATTACHMENT` | Text/JSON | If attachment exceeds 2MB, remove it, email may lose some information due to parsing                                   | `true`                     |
 | `REMOVE_ALL_ATTACHMENT`         | Text/JSON | Remove all attachments, email may lose some information due to parsing                                                 | `true`                     |
 | `ENABLE_MAIL_GZIP`             | Text/JSON | When enabled, new emails are gzip-compressed and stored in `raw_blob` column to save D1 database space. Existing plaintext `raw` data is automatically compatible for reading. **Run database migration first (`Admin -> Quick Setup -> Database -> Migrate Database` or `POST /admin/db_migration`) to ensure the `raw_blob` column exists before enabling. This feature adds compression/decompression CPU overhead, so enabling it on a paid Cloudflare Worker plan is recommended.** | `true`                     |
 
 > [!NOTE]
 > `ENABLE_MAIL_GZIP` adds CPU cost for gzip compression on write and decompression on read. Free-tier Workers are more likely to hit CPU limits, so a paid plan is recommended before enabling it
+>
+> `COLLECTOR_ADDRESSES` / `MANAGED_RECEIVE_DOMAINS` are for free forwarding bridges, for example
+> `colin.cmd.gd -> ImprovMX -> mx-colin-cmd-gd@20030405.xyz -> Cloudflare Email Routing -> Worker`.
+> If no collector address is configured, the Worker keeps using the native Cloudflare `message.to` recipient.
 >
 > `Junk mail checking` and `attachment removal` require email parsing, free tier CPU is limited, may cause large email parsing timeout
 >

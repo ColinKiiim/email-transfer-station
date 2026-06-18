@@ -235,6 +235,9 @@ const showNewAddressTab = computed(() => {
     ) {
         return false;
     }
+    if (userSettings.value.user_email && userSettings.value.can_create_address === false) {
+        return false;
+    }
     return openSettings.value.enableUserCreateEmail;
 });
 

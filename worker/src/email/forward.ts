@@ -71,7 +71,8 @@ async function forwardToGlobalAddresses(
  */
 async function forwardByRules(
     message: ForwardableEmailMessage,
-    env: Bindings
+    env: Bindings,
+    recipientAddress: string = message.to
 ): Promise<void> {
     try {
         // 获取环境变量配置
@@ -101,7 +102,7 @@ async function forwardByRules(
             // 保持原始逻辑：每个匹配的 domain 都会触发一次转发
             if (rule.domains && rule.domains.length > 0) {
                 for (const domain of rule.domains) {
-                    if (message.to.endsWith(domain) && rule.forward) {
+                    if (recipientAddress.endsWith(domain) && rule.forward) {
                         await message.forward(rule.forward);
                     }
                 }
@@ -122,13 +123,14 @@ async function forwardByRules(
  */
 async function forwardEmail(
     message: ForwardableEmailMessage,
-    env: Bindings
+    env: Bindings,
+    recipientAddress: string = message.to
 ): Promise<void> {
     // 全局转发
     await forwardToGlobalAddresses(message, env);
 
     // 规则转发
-    await forwardByRules(message, env);
+    await forwardByRules(message, env, recipientAddress);
 }
 
 export {

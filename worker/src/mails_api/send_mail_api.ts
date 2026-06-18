@@ -6,11 +6,12 @@ import { WorkerMailer, WorkerMailerOptions } from 'worker-mailer';
 
 import i18n from '../i18n';
 import { CONSTANTS } from '../constants'
-import { getJsonSetting, getDomains, getBooleanValue, getJsonObjectValue } from '../utils';
+import { getJsonSetting, getBooleanValue, getJsonObjectValue } from '../utils';
 import { GeoData } from '../models'
 import { handleListQuery, isSendMailBindingEnabled, updateAddressUpdatedAt } from '../common'
 import { getSendBalanceState, requestSendMailAccess } from './send_balance';
 import { ensureSendMailLimit, increaseSendMailLimitCount } from './send_mail_limit_utils';
+import { getActiveDomainNames } from '../domains';
 
 
 export const api = new Hono<HonoCustomType>()
@@ -144,7 +145,7 @@ export const sendMail = async (
     }
     // check domain
     const mailDomain = address.split("@")[1];
-    const domains = getDomains(c);
+    const domains = await getActiveDomainNames(c);
     if (!domains.includes(mailDomain)) {
         throw new Error(msgs.InvalidDomainMsg)
     }

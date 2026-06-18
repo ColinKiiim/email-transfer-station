@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 import { useRouter } from 'vue-router'
 
@@ -16,6 +16,7 @@ const {
 
 const { t } = useScopedI18n('views.user.UserBar')
 
+const roleLabel = computed(() => userSettings.value.user_role?.role || t('noRole'))
 
 onMounted(async () => {
     await api.getUserOpenSettings(message);
@@ -31,9 +32,21 @@ onMounted(async () => {
         </n-card>
         <div v-else-if="userSettings.user_email">
             <n-alert type="success" :show-icon="false" :bordered="false">
-                <span>
-                    <b>{{ t('currentUser') }} <b>{{ userSettings.user_email }}</b></b>
-                </span>
+                <div class="user-summary">
+                    <span>
+                        <b>{{ t('currentUser') }} <b>{{ userSettings.user_email }}</b></b>
+                    </span>
+                    <div class="user-tags">
+                        <n-tag size="small" :bordered="false">{{ roleLabel }}</n-tag>
+                        <n-tag v-if="userSettings.is_admin" size="small" type="error" :bordered="false">Admin</n-tag>
+                        <n-tag v-else-if="userSettings.can_create_address" size="small" type="success" :bordered="false">
+                            {{ t('canCreateAddress') }}
+                        </n-tag>
+                        <n-tag v-else size="small" type="warning" :bordered="false">
+                            {{ t('assignedOnly') }}
+                        </n-tag>
+                    </div>
+                </div>
             </n-alert>
         </div>
         <div v-else class="center">
@@ -60,5 +73,20 @@ onMounted(async () => {
     place-items: center;
     justify-content: center;
     margin: 20px;
+}
+
+.user-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    align-items: center;
+    justify-content: center;
+}
+
+.user-tags {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
 }
 </style>

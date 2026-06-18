@@ -3,6 +3,7 @@ import { CONSTANTS } from "../constants";
 import { WebhookSettings, RawMailRow } from "../models";
 import { commonParseMail, sendWebhook } from "../common";
 import { resolveRawEmail } from "../gzip";
+import { recordAuditEvent } from "../audit";
 
 async function getWebhookSettings(c: Context<HonoCustomType>): Promise<Response> {
     const settings = await c.env.KV.get<WebhookSettings>(
@@ -16,6 +17,17 @@ async function saveWebhookSettings(c: Context<HonoCustomType>): Promise<Response
     await c.env.KV.put(
         CONSTANTS.WEBHOOK_KV_ADMIN_MAIL_SETTINGS_KEY,
         JSON.stringify(settings));
+    await recordAuditEvent(c, {
+        action: "webhook.mail_settings.update",
+        actor_type: "admin",
+        actor_label: "admin",
+        resource_type: "mail_webhook_settings",
+        status: "success",
+        metadata: {
+            enabled: settings.enabled,
+            method: settings.method,
+        },
+    });
     return c.json({ success: true })
 }
 

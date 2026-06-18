@@ -38,6 +38,8 @@ type Bindings = {
     MAX_ADDRESS_LEN: string | number | undefined
     DEFAULT_DOMAINS: string | string[] | undefined
     DOMAINS: string | string[] | undefined
+    MANAGED_RECEIVE_DOMAINS: string | string[] | undefined
+    COLLECTOR_ADDRESSES: string | string[] | undefined
     ENABLE_CREATE_ADDRESS_SUBDOMAIN_MATCH: string | boolean | undefined
     RANDOM_SUBDOMAIN_DOMAINS: string | string[] | undefined
     RANDOM_SUBDOMAIN_LENGTH: string | number | undefined
@@ -54,6 +56,7 @@ type Bindings = {
     BLACK_LIST: string | undefined
     ENABLE_AUTO_REPLY: string | boolean | undefined
     ENABLE_WEBHOOK: string | boolean | undefined
+    ENABLE_ADDRESS_WEBHOOK: string | boolean | undefined
     ENABLE_USER_CREATE_EMAIL: string | boolean | undefined
     DISABLE_ANONYMOUS_USER_CREATE_EMAIL: string | boolean | undefined
     ENABLE_USER_DELETE_EMAIL: string | boolean | undefined
@@ -117,6 +120,11 @@ type Bindings = {
     // gzip compression for raw_mails
     ENABLE_MAIL_GZIP: string | boolean | undefined
 
+    // Cloudflare Email Routing automation. Store real token as Worker secret.
+    CLOUDFLARE_API_TOKEN: string | undefined
+    CLOUDFLARE_ACCOUNT_ID: string | undefined
+    CLOUDFLARE_EMAIL_WORKER_NAME: string | undefined
+
     // E2E testing
     E2E_TEST_MODE: string | boolean | undefined
 }
@@ -124,6 +132,11 @@ type Bindings = {
 type JwtPayload = {
     address: string
     address_id: number
+    credential_version?: number
+    exp?: number
+    iat?: number
+    share_token_id?: number
+    share_scope?: string
 }
 
 type UserPayload = {

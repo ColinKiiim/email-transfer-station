@@ -4,6 +4,7 @@ import { useScopedI18n } from '@/i18n/app'
 
 import { useGlobalState } from '../../store'
 import { api } from '../../api'
+import { selectDefaultDomain } from '../../utils/domain-ui'
 import AddressCredentialModal from '../../components/AddressCredentialModal.vue'
 
 const {
@@ -64,7 +65,10 @@ onMounted(async () => {
     if (openSettings.prefix) {
         enablePrefix.value = true
     }
-    emailDomain.value = openSettings.value.domains?.[0]?.value || ""
+    emailDomain.value = selectDefaultDomain(
+        openSettings.value.domains,
+        openSettings.value.defaultDomains,
+    )
 })
 </script>
 

@@ -6,18 +6,34 @@
   <a href="CHANGELOG_EN.md">English</a>
 </p>
 
-## v1.9.0(main)
+## v0.0.0-test
 
 ### Features
 
+- feat: |Webhook| 配置外部 Webhook URL：管理员可设置邮件 Webhook 目标地址，收到邮件时会自动发送 HTTP 请求到配置的 URL，便于集成第三方服务
+
+- feat: |Address Share| 新增邮箱地址分享 token：管理员可为单个地址创建一次性展示的分享链接，访问 `/i/:token` 后获得短期只读地址会话，避免直接分发长期 Address JWT
+- feat: |Credential Rotation| 地址凭证新增手动更新机制：管理员可为单个地址轮换 Address JWT，旧的凭证自动登录链接会立即失效
+- feat: |Ingress| 新增 ImprovMX 免费转发桥接支持：邮件投递到配置的收集邮箱时，Worker 会从转发头解析原始收件人，并把邮件按原始域名/地址存储
+- feat: |Admin| 管理员邮件列表新增域名、地址和地址前缀筛选接口与前端分组视图，便于按域名和子地址查看最近邮件
+- feat: |Admin| 管理员地址列表新增标签、用途备注、分享记录查看、分享链接过期时间和单条分享记录撤销
+- feat: |Forwarding| 账号设置新增 Gmail 副本规则快捷入口，底层复用现有邮件转发规则
 - feat: |Frontend| 将邮箱地址凭证弹窗升级为“地址凭证与连接方式”，复用普通用户与 admin 创建邮箱结果弹窗；支持通过 `ENABLE_AGENT_EMAIL_INFO` 展示 AI Agent 接入信息，并通过 `SMTP_IMAP_PROXY_CONFIG` 展示 SMTP/IMAP 客户端连接信息
 
 ### Bug Fixes
 
 - fix: |Admin| 管理员重置邮箱地址密码时改为前端 SHA-256 后提交，后端只接受并存储哈希值，避免该接口继续接收明文密码
 - fix: |Address| 管理员邮箱地址列表与用户绑定地址列表不再返回已存储的地址密码哈希值，避免列表接口暴露敏感字段
+- fix: |Address Share| 修复分享 token 访问写接口时返回 500 的问题，现在会稳定返回 403 `Share token is read-only`
 
 ### Improvements
+
+- improve: |Email Transfer Station| 默认配置改为管理员创建地址优先：关闭公开创建、关闭匿名创建、关闭普通用户删除邮件；分享 token 页面使用独立 share-only 外壳，不再显示用户入口和全局页脚
+- improve: |Address Share| 管理员可一键撤销某个地址的全部分享链接；分享链接换出的短期只读会话现在每次读邮件都会校验原 token 是否仍有效
+- improve: |Email Transfer Station| 根路径、普通邮箱页和 `?jwt=` 凭证自动登录页默认不显示“用户”入口；只有直接访问 `/user` 时才暴露用户入口
+- improve: |Email Transfer Station| 全局隐藏页脚版权与 Header 版本/GitHub 入口，左上角默认品牌替换为 `Email Transfer Station` 与自有图标
+- improve: |Release| 禁用 inherited GitHub Actions，移除 inherited Claude 发布技能，并将包名、README 与运行时版本整理到 Email Transfer Station 的 `0.0.0-test` 发布边界
+- improve: |Routing| Worker 配置接口新增 `DOMAIN_ROUTING_STATUS`，区分 Cloudflare 原生域名与 ImprovMX collector 域名
 
 ## v1.8.0
 

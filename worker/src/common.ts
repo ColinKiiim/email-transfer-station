@@ -2,11 +2,19 @@ import { Context } from 'hono';
 import { Jwt } from 'hono/utils/jwt'
 import { WorkerMailerOptions } from 'worker-mailer';
 
-import { getBooleanValue, getDomains, getStringArray, getStringValue, getIntValue, getUserRoles, getDefaultDomains, getJsonSetting, getAnotherWorkerList, hashPassword, getJsonObjectValue, getRandomSubdomainDomains } from './utils';
+import { getBooleanValue, getStringArray, getStringValue, getIntValue, getUserRoles, getJsonSetting, getAnotherWorkerList, hashPassword, getJsonObjectValue } from './utils';
 import { unbindTelegramByAddress } from './telegram_api/common';
 import { CONSTANTS } from './constants';
 import { AddressCreationSettings, AdminWebhookSettings, WebhookMail, WebhookSettings } from './models';
 import i18n from './i18n';
+import {
+    findMatchedAddressCreationDomain,
+    getAddressCreationDomainNames,
+    getAddressCreationDomains,
+    getActiveDomainNames,
+    getDomainRegistry,
+    normalizeDomain as normalizeManagedDomain,
+} from './domains';
 
 const DEFAULT_NAME_REGEX = /[^a-z0-9]/g;
 const DEFAULT_RANDOM_SUBDOMAIN_LENGTH = 8;
@@ -24,6 +32,31 @@ const isValidDomainLabel = (label: string): boolean => {
 
 const areValidDomainLabels = (labels: string[]): boolean => {
     return labels.length > 0 && labels.every((label) => isValidDomainLabel(label));
+}
+
+export const getAddressCredentialVersion = async (
+    c: Context<HonoCustomType>,
+    addressId: number | string
+): Promise<number> => {
+    const version = await c.env.DB.prepare(
+        `SELECT COALESCE(credential_version, 1) AS credential_version FROM address WHERE id = ?`
+    ).bind(addressId).first<number>("credential_version");
+    return Number(version || 1);
+}
+
+export const issueAddressJwt = async (
+    c: Context<HonoCustomType>,
+    address: string,
+    addressId: number | string,
+    credentialVersion?: number | string | null
+): Promise<string> => {
+    const normalizedAddressId = Number(addressId);
+    const version = Number(credentialVersion || await getAddressCredentialVersion(c, normalizedAddressId) || 1);
+    return await Jwt.sign({
+        address,
+        address_id: normalizedAddressId,
+        credential_version: version,
+    }, c.env.JWT_SECRET, "HS256");
 }
 
 /**
@@ -67,8 +100,8 @@ export const isSendMailBindingEnabled = (
 /**
  * Check if send mail is enabled for any configured domain
  */
-export const isAnySendMailEnabled = (c: Context<HonoCustomType>): boolean => {
-    const domains = getDomains(c);
+export const isAnySendMailEnabled = async (c: Context<HonoCustomType>): Promise<boolean> => {
+    const domains = await getActiveDomainNames(c);
     return domains.some(domain => isSendMailEnabled(c, domain));
 }
 
@@ -110,14 +143,17 @@ const generateRandomSubdomain = (c: Context<HonoCustomType>): string => {
     return subdomain;
 }
 
-const allowRandomSubdomainForDomain = (
+const allowRandomSubdomainForDomain = async (
     c: Context<HonoCustomType>,
     domain: string
-): boolean => {
+): Promise<boolean> => {
     const normalizedDomain = normalizeDomainValue(domain);
-    return getRandomSubdomainDomains(c)
-        .map((item) => normalizeDomainValue(item))
-        .includes(normalizedDomain);
+    return (await getDomainRegistry(c))
+        .some((item) => item.enabled
+            && item.setup_status === "active"
+            && item.allow_address_creation
+            && item.allow_random_subdomain
+            && normalizeDomainValue(item.domain) === normalizedDomain);
 }
 
 const isCreateAddressSubdomainMatchEnvConfigured = (c: Context<HonoCustomType>): boolean => {
@@ -328,7 +364,6 @@ export const newAddress = async (
         enableRandomSubdomain = false,
         checkLengthByConfig = true,
         addressPrefix = null,
-        checkAllowDomains = true,
         enableCheckNameRegex = true,
         sourceMeta = null,
     }: {
@@ -337,7 +372,6 @@ export const newAddress = async (
         enableRandomSubdomain?: boolean,
         checkLengthByConfig?: boolean,
         addressPrefix?: string | undefined | null,
-        checkAllowDomains?: boolean,
         enableCheckNameRegex?: boolean,
         sourceMeta?: string | undefined | null,
     }
@@ -374,27 +408,38 @@ export const newAddress = async (
         name = getStringValue(c.env.PREFIX).trim() + name;
     }
     // check domain
-    const allowDomains = checkAllowDomains ? await getAllowDomains(c) : getDomains(c);
+    const allowDomains = await getAllowDomains(c);
+    const allowDomainSet = new Set(allowDomains.map(normalizeDomainValue));
+    const domainConfigs = (await getAddressCreationDomains(c))
+        .filter((item) => allowDomainSet.has(item.domain));
     // if domain is not set, select domain based on environment configuration
     if (!domain && allowDomains.length > 0) {
-        const createAddressDefaultDomainFirst = getBooleanValue(c.env.CREATE_ADDRESS_DEFAULT_DOMAIN_FIRST);
-        if (createAddressDefaultDomainFirst) {
-            domain = normalizeDomainValue(allowDomains[0]);
+        const defaultDomains = domainConfigs.filter((item) => item.is_default);
+        if (defaultDomains.length > 0) {
+            domain = defaultDomains[0].domain;
         } else {
-            domain = normalizeDomainValue(allowDomains[Math.floor(Math.random() * allowDomains.length)]);
+            const createAddressDefaultDomainFirst = getBooleanValue(c.env.CREATE_ADDRESS_DEFAULT_DOMAIN_FIRST);
+            domain = createAddressDefaultDomainFirst
+                ? normalizeDomainValue(allowDomains[0])
+                : normalizeDomainValue(allowDomains[Math.floor(Math.random() * allowDomains.length)]);
         }
     } else if (typeof domain === "string") {
         domain = normalizeDomainValue(domain);
     }
-    const { effectiveEnabled: enableSubdomainMatch } = await getAddressCreationSubdomainMatchStatus(c);
+    const subdomainMatchStatus = await getAddressCreationSubdomainMatchStatus(c);
     const matchedAllowDomain = domain
-        ? findMatchedAllowedDomain(domain, allowDomains, enableSubdomainMatch)
+        ? findMatchedAddressCreationDomain(
+            domain,
+            domainConfigs,
+            subdomainMatchStatus.effectiveEnabled,
+            subdomainMatchStatus.envConfigured && !subdomainMatchStatus.envEnabled,
+        )
         : null;
     // check domain is valid
     if (!domain || !matchedAllowDomain) {
         throw new Error(msgs.InvalidDomainMsg)
     }
-    if (enableRandomSubdomain && !allowRandomSubdomainForDomain(c, domain)) {
+    if (enableRandomSubdomain && !await allowRandomSubdomainForDomain(c, domain)) {
         throw new Error(msgs.RandomSubdomainNotAllowedMsg)
     }
 
@@ -420,11 +465,7 @@ export const newAddress = async (
             // 如果启用地址密码功能，自动生成密码
             const generatedPassword = await generatePasswordForAddress(c, address);
 
-            // create jwt
-            const jwt = await Jwt.sign({
-                address: address,
-                address_id: address_id
-            }, c.env.JWT_SECRET, "HS256")
+            const jwt = await issueAddressJwt(c, address, address_id);
             return {
                 jwt: jwt,
                 address: address,
@@ -771,11 +812,16 @@ export const getAddressPrefix = async (c: Context<HonoCustomType>): Promise<stri
 
 export const getAllowDomains = async (c: Context<HonoCustomType>): Promise<string[]> => {
     const user = c.get("userPayload");
+    const creationDomains = await getAddressCreationDomainNames(c);
     if (!user) {
-        return getDefaultDomains(c);
+        return creationDomains;
     }
     const user_role = await commonGetUserRole(c, user.user_id);
-    return user_role?.domains || getDefaultDomains(c);;
+    if (!user_role?.domains || user_role.domains.length === 0) {
+        return creationDomains;
+    }
+    const roleDomains = user_role.domains.map((domain) => normalizeManagedDomain(domain));
+    return creationDomains.filter((domain) => roleDomains.includes(domain));
 }
 
 export async function sendWebhook(
@@ -821,14 +867,16 @@ export async function triggerWebhook(
         webhookList.push(adminMailWebhookSettings)
     }
 
-    // user mail webhook
-    const adminSettings = await c.env.KV.get<AdminWebhookSettings>(CONSTANTS.WEBHOOK_KV_SETTINGS_KEY, "json");
-    if (!adminSettings?.enableAllowList || adminSettings?.allowList.includes(address)) {
-        const settings = await c.env.KV.get<WebhookSettings>(
-            `${CONSTANTS.WEBHOOK_KV_USER_SETTINGS_KEY}:${address}`, "json"
-        );
-        if (settings?.enabled) {
-            webhookList.push(settings)
+    // address-level webhook
+    if (getBooleanValue(c.env.ENABLE_ADDRESS_WEBHOOK)) {
+        const adminSettings = await c.env.KV.get<AdminWebhookSettings>(CONSTANTS.WEBHOOK_KV_SETTINGS_KEY, "json");
+        if (!adminSettings?.enableAllowList || adminSettings?.allowList.includes(address)) {
+            const settings = await c.env.KV.get<WebhookSettings>(
+                `${CONSTANTS.WEBHOOK_KV_USER_SETTINGS_KEY}:${address}`, "json"
+            );
+            if (settings?.enabled) {
+                webhookList.push(settings)
+            }
         }
     }
 

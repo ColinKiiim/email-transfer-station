@@ -2,14 +2,14 @@
 import { ref, h, computed, onMounted } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 import { useHead } from '@unhead/vue'
-import { useRoute, useRouter, RouterLink } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useIsMobile } from '../utils/composables'
 import {
     DarkModeFilled, LightModeFilled, MenuFilled,
     AdminPanelSettingsFilled, MonitorHeartFilled,
-    KeyboardArrowDownOutlined, OpenInNewOutlined
+    KeyboardArrowDownOutlined
 } from '@vicons/material'
-import { GithubAlt, Language, User, Home } from '@vicons/fa'
+import { Language, User, Home } from '@vicons/fa'
 
 import { useGlobalState } from '../store'
 import { api } from '../api'
@@ -19,12 +19,14 @@ import { getLocaleLabel, SUPPORTED_LOCALES } from '../i18n/locale-registry'
 import Turnstile from '../components/Turnstile.vue'
 import { NButton, NIcon } from 'naive-ui'
 
+const PRODUCT_TITLE = 'Email Transfer Station'
+
 const message = useMessage()
 const notification = useNotification()
 
 const {
     toggleDark, isDark, isTelegram, showAdminPage,
-    showAuth, auth, loading, openSettings, preferredLocale, userSettings
+    showAuth, auth, loading, openSettings, preferredLocale, userSettings, adminTab
 } = useGlobalState()
 const route = useRoute()
 const router = useRouter()
@@ -36,6 +38,7 @@ const menuValue = computed(() => {
     if (route.path.includes("admin")) return "admin";
     return "home";
 });
+const showUserEntry = computed(() => !isTelegram.value && route.path.includes("user"));
 
 const cfToken = ref('')
 const turnstileRef = ref(null)
@@ -67,6 +70,19 @@ const currentLocaleLabel = computed(() => {
 });
 
 const { t, locale } = useScopedI18n('views.Header')
+
+const isAdminRoute = computed(() => route.path.includes("admin"));
+const homeLabel = computed(() => isAdminRoute.value ? t('adminHome') : t('home'));
+
+const goHome = async () => {
+    if (isAdminRoute.value) {
+        adminTab.value = 'stationOverview';
+        await router.push(getRouterPathWithLang('/admin', locale.value));
+    } else {
+        await router.push(getRouterPathWithLang('/', locale.value));
+    }
+    showMobileMenu.value = false;
+}
 
 const changeLocale = async (lang) => {
     if (!isSupportedLocale(lang)) {
@@ -102,8 +118,6 @@ const changeLocale = async (lang) => {
     if (localeSwitched) preferredLocale.value = lang;
 }
 
-const version = import.meta.env.PACKAGE_VERSION ? `v${import.meta.env.PACKAGE_VERSION}` : "";
-
 const menuOptions = computed(() => [
     {
         label: () => h(NButton,
@@ -112,13 +126,10 @@ const menuOptions = computed(() => [
                 size: "small",
                 type: menuValue.value == "home" ? "primary" : "default",
                 style: "width: 100%",
-                onClick: async () => {
-                    await router.push(getRouterPathWithLang('/', locale.value));
-                    showMobileMenu.value = false;
-                }
+                onClick: goHome
             },
             {
-                default: () => t('home'),
+                default: () => homeLabel.value,
                 icon: () => h(NIcon, { component: Home })
             }),
         key: "home"
@@ -142,7 +153,7 @@ const menuOptions = computed(() => [
             }
         ),
         key: "user",
-        show: !isTelegram.value
+        show: showUserEntry.value
     },
     {
         label: () => h(
@@ -207,9 +218,9 @@ const menuOptions = computed(() => [
 ]);
 
 useHead({
-    title: () => openSettings.value.title || t('title'),
+    title: () => openSettings.value.title || PRODUCT_TITLE,
     meta: [
-        { name: "description", content: openSettings.value.description || t('title') },
+        { name: "description", content: openSettings.value.description || PRODUCT_TITLE },
     ]
 });
 
@@ -244,11 +255,11 @@ onMounted(async () => {
     <div>
         <n-page-header>
             <template #title>
-                <h3>{{ openSettings.title || t('title') }}</h3>
+                <h3>{{ openSettings.title || PRODUCT_TITLE }}</h3>
             </template>
             <template #avatar>
                 <div @click="logoClick">
-                    <n-avatar style="margin-left: 10px;" src="/logo.png" />
+                    <n-avatar style="margin-left: 10px;" src="/email-transfer-station-logo.svg" />
                 </div>
             </template>
             <template #extra>
@@ -269,20 +280,6 @@ onMounted(async () => {
                             <n-icon :component="KeyboardArrowDownOutlined" style="margin-left: 4px;" />
                         </n-button>
                     </n-dropdown>
-                    <n-button
-                        v-if="!isMobile && openSettings.showGithub"
-                        text
-                        size="small"
-                        class="header-version-button"
-                        tag="a"
-                        target="_blank"
-                        href="https://github.com/dreamhunter2333/cloudflare_temp_email"
-                    >
-                        <template #icon>
-                            <n-icon :component="GithubAlt" />
-                        </template>
-                        {{ version || 'Github' }}
-                    </n-button>
                 </n-space>
             </template>
         </n-page-header>
@@ -297,17 +294,6 @@ onMounted(async () => {
                             <n-icon :component="KeyboardArrowDownOutlined" class="mobile-menu-action-arrow" />
                         </button>
                     </n-dropdown>
-                    <a
-                        v-if="openSettings.showGithub"
-                        class="mobile-menu-utility-button"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        href="https://github.com/dreamhunter2333/cloudflare_temp_email"
-                    >
-                        <n-icon :component="GithubAlt" />
-                        <span class="mobile-menu-action-label">{{ version || 'Github' }}</span>
-                        <n-icon :component="OpenInNewOutlined" class="mobile-menu-action-arrow" />
-                    </a>
                 </div>
             </n-drawer-content>
         </n-drawer>
@@ -357,19 +343,9 @@ onMounted(async () => {
     align-items: center;
 }
 
-.header-version-button {
-    display: inline-flex;
-    align-items: center;
-}
-
-.header-version-button :deep(.n-button__content) {
-    display: inline-flex;
-    align-items: center;
-}
-
 .mobile-menu-actions {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: 6px;
     margin-top: 12px;
     padding-top: 12px;

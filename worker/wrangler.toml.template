@@ -1,11 +1,11 @@
-name = "cloudflare_temp_email"
+name = "email-transfer-station-api"
 main = "src/worker.ts"
 compatibility_date = "2025-04-01"
 compatibility_flags = [ "nodejs_compat" ]
 keep_vars = true
 # if you want use custom_domain, you need to add routes
 # routes = [
-# 	{ pattern = "temp-email-api.xxxxx.xyz", custom_domain = true },
+# 	{ pattern = "mail-api.example.com", custom_domain = true },
 # ]
 
 # if you want deploy worker with frontend assets, you need to add assets
@@ -41,8 +41,8 @@ PREFIX = "tmp"
 # DISABLE_CUSTOM_ADDRESS_NAME = true
 # IF YOU WANT TO MAKE YOUR SITE PRIVATE, UNCOMMENT THE FOLLOWING LINES
 # PASSWORDS = ["123", "456"]
-# For admin panel
-# ADMIN_PASSWORDS = ["123", "456"]
+# For admin panel. Configure production values with:
+#   printf '%s' '["strong-password"]' | pnpm exec wrangler secret put ADMIN_PASSWORDS
 # warning: no password or user check for admin portal
 # DISABLE_ADMIN_PASSWORD_CHECK = false
 # ADMIN CONTACT, CAN BE ANY STRING
@@ -60,25 +60,32 @@ DOMAINS = ["xxx.xxx1" , "xxx.xxx2"] # all domain names
 # RANDOM_SUBDOMAIN_LENGTH = 8
 # For chinese domain name, you can use DOMAIN_LABELS to show chinese domain name
 # DOMAIN_LABELS = ["中文.xxx", "xxx.xxx2"]
-# USER_DEFAULT_ROLE = "vip" # default role for new users(only when enable mail verification)
+# USER_DEFAULT_ROLE = "default" # default role for new users
 # ADMIN_USER_ROLE = "admin" # the role which can access admin panel
-# User roles configuration, if domains is empty will use default_domains, if prefix is null will use default prefix, if prefix is empty string will not use prefix
+# User roles configuration. For Email Transfer Station, start with explicit admin-assigned addresses.
+# These roles only become self-service creation permissions if ENABLE_USER_CREATE_EMAIL is enabled.
+# If domains is empty, default_domains is used. If prefix is null, default prefix is used. If prefix is empty string, no prefix is used.
 # USER_ROLES = [
-#    { domains = ["xxx.xxx1" , "xxx.xxx2"], role = "vip", prefix = "vip" },
-#    { domains = ["xxx.xxx1" , "xxx.xxx2"], role = "admin", prefix = "" },
+#    { domains = ["20030405.xyz"], role = "default", prefix = "" },
+#    { domains = ["20030405.xyz", "colin.fnrry.com", "colin.cmd.gd"], role = "friend", prefix = "" },
+#    { domains = ["20030405.xyz", "colin.fnrry.com", "colin.cmd.gd"], role = "trusted", prefix = "" },
 # ]
-JWT_SECRET = "xxx"
+# Configure production JWT signing secret with:
+#   openssl rand -hex 32 | pnpm exec wrangler secret put JWT_SECRET
 BLACK_LIST = ""
-# Allow users to create email addresses
-ENABLE_USER_CREATE_EMAIL = true
-# Disable anonymous user create email, if set true, users can only create email addresses after logging in
-# DISABLE_ANONYMOUS_USER_CREATE_EMAIL = true
-# Allow users to delete messages
-ENABLE_USER_DELETE_EMAIL = true
+# Allow visitors or logged-in users to create email addresses through /api/new_address.
+# Email Transfer Station defaults to administrator-created addresses only.
+ENABLE_USER_CREATE_EMAIL = false
+# Disable anonymous user create email, if set true, users can only create email addresses after logging in.
+DISABLE_ANONYMOUS_USER_CREATE_EMAIL = true
+# Allow non-admin users to delete messages.
+ENABLE_USER_DELETE_EMAIL = false
 # Allow automatic replies to emails
 ENABLE_AUTO_REPLY = false
-# Allow webhook
+# Allow webhook. Requires a KV namespace binding named KV.
 # ENABLE_WEBHOOK = true
+# Allow ordinary address users to configure address-level webhooks.
+# ENABLE_ADDRESS_WEBHOOK = false
 # Enable address password feature, if set true, will generate password for new address and support password login and change
 # ENABLE_ADDRESS_PASSWORD = false
 # Show AI Agent mailbox connection info in the address credential modal
@@ -91,7 +98,7 @@ ENABLE_AUTO_REPLY = false
 # }
 # """
 # Footer text
-# COPYRIGHT = "Dream Hunter"
+# COPYRIGHT = ""
 # DISABLE_SHOW_GITHUB = true
 # Status monitoring page URL
 # STATUS_URL = "https://status.example.com"
@@ -114,6 +121,19 @@ ENABLE_AUTO_REPLY = false
 # ENABLE_TG_PUSH_ATTACHMENT = true
 # global forward address list, if set, all emails will be forwarded to these addresses
 # FORWARD_ADDRESS_LIST = ["xxx@xxx.com"]
+# Collector addresses for non-Cloudflare domains forwarded into this Worker.
+# Example: ImprovMX free forwarding -> mx-colin-cmd-gd@20030405.xyz -> Cloudflare Email Routing -> Worker.
+# COLLECTOR_ADDRESSES = ["mx-colin-fnrry-com@20030405.xyz", "mx-colin-cmd-gd@20030405.xyz"]
+# Original recipient domains managed through forwarding bridges.
+# When a message is delivered to a collector address, the Worker scans forwarding headers
+# and stores mail under the original recipient if the domain is listed here.
+# MANAGED_RECEIVE_DOMAINS = ["colin.fnrry.com", "colin.cmd.gd"]
+# Optional Cloudflare Email Routing automation:
+# - Local development: copy worker/.dev.vars.example to worker/.dev.vars and fill values there.
+# - Production: use `wrangler secret put CLOUDFLARE_API_TOKEN`.
+# - Required token permissions: Zone Read, Zone Settings Edit, Email Routing Rules Edit.
+# CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_EMAIL_WORKER_NAME may be set as vars or secrets.
+# CLOUDFLARE_EMAIL_WORKER_NAME = "email-transfer-station-api"
 # subdomain forward address list, if set, subdomain emails will be forwarded to these addresses
 # SUBDOMAIN_FORWARD_ADDRESS_LIST = """
 # [
@@ -163,7 +183,7 @@ database_id = "xxx"
 # [ai]
 # binding = "AI"
 
-# kv config for send email verification code
+# KV config for Webhook settings, email verification codes, Telegram bindings, and optional KV-backed limits.
 # [[kv_namespaces]]
 # binding = "KV"
 # id = "xxxx"

@@ -1,0 +1,24 @@
+name = "email-transfer-station-local-test"
+main = "src/worker.ts"
+compatibility_date = "2025-04-01"
+compatibility_flags = [ "nodejs_compat" ]
+
+[vars]
+PREFIX = "test"
+DEFAULT_DOMAINS = ["test.example.com"]
+DOMAINS = ["test.example.com"]
+JWT_SECRET = "local-test-only"
+BLACK_LIST = ""
+DISABLE_ADMIN_PASSWORD_CHECK = true
+ENABLE_USER_CREATE_EMAIL = true
+ENABLE_USER_DELETE_EMAIL = true
+E2E_TEST_MODE = true
+
+[[kv_namespaces]]
+binding = "KV"
+id = "local-test-kv"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "email-transfer-station-local-test"
+database_id = "local-test-d1"

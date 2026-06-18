@@ -1,9 +1,10 @@
 import { Context } from 'hono'
 
 import i18n from '../i18n';
-import { getBooleanValue, getJsonSetting, checkCfTurnstile, isAddressCountLimitReached } from '../utils';
+import { getBooleanValue, getJsonSetting, checkCfTurnstile, isAddressCountLimitReached, canUserCreateAddress } from '../utils';
 import { newAddress, getAddressPrefix, generateRandomName } from '../common'
 import { CONSTANTS } from '../constants'
+import { recordAuditEvent } from '../audit';
 
 const createNewAddress = async (c: Context<HonoCustomType>) => {
     const msgs = i18n.getMessagesbyContext(c);
@@ -16,6 +17,12 @@ const createNewAddress = async (c: Context<HonoCustomType>) => {
     }
     if (!getBooleanValue(c.env.ENABLE_USER_CREATE_EMAIL)) {
         return c.text(msgs.NewAddressDisabledMsg, 403)
+    }
+    if (userPayload) {
+        const userRole = c.get("userRolePayload");
+        if (!await canUserCreateAddress(c, userRole)) {
+            return c.text(msgs.NewAddressDisabledMsg, 403)
+        }
     }
 
     // 如果启用了禁止匿名创建，且用户已登录，检查地址数量限制
@@ -53,10 +60,21 @@ const createNewAddress = async (c: Context<HonoCustomType>) => {
     }
     try {
         const addressPrefix = await getAddressPrefix(c);
-        const sourceMeta = c.req.header('CF-Connecting-IP')
+        let sourceMeta = c.req.header('CF-Connecting-IP')
             || c.req.header('X-Forwarded-For')?.split(',')[0]?.trim()
             || c.req.header('X-Real-IP')
             || 'web:unknown';
+        if (userPayload) {
+            const userInfo = await c.env.DB.prepare(
+                `SELECT username, display_name, user_email FROM users WHERE id = ?`
+            ).bind(userPayload.user_id).first<{
+                username?: string | null,
+                display_name?: string | null,
+                user_email?: string | null,
+            }>();
+            const identity = userInfo?.username || userInfo?.display_name || userInfo?.user_email || userPayload.user_id;
+            sourceMeta = `user:${identity}`;
+        }
         const res = await newAddress(c, {
             name, domain,
             enablePrefix: true,
@@ -64,6 +82,20 @@ const createNewAddress = async (c: Context<HonoCustomType>) => {
             checkLengthByConfig: true,
             addressPrefix,
             sourceMeta
+        });
+        await recordAuditEvent(c, {
+            action: "address.create",
+            actor_type: userPayload ? "user" : "anonymous",
+            actor_id: userPayload?.user_id || null,
+            resource_type: "address",
+            resource_id: res.address_id,
+            resource_label: res.address,
+            status: "success",
+            metadata: {
+                domain,
+                source_meta: sourceMeta,
+                enable_random_subdomain: getBooleanValue(enableRandomSubdomain),
+            },
         });
         return c.json(res);
     } catch (e) {
