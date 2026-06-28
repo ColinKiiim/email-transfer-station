@@ -1,5 +1,5 @@
 <template>
-    <div v-if="useFallback" v-html="safeHtml"></div>
+    <div v-if="useFallback" class="fallback-mail-html" v-html="safeHtml"></div>
     <div v-else ref="shadowHost"></div>
 </template>
 
@@ -52,6 +52,28 @@ const safeHtml = computed(() => removeInsecureMedia(DOMPurify.sanitize(String(pr
     ADD_ATTR: ['target', 'rel'],
 })));
 
+const mailRenderGuardStyle = `<style>
+    :host {
+        display: block;
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+    img {
+        max-width: 100% !important;
+        height: auto !important;
+        object-fit: contain !important;
+    }
+    table {
+        max-width: 100% !important;
+    }
+    pre, code {
+        white-space: pre-wrap;
+    }
+    a {
+        overflow-wrap: anywhere;
+    }
+</style>`;
+
 /**
  * Renders content into Shadow DOM with fallback to v-html
  */
@@ -81,7 +103,7 @@ const renderShadowDom = () => {
                     a { color: #A8C7FA; }
                    </style>`
                 : '';
-            shadowRoot.innerHTML = darkModeStyle + safeHtml.value;
+            shadowRoot.innerHTML = safeHtml.value + mailRenderGuardStyle + darkModeStyle;
         }
     } catch (error) {
         console.error('Failed to render Shadow DOM, falling back to v-html:', error);
@@ -114,3 +136,29 @@ watch(() => [safeHtml.value, props.isDark], () => {
     renderShadowDom();
 }, { flush: 'post' });
 </script>
+
+<style scoped>
+.fallback-mail-html {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.fallback-mail-html :deep(img) {
+    max-width: 100% !important;
+    height: auto !important;
+    object-fit: contain !important;
+}
+
+.fallback-mail-html :deep(table) {
+    max-width: 100% !important;
+}
+
+.fallback-mail-html :deep(pre),
+.fallback-mail-html :deep(code) {
+    white-space: pre-wrap;
+}
+
+.fallback-mail-html :deep(a) {
+    overflow-wrap: anywhere;
+}
+</style>

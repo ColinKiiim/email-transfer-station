@@ -38,7 +38,8 @@ const router = createRouter({
         {
             path: '/user',
             alias: '/:lang/user',
-            component: User
+            component: User,
+            meta: { fullScreen: true }
         },
         {
             path: '/user/oauth2/callback',
@@ -61,7 +62,8 @@ const router = createRouter({
             alias: '/:lang/i/:token',
             component: () => import('../views/TokenInbox.vue'),
             meta: {
-                shareOnly: true
+                shareOnly: true,
+                fullScreen: true
             }
         },
         {

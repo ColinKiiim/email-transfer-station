@@ -4,7 +4,8 @@ import { useRoute } from 'vue-router'
 import { useScopedI18n } from '@/i18n/app'
 
 import { api } from '../api'
-import MailBox from '../components/MailBox.vue'
+import AccessShell from '../components/AccessShell.vue'
+import AccessMailWorkbench from '../components/AccessMailWorkbench.vue'
 
 const route = useRoute()
 const message = useMessage()
@@ -14,6 +15,7 @@ const shareJwt = ref('')
 const address = ref('')
 const label = ref('')
 const errorText = ref('')
+const resolving = ref(false)
 const mailBoxKey = ref('')
 
 const token = computed(() => {
@@ -21,8 +23,18 @@ const token = computed(() => {
   return Array.isArray(rawToken) ? rawToken[0] : rawToken
 })
 
+const title = computed(() => label.value || address.value || t('mailbox'))
+const identityLabel = computed(() => address.value || '共享收件箱')
+const statusLabel = computed(() => {
+  if (resolving.value) return '验证中'
+  if (errorText.value) return '无效链接'
+  return shareJwt.value ? '只读分享' : '等待验证'
+})
+const statusTone = computed(() => errorText.value ? 'error' : (shareJwt.value ? 'success' : 'warning'))
+
 const resolveToken = async () => {
   try {
+    resolving.value = true
     errorText.value = ''
     shareJwt.value = ''
     address.value = ''
@@ -35,6 +47,8 @@ const resolveToken = async () => {
   } catch (error) {
     errorText.value = error.message || t('invalidToken')
     message.error(errorText.value)
+  } finally {
+    resolving.value = false
   }
 }
 
@@ -60,31 +74,107 @@ onMounted(resolveToken)
 </script>
 
 <template>
-  <main class="token-inbox">
-    <n-card :bordered="false" embedded>
-      <n-space vertical size="small">
-        <n-text depth="3">{{ t('mailbox') }}</n-text>
-        <n-h2 style="margin: 0;">
-          {{ label || address || t('loading') }}
-        </n-h2>
-        <n-text v-if="address" depth="3">{{ address }}</n-text>
-      </n-space>
-    </n-card>
+  <AccessShell
+    :title="title"
+    kicker="shared mailbox access"
+    :identity-label="identityLabel"
+    identity-meta="通过分享 token 只读访问"
+    :status-label="statusLabel"
+    :status-tone="statusTone"
+  >
+    <template #rail-footer>
+      <div class="share-summary">
+        <span>访问模式</span>
+        <strong>Read only</strong>
+        <p>可阅读邮件和附件；不能删除、发送或管理地址。</p>
+      </div>
+    </template>
 
-    <n-alert v-if="errorText" type="error" :bordered="false">
-      {{ errorText }}
-    </n-alert>
+    <section v-if="resolving" class="token-state-card">
+      <n-skeleton text :repeat="8" />
+    </section>
 
-    <MailBox v-if="shareJwt" :key="mailBoxKey" :showEMailTo="false" :showReply="false"
-      :showSaveS3="false" :enableUserDeleteEmail="false" :fetchMailData="fetchMailData"
-      :updateMailReadState="updateMailReadState" :showFilterInput="true" />
-  </main>
+    <section v-else-if="errorText" class="token-state-card is-error">
+      <span>share token</span>
+      <h2>{{ t('invalidToken') }}</h2>
+      <p>{{ errorText }}</p>
+      <n-button tertiary type="primary" @click="resolveToken">重新验证</n-button>
+    </section>
+
+    <AccessMailWorkbench
+      v-else-if="shareJwt"
+      :key="mailBoxKey"
+      title="共享收件箱"
+      description="这是只读访问视图，风格与管理台一致，但不会暴露地址管理或写入操作。"
+      :show-e-mail-to="false"
+      :show-reply="false"
+      :show-save-s3="false"
+      :enable-user-delete-email="false"
+      :fetch-mail-data="fetchMailData"
+      :update-mail-read-state="updateMailReadState"
+    />
+  </AccessShell>
 </template>
 
 <style scoped>
-.token-inbox {
+.share-summary,
+.token-state-card {
+  min-width: 0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow:
+    0 0 0 1px rgba(15, 23, 42, 0.06),
+    0 1px 2px -1px rgba(15, 23, 42, 0.08),
+    0 16px 48px -34px rgba(15, 23, 42, 0.48);
+}
+
+.share-summary {
   display: grid;
-  gap: 12px;
-  padding: 16px;
+  gap: 3px;
+  padding: 12px;
+  background: #f8fafc;
+}
+
+.share-summary span,
+.token-state-card span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.share-summary strong {
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 760;
+}
+
+.share-summary p,
+.token-state-card p {
+  margin: 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+.token-state-card {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  max-width: 720px;
+  padding: 22px;
+}
+
+.token-state-card h2 {
+  margin: 0;
+  color: #020617;
+  font-size: 22px;
+  font-weight: 760;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.token-state-card.is-error {
+  background: #fff7f7;
 }
 </style>

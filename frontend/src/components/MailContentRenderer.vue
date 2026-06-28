@@ -88,6 +88,23 @@ const removeInsecureMedia = (html) => {
 const safeMessage = computed(() => removeInsecureMedia(DOMPurify.sanitize(String(props.mail.message || ''), {
   ADD_ATTR: ['target', 'rel'],
 })));
+const iframeRenderGuardStyle = `<style>
+  img {
+    max-width: 100% !important;
+    height: auto !important;
+    object-fit: contain !important;
+  }
+  table {
+    max-width: 100% !important;
+  }
+  pre, code {
+    white-space: pre-wrap;
+  }
+  a {
+    overflow-wrap: anywhere;
+  }
+</style>`;
+const iframeMessage = computed(() => `${safeMessage.value}${iframeRenderGuardStyle}`);
 const hasHtmlMessage = computed(() => !!props.mail.messageIsHtml && safeMessage.value.trim().length > 0);
 const textMessage = computed(() => String(
   props.mail.text || (!props.mail.messageIsHtml ? props.mail.message : '') || ''
@@ -200,7 +217,7 @@ const handleSaveToS3 = async (filename, blob) => {
         {{ t('parseFailed') }}
       </n-alert>
       <pre v-if="showPlainText" class="mail-text">{{ textMessage }}</pre>
-      <iframe v-else-if="useIframeShowMail" :srcdoc="safeMessage" class="mail-iframe" sandbox=""
+      <iframe v-else-if="useIframeShowMail" :srcdoc="iframeMessage" class="mail-iframe" sandbox=""
         referrerpolicy="no-referrer">
       </iframe>
       <ShadowHtmlComponent v-else :key="mail.id" :htmlContent="safeMessage" :isDark="isDark" class="mail-html" />
@@ -215,7 +232,7 @@ const handleSaveToS3 = async (filename, blob) => {
           {{ t('parseFailed') }}
         </n-alert>
         <pre v-if="showPlainText" class="mail-text">{{ textMessage }}</pre>
-        <iframe v-else-if="useIframeShowMail" :srcdoc="safeMessage" class="mail-iframe" sandbox=""
+        <iframe v-else-if="useIframeShowMail" :srcdoc="iframeMessage" class="mail-iframe" sandbox=""
           referrerpolicy="no-referrer">
         </iframe>
         <ShadowHtmlComponent v-else :key="mail.id" :htmlContent="safeMessage" :isDark="isDark" class="mail-html" />
