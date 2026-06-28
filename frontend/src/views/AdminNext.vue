@@ -923,6 +923,13 @@ const opsRows = computed(() => {
     ]
 })
 
+const opsBoundaryItems = computed(() => [
+    { label: 'Worker', value: opsRows.value[0]?.status || '-' },
+    { label: 'D1', value: opsRows.value[1]?.status || '-' },
+    { label: 'KV', value: opsRows.value[2]?.status || '-' },
+    { label: 'Pages', value: 'admin-next preview' },
+])
+
 const explicitUnreadMailCount = computed(() => {
     if (Number.isFinite(Number(live.mailUnreadCount))) return Number(live.mailUnreadCount)
     return mailRows.value.filter((row) => (
@@ -1810,6 +1817,13 @@ onBeforeUnmount(() => {
                     <span>{{ live.errors.slice(0, 2).join('；') }}</span>
                 </div>
 
+                <div v-if="activeView === 'ops'" class="ops-boundary-strip" aria-label="运行边界">
+                    <div v-for="item in opsBoundaryItems" :key="item.label" class="ops-boundary-item">
+                        <span>{{ item.label }}</span>
+                        <strong class="status" :class="statusClass(item.value)">{{ item.value }}</strong>
+                    </div>
+                </div>
+
                 <div v-if="activeView === 'flow'" class="mail-workbench" aria-label="收件流工作台">
                     <aside class="mail-facets" aria-label="收件流筛选">
                         <div class="facet-card">
@@ -2116,49 +2130,6 @@ onBeforeUnmount(() => {
             </section>
         </main>
 
-        <aside v-if="activeView !== 'flow'" class="rail" aria-label="上下文详情">
-            <section class="panel">
-                <div class="panel-head">
-                    <div>
-                        <h2>{{ currentRail.title }}</h2>
-                        <p>{{ currentRail.subtitle }}</p>
-                    </div>
-                </div>
-                <div class="inner-pad">
-                    <div v-if="currentRail.tags?.length" class="tag-row rail-tags">
-                        <span v-for="tag in currentRail.tags" :key="tag" class="tag">{{ tag }}</span>
-                    </div>
-                    <dl v-if="currentRail.kv" class="kv">
-                        <template v-for="item in currentRail.kv" :key="item[0]">
-                            <dt>{{ item[0] }}</dt>
-                            <dd>
-                                <span v-if="item[2] === 'status'" class="status" :class="statusClass(item[1])">{{ item[1] }}</span>
-                                <span v-else>{{ item[1] }}</span>
-                            </dd>
-                        </template>
-                    </dl>
-                    <p v-if="currentRail.body" class="quoted">{{ currentRail.body }}</p>
-                    <div v-if="currentRail.actions" class="tag-row rail-actions">
-                        <button v-for="action in currentRail.actions" :key="action.label" type="button" class="btn"
-                            :class="{ primary: action.primary, danger: action.danger }"
-                            @click="action.modal ? openActionModal(action.modal) : handleAction(action.action)">
-                            {{ action.label }}
-                        </button>
-                    </div>
-                    <div v-if="currentRail.alerts" class="timeline">
-                        <div v-for="risk in currentRail.alerts" :key="risk.id" class="timeline-row">
-                            <span class="mono">{{ risk.level }}</span>
-                            <div>
-                                <strong>{{ risk.title }}</strong>
-                                <div class="cell-sub">{{ risk.detail }}</div>
-                            </div>
-                            <span class="status" :class="statusClass(risk.status)">{{ risk.status }}</span>
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </aside>
-
         <div v-if="detailOpen" class="detail-drawer-backdrop" role="dialog" aria-modal="true"
             aria-labelledby="detail-drawer-title" @click.self="closeDetail" @keydown.esc="closeDetail">
             <aside class="detail-drawer" tabindex="-1" aria-label="上下文详情抽屉">
@@ -2318,7 +2289,7 @@ onBeforeUnmount(() => {
 
 .app {
     display: grid;
-    grid-template-columns: 244px minmax(0, 1fr) 320px;
+    grid-template-columns: 244px minmax(0, 1fr);
     justify-content: start;
     height: 100dvh;
     min-height: 0;
@@ -2333,7 +2304,7 @@ onBeforeUnmount(() => {
 }
 
 .app.is-sidebar-collapsed {
-    grid-template-columns: 72px minmax(0, 1fr) 320px;
+    grid-template-columns: 72px minmax(0, 1fr);
 }
 
 .app.is-flow-view.is-sidebar-collapsed {
@@ -2842,6 +2813,35 @@ textarea {
     width: auto;
     min-width: 160px;
     flex: 0 0 180px;
+}
+
+.ops-boundary-strip {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.ops-boundary-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+    min-height: 44px;
+    border-radius: var(--radius);
+    padding: 0 12px;
+    background: var(--surface);
+    box-shadow: var(--shadow-border);
+}
+
+.ops-boundary-item > span {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 720;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .overview-home {
@@ -3552,10 +3552,18 @@ tr.is-selected {
 }
 
 .detail-drawer-backdrop {
-    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 45;
+    display: grid;
+    justify-items: end;
+    background: rgba(4, 12, 24, 0.42);
 }
 
 .detail-drawer {
+    width: min(520px, calc(100vw - 28px));
+    height: 100dvh;
+    overflow: auto;
     background: var(--surface);
     box-shadow: var(--shadow-pop);
 }
@@ -3633,7 +3641,8 @@ tr.is-selected {
 
     .state-band,
     .cols-4,
-    .overview-home {
+    .overview-home,
+    .ops-boundary-strip {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
@@ -3815,6 +3824,21 @@ tr.is-selected {
     .toolbar .select {
         flex: 0 0 154px;
         width: auto;
+    }
+
+    .ops-boundary-item {
+        grid-template-columns: 1fr;
+        gap: 4px;
+        align-items: start;
+        min-height: 54px;
+        padding: 8px 10px;
+    }
+
+    .ops-boundary-item .status {
+        justify-self: start;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .mail-workbench {
