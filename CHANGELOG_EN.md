@@ -10,6 +10,7 @@
 
 ### Features
 
+- feat: |Mail Read State| Add actor-scoped mail read state with `mail_read_states`, `unread_count`, and `PATCH */mails/:id/read_state` endpoints for admin, address/share-token, and user mailbox sessions
 - feat: |Webhook| Configure external Webhook URL: admins can set a mail Webhook target URL, and incoming mail will automatically trigger an HTTP request to the configured URL for third-party service integration
 
 - feat: |Address Share| Add address share tokens: admins can create one-time-displayed share links for a single address, and `/i/:token` resolves to a short-lived read-only address session instead of exposing long-lived Address JWTs
@@ -22,12 +23,18 @@
 
 ### Bug Fixes
 
+- fix: |Mailbox| Stop desktop inbox load and auto-refresh from marking the first message as read in normal, share-token, and user mailboxes; read state is now written only after explicit message navigation or row selection
+- fix: |Mailbox| Sanitize rendered mail HTML with DOMPurify and sandbox iframe previews; when parsing fails, raw MIME is no longer rendered as the default body and remains available through `.eml` download
+- fix: |User Mailbox| URL-encode the user mailbox address filter so valid characters such as `+` are preserved
+- fix: |AdminNext| Fix overview entries calling the missing `switchView` handler, and prevent `?jwt=` on the `mail-admin` host from polluting the normal mailbox JWT state
 - fix: |Admin| Hash address passwords in the frontend before admin reset requests, and make the backend accept and store only the hash instead of plaintext
 - fix: |Address| Stop returning stored address password hashes from the admin address list and user bound-address list APIs to avoid exposing sensitive fields
 - fix: |Address Share| Fix share-token write requests returning 500; they now consistently return 403 `Share token is read-only`
 
 ### Improvements
 
+- improve: |AdminNext| Make the delivery page consume real `/admin/address_sender` and `/admin/sendbox` data with empty states, instead of substituting address-ledger or inbox rows
+- improve: |Release QA| Add a harness-local Playwright screenshot and DOM-metric workflow for multi-page, multi-breakpoint release checks of the public site and `/console`
 - improve: |Email Transfer Station| Default to admin-created addresses: public creation, anonymous creation, and non-admin mail deletion are disabled; share-token inbox pages use a share-only shell without the user entry or global footer
 - improve: |Address Share| Let admins revoke all share links for an address; short-lived read-only sessions issued from share links now re-check that the original token is still active on every mailbox request
 - improve: |Email Transfer Station| Hide the user entry by default on the root page, normal mailbox pages, and `?jwt=` credential auto-login pages; expose it only when visiting `/user` directly

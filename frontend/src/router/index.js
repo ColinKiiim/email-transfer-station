@@ -13,6 +13,19 @@ import {
 } from '../i18n/utils'
 
 const { jwt, preferredLocale } = useGlobalState()
+const ADMIN_STAGING_HOSTS = new Set([
+    'mail-admin.20030405.xyz',
+])
+
+const isAdminStagingHost = () => {
+    if (typeof window === 'undefined') return false
+    return ADMIN_STAGING_HOSTS.has(window.location.hostname)
+}
+
+const isLocaleRootPath = (path, locale) => {
+    if (!locale) return false
+    return path === `/${locale}` || path === `/${locale}/`
+}
 
 const router = createRouter({
     history: createWebHistory(),
@@ -36,6 +49,12 @@ const router = createRouter({
             path: '/admin',
             alias: '/:lang/admin',
             component: () => import('../views/Admin.vue')
+        },
+        {
+            path: '/console',
+            alias: '/:lang/console',
+            meta: { fullScreen: true },
+            component: () => import('../views/AdminNext.vue')
         },
         {
             path: '/i/:token',
@@ -63,6 +82,16 @@ router.beforeEach((to, from, next) => {
     const resolvedLocale = routeLocale || DEFAULT_LOCALE
     i18n.global.locale.value = resolvedLocale
 
+    if (isAdminStagingHost() && (to.path === '/' || isLocaleRootPath(to.path, routeLocale))) {
+        const path = routeLocale ? `/${routeLocale}/console` : '/console'
+        return next({
+            path,
+            query: to.query,
+            hash: to.hash,
+            replace: true,
+        })
+    }
+
     if (routeLocale) {
         preferredLocale.value = routeLocale
     } else if (!preferredLocale.value) {
@@ -71,7 +100,7 @@ router.beforeEach((to, from, next) => {
 
     if (Object.prototype.hasOwnProperty.call(to.query, 'jwt')) {
         const jwtQuery = Array.isArray(to.query.jwt) ? to.query.jwt[0] : to.query.jwt
-        if (typeof jwtQuery === 'string') {
+        if (typeof jwtQuery === 'string' && !isAdminStagingHost()) {
             jwt.value = jwtQuery
         }
         const query = { ...to.query }

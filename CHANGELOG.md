@@ -10,6 +10,8 @@
 
 ### Features
 
+- feat: |Mail Read State| 新增按访问者隔离的邮件已读状态：`mail_read_states` 保存 admin、地址凭证、分享链接和账号用户各自的阅读状态，邮件列表返回 `unread_count`，并新增 `PATCH */mails/:id/read_state` 已读/未读接口
+
 - feat: |Webhook| 配置外部 Webhook URL：管理员可设置邮件 Webhook 目标地址，收到邮件时会自动发送 HTTP 请求到配置的 URL，便于集成第三方服务
 
 - feat: |Address Share| 新增邮箱地址分享 token：管理员可为单个地址创建一次性展示的分享链接，访问 `/i/:token` 后获得短期只读地址会话，避免直接分发长期 Address JWT
@@ -22,12 +24,18 @@
 
 ### Bug Fixes
 
+- fix: |Mailbox| 修复普通邮箱、分享 token 邮箱和用户邮箱在桌面端加载或自动刷新时自动把第一封邮件标记为已读的问题；现在只有点击邮件或前后切换阅读时才写入 read state
+- fix: |Mailbox| 邮件 HTML 渲染统一经过 DOMPurify 清洗，iframe 预览使用 sandbox；解析失败时不再把原始 MIME 当正文默认渲染，改为提示下载 `.eml` 检查原始内容
+- fix: |User Mailbox| 用户邮箱地址筛选参数改为 URL encode，避免 `+` 等合法地址字符在查询时被破坏
+- fix: |AdminNext| 修复运行总控入口调用不存在的 `switchView` 导致点击报错的问题，并让 `mail-admin` 域名上的 `?jwt=` 不再污染普通邮箱 JWT 状态
 - fix: |Admin| 管理员重置邮箱地址密码时改为前端 SHA-256 后提交，后端只接受并存储哈希值，避免该接口继续接收明文密码
 - fix: |Address| 管理员邮箱地址列表与用户绑定地址列表不再返回已存储的地址密码哈希值，避免列表接口暴露敏感字段
 - fix: |Address Share| 修复分享 token 访问写接口时返回 500 的问题，现在会稳定返回 403 `Share token is read-only`
 
 ### Improvements
 
+- improve: |AdminNext| 出站与通知页改为消费真实 `/admin/address_sender` 与 `/admin/sendbox` 数据，空表显示空态，不再用地址账本或收件箱数据冒充发送权限/发送箱
+- improve: |Release QA| 新增 harness-local Playwright 截图和 DOM 指标采集流程，用于按多页面、多断点复查公共站和 `/console` 发布状态
 - improve: |Email Transfer Station| 默认配置改为管理员创建地址优先：关闭公开创建、关闭匿名创建、关闭普通用户删除邮件；分享 token 页面使用独立 share-only 外壳，不再显示用户入口和全局页脚
 - improve: |Address Share| 管理员可一键撤销某个地址的全部分享链接；分享链接换出的短期只读会话现在每次读邮件都会校验原 token 是否仍有效
 - improve: |Email Transfer Station| 根路径、普通邮箱页和 `?jwt=` 凭证自动登录页默认不显示“用户”入口；只有直接访问 `/user` 时才暴露用户入口

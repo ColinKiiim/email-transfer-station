@@ -5,16 +5,35 @@ function humanFileSize(size) {
     return parseFloat((size / Math.pow(1024, i)).toFixed(2)) + ' ' + ['B', 'KB', 'MB', 'GB', 'TB'][i];
 }
 
+function applyParsedContent(item, html, text) {
+    const htmlContent = html || '';
+    const textContent = text || '';
+    item.html = htmlContent;
+    item.text = textContent;
+    item.message = htmlContent || textContent || '';
+    item.messageIsHtml = htmlContent.length > 0;
+    item.parseFailed = false;
+}
+
+function applyParseFailure(item) {
+    item.html = '';
+    item.text = '';
+    item.message = '';
+    item.messageIsHtml = false;
+    item.parseFailed = true;
+}
+
 export async function processItem(item) {
     // Try to parse the email using mail-parser-wasm
     item.originalSource = item.source;
+    item.messageIsHtml = false;
+    item.parseFailed = false;
     try {
         const { parse_message } = await import('mail-parser-wasm');
         const parsedEmail = parse_message(item.raw);
         item.source = parsedEmail.sender || item.source;
         item.subject = parsedEmail.subject || '';
-        item.message = parsedEmail.body_html || parsedEmail.text || '';
-        item.text = parsedEmail.text || '';
+        applyParsedContent(item, parsedEmail.body_html, parsedEmail.text);
         item.attachments = parsedEmail.attachments?.map((a_item) => {
             const blob = new Blob(
                 [a_item.content],
@@ -42,13 +61,12 @@ export async function processItem(item) {
     // Fallback to PostalMime
     try {
         const parsedEmail = await PostalMime.parse(item.raw);
-        item.source = parsedEmail.from.address || item.source;
-        if (parsedEmail.from.address && parsedEmail.from.name) {
+        item.source = parsedEmail.from?.address || item.source;
+        if (parsedEmail.from?.address && parsedEmail.from?.name) {
             item.source = `${parsedEmail.from.name} <${parsedEmail.from.address}>`;
         }
         item.subject = parsedEmail.subject || 'No Subject';
-        item.message = parsedEmail.html || parsedEmail.text || item.raw;
-        item.text = parsedEmail.text || '';
+        applyParsedContent(item, parsedEmail.html, parsedEmail.text);
         item.attachments = parsedEmail.attachments?.map((a_item) => {
             const blob = new Blob(
                 [a_item.content],
@@ -66,11 +84,14 @@ export async function processItem(item) {
                 blob: blob
             }
         }) || [];
+        if (!item.message && item.attachments.length === 0) {
+            applyParseFailure(item);
+        }
     } catch (error) {
         console.log('Error parsing email with PostalMime');
         console.error(error);
         item.subject = 'No Subject';
-        item.message = item.raw;
+        applyParseFailure(item);
     }
     return item;
 }

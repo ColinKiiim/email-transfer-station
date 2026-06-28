@@ -45,6 +45,15 @@ const fetchMailData = async (limit, offset) => {
   })
 }
 
+const updateMailReadState = async (curMailId, read = true) => {
+  if (!shareJwt.value) return { success: false }
+  return await api.fetch(`/api/mails/${curMailId}/read_state`, {
+    method: 'PATCH',
+    jwt: shareJwt.value,
+    body: JSON.stringify({ read }),
+  })
+}
+
 watch(token, resolveToken)
 
 onMounted(resolveToken)
@@ -68,7 +77,7 @@ onMounted(resolveToken)
 
     <MailBox v-if="shareJwt" :key="mailBoxKey" :showEMailTo="false" :showReply="false"
       :showSaveS3="false" :enableUserDeleteEmail="false" :fetchMailData="fetchMailData"
-      :showFilterInput="true" />
+      :updateMailReadState="updateMailReadState" :showFilterInput="true" />
   </main>
 </template>
 

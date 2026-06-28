@@ -25,7 +25,7 @@ const fetchMailData = async (limit, offset) => {
         `/user_api/mails`
         + `?limit=${limit}`
         + `&offset=${offset}`
-        + (addressFilter.value ? `&address=${addressFilter.value}` : '')
+        + (addressFilter.value ? `&address=${encodeURIComponent(addressFilter.value)}` : '')
     );
 }
 
@@ -50,6 +50,13 @@ const deleteMail = async (curMailId) => {
     await api.fetch(`/user_api/mails/${curMailId}`, { method: 'DELETE' });
 };
 
+const updateMailReadState = async (curMailId, read = true) => {
+    return await api.fetch(`/user_api/mails/${curMailId}/read_state`, {
+        method: 'PATCH',
+        body: JSON.stringify({ read })
+    });
+};
+
 watch(addressFilter, async (newValue) => {
     queryMail();
 });
@@ -70,6 +77,6 @@ onMounted(() => {
         </n-input-group>
         <div style="margin-top: 10px;"></div>
         <MailBox :key="mailBoxKey" :enableUserDeleteEmail="openSettings.enableUserDeleteEmail" :fetchMailData="fetchMailData"
-            :deleteMail="deleteMail" :showFilterInput="true" />
+            :deleteMail="deleteMail" :updateMailReadState="updateMailReadState" :showFilterInput="true" />
     </div>
 </template>

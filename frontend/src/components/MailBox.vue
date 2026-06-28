@@ -35,6 +35,11 @@ const props = defineProps({
     default: () => { },
     required: false
   },
+  updateMailReadState: {
+    type: Function,
+    default: async () => { },
+    required: false
+  },
   showReply: {
     type: Boolean,
     default: false,
@@ -106,11 +111,13 @@ const prevMail = async () => {
 
   if (currentIndex > 0) {
     curMail.value = data.value[currentIndex - 1]
+    await markMailRead(curMail.value)
   } else if (page.value > 1) {
     page.value--
     await refresh()
     if (data.value.length > 0) {
       curMail.value = data.value[data.value.length - 1]
+      await markMailRead(curMail.value)
     }
   }
 }
@@ -121,11 +128,13 @@ const nextMail = async () => {
 
   if (currentIndex < data.value.length - 1) {
     curMail.value = data.value[currentIndex + 1]
+    await markMailRead(curMail.value)
   } else if (count.value > page.value * pageSize.value) {
     page.value++
     await refresh()
     if (data.value.length > 0) {
       curMail.value = data.value[0]
+      await markMailRead(curMail.value)
     }
   }
 }
@@ -179,11 +188,10 @@ const refresh = async () => {
       item.checked = false;
       return await processItem(item);
     }));
-    if (totalCount > 0) {
-      count.value = totalCount;
-    }
-    curMail.value = null;
-    if (!isMobile.value && data.value.length > 0) {
+    count.value = Number.isFinite(Number(totalCount)) ? Number(totalCount) : rawData.value.length;
+    const selectedId = curMail.value?.id;
+    curMail.value = data.value.find((mail) => mail.id === selectedId) || null;
+    if (!isMobile.value && !curMail.value && data.value.length > 0) {
       curMail.value = data.value[0];
     }
   } catch (error) {
@@ -205,11 +213,27 @@ const clickRow = async (row) => {
     return;
   }
   curMail.value = row;
+  await markMailRead(row);
 };
 
+const markMailRead = async (row) => {
+  if (!row || row.unread === false || row.is_read === true) return;
+  try {
+    const result = await props.updateMailReadState(row.id, true);
+    row.read_at = result?.read_at || row.read_at || new Date().toISOString();
+    row.is_read = true;
+    row.unread = false;
+  } catch (error) {
+    console.error(error);
+    message.warning(t('markReadFailed'));
+  }
+};
 
 const mailItemClass = (row) => {
-  return curMail.value && row.id == curMail.value.id ? (isDark.value ? 'overlay overlay-dark-backgroud' : 'overlay overlay-light-backgroud') : '';
+  return [
+    curMail.value && row.id == curMail.value.id ? (isDark.value ? 'overlay overlay-dark-backgroud' : 'overlay overlay-light-backgroud') : '',
+    row.unread ? 'mail-unread' : '',
+  ].filter(Boolean).join(' ');
 };
 
 const deleteMail = async () => {
@@ -387,6 +411,9 @@ onBeforeUnmount(() => {
                 </template>
                 <n-thing :title="row.subject">
                   <template #description>
+                    <n-tag v-if="row.unread" type="warning" size="small">
+                      {{ t('unread') }}
+                    </n-tag>
                     <n-tag type="info">
                       ID: {{ row.id }}
                     </n-tag>
@@ -448,7 +475,7 @@ onBeforeUnmount(() => {
       </n-split>
     </div>
     <div class="left" v-else>
-      <n-space justify="space-around" align="center" :wrap="false" style="display: flex; align-items: center;">
+      <n-space class="mobile-mailbox-toolbar" justify="start" align="center" :wrap="true">
         <n-pagination v-model:page="page" v-model:page-size="pageSize" :item-count="count" simple size="small" />
         <n-switch v-model:value="autoRefresh" size="small" :round="false">
           <template #checked>
@@ -466,11 +493,15 @@ onBeforeUnmount(() => {
         <n-input v-model:value="localFilterKeyword"
           :placeholder="t('keywordQueryTip')" size="small" clearable />
       </div>
-      <div style="overflow: auto; min-height: 60vh; max-height: 100vh;">
+      <div class="mobile-mail-list">
         <n-list hoverable clickable>
-          <n-list-item v-for="row in data" v-bind:key="row.id" @click="() => clickRow(row)">
+          <n-list-item v-for="row in data" v-bind:key="row.id" @click="() => clickRow(row)"
+            :class="mailItemClass(row)">
             <n-thing :title="row.subject">
               <template #description>
+                <n-tag v-if="row.unread" type="warning" size="small">
+                  {{ t('unread') }}
+                </n-tag>
                 <n-tag type="info">
                   ID: {{ row.id }}
                 </n-tag>
@@ -494,7 +525,7 @@ onBeforeUnmount(() => {
         </n-list>
       </div>
       <n-drawer v-model:show="curMail" width="100%" placement="bottom" :trap-focus="false" :block-scroll="false"
-        style="height: 80vh;">
+        style="height: min(86vh, 720px);">
         <n-drawer-content :title="curMail ? curMail.subject : ''" closable>
           <n-card :bordered="false" embedded style="overflow: auto;">
             <MailContentRenderer :mail="curMail" :showEMailTo="showEMailTo"
@@ -553,6 +584,20 @@ onBeforeUnmount(() => {
 
 .mail-item {
   height: 100%;
+}
+
+.mobile-mailbox-toolbar {
+  padding: 0 10px;
+}
+
+.mobile-mail-list {
+  overflow: auto;
+  min-height: 45vh;
+  max-height: 72vh;
+}
+
+.mail-unread :deep(.n-thing-header__title) {
+  font-weight: 650;
 }
 
 pre {

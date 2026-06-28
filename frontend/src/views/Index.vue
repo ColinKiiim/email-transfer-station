@@ -1,5 +1,5 @@
 <script setup>
-import { defineAsyncComponent, onMounted, watch } from 'vue'
+import { defineAsyncComponent, watch } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 import { useRoute } from 'vue-router'
 
@@ -33,9 +33,13 @@ const SendMail = defineAsyncComponent(() => {
 const { t } = useScopedI18n('views.Index')
 
 const fetchMailData = async (limit, offset) => {
-  if (mailIdQuery.value > 0) {
-    const singleMail = await api.fetch(`/api/mail/${mailIdQuery.value}`);
+  const mailId = Number(mailIdQuery.value)
+  if (Number.isInteger(mailId) && mailId > 0) {
+    const singleMail = await api.fetch(`/api/mail/${mailId}`);
     if (singleMail) return { results: [singleMail], count: 1 };
+    return { results: [], count: 0 };
+  }
+  if (showMailIdQuery.value) {
     return { results: [], count: 0 };
   }
   return await api.fetch(`/api/mails?limit=${limit}&offset=${offset}`);
@@ -43,6 +47,13 @@ const fetchMailData = async (limit, offset) => {
 
 const deleteMail = async (curMailId) => {
   await api.fetch(`/api/mails/${curMailId}`, { method: 'DELETE' });
+};
+
+const updateMailReadState = async (curMailId, read = true) => {
+  return await api.fetch(`/api/mails/${curMailId}/read_state`, {
+    method: 'PATCH',
+    body: JSON.stringify({ read })
+  });
 };
 
 const deleteSenboxMail = async (curMailId) => {
@@ -81,21 +92,16 @@ const queryMail = () => {
   mailBoxKey.value = Date.now();
 }
 
-watch(route, () => {
-  if (!route.query.mail_id) {
-    showMailIdQuery.value = false;
-    mailIdQuery.value = "";
+watch(
+  () => route.query.mail_id,
+  (mailId) => {
+    const normalizedMailId = Array.isArray(mailId) ? mailId[0] : mailId;
+    showMailIdQuery.value = typeof normalizedMailId === 'string' && normalizedMailId.length > 0;
+    mailIdQuery.value = showMailIdQuery.value ? normalizedMailId : "";
     queryMail();
-  }
-})
-
-onMounted(() => {
-  if (route.query.mail_id) {
-    showMailIdQuery.value = true;
-    mailIdQuery.value = route.query.mail_id;
-    queryMail();
-  }
-})
+  },
+  { immediate: true }
+)
 </script>
 
 <template>
@@ -127,7 +133,8 @@ onMounted(() => {
           </div>
           <MailBox :key="mailBoxKey" :showEMailTo="false" :showReply="openSettings.enableSendMail" :showSaveS3="openSettings.isS3Enabled"
             :saveToS3="saveToS3" :enableUserDeleteEmail="openSettings.enableUserDeleteEmail"
-            :fetchMailData="fetchMailData" :deleteMail="deleteMail" :showFilterInput="true" />
+            :fetchMailData="fetchMailData" :deleteMail="deleteMail" :updateMailReadState="updateMailReadState"
+            :showFilterInput="true" />
         </n-tab-pane>
         <n-tab-pane v-if="openSettings.enableSendMail" name="sendbox" :tab="t('sendbox')">
           <SendBox :fetchMailData="fetchSenboxData" :enableUserDeleteEmail="openSettings.enableUserDeleteEmail"

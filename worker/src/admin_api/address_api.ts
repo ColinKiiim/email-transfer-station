@@ -307,6 +307,9 @@ const deleteAddress = async (c: Context<HonoCustomType>) => {
     if (!address) {
         return c.text(msgs.AddressNotFoundMsg, 404);
     }
+    const { success: readStateSuccess } = await c.env.DB.prepare(
+        `DELETE FROM mail_read_states WHERE mail_id IN (SELECT id FROM raw_mails WHERE address = ?)`
+    ).bind(address).run();
     const { success: mailSuccess } = await c.env.DB.prepare(
         `DELETE FROM raw_mails WHERE address = ?`
     ).bind(address).run();
@@ -335,6 +338,7 @@ const deleteAddress = async (c: Context<HonoCustomType>) => {
         return c.text(msgs.OperationFailedMsg, 500)
     }
     const finalSuccess = success
+        && readStateSuccess
         && mailSuccess
         && sendboxSuccess
         && sendAccess
@@ -356,11 +360,16 @@ const deleteAddress = async (c: Context<HonoCustomType>) => {
 const clearInbox = async (c: Context<HonoCustomType>) => {
     const msgs = i18n.getMessagesbyContext(c);
     const { id } = c.req.param();
+    const { success: readStateSuccess } = await c.env.DB.prepare(
+        `DELETE FROM mail_read_states`
+        + ` WHERE mail_id IN (SELECT id FROM raw_mails WHERE address IN`
+        + ` (select name from address where id = ?))`
+    ).bind(id).run();
     const { success: mailSuccess } = await c.env.DB.prepare(
         `DELETE FROM raw_mails WHERE address IN`
         + ` (select name from address where id = ?) `
     ).bind(id).run();
-    if (!mailSuccess) {
+    if (!mailSuccess || !readStateSuccess) {
         return c.text(msgs.OperationFailedMsg, 500)
     }
     await recordAuditEvent(c, {
@@ -371,7 +380,7 @@ const clearInbox = async (c: Context<HonoCustomType>) => {
         resource_id: id,
         status: "success",
     });
-    return c.json({ success: mailSuccess });
+    return c.json({ success: mailSuccess && readStateSuccess });
 };
 
 const clearSentItems = async (c: Context<HonoCustomType>) => {

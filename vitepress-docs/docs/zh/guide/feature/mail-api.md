@@ -19,6 +19,28 @@ res = requests.get(
 
 **注意**：`/api/mails` 按设计返回的是原始 RFC822 数据（如 `source`/`raw`），不保证直接包含 `subject`、`text`、`html` 等已解析字段。若要直接读取正文，请在客户端侧解析 `raw`（例如 `mail-parser-wasm`、`postal-mime`）。
 
+邮件列表现在会返回当前访问者作用域下的已读状态：
+
+- 每行包含 `read_at`、`is_read` 和 `unread`；
+- 当 `offset=0` 时，列表响应包含当前筛选范围的 `unread_count`；
+- 已读状态按访问者隔离，admin、地址凭证、分享链接和账号用户不会互相覆盖。
+
+标记已读或未读：
+
+```python
+mail_id = 1
+res = requests.patch(
+    f"https://<你的worker地址>/api/mails/{mail_id}/read_state",
+    headers={
+        "Authorization": f"Bearer {你的JWT密码}",
+        "Content-Type": "application/json"
+    },
+    json={"read": True}
+)
+```
+
+传入 `{"read": False}` 可以把同一封邮件重新标记为当前访问者的未读。
+
 ## admin 邮件 API
 
 支持 `address` 过滤
@@ -46,6 +68,22 @@ print(response.json())
 ```
 
 **注意**：`/admin/mails` 与 `/api/mails` 一致，返回的是邮件数据库中的 raw MIME 内容；如需正文/主题等可读字段，请在客户端自行解析 `raw`。
+
+admin 邮件列表同样返回 `read_at`、`is_read`、`unread` 和 `unread_count`。admin 已读状态按管理控制台作用域保存。
+
+```python
+mail_id = 1
+url = f"https://<你的worker地址>/admin/mails/{mail_id}/read_state"
+
+response = requests.patch(
+    url,
+    headers={
+        "x-admin-auth": "<你的Admin密码>",
+        "Content-Type": "application/json"
+    },
+    json={"read": True}
+)
+```
 
 **注意**：后端 API 已移除关键词过滤功能。如需按内容过滤邮件，请使用前端界面的过滤输入框，该功能可过滤当前显示的页面。
 
@@ -161,6 +199,20 @@ headers = {
 response = requests.get(url, headers=headers, params=querystring)
 
 print(response.json())
+```
+
+user 邮件列表也会返回相同的已读状态字段。账号用户可使用用户 token 作用域下的接口标记已读或未读：
+
+```python
+mail_id = 1
+response = requests.patch(
+    f"https://<你的worker地址>/user_api/mails/{mail_id}/read_state",
+    headers={
+        "x-user-token": "<你的用户JWT Token>",
+        "Content-Type": "application/json"
+    },
+    json={"read": True}
+)
 ```
 
 **注意**：`/user_api/mails` 同样返回原始 RFC822 内容；请在客户端解析后提取 `subject`、`text`、`html`。

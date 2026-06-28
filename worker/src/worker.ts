@@ -229,6 +229,7 @@ app.use('/api/*', async (c, next) => {
 						|| path === "/api/attachment/list"
 					))
 					|| (method === "POST" && path === "/api/attachment/get_url")
+					|| (method === "PATCH" && /^\/api\/mails\/[^/]+\/read_state$/.test(path))
 				);
 				if (!shareReadAllowed) {
 					shareTokenReadOnlyDenied = true;

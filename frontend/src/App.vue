@@ -24,10 +24,12 @@ const theme = computed(() => isDark.value ? darkTheme : null)
 const localeConfig = computed(() => getNaiveLocaleConfig(isSupportedLocale(locale.value) ? locale.value : DEFAULT_LOCALE))
 const isMobile = useIsMobile()
 const isShareOnlyRoute = computed(() => route.meta?.shareOnly === true)
-const showAppChrome = computed(() => !isShareOnlyRoute.value)
+const isFullScreenRoute = computed(() => route.meta?.fullScreen === true)
+const showAppChrome = computed(() => !isShareOnlyRoute.value && !isFullScreenRoute.value)
 const showSideMargin = computed(() => showAppChrome.value && !isMobile.value && useSideMargin.value);
 const showAd = computed(() => showAppChrome.value && !isMobile.value && adClient && adSlot);
 const gridMaxCols = computed(() => showAd.value ? 8 : 12);
+const showGlobalLoading = computed(() => loading.value && !isFullScreenRoute.value);
 
 watchEffect(() => {
   if (typeof document === 'undefined') return
@@ -93,7 +95,7 @@ onMounted(async () => {
 <template>
   <n-config-provider :locale="localeConfig.locale" :date-locale="localeConfig.dateLocale" :theme="theme">
     <n-global-style />
-    <n-spin description="loading..." :show="loading">
+    <n-spin description="loading..." :show="showGlobalLoading">
       <n-notification-provider container-style="margin-top: 60px;">
         <n-message-provider container-style="margin-top: 20px;">
           <n-grid x-gap="12" :cols="gridMaxCols">
@@ -104,7 +106,7 @@ onMounted(async () => {
               </div>
             </n-gi>
             <n-gi :span="!showSideMargin ? gridMaxCols : (gridMaxCols - 2)">
-              <div class="main">
+              <div class="main" :class="{ 'main-fullscreen': isFullScreenRoute }">
                 <n-space vertical>
                   <n-layout style="min-height: 80vh;">
                     <Header v-if="showAppChrome" />
@@ -129,6 +131,18 @@ onMounted(async () => {
 
 
 <style>
+:root {
+  --ets-ui-font: "Segoe UI Variable", "Segoe UI", "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", "Helvetica Neue", Arial, sans-serif;
+}
+
+html,
+body,
+#app {
+  font-family: var(--ets-ui-font);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 .n-switch {
   margin-left: 10px;
   margin-right: 10px;
@@ -143,6 +157,10 @@ onMounted(async () => {
 .main {
   height: 100vh;
   text-align: center;
+}
+
+.main-fullscreen {
+  text-align: left;
 }
 
 .n-grid {

@@ -70,6 +70,10 @@ export const MESSAGE_REGISTRY = {
       "en": "Filter current page",
       "zh": "过滤当前页"
     },
+    "markReadFailed": {
+      "en": "Unable to update read status",
+      "zh": "无法更新已读状态"
+    },
     "multiAction": {
       "en": "Multi Action",
       "zh": "多选"
@@ -125,6 +129,10 @@ export const MESSAGE_REGISTRY = {
     "unselectAll": {
       "en": "Unselect All",
       "zh": "取消全选"
+    },
+    "unread": {
+      "en": "Unread",
+      "zh": "未读"
     }
   },
   "components.AiExtractInfo": {
@@ -185,6 +193,10 @@ export const MESSAGE_REGISTRY = {
     "fullscreen": {
       "en": "Fullscreen",
       "zh": "全屏"
+    },
+    "parseFailed": {
+      "en": "Unable to parse this message body. Download the .eml file to inspect the raw source.",
+      "zh": "无法解析这封邮件正文。请下载 .eml 文件查看原始邮件。"
     },
     "reply": {
       "en": "Reply",

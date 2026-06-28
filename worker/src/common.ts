@@ -534,10 +534,23 @@ export const cleanup = async (
             break;
         case "mails":
             await c.env.DB.prepare(`
+                DELETE FROM mail_read_states
+                WHERE mail_id IN (
+                    SELECT id FROM raw_mails WHERE created_at < datetime('now', '-${cleanDays} day')
+                )`
+            ).run();
+            await c.env.DB.prepare(`
                 DELETE FROM raw_mails WHERE created_at < datetime('now', '-${cleanDays} day')`
             ).run();
             break;
         case "mails_unknow":
+            await c.env.DB.prepare(`
+                DELETE FROM mail_read_states
+                WHERE mail_id IN (
+                    SELECT id FROM raw_mails WHERE address NOT IN
+                    (select name from address) AND created_at < datetime('now', '-${cleanDays} day')
+                )`
+            ).run();
             await c.env.DB.prepare(`
                 DELETE FROM raw_mails WHERE address NOT IN
                 (select name from address) AND created_at < datetime('now', '-${cleanDays} day')`
@@ -565,6 +578,11 @@ const batchDeleteAddressWithData = async (
     c: Context<HonoCustomType>,
     addressQueryCondition: string,
 ): Promise<boolean> => {
+    await c.env.DB.prepare(
+        `DELETE FROM mail_read_states WHERE mail_id IN ( ` +
+        `SELECT id FROM raw_mails WHERE address IN ( ` +
+        `SELECT name FROM address WHERE ${addressQueryCondition}))`
+    ).run();
     await c.env.DB.prepare(
         `DELETE FROM raw_mails WHERE address IN ( ` +
         `SELECT name FROM address WHERE ${addressQueryCondition})`
@@ -622,6 +640,9 @@ export const deleteAddressWithData = async (
     // unbind telegram
     await unbindTelegramByAddress(c, address);
     // delete address and related data
+    const { success: readStateSuccess } = await c.env.DB.prepare(
+        `DELETE FROM mail_read_states WHERE mail_id IN (SELECT id FROM raw_mails WHERE address = ?)`
+    ).bind(address).run();
     const { success: mailSuccess } = await c.env.DB.prepare(
         `DELETE FROM raw_mails WHERE address = ? `
     ).bind(address).run();
@@ -640,7 +661,7 @@ export const deleteAddressWithData = async (
     const { success } = await c.env.DB.prepare(
         `DELETE FROM address WHERE name = ? `
     ).bind(address).run();
-    if (!success || !mailSuccess || !sendboxSuccess || !addressSuccess || !sendAccess || !autoReplySuccess) {
+    if (!success || !mailSuccess || !readStateSuccess || !sendboxSuccess || !addressSuccess || !sendAccess || !autoReplySuccess) {
         throw new Error(msgs.OperationFailedMsg)
     }
     return true;

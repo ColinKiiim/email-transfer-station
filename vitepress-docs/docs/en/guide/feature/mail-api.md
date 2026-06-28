@@ -19,6 +19,28 @@ res = requests.get(
 
 **Note**: `/api/mails` returns raw RFC822 data by design (for example `source`/`raw`), and it does not guarantee parsed fields such as `subject`, `text`, or `html`. Parse the raw source on the client side (for example with `mail-parser-wasm` or `postal-mime`) if you need readable message content.
 
+Mail list responses also include read-state metadata for the current actor:
+
+- each row includes `read_at`, `is_read`, and `unread`;
+- the list response includes `unread_count` for the current filter when `offset=0`;
+- read state is scoped by actor, so admin, address JWT, share-token, and user-account sessions do not overwrite one another.
+
+To mark a mail as read or unread:
+
+```python
+mail_id = 1
+res = requests.patch(
+    f"https://<your-worker-address>/api/mails/{mail_id}/read_state",
+    headers={
+        "Authorization": f"Bearer {your-JWT-password}",
+        "Content-Type": "application/json"
+    },
+    json={"read": True}
+)
+```
+
+Use `{"read": False}` to mark the same mail as unread for the current actor.
+
 ## Admin Mail API
 
 Supports `address` filter
@@ -46,6 +68,22 @@ print(response.json())
 ```
 
 **Note**: `/admin/mails` follows the same design as `/api/mails`: it returns stored raw MIME data. If you need readable subject/body, parse the raw content on the client side.
+
+Admin mail lists return the same `read_at`, `is_read`, `unread`, and `unread_count` fields. Admin read state is scoped to the admin console actor.
+
+```python
+mail_id = 1
+url = f"https://<your-worker-address>/admin/mails/{mail_id}/read_state"
+
+response = requests.patch(
+    url,
+    headers={
+        "x-admin-auth": "<your-Admin-password>",
+        "Content-Type": "application/json"
+    },
+    json={"read": True}
+)
+```
 
 **Note**: Keyword filtering has been removed from the backend API. If you need to filter emails by content, please use the frontend filter input in the UI, which filters the currently displayed page.
 
@@ -161,6 +199,20 @@ headers = {
 response = requests.get(url, headers=headers, params=querystring)
 
 print(response.json())
+```
+
+User mail lists return the same read-state fields. Use the user-token scoped endpoint to mark a user-account mailbox item as read or unread:
+
+```python
+mail_id = 1
+response = requests.patch(
+    f"https://<your-worker-address>/user_api/mails/{mail_id}/read_state",
+    headers={
+        "x-user-token": "<your-user-JWT-token>",
+        "Content-Type": "application/json"
+    },
+    json={"read": True}
+)
 ```
 
 **Note**: `/user_api/mails` also returns raw RFC822 content from storage; parse it in your client to extract `subject`, `text`, and `html`.

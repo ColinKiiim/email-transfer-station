@@ -59,6 +59,7 @@ api.get('/admin/mails', admin_mail_api.getMails)
 api.get('/admin/mail_domains', admin_mail_api.getDomains)
 api.get('/admin/mail_addresses', admin_mail_api.getAddresses)
 api.get('/admin/mails_unknow', admin_mail_api.getUnknowMails)
+api.patch('/admin/mails/:id/read_state', admin_mail_api.updateReadState)
 api.delete('/admin/mails/:id', admin_mail_api.deleteMail)
 
 // address sender

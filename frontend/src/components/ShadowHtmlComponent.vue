@@ -1,10 +1,11 @@
 <template>
-    <div v-if="useFallback" v-html="htmlContent"></div>
+    <div v-if="useFallback" v-html="safeHtml"></div>
     <div v-else ref="shadowHost"></div>
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onBeforeUnmount } from 'vue';
+import DOMPurify from 'dompurify';
+import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue';
 
 const props = defineProps({
     htmlContent: {
@@ -20,6 +21,9 @@ const props = defineProps({
 const shadowHost = ref(null);
 let shadowRoot = null;
 const useFallback = ref(false);
+const safeHtml = computed(() => DOMPurify.sanitize(String(props.htmlContent || ''), {
+    ADD_ATTR: ['target', 'rel'],
+}));
 
 /**
  * Renders content into Shadow DOM with fallback to v-html
@@ -50,7 +54,7 @@ const renderShadowDom = () => {
                     a { color: #A8C7FA; }
                    </style>`
                 : '';
-            shadowRoot.innerHTML = darkModeStyle + props.htmlContent;
+            shadowRoot.innerHTML = darkModeStyle + safeHtml.value;
         }
     } catch (error) {
         console.error('Failed to render Shadow DOM, falling back to v-html:', error);
@@ -79,7 +83,7 @@ onBeforeUnmount(() => {
 });
 
 // Update Shadow DOM when htmlContent or dark mode changes
-watch(() => [props.htmlContent, props.isDark], () => {
+watch(() => [safeHtml.value, props.isDark], () => {
     renderShadowDom();
 }, { flush: 'post' });
 </script>

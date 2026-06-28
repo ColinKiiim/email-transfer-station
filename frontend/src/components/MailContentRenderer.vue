@@ -1,5 +1,6 @@
 <script setup>
-import { ref } from "vue";
+import DOMPurify from "dompurify";
+import { computed, ref } from "vue";
 import { useScopedI18n } from '@/i18n/app'
 import { CloudDownloadRound, ReplyFilled, ForwardFilled, FullscreenRound } from '@vicons/material'
 import ShadowHtmlComponent from "./ShadowHtmlComponent.vue";
@@ -57,6 +58,17 @@ const showAttachments = ref(false);
 const curAttachments = ref([]);
 const attachmentLoding = ref(false);
 const showFullscreen = ref(false);
+const safeMessage = computed(() => DOMPurify.sanitize(String(props.mail.message || ''), {
+  ADD_ATTR: ['target', 'rel'],
+}));
+const hasHtmlMessage = computed(() => !!props.mail.messageIsHtml && safeMessage.value.trim().length > 0);
+const textMessage = computed(() => String(
+  props.mail.text || (!props.mail.messageIsHtml ? props.mail.message : '') || ''
+));
+const hasTextMessage = computed(() => textMessage.value.trim().length > 0);
+const showPlainText = computed(() => !props.mail.parseFailed && (
+  (showTextMail.value && hasTextMessage.value) || !hasHtmlMessage.value
+));
 
 const handleDelete = () => {
   props.onDelete();
@@ -95,7 +107,7 @@ const handleSaveToS3 = async (filename, blob) => {
         ID: {{ mail.id }}
       </n-tag>
       <n-tag type="info">
-        {{ utcToLocalDate(mail.created_at, useUTCDate.value) }}
+        {{ utcToLocalDate(mail.created_at, useUTCDate) }}
       </n-tag>
       <n-tag type="info">
         FROM: {{ mail.source }}
@@ -139,7 +151,8 @@ const handleSaveToS3 = async (filename, blob) => {
         {{ t('forward') }}
       </n-button>
 
-      <n-button size="small" tertiary type="info" @click="showTextMail = !showTextMail">
+      <n-button v-if="hasHtmlMessage && textMessage" size="small" tertiary type="info"
+        @click="showTextMail = !showTextMail">
         {{ showTextMail ? t('showHtmlMail') : t('showTextMail') }}
       </n-button>
 
@@ -156,10 +169,14 @@ const handleSaveToS3 = async (filename, blob) => {
 
     <!-- 邮件内容 -->
     <div class="mail-content" :class="{ 'dark-mode': isDark }">
-      <pre v-if="showTextMail" class="mail-text">{{ mail.text }}</pre>
-      <iframe v-else-if="useIframeShowMail" :srcdoc="mail.message" class="mail-iframe">
+      <n-alert v-if="mail.parseFailed" type="warning" :bordered="false" class="mail-render-alert">
+        {{ t('parseFailed') }}
+      </n-alert>
+      <pre v-if="showPlainText" class="mail-text">{{ textMessage }}</pre>
+      <iframe v-else-if="useIframeShowMail" :srcdoc="safeMessage" class="mail-iframe" sandbox=""
+        referrerpolicy="no-referrer">
       </iframe>
-      <ShadowHtmlComponent v-else :key="mail.id" :htmlContent="mail.message" :isDark="isDark" class="mail-html" />
+      <ShadowHtmlComponent v-else :key="mail.id" :htmlContent="safeMessage" :isDark="isDark" class="mail-html" />
     </div>
   </div>
 
@@ -167,10 +184,14 @@ const handleSaveToS3 = async (filename, blob) => {
     style="height: 100vh;">
     <n-drawer-content :title="mail.subject" closable>
       <div class="fullscreen-mail-content" :class="{ 'dark-mode': isDark }">
-        <pre v-if="showTextMail" class="mail-text">{{ mail.text }}</pre>
-        <iframe v-else-if="useIframeShowMail" :srcdoc="mail.message" class="mail-iframe">
+        <n-alert v-if="mail.parseFailed" type="warning" :bordered="false" class="mail-render-alert">
+          {{ t('parseFailed') }}
+        </n-alert>
+        <pre v-if="showPlainText" class="mail-text">{{ textMessage }}</pre>
+        <iframe v-else-if="useIframeShowMail" :srcdoc="safeMessage" class="mail-iframe" sandbox=""
+          referrerpolicy="no-referrer">
         </iframe>
-        <ShadowHtmlComponent v-else :key="mail.id" :htmlContent="mail.message" :isDark="isDark" class="mail-html" />
+        <ShadowHtmlComponent v-else :key="mail.id" :htmlContent="safeMessage" :isDark="isDark" class="mail-html" />
       </div>
     </n-drawer-content>
   </n-drawer>
@@ -218,6 +239,10 @@ const handleSaveToS3 = async (filename, blob) => {
 .mail-content {
   margin-top: 10px;
   flex: 1;
+}
+
+.mail-render-alert {
+  margin-bottom: 10px;
 }
 
 .mail-text {
