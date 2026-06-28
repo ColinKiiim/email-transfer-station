@@ -21,9 +21,36 @@ const props = defineProps({
 const shadowHost = ref(null);
 let shadowRoot = null;
 const useFallback = ref(false);
-const safeHtml = computed(() => DOMPurify.sanitize(String(props.htmlContent || ''), {
+
+const removeInsecureMedia = (html) => {
+    if (typeof document === 'undefined') return html;
+    const template = document.createElement('template');
+    template.innerHTML = html;
+    template.content.querySelectorAll('[src], [srcset], [poster], [style]').forEach((element) => {
+        for (const attr of ['src', 'poster']) {
+            const value = element.getAttribute(attr);
+            if (value && /^http:\/\//i.test(value.trim())) {
+                element.removeAttribute(attr);
+                element.setAttribute('data-removed-insecure-media', attr);
+            }
+        }
+        const srcset = element.getAttribute('srcset');
+        if (srcset && /(^|,\s*)http:\/\//i.test(srcset)) {
+            element.removeAttribute('srcset');
+            element.setAttribute('data-removed-insecure-media', 'srcset');
+        }
+        const style = element.getAttribute('style');
+        if (style && /url\(\s*['"]?http:\/\//i.test(style)) {
+            element.removeAttribute('style');
+            element.setAttribute('data-removed-insecure-media', 'style');
+        }
+    });
+    return template.innerHTML;
+};
+
+const safeHtml = computed(() => removeInsecureMedia(DOMPurify.sanitize(String(props.htmlContent || ''), {
     ADD_ATTR: ['target', 'rel'],
-}));
+})));
 
 /**
  * Renders content into Shadow DOM with fallback to v-html

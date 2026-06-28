@@ -58,9 +58,36 @@ const showAttachments = ref(false);
 const curAttachments = ref([]);
 const attachmentLoding = ref(false);
 const showFullscreen = ref(false);
-const safeMessage = computed(() => DOMPurify.sanitize(String(props.mail.message || ''), {
+
+const removeInsecureMedia = (html) => {
+  if (typeof document === 'undefined') return html;
+  const template = document.createElement('template');
+  template.innerHTML = html;
+  template.content.querySelectorAll('[src], [srcset], [poster], [style]').forEach((element) => {
+    for (const attr of ['src', 'poster']) {
+      const value = element.getAttribute(attr);
+      if (value && /^http:\/\//i.test(value.trim())) {
+        element.removeAttribute(attr);
+        element.setAttribute('data-removed-insecure-media', attr);
+      }
+    }
+    const srcset = element.getAttribute('srcset');
+    if (srcset && /(^|,\s*)http:\/\//i.test(srcset)) {
+      element.removeAttribute('srcset');
+      element.setAttribute('data-removed-insecure-media', 'srcset');
+    }
+    const style = element.getAttribute('style');
+    if (style && /url\(\s*['"]?http:\/\//i.test(style)) {
+      element.removeAttribute('style');
+      element.setAttribute('data-removed-insecure-media', 'style');
+    }
+  });
+  return template.innerHTML;
+};
+
+const safeMessage = computed(() => removeInsecureMedia(DOMPurify.sanitize(String(props.mail.message || ''), {
   ADD_ATTR: ['target', 'rel'],
-}));
+})));
 const hasHtmlMessage = computed(() => !!props.mail.messageIsHtml && safeMessage.value.trim().length > 0);
 const textMessage = computed(() => String(
   props.mail.text || (!props.mail.messageIsHtml ? props.mail.message : '') || ''
@@ -102,17 +129,17 @@ const handleSaveToS3 = async (filename, blob) => {
 <template>
   <div class="mail-content-renderer">
     <!-- 邮件信息标签 -->
-    <n-space>
-      <n-tag type="info">
+    <n-space class="mail-meta-bar">
+      <n-tag type="info" class="mail-meta-chip">
         ID: {{ mail.id }}
       </n-tag>
-      <n-tag type="info">
+      <n-tag type="info" class="mail-meta-chip">
         {{ utcToLocalDate(mail.created_at, useUTCDate) }}
       </n-tag>
-      <n-tag type="info">
+      <n-tag type="info" class="mail-meta-chip mail-meta-address">
         FROM: {{ mail.source }}
       </n-tag>
-      <n-tag v-if="showEMailTo" type="info">
+      <n-tag v-if="showEMailTo" type="info" class="mail-meta-chip mail-meta-address">
         TO: {{ mail.address }}
       </n-tag>
 
@@ -236,6 +263,32 @@ const handleSaveToS3 = async (filename, blob) => {
   gap: 10px;
 }
 
+.mail-meta-bar {
+  align-items: flex-start;
+  gap: 8px 10px !important;
+}
+
+.mail-meta-chip {
+  max-width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+
+.mail-meta-chip :deep(.n-tag__content) {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
+.mail-meta-address {
+  flex: 1 1 260px;
+}
+
+.mail-content-renderer :deep(.n-button) {
+  min-height: 32px;
+}
+
 .mail-content {
   margin-top: 10px;
   flex: 1;
@@ -286,5 +339,19 @@ const handleSaveToS3 = async (filename, blob) => {
 
 .fullscreen-mail-content .mail-iframe {
   min-height: calc(100vh - 120px);
+}
+
+@media (max-width: 640px) {
+  .mail-meta-bar {
+    gap: 7px !important;
+  }
+
+  .mail-meta-address {
+    flex-basis: 100%;
+  }
+
+  .mail-content {
+    margin-top: 6px;
+  }
 }
 </style>

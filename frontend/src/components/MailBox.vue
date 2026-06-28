@@ -236,6 +236,18 @@ const mailItemClass = (row) => {
   ].filter(Boolean).join(' ');
 };
 
+const compactWhitespace = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+
+const stripHtmlForPreview = (value) => compactWhitespace(String(value || '').replace(/<[^>]*>/g, ' '));
+
+const mailPreview = (row) => {
+  return stripHtmlForPreview(row.text || row.message || '').slice(0, 180);
+};
+
+const mailPrimaryAddress = (row) => compactWhitespace(row.source);
+
+const mailSecondaryAddress = (row) => props.showEMailTo ? compactWhitespace(row.address) : '';
+
 const deleteMail = async () => {
   try {
     await props.deleteMail(curMail.value.id);
@@ -409,30 +421,24 @@ onBeforeUnmount(() => {
                 <template #prefix v-if="multiActionMode">
                   <n-checkbox v-model:checked="row.checked" />
                 </template>
-                <n-thing :title="row.subject">
-                  <template #description>
-                    <n-tag v-if="row.unread" type="warning" size="small">
-                      {{ t('unread') }}
-                    </n-tag>
-                    <n-tag type="info">
-                      ID: {{ row.id }}
-                    </n-tag>
-                    <n-tag type="info">
-                      {{ utcToLocalDate(row.created_at, useUTCDate) }}
-                    </n-tag>
-                    <n-tag type="info">
-                      <n-ellipsis style="max-width: 240px;">
-                        {{ showEMailTo ? "FROM: " + row.source : row.source }}
-                      </n-ellipsis>
-                    </n-tag>
-                    <n-tag v-if="showEMailTo" type="info">
-                      <n-ellipsis style="max-width: 240px;">
-                        TO: {{ row.address }}
-                      </n-ellipsis>
-                    </n-tag>
-                    <AiExtractInfo :metadata="row.metadata" compact />
-                  </template>
-                </n-thing>
+                <div class="mail-list-row">
+                  <div class="mail-row-header">
+                    <strong class="mail-row-title">{{ row.subject }}</strong>
+                    <time class="mail-row-date">{{ utcToLocalDate(row.created_at, useUTCDate) }}</time>
+                  </div>
+                  <div class="mail-row-address-line">
+                    <span v-if="row.unread" class="mail-row-pill unread-pill">{{ t('unread') }}</span>
+                    <span class="mail-row-pill">ID {{ row.id }}</span>
+                    <span class="mail-row-address">
+                      {{ showEMailTo ? "FROM: " + mailPrimaryAddress(row) : mailPrimaryAddress(row) }}
+                    </span>
+                    <span v-if="mailSecondaryAddress(row)" class="mail-row-address muted-address">
+                      TO: {{ mailSecondaryAddress(row) }}
+                    </span>
+                  </div>
+                  <p v-if="mailPreview(row)" class="mail-row-snippet">{{ mailPreview(row) }}</p>
+                  <AiExtractInfo :metadata="row.metadata" compact />
+                </div>
               </n-list-item>
             </n-list>
           </div>
@@ -497,30 +503,24 @@ onBeforeUnmount(() => {
         <n-list hoverable clickable>
           <n-list-item v-for="row in data" v-bind:key="row.id" @click="() => clickRow(row)"
             :class="mailItemClass(row)">
-            <n-thing :title="row.subject">
-              <template #description>
-                <n-tag v-if="row.unread" type="warning" size="small">
-                  {{ t('unread') }}
-                </n-tag>
-                <n-tag type="info">
-                  ID: {{ row.id }}
-                </n-tag>
-                <n-tag type="info">
-                  {{ utcToLocalDate(row.created_at, useUTCDate) }}
-                </n-tag>
-                <n-tag type="info">
-                  <n-ellipsis style="max-width: 240px;">
-                    {{ showEMailTo ? "FROM: " + row.source : row.source }}
-                  </n-ellipsis>
-                </n-tag>
-                <n-tag v-if="showEMailTo" type="info">
-                  <n-ellipsis style="max-width: 240px;">
-                    TO: {{ row.address }}
-                  </n-ellipsis>
-                </n-tag>
-                <AiExtractInfo :metadata="row.metadata" compact />
-              </template>
-            </n-thing>
+            <div class="mail-list-row">
+              <div class="mail-row-header">
+                <strong class="mail-row-title">{{ row.subject }}</strong>
+                <time class="mail-row-date">{{ utcToLocalDate(row.created_at, useUTCDate) }}</time>
+              </div>
+              <div class="mail-row-address-line">
+                <span v-if="row.unread" class="mail-row-pill unread-pill">{{ t('unread') }}</span>
+                <span class="mail-row-pill">ID {{ row.id }}</span>
+                <span class="mail-row-address">
+                  {{ showEMailTo ? "FROM: " + mailPrimaryAddress(row) : mailPrimaryAddress(row) }}
+                </span>
+                <span v-if="mailSecondaryAddress(row)" class="mail-row-address muted-address">
+                  TO: {{ mailSecondaryAddress(row) }}
+                </span>
+              </div>
+              <p v-if="mailPreview(row)" class="mail-row-snippet">{{ mailPreview(row) }}</p>
+              <AiExtractInfo :metadata="row.metadata" compact />
+            </div>
           </n-list-item>
         </n-list>
       </div>
@@ -569,21 +569,109 @@ onBeforeUnmount(() => {
 }
 
 .overlay {
-  width: 100%;
-  height: 100%;
-  z-index: 1000;
+  position: relative;
+  z-index: 0;
 }
 
 .overlay-dark-backgroud {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.08);
 }
 
 .overlay-light-backgroud {
-  background-color: rgba(0, 0, 0, 0.1);
+  background-color: #f3f6fb;
 }
 
 .mail-item {
   height: 100%;
+}
+
+:deep(.n-list .n-list-item) {
+  padding: 0;
+}
+
+.mail-list-row {
+  width: 100%;
+  min-width: 0;
+  padding: 13px 16px;
+}
+
+.mail-row-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.mail-row-title {
+  min-width: 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  color: #111827;
+  font-size: 15px;
+  font-weight: 620;
+  line-height: 1.35;
+  text-wrap: pretty;
+}
+
+.mail-row-date {
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.mail-row-address-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 8px;
+  min-width: 0;
+  margin-top: 6px;
+  color: #4b5563;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.mail-row-pill {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 1px 7px;
+  background: #eef2ff;
+  color: #1d4ed8;
+  font-size: 11px;
+  font-weight: 560;
+  font-variant-numeric: tabular-nums;
+}
+
+.unread-pill {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.mail-row-address {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.muted-address {
+  color: #6b7280;
+}
+
+.mail-row-snippet {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  margin: 6px 0 0;
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 1.45;
+  text-wrap: pretty;
 }
 
 .mobile-mailbox-toolbar {
@@ -600,8 +688,32 @@ onBeforeUnmount(() => {
   font-weight: 650;
 }
 
+.mail-unread .mail-row-title {
+  font-weight: 720;
+}
+
 pre {
   white-space: pre-wrap;
   word-wrap: break-word;
+}
+
+@media (max-width: 640px) {
+  .mail-list-row {
+    padding: 12px 14px;
+  }
+
+  .mail-row-header {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 3px;
+  }
+
+  .mail-row-date {
+    order: -1;
+  }
+
+  .mail-row-address {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
 }
 </style>

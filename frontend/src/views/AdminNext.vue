@@ -3691,7 +3691,7 @@ tr.is-selected {
     }
 
     .mail-facets {
-        order: 1;
+        order: 4;
     }
 }
 
@@ -3783,13 +3783,37 @@ tr.is-selected {
         justify-content: flex-start;
     }
 
-    .top-actions .btn,
-    .toolbar .btn {
+    .top-actions .btn {
         flex: 1 1 132px;
     }
 
+    .notice {
+        gap: 0;
+        margin-bottom: 8px;
+        padding: 10px 12px;
+    }
+
+    .notice span {
+        display: none;
+    }
+
+    .toolbar {
+        flex-wrap: nowrap;
+        min-height: 44px;
+        margin-bottom: 8px;
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        scrollbar-width: thin;
+    }
+
+    .toolbar .btn {
+        flex: 0 0 auto;
+        min-height: 40px;
+        white-space: nowrap;
+    }
+
     .toolbar .select {
-        flex: 1 1 160px;
+        flex: 0 0 154px;
         width: auto;
     }
 

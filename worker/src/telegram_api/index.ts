@@ -22,6 +22,9 @@ api.use("/telegram/*", async (c, next) => {
 });
 
 api.use("/admin/telegram/*", async (c, next) => {
+    if (c.req.path === "/admin/telegram/status") {
+        return await next();
+    }
     const msgs = i18n.getMessagesbyContext(c);
     if (!c.env.TELEGRAM_BOT_TOKEN) {
         return c.text(msgs.TgBotTokenRequiredMsg, 400);
@@ -61,11 +64,28 @@ api.post("/admin/telegram/init", async (c) => {
 });
 
 api.get("/admin/telegram/status", async (c) => {
+    if (!c.env.TELEGRAM_BOT_TOKEN || !c.env.KV) {
+        return c.json({
+            ok: false,
+            enabled: false,
+            configured: false,
+            reason: !c.env.TELEGRAM_BOT_TOKEN ? 'missing_bot_token' : 'missing_kv',
+        });
+    }
     const token = c.env.TELEGRAM_BOT_TOKEN;
     const bot = newTelegramBot(c, token);
-    const info = await bot.telegram.getWebhookInfo()
-    const commands = await bot.telegram.getMyCommands()
-    return c.json({ info, commands });
+    try {
+        const info = await bot.telegram.getWebhookInfo()
+        const commands = await bot.telegram.getMyCommands()
+        return c.json({ ok: true, enabled: true, configured: true, info, commands });
+    } catch (error) {
+        return c.json({
+            ok: false,
+            enabled: true,
+            configured: true,
+            error: error instanceof Error ? error.message : 'telegram_status_failed',
+        });
+    }
 });
 
 api.get("/admin/telegram/settings", settings.getTelegramSettings);
