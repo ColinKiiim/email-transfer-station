@@ -5,8 +5,14 @@ function humanFileSize(size) {
     return parseFloat((size / Math.pow(1024, i)).toFixed(2)) + ' ' + ['B', 'KB', 'MB', 'GB', 'TB'][i];
 }
 
-function applyParsedContent(item, html, text) {
-    const htmlContent = html || '';
+function isPlainTextOnly(raw) {
+    const headerBlock = String(raw || '').split(/\r?\n\r?\n/, 1)[0] || '';
+    const contentType = headerBlock.match(/^content-type:\s*([^;\r\n]+)/im)?.[1]?.trim().toLowerCase();
+    return contentType === 'text/plain';
+}
+
+function applyParsedContent(item, html, text, forcePlainText = false) {
+    const htmlContent = forcePlainText ? '' : (html || '');
     const textContent = text || '';
     item.html = htmlContent;
     item.text = textContent;
@@ -33,7 +39,7 @@ export async function processItem(item) {
         const parsedEmail = parse_message(item.raw);
         item.source = parsedEmail.sender || item.source;
         item.subject = parsedEmail.subject || '';
-        applyParsedContent(item, parsedEmail.body_html, parsedEmail.text);
+        applyParsedContent(item, parsedEmail.body_html, parsedEmail.text, isPlainTextOnly(item.raw));
         item.attachments = parsedEmail.attachments?.map((a_item) => {
             const blob = new Blob(
                 [a_item.content],
@@ -66,7 +72,7 @@ export async function processItem(item) {
             item.source = `${parsedEmail.from.name} <${parsedEmail.from.address}>`;
         }
         item.subject = parsedEmail.subject || 'No Subject';
-        applyParsedContent(item, parsedEmail.html, parsedEmail.text);
+        applyParsedContent(item, parsedEmail.html, parsedEmail.text, isPlainTextOnly(item.raw));
         item.attachments = parsedEmail.attachments?.map((a_item) => {
             const blob = new Blob(
                 [a_item.content],
