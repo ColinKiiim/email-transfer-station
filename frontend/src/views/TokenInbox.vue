@@ -8,6 +8,8 @@ import AccessShell from '../components/AccessShell.vue'
 import AccessMailWorkbench from '../components/AccessMailWorkbench.vue'
 
 const route = useRoute()
+const homePath = computed(() => '/')
+const userPath = computed(() => '/user')
 const message = useMessage()
 const { t } = useScopedI18n('views.TokenInbox')
 
@@ -98,7 +100,19 @@ onMounted(resolveToken)
       <span>share token</span>
       <h2>{{ t('invalidToken') }}</h2>
       <p>{{ errorText }}</p>
-      <n-button tertiary type="primary" @click="resolveToken">重新验证</n-button>
+      <div class="token-next-steps">
+        <strong>这个分享链接可能已经过期、被撤销，或复制不完整。</strong>
+        <ul>
+          <li>请确认链接来自地址管理员。</li>
+          <li>如果你本来拥有账号，可以进入用户入口查看已绑定地址。</li>
+          <li>如果这是临时协作链接，请让分享者重新生成访问包。</li>
+        </ul>
+      </div>
+      <div class="token-actions">
+        <n-button tertiary type="primary" @click="resolveToken">重新验证</n-button>
+        <n-button tag="a" :href="userPath" tertiary>进入用户入口</n-button>
+        <n-button tag="a" :href="homePath" tertiary>返回首页</n-button>
+      </div>
     </section>
 
     <AccessMailWorkbench
@@ -161,7 +175,7 @@ onMounted(resolveToken)
   display: grid;
   align-content: start;
   gap: 10px;
-  max-width: 720px;
+  width: min(720px, 100%);
   padding: 22px;
 }
 
@@ -176,5 +190,32 @@ onMounted(resolveToken)
 
 .token-state-card.is-error {
   background: #fff7f7;
+}
+
+.token-next-steps {
+  display: grid;
+  gap: 8px;
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.token-next-steps strong {
+  color: #991b1b;
+  font-size: 14px;
+}
+
+.token-next-steps ul {
+  margin: 0;
+  padding-left: 18px;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.token-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 </style>

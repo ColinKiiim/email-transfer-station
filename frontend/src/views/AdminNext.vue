@@ -8,6 +8,7 @@ import { useGlobalState } from '../store'
 import { hashPassword } from '../utils'
 import Turnstile from '../components/Turnstile.vue'
 import ShadowHtmlComponent from '../components/ShadowHtmlComponent.vue'
+import MailContentRenderer from '../components/MailContentRenderer.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -142,16 +143,23 @@ const selectedInitialView = () => {
     return viewMeta[queryView] ? queryView : (viewMeta[stored] ? stored : 'overview')
 }
 
+const queryValue = (value, fallback = '') => {
+    const text = Array.isArray(value) ? value[0] : value
+    return text == null || text === '' ? fallback : String(text)
+}
+
 const ui = reactive({
     view: selectedInitialView(),
-    query: '',
-    domain: 'all',
-    status: 'all',
+    query: queryValue(route.query.q),
+    domain: queryValue(route.query.domain, 'all'),
+    address: queryValue(route.query.address, 'all'),
+    status: queryValue(route.query.status, 'all'),
     syncing: false,
     mailRenderMode: 'html',
+    flowMode: queryValue(route.query.mode, 'list'),
     detailKind: '',
     selected: {
-        flow: 'mail-240625-03',
+        flow: queryValue(route.query.mailId || route.query.item),
         identity: 'addr-ops',
         routing: 'domain-cloudflare',
         delivery: 'notify-mailhook',
@@ -287,17 +295,28 @@ const showToast = (text) => {
     }, 1800)
 }
 
+const replaceRouteQuery = (patch = {}, remove = []) => {
+    const query = { ...route.query, ...patch }
+    remove.forEach((key) => {
+        delete query[key]
+    })
+    Object.keys(query).forEach((key) => {
+        if (query[key] === '' || query[key] == null || query[key] === 'all') delete query[key]
+    })
+    router.replace({
+        path: route.path,
+        query,
+        hash: route.hash,
+    }).catch(() => {})
+}
+
 const setView = async (view) => {
     if (!viewMeta[view]) return
     ui.view = view
     ui.detailKind = ''
     detailOpen.value = false
     localStorage.setItem('ets-admin-next-view', view)
-    await router.replace({
-        path: route.path,
-        query: { ...route.query, view },
-        hash: route.hash,
-    })
+    await replaceRouteQuery({ view })
 }
 
 const getDomain = (value) => {
@@ -957,6 +976,14 @@ const domainOptions = computed(() => {
     return ['all', ...domains]
 })
 
+const addressOptions = computed(() => {
+    const addresses = new Set([
+        ...addressRows.value.map((row) => row.address).filter(Boolean),
+        ...mailRows.value.map((row) => row.to).filter((value) => value && value !== '-'),
+    ])
+    return ['all', ...addresses]
+})
+
 const toggleSidebar = () => {
     sidebarCollapsed.value = !sidebarCollapsed.value
     if (typeof localStorage !== 'undefined') {
@@ -1014,6 +1041,10 @@ const matches = (row) => {
         || row.domain === ui.domain
         || row.address?.endsWith(`@${ui.domain}`)
         || row.to?.endsWith(`@${ui.domain}`)
+    const inAddress = ui.address === 'all'
+        || row.address === ui.address
+        || row.to === ui.address
+        || row.owner === ui.address
     const statusText = [
         row.status,
         row.result,
@@ -1024,13 +1055,137 @@ const matches = (row) => {
         Number(row.attachmentCount || 0) > 0 ? 'attachment 有附件' : '',
     ].filter(Boolean).join(' ').toLowerCase()
     const inStatus = ui.status === 'all' || statusText.includes(ui.status.toLowerCase())
-    return inQuery && inDomain && inStatus
+    return inQuery && inDomain && inAddress && inStatus
 }
 
 const filterRows = (rows) => rows.filter(matches)
 
 const filteredMailRows = computed(() => filterRows(mailRows.value))
 const filteredUnknownRows = computed(() => filterRows(unknownRows.value))
+const activeFilterChips = computed(() => [
+    ui.query ? { key: 'q', label: `搜索: ${ui.query}` } : null,
+    ui.domain !== 'all' ? { key: 'domain', label: `域名: ${ui.domain}` } : null,
+    ui.address !== 'all' ? { key: 'address', label: `地址: ${ui.address}` } : null,
+    ui.status !== 'all' ? { key: 'status', label: `状态: ${ui.status}` } : null,
+].filter(Boolean))
+
+const mailHierarchy = computed(() => {
+    const allCount = mailRows.value.length
+    const unreadCount = explicitUnreadMailCount.value
+    const attachmentCount = mailRows.value.filter((row) => Number(row.attachmentCount || 0) > 0).length
+    const unknownCount = unknownRows.value.length
+    return {
+        queues: [
+            { id: 'queue-all', label: '全部邮件', count: allCount, status: 'all' },
+            { id: 'queue-unread', label: '未读', count: unreadCount, status: '未读' },
+            { id: 'queue-saved', label: '已保存', count: mailRows.value.filter((row) => row.result === '已保存').length, status: '已保存' },
+            { id: 'queue-attachment', label: '有附件', count: attachmentCount, status: 'attachment' },
+            { id: 'queue-unknown', label: '未知收件人', count: unknownCount, status: '未知地址' },
+        ],
+        domains: domainRows.value.map((domain) => ({
+            ...domain,
+            addresses: addressOptions.value
+                .filter((address) => address !== 'all' && address.endsWith(`@${domain.domain}`))
+                .map((address) => ({
+                    address,
+                    count: mailRows.value.filter((row) => row.to === address || row.address === address).length,
+                })),
+        })),
+    }
+})
+
+const syncMailQueryToRoute = (extra = {}) => {
+    replaceRouteQuery({
+        view: 'flow',
+        q: ui.query || undefined,
+        domain: ui.domain === 'all' ? undefined : ui.domain,
+        address: ui.address === 'all' ? undefined : ui.address,
+        status: ui.status === 'all' ? undefined : ui.status,
+        mailId: ui.selected.flow || undefined,
+        mode: ui.flowMode === 'list' ? undefined : ui.flowMode,
+        ...extra,
+    }, ['item'])
+}
+
+const setMailStatus = (status) => {
+    ui.status = status
+    ui.flowMode = 'list'
+    syncMailQueryToRoute({ status: status === 'all' ? undefined : status, mode: undefined })
+}
+
+const setMailDomain = (domain) => {
+    ui.domain = domain || 'all'
+    ui.address = 'all'
+    ui.flowMode = 'list'
+    syncMailQueryToRoute({ domain: ui.domain === 'all' ? undefined : ui.domain, address: undefined, mode: undefined })
+}
+
+const setMailAddress = (address) => {
+    ui.address = address || 'all'
+    ui.domain = address && address !== 'all' ? getDomain(address) || ui.domain : ui.domain
+    ui.flowMode = 'list'
+    syncMailQueryToRoute({
+        address: ui.address === 'all' ? undefined : ui.address,
+        domain: ui.domain === 'all' ? undefined : ui.domain,
+        mode: undefined,
+    })
+}
+
+const clearMailFilter = (key) => {
+    if (key === 'q') ui.query = ''
+    if (key === 'domain') {
+        ui.domain = 'all'
+        ui.address = 'all'
+    }
+    if (key === 'address') ui.address = 'all'
+    if (key === 'status') ui.status = 'all'
+    syncMailQueryToRoute({
+        q: ui.query || undefined,
+        domain: ui.domain === 'all' ? undefined : ui.domain,
+        address: ui.address === 'all' ? undefined : ui.address,
+        status: ui.status === 'all' ? undefined : ui.status,
+    })
+}
+
+const currentMailIndex = computed(() => filteredMailRows.value.findIndex((row) => row.id === ui.selected.flow))
+const canGoPrevMail = computed(() => currentMailIndex.value > 0)
+const canGoNextMail = computed(() => currentMailIndex.value >= 0 && currentMailIndex.value < filteredMailRows.value.length - 1)
+
+const selectAdjacentMail = (step) => {
+    const index = currentMailIndex.value
+    if (index < 0) return
+    const next = filteredMailRows.value[index + step]
+    if (next) selectRow('flow', next.id)
+}
+
+const closeMailDetail = () => {
+    ui.flowMode = 'list'
+    ui.detailKind = ''
+    ui.selected.flow = ''
+    replaceRouteQuery({ mode: undefined, mailId: undefined }, ['item'])
+}
+
+const openMailFromAddress = (address) => {
+    if (!address) return
+    ui.view = 'flow'
+    ui.domain = getDomain(address) || 'all'
+    ui.address = address
+    ui.status = 'all'
+    ui.flowMode = 'list'
+    if (typeof localStorage !== 'undefined') localStorage.setItem('ets-admin-next-view', 'flow')
+    syncMailQueryToRoute({ address, domain: ui.domain === 'all' ? undefined : ui.domain, status: undefined, mode: undefined })
+}
+
+const openMailFromDomain = (domain) => {
+    if (!domain) return
+    ui.view = 'flow'
+    ui.domain = domain
+    ui.address = 'all'
+    ui.status = 'all'
+    ui.flowMode = 'list'
+    if (typeof localStorage !== 'undefined') localStorage.setItem('ets-admin-next-view', 'flow')
+    syncMailQueryToRoute({ domain, address: undefined, status: undefined, mode: undefined })
+}
 const stateCards = computed(() => {
     const db = live.workerConfig?.DIAGNOSTICS?.database || {}
     const webhookStatus = live.mailWebhook?.enabled ? '入站通知已启用' : '通知通道需复核'
@@ -1220,13 +1375,15 @@ const selectRow = (kind, id) => {
     if ((kind === 'flow' || kind === 'exception') && activeView.value !== 'flow') {
         ui.view = 'flow'
         ui.detailKind = kind
+        ui.flowMode = 'detail'
         detailOpen.value = false
         if (typeof localStorage !== 'undefined') localStorage.setItem('ets-admin-next-view', 'flow')
-        router.replace({
-            path: route.path,
-            query: { ...route.query, view: 'flow', item: id },
-            hash: route.hash,
-        }).catch(() => {})
+        replaceRouteQuery({
+            view: 'flow',
+            mailId: kind === 'flow' ? id : undefined,
+            item: kind === 'exception' ? id : undefined,
+            mode: 'detail',
+        }, kind === 'flow' ? ['item'] : ['mailId'])
         if (kind === 'flow') {
             const row = mailRows.value.find((item) => item.id === id)
             markAdminMailRead(row)
@@ -1241,11 +1398,13 @@ const selectRow = (kind, id) => {
         detailOpen.value = true
     }
     if (kind === 'flow' || kind === 'exception') {
-        router.replace({
-            path: route.path,
-            query: { ...route.query, view: activeView.value, item: id },
-            hash: route.hash,
-        }).catch(() => {})
+        ui.flowMode = 'detail'
+        replaceRouteQuery({
+            view: activeView.value,
+            mailId: kind === 'flow' ? id : undefined,
+            item: kind === 'exception' ? id : undefined,
+            mode: 'detail',
+        }, kind === 'flow' ? ['item'] : ['mailId'])
     }
     if (kind === 'flow') {
         const row = mailRows.value.find((item) => item.id === id)
@@ -1286,7 +1445,25 @@ const markAdminMailRead = async (row) => {
     }
 }
 
-const currentMail = computed(() => mailRows.value.find((row) => row.id === ui.selected.flow) || mailRows.value[0])
+const currentMail = computed(() => mailRows.value.find((row) => row.id === ui.selected.flow) || null)
+const currentRendererMail = computed(() => {
+    const row = currentMail.value
+    if (!row) return null
+    return {
+        id: row.sourceId || row.id,
+        subject: row.subject,
+        source: row.sender,
+        address: row.to,
+        created_at: row.created_at || row.fullTime || row.time,
+        message: row.html || row.text || row.body || '',
+        messageIsHtml: !!row.html,
+        text: row.text || (!row.html ? row.body : ''),
+        raw: row.raw || '',
+        attachments: row.attachments || [],
+        metadata: row.metadata || {},
+        parseFailed: row.parseStatus === 'failed',
+    }
+})
 const currentException = computed(() => unknownRows.value.find((row) => row.id === ui.selected.exception) || unknownRows.value[0])
 const currentAddress = computed(() => addressRows.value.find((row) => row.id === ui.selected.identity) || addressRows.value[0])
 const currentDomain = computed(() => domainRows.value.find((row) => row.id === ui.selected.routing) || domainRows.value[0])
@@ -1317,6 +1494,19 @@ const copyCurrent = async () => {
     }
 }
 
+const copyText = async (text) => {
+    if (!text) {
+        showToast('没有可复制内容')
+        return
+    }
+    try {
+        await navigator.clipboard.writeText(text)
+        showToast('已复制到剪贴板')
+    } catch (error) {
+        showToast(error?.message || '复制失败')
+    }
+}
+
 const handleAction = async (type) => {
     if (type === 'refresh') {
         await refreshAll()
@@ -1326,7 +1516,16 @@ const handleAction = async (type) => {
     if (type === 'reset-filters') {
         ui.query = ''
         ui.domain = 'all'
+        ui.address = 'all'
         ui.status = 'all'
+        ui.flowMode = 'list'
+        replaceRouteQuery({
+            q: undefined,
+            domain: undefined,
+            address: undefined,
+            status: undefined,
+            mode: undefined,
+        }, ['item'])
         showToast('筛选已清除')
         return
     }
@@ -1490,6 +1689,14 @@ const currentRail = computed(() => {
             ],
         }
     }
+    if (context === 'flow') {
+        return {
+            title: '选择一封邮件',
+            subtitle: '从左侧列表打开邮件后，可查看正文、附件、纯文本和原始内容。',
+            tags: ['未选择', '列表保留'],
+            empty: true,
+        }
+    }
     if (context === 'exception' && currentException.value) {
         return {
             title: '异常邮件',
@@ -1605,6 +1812,26 @@ watch(() => route.query.view, (value) => {
     }
 })
 
+watch(() => route.query.q, (value) => {
+    ui.query = queryValue(value)
+})
+
+watch(() => route.query.domain, (value) => {
+    ui.domain = queryValue(value, 'all')
+})
+
+watch(() => route.query.address, (value) => {
+    ui.address = queryValue(value, 'all')
+})
+
+watch(() => route.query.status, (value) => {
+    ui.status = queryValue(value, 'all')
+})
+
+watch(() => route.query.mode, (value) => {
+    ui.flowMode = queryValue(value, 'list')
+})
+
 watch(() => route.query.item, (value) => {
     const item = Array.isArray(value) ? value[0] : value
     if (!item) return
@@ -1618,11 +1845,15 @@ watch(() => route.query.item, (value) => {
 }, { immediate: true })
 
 watch(mailRows, (rows) => {
-    if (!rows.length) return
-    if (!rows.some((row) => row.id === ui.selected.flow)) {
-        ui.selected.flow = rows[0].id
+    if (!rows.length) {
+        ui.selected.flow = ''
+        return
     }
-    if (ui.view === 'flow' && !ui.detailKind) ui.detailKind = 'flow'
+    if (ui.selected.flow && !rows.some((row) => row.id === ui.selected.flow)) {
+        ui.selected.flow = ''
+        ui.detailKind = ''
+        if (activeView.value === 'flow') replaceRouteQuery({ mailId: undefined, mode: undefined }, ['item'])
+    }
 }, { immediate: true })
 
 watch(showAdminPage, async (allowed) => {
@@ -1654,6 +1885,13 @@ const handleGlobalKeydown = (event) => {
 }
 
 const syncSelectionFromRoute = () => {
+    const mailId = queryValue(route.query.mailId)
+    if (mailId) {
+        ui.selected.flow = mailId
+        ui.detailKind = 'flow'
+        ui.flowMode = queryValue(route.query.mode, 'detail')
+        return
+    }
     const item = Array.isArray(route.query.item) ? route.query.item[0] : route.query.item
     if (!item) return
     if (String(item).startsWith('unknown-')) {
@@ -1667,7 +1905,7 @@ const syncSelectionFromRoute = () => {
     }
 }
 
-watch(() => route.query.item, syncSelectionFromRoute)
+watch(() => [route.query.mailId, route.query.item], syncSelectionFromRoute)
 
 onMounted(() => {
     syncSelectionFromRoute()
@@ -1738,7 +1976,8 @@ onBeforeUnmount(() => {
                 </div>
 
                 <div class="topbar-controls">
-                    <select v-model="ui.domain" class="select domain-select" aria-label="域名范围">
+                    <select v-model="ui.domain" class="select domain-select" aria-label="域名范围"
+                        @change="activeView === 'flow' ? setMailDomain(ui.domain) : replaceRouteQuery({ domain: ui.domain === 'all' ? undefined : ui.domain })">
                         <option v-for="domain in domainOptions" :key="domain" :value="domain">
                             {{ domain === 'all' ? '全部域名' : domain }}
                         </option>
@@ -1749,7 +1988,9 @@ onBeforeUnmount(() => {
                             <component :is="shape.tag" v-for="(shape, index) in shapeList('search')" :key="index"
                                 v-bind="shape.attrs" />
                         </svg>
-                        <input ref="searchInput" v-model="ui.query" class="field" placeholder="搜索：from:openai to:zkc subject:codex has:attachment is:unread" />
+                        <input ref="searchInput" v-model="ui.query" class="field"
+                            placeholder="搜索：from:openai to:zkc subject:codex has:attachment is:unread"
+                            @input="activeView === 'flow' ? syncMailQueryToRoute({ q: ui.query || undefined }) : replaceRouteQuery({ q: ui.query || undefined })" />
                         <span class="kbd">⌘K</span>
                     </label>
 
@@ -1799,7 +2040,8 @@ onBeforeUnmount(() => {
                         </svg>
                         {{ action.label }}
                     </button>
-                    <select v-if="activeView === 'flow' || activeView === 'access'" v-model="ui.status" class="select">
+                    <select v-if="activeView === 'flow' || activeView === 'access'" v-model="ui.status" class="select"
+                        @change="activeView === 'flow' ? setMailStatus(ui.status) : replaceRouteQuery({ status: ui.status === 'all' ? undefined : ui.status })">
                         <option value="all">全部状态</option>
                         <option v-if="activeView === 'flow'" value="未读">未读</option>
                         <option v-if="activeView === 'flow'" value="已读">已读</option>
@@ -1824,33 +2066,18 @@ onBeforeUnmount(() => {
                     </div>
                 </div>
 
-                <div v-if="activeView === 'flow'" class="mail-workbench" aria-label="收件流工作台">
+                <div v-if="activeView === 'flow'" class="mail-workbench" :class="`flow-mode-${ui.flowMode}`" aria-label="收件流工作台">
                     <aside class="mail-facets" aria-label="收件流筛选">
                         <div class="facet-card">
                             <div class="facet-title">
                                 <strong>队列</strong>
-                                <span>筛选</span>
+                                <button type="button" class="facet-mini-action" @click="ui.flowMode = 'list'; syncMailQueryToRoute({ mode: undefined })">返回列表</button>
                             </div>
-                            <button class="facet-row" :class="{ 'is-active': ui.status === 'all' }" type="button"
-                                @click="ui.status = 'all'">
-                                <span>全部邮件</span>
-                            </button>
-                            <button class="facet-row" :class="{ 'is-active': ui.status === '未读' }" type="button"
-                                @click="ui.status = '未读'">
-                                <span>未读</span>
-                                <b>{{ formatNumber(explicitUnreadMailCount) }}</b>
-                            </button>
-                            <button class="facet-row" :class="{ 'is-active': ui.status === '已保存' }" type="button"
-                                @click="ui.status = '已保存'">
-                                <span>已保存</span>
-                            </button>
-                            <button class="facet-row" :class="{ 'is-active': ui.status === 'attachment' }" type="button"
-                                @click="ui.status = 'attachment'">
-                                <span>有附件</span>
-                            </button>
-                            <button class="facet-row" :class="{ 'is-active': ui.status === '未知地址' }" type="button"
-                                @click="ui.status = '未知地址'">
-                                <span>未知收件人</span>
+                            <button v-for="queue in mailHierarchy.queues" :key="queue.id" class="facet-row"
+                                :class="{ 'is-active': ui.status === queue.status }" type="button"
+                                @click="setMailStatus(queue.status)">
+                                <span>{{ queue.label }}</span>
+                                <b>{{ formatNumber(queue.count) }}</b>
                             </button>
                             <div class="facet-note">
                                 常规邮件、未知收件人和渲染风险归在同一条收件链路里，不再拆成互相抢空间的报表。
@@ -1859,13 +2086,28 @@ onBeforeUnmount(() => {
 
                         <div class="facet-card">
                             <div class="facet-title">
-                                <strong>安全处理</strong>
-                                <span>状态</span>
+                                <strong>邮箱</strong>
+                                <span>域名 / 地址</span>
                             </div>
-                            <div class="safety-list">
-                                <span class="status ok">HTML 隔离渲染</span>
-                                <span class="status warn">入站副作用 no-op</span>
-                                <span class="status ok">写入动作隔离</span>
+                            <div class="mail-tree">
+                                <button class="facet-row" :class="{ 'is-active': ui.domain === 'all' && ui.address === 'all' }"
+                                    type="button" @click="setMailDomain('all')">
+                                    <span>全部域名</span>
+                                    <b>{{ formatNumber(mailRows.length) }}</b>
+                                </button>
+                                <div v-for="domain in mailHierarchy.domains" :key="domain.id || domain.domain" class="tree-group">
+                                    <button class="facet-row domain-row" :class="{ 'is-active': ui.domain === domain.domain && ui.address === 'all' }"
+                                        type="button" @click="setMailDomain(domain.domain)">
+                                        <span>{{ domain.domain }}</span>
+                                        <b>{{ formatNumber(domain.mails || 0) }}</b>
+                                    </button>
+                                    <button v-for="address in domain.addresses" :key="address.address"
+                                        class="facet-row address-row" :class="{ 'is-active': ui.address === address.address }"
+                                        type="button" @click="setMailAddress(address.address)">
+                                        <span>{{ address.address }}</span>
+                                        <b>{{ formatNumber(address.count) }}</b>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </aside>
@@ -1876,7 +2118,21 @@ onBeforeUnmount(() => {
                                 <h2>收件箱</h2>
                                 <p>支持 from:、to:、subject:、has:attachment、is:unread 搜索。</p>
                             </div>
-                            <span class="status neutral">{{ formatNumber(filteredMailRows.length) }} 封</span>
+                            <div class="panel-head-actions">
+                                <button type="button" class="btn compact-btn" @click="ui.flowMode = 'filters'; syncMailQueryToRoute({ mode: 'filters' })">筛选</button>
+                                <span class="status neutral">{{ formatNumber(filteredMailRows.length) }} 封</span>
+                            </div>
+                        </div>
+                        <div class="filter-strip">
+                            <span class="filter-scope">筛选当前已加载邮件</span>
+                            <button v-for="chip in activeFilterChips" :key="chip.key" type="button" class="filter-chip"
+                                @click="clearMailFilter(chip.key)">
+                                {{ chip.label }}
+                                <span aria-hidden="true">×</span>
+                            </button>
+                            <button v-if="activeFilterChips.length" type="button" class="filter-clear" @click="handleAction('reset-filters')">
+                                清除全部
+                            </button>
                         </div>
                         <div class="mail-list" role="listbox" aria-label="邮件记录">
                             <button v-for="row in filteredMailRows" :key="row.id" class="mail-row" type="button"
@@ -1935,6 +2191,21 @@ onBeforeUnmount(() => {
                             </div>
                         </div>
                         <div class="inner-pad detail-pane-body">
+                            <div v-if="currentRail.empty" class="empty-state reader-empty">
+                                <strong>{{ currentRail.title }}</strong>
+                                <span>{{ currentRail.subtitle }}</span>
+                            </div>
+                            <template v-else>
+                            <div v-if="activeView === 'flow' && currentMail" class="mail-reader-actions">
+                                <button type="button" class="btn" @click="closeMailDetail">返回列表</button>
+                                <button type="button" class="btn" :disabled="!canGoPrevMail" @click="selectAdjacentMail(-1)">上一封</button>
+                                <button type="button" class="btn" :disabled="!canGoNextMail" @click="selectAdjacentMail(1)">下一封</button>
+                                <button type="button" class="btn" :disabled="!currentRail.mail?.html" @click="ui.mailRenderMode = 'html'">HTML</button>
+                                <button type="button" class="btn" :disabled="!currentRail.mail?.text" @click="ui.mailRenderMode = 'text'">纯文本</button>
+                                <button type="button" class="btn" :disabled="!currentRail.mail?.raw" @click="ui.mailRenderMode = 'raw'">原始</button>
+                                <button type="button" class="btn" @click="copyCurrent">复制收件地址</button>
+                                <button type="button" class="btn danger" @click="handleAction('delete')">删除</button>
+                            </div>
                             <div v-if="currentRail.tags?.length" class="tag-row rail-tags">
                                 <span v-for="tag in currentRail.tags" :key="tag" class="tag">{{ tag }}</span>
                             </div>
@@ -1953,8 +2224,8 @@ onBeforeUnmount(() => {
                                             @click="ui.mailRenderMode = 'raw'">原始</button>
                                     </div>
                                 </div>
-                                <div v-if="currentRail.mail?.html && ui.mailRenderMode === 'html'" class="mail-body html-body">
-                                    <ShadowHtmlComponent :key="currentRail.mail.id" :htmlContent="currentRail.mail.html" :isDark="isDark" />
+                                <div v-if="currentRendererMail && ui.mailRenderMode === 'html'" class="mail-body html-body">
+                                    <MailContentRenderer :mail="currentRendererMail" :showEMailTo="true" :showReply="false" />
                                 </div>
                                 <pre v-else-if="currentRail.mail?.text && ui.mailRenderMode === 'text'" class="mail-body text-body">{{ currentRail.mail.text }}</pre>
                                 <pre v-else-if="currentRail.mail?.raw && ui.mailRenderMode === 'raw'" class="mail-body raw-body">{{ currentRail.mail.raw }}</pre>
@@ -1991,6 +2262,7 @@ onBeforeUnmount(() => {
                                     {{ action.label }}
                                 </button>
                             </div>
+                            </template>
                         </div>
                     </aside>
                 </div>
@@ -2051,6 +2323,16 @@ onBeforeUnmount(() => {
                                                     <span class="cell-sub">{{ cellText(row, column.sub) }}</span>
                                                     <span v-if="column.tags && row[column.tags]?.length" class="tag-row">
                                                         <span v-for="tag in row[column.tags]" :key="tag" class="tag">{{ tag }}</span>
+                                                    </span>
+                                                    <span v-if="panel.kind === 'identity' && column.main === 'address'" class="cell-actions">
+                                                        <button type="button" @click.stop="openMailFromAddress(row.address)">查看收件</button>
+                                                        <button type="button" @click.stop="copyText(row.address)">复制</button>
+                                                        <button type="button" @click.stop="openActionModal('share-package')">分享</button>
+                                                    </span>
+                                                    <span v-if="panel.kind === 'routing' && column.main === 'domain'" class="cell-actions">
+                                                        <button type="button" @click.stop="openMailFromDomain(row.domain)">查看邮件</button>
+                                                        <button type="button" @click.stop="openActionModal('new-address')">创建地址</button>
+                                                        <button type="button" @click.stop="copyText(row.collector)">复制 Collector</button>
                                                     </span>
                                                 </div>
                                             </template>
@@ -2121,8 +2403,8 @@ onBeforeUnmount(() => {
                             <dl class="kv">
                                 <dt>AI 提取</dt><dd><span class="status warn">灰度中</span></dd>
                                 <dt>HTML 预览</dt><dd><span class="status ok">隔离渲染</span></dd>
-                                <dt>附件转存</dt><dd><span class="status ok">可用</span></dd>
-                                <dt>自动回复</dt><dd><span class="status warn">门禁后执行</span></dd>
+                                <dt>附件转存</dt><dd><span class="status warn">仅展示入口</span></dd>
+                                <dt>自动回复</dt><dd><span class="status warn">暂未执行生产写入</span></dd>
                             </dl>
                         </div>
                     </section>
@@ -3001,6 +3283,106 @@ textarea {
     gap: 6px;
 }
 
+.mail-tree {
+    display: grid;
+    gap: 4px;
+}
+
+.tree-group {
+    display: grid;
+    gap: 2px;
+}
+
+.domain-row span,
+.address-row span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.address-row {
+    padding-left: 18px;
+    color: var(--muted);
+}
+
+.filter-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    border-top: 1px solid var(--border);
+    padding: 8px 10px;
+    background: var(--surface-soft);
+}
+
+.filter-scope,
+.filter-clear,
+.filter-chip {
+    font-size: 12px;
+}
+
+.filter-scope {
+    color: var(--muted);
+}
+
+.filter-chip,
+.filter-clear {
+    min-height: 28px;
+    border: 0;
+    border-radius: 999px;
+    padding: 0 9px;
+    background: var(--surface);
+    color: var(--fg);
+    box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.filter-chip span {
+    margin-left: 5px;
+    color: var(--muted);
+}
+
+.panel-head-actions {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.compact-btn,
+.facet-mini-action {
+    min-height: 30px;
+    font-size: 12px;
+}
+
+.facet-mini-action {
+    border: 0;
+    border-radius: 999px;
+    padding: 0 8px;
+    background: var(--surface-soft);
+    color: var(--muted);
+}
+
+.cell-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 7px;
+}
+
+.cell-actions button {
+    min-height: 26px;
+    border: 0;
+    border-radius: 999px;
+    padding: 0 8px;
+    background: var(--surface-soft);
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.cell-actions button:hover {
+    color: var(--fg);
+    box-shadow: inset 0 0 0 1px var(--border);
+}
+
 .mail-list-panel,
 .mail-detail-panel {
     display: grid;
@@ -3127,6 +3509,24 @@ textarea {
 .detail-pane-body {
     min-height: 0;
     overflow: auto;
+}
+
+.mail-reader-actions {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+    margin: -12px -12px 12px;
+    padding: 10px 12px;
+    background: color-mix(in oklch, var(--surface) 96%, transparent);
+}
+
+.reader-empty {
+    min-height: 280px;
+    align-content: center;
 }
 
 .body-section {
@@ -3674,7 +4074,7 @@ tr.is-selected {
 @media (max-width: 1120px) {
     .mail-workbench {
         grid-template-columns: 190px minmax(320px, 0.9fr) minmax(320px, 1fr);
-        height: auto;
+        height: clamp(500px, calc(100dvh - 280px), 720px);
     }
 
     .mail-list-panel {
@@ -3706,38 +4106,40 @@ tr.is-selected {
 
 @media (max-width: 900px) {
     :global(html:has(.admin-next)) {
-        height: auto;
-        min-height: 100%;
-        overflow: visible;
+        height: 100dvh;
+        min-height: 0;
+        overflow: hidden;
     }
 
     :global(body:has(.admin-next)) {
-        height: auto;
-        min-height: 100%;
-        overflow-x: hidden;
-        overflow-y: auto;
+        height: 100dvh;
+        min-height: 0;
+        overflow: hidden;
     }
 
     .app {
-        display: block;
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr);
+        grid-template-columns: minmax(0, 1fr) !important;
         width: 100%;
         max-width: 100vw;
-        height: auto;
-        min-height: 100dvh;
-        overflow: visible;
+        height: 100dvh;
+        min-height: 0;
+        overflow: hidden;
     }
 
     .admin-next {
         width: 100%;
         max-width: 100vw;
-        height: auto;
-        min-height: 100dvh;
+        height: 100dvh;
+        min-height: 0;
     }
 
     .workspace {
-        display: block;
+        display: grid;
         height: auto;
-        overflow: visible;
+        min-height: 0;
+        overflow: hidden;
     }
 
     .sidebar {
@@ -3845,7 +4247,8 @@ tr.is-selected {
         width: 100%;
         max-width: 100%;
         grid-template-columns: minmax(0, 1fr) !important;
-        height: auto !important;
+        height: 100%;
+        min-height: 0;
     }
 
     .mail-workbench > * {
@@ -3853,9 +4256,24 @@ tr.is-selected {
     }
 
     .mail-facets {
-        display: grid !important;
+        display: grid;
         grid-template-columns: minmax(0, 1fr) !important;
-        overflow: visible;
+        overflow: auto;
+    }
+
+    .mail-workbench.flow-mode-list .mail-detail-panel,
+    .mail-workbench.flow-mode-list .mail-facets {
+        display: none;
+    }
+
+    .mail-workbench.flow-mode-detail .mail-list-panel,
+    .mail-workbench.flow-mode-detail .mail-facets {
+        display: none;
+    }
+
+    .mail-workbench.flow-mode-filters .mail-list-panel,
+    .mail-workbench.flow-mode-filters .mail-detail-panel {
+        display: none;
     }
 
     .facet-card {
@@ -3880,8 +4298,52 @@ tr.is-selected {
     }
 
     .view {
-        overflow: visible;
+        min-height: 0;
+        overflow: auto;
         padding: 12px;
+    }
+
+    .app.is-flow-view .view {
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr);
+        gap: 8px;
+        overflow: hidden;
+    }
+
+    .app.is-flow-view .source-notice,
+    .app.is-flow-view .toolbar {
+        display: none;
+    }
+
+    .app.is-flow-view .mail-workbench {
+        min-height: 0;
+        height: auto;
+    }
+
+    .app.is-flow-view .mail-list-panel,
+    .app.is-flow-view .mail-detail-panel,
+    .app.is-flow-view .mail-facets {
+        min-height: 0;
+        height: 100%;
+    }
+
+    .app.is-flow-view .mail-list {
+        min-height: 0;
+        height: auto;
+    }
+
+    .app.is-flow-view .detail-pane-body {
+        min-height: 0;
+    }
+
+    .app.is-flow-view .mail-reader-actions {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        scrollbar-width: thin;
+    }
+
+    .app.is-flow-view .mail-reader-actions .btn {
+        flex: 0 0 auto;
     }
 
     .detail-drawer-backdrop {

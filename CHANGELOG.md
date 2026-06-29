@@ -24,6 +24,10 @@
 
 ### Bug Fixes
 
+- fix: |AdminNext| 新版控制台收件流改为按列表、详情、筛选分区独立滚动，移动端优先显示当前任务页；支持 `mailId` URL 状态、地址/域名筛选和从地址/域名列表直达对应邮件
+- fix: |Frontend| 统一写信预览、发送箱和 Telegram 邮件详情的 HTML 安全渲染路径，避免不同入口的 HTML 邮件显示体验和隔离策略不一致
+- fix: |Security| Worker 运行时错误不再把内部异常细节返回给调用方，发信失败也不再直接暴露底层错误文本
+- fix: |E2E| 测试辅助接口继续要求 `E2E_TEST_MODE`，并支持可选 `E2E_TEST_SECRET` 头部校验，避免误开的测试端点被直接调用
 - fix: |Mailbox| 修复普通邮箱、分享 token 邮箱和用户邮箱在桌面端加载或自动刷新时自动把第一封邮件标记为已读的问题；现在只有点击邮件或前后切换阅读时才写入 read state
 - fix: |Mailbox| 邮件 HTML 渲染统一经过 DOMPurify 清洗，iframe 预览使用 sandbox；解析失败时不再把原始 MIME 当正文默认渲染，改为提示下载 `.eml` 检查原始内容
 - fix: |User Mailbox| 用户邮箱地址筛选参数改为 URL encode，避免 `+` 等合法地址字符在查询时被破坏
@@ -34,6 +38,8 @@
 
 ### Improvements
 
+- improve: |AdminNext| 收件台补充 Gmail/Outlook 式的空详情态、移动详情工具栏、邮件前后切换、HTML/文本/原文视图切换、复制和删除动作入口
+- improve: |Token/User| 分享 token 失效页补充重试、进入用户中心和返回首页入口；普通用户本地配置打开失败改为内联提示，不再表现为全局阻断错误
 - improve: |AdminNext| 出站与通知页改为消费真实 `/admin/address_sender` 与 `/admin/sendbox` 数据，空表显示空态，不再用地址账本或收件箱数据冒充发送权限/发送箱
 - improve: |Release QA| 新增 harness-local Playwright 截图和 DOM 指标采集流程，用于按多页面、多断点复查公共站和 `/console` 发布状态
 - improve: |Email Transfer Station| 默认配置改为管理员创建地址优先：关闭公开创建、关闭匿名创建、关闭普通用户删除邮件；分享 token 页面使用独立 share-only 外壳，不再显示用户入口和全局页脚

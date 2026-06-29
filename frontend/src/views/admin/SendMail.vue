@@ -5,6 +5,7 @@ import { useScopedI18n } from '@/i18n/app'
 import { onBeforeUnmount, ref, shallowRef } from 'vue'
 import { useSessionStorage } from '@vueuse/core'
 import { api } from '../../api'
+import ShadowHtmlComponent from '../../components/ShadowHtmlComponent.vue'
 
 const message = useMessage()
 const isPreview = ref(false)
@@ -180,7 +181,7 @@ const handleCreated = (editor) => {
                     </n-form-item>
                     <n-form-item :label="t('content')" label-placement="top">
                         <n-card :bordered="false" embedded v-if="isPreview">
-                            <div v-html="sendMailModel.content" />
+                            <ShadowHtmlComponent :htmlContent="sendMailModel.content || ''" />
                         </n-card>
                         <div v-else-if="sendMailModel.contentType == 'rich'" style="border: 1px solid #ccc">
                             <Toolbar style="border-bottom: 1px solid #ccc" :defaultConfig="toolbarConfig"

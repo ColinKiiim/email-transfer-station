@@ -4,6 +4,7 @@ import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
 import { useScopedI18n } from '@/i18n/app'
 import { onMounted, onBeforeUnmount, ref, shallowRef } from 'vue'
 import AdminContact from '../common/AdminContact.vue'
+import ShadowHtmlComponent from '../../components/ShadowHtmlComponent.vue'
 
 import { useGlobalState } from '../../store'
 import { api } from '../../api'
@@ -203,7 +204,7 @@ onMounted(async () => {
                         </n-form-item>
                         <n-form-item :label="t('content')" label-placement="top">
                             <n-card :bordered="false" embedded v-if="isPreview">
-                                <div v-html="sendMailModel.content" />
+                                <ShadowHtmlComponent :htmlContent="sendMailModel.content || ''" />
                             </n-card>
                             <div v-else-if="sendMailModel.contentType == 'rich'" style="border: 1px solid #ccc">
                                 <Toolbar style="border-bottom: 1px solid #ccc" :defaultConfig="toolbarConfig"

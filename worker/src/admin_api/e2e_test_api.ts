@@ -1,11 +1,24 @@
 import { Context } from 'hono'
 import { getBooleanValue } from '../utils'
 
-// Direct DB insert — bypasses the email() handler.
-const seedMail = async (c: Context<HonoCustomType>) => {
+const checkE2eAccess = (c: Context<HonoCustomType>) => {
     if (!getBooleanValue(c.env.E2E_TEST_MODE)) {
         return c.text("Not available", 404);
     }
+    const expectedSecret = c.env.E2E_TEST_SECRET;
+    if (expectedSecret) {
+        const actualSecret = c.req.header('x-e2e-test-secret') || '';
+        if (actualSecret !== expectedSecret) {
+            return c.text("Not available", 404);
+        }
+    }
+    return null;
+}
+
+// Direct DB insert — bypasses the email() handler.
+const seedMail = async (c: Context<HonoCustomType>) => {
+    const unavailable = checkE2eAccess(c);
+    if (unavailable) return unavailable;
     const { address, source, raw, message_id } = await c.req.json();
     if (!address || !raw) {
         return c.text("address and raw are required", 400);
@@ -26,9 +39,8 @@ const seedMail = async (c: Context<HonoCustomType>) => {
 
 // Exercises the real email() handler with a mock ForwardableEmailMessage.
 const receiveMail = async (c: Context<HonoCustomType>) => {
-    if (!getBooleanValue(c.env.E2E_TEST_MODE)) {
-        return c.text("Not available", 404);
-    }
+    const unavailable = checkE2eAccess(c);
+    if (unavailable) return unavailable;
     const { from, to, raw } = await c.req.json();
     if (!from || !to || !raw) {
         return c.text("from, to and raw are required", 400);

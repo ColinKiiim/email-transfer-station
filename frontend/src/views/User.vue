@@ -24,6 +24,7 @@ const { t } = useScopedI18n('views.User')
 const addressFilter = ref('')
 const addressFilterOptions = ref([])
 const addressesLoaded = ref(false)
+const userOpenSettingsWarning = ref('')
 
 const isSignedIn = computed(() => !!userSettings.value.user_email)
 const roleLabel = computed(() => userSettings.value.user_role?.role || '无角色')
@@ -119,7 +120,12 @@ watch(isSignedIn, async (signedIn) => {
 }, { immediate: true })
 
 onMounted(async () => {
-  await api.getUserOpenSettings(message)
+  try {
+    await api.getUserOpenSettings({ error: (text) => { userOpenSettingsWarning.value = text } })
+  } catch (error) {
+    userOpenSettingsWarning.value = error.message || '用户公开设置暂不可用'
+    userOpenSettings.value.fetched = true
+  }
   if (userJwt.value && !userSettings.value.user_id) {
     await api.getUserSettings(message)
   } else if (!userSettings.value.fetched) {
@@ -167,6 +173,9 @@ onMounted(async () => {
         <span>用户入口</span>
         <h2>登录后进入同一套新工作台</h2>
         <p>收件箱、地址绑定和账户安全都在这里完成。这个页面不再使用旧站 Header 和卡片式导航。</p>
+        <p v-if="userOpenSettingsWarning" class="inline-warning">
+          当前本地预览没有完整公开配置，登录表单仍可使用；线上环境会读取 Worker 设置。
+        </p>
       </div>
       <div class="login-panel">
         <UserLogin />
@@ -293,6 +302,14 @@ onMounted(async () => {
   font-size: 13px;
   line-height: 1.55;
   text-wrap: pretty;
+}
+
+.inline-warning {
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fff7ed;
+  color: #9a3412 !important;
+  font-size: 13px !important;
 }
 
 .login-panel {

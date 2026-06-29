@@ -35,7 +35,7 @@ app.use('/*', cors());
 // error handler
 app.onError((err, c) => {
 	console.error(err)
-	return c.text(`${err.name} ${err.message}`, 500)
+	return c.text('Internal server error', 500)
 })
 // global middlewares
 app.use('/*', async (c, next) => {

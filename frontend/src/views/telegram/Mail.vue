@@ -5,9 +5,9 @@ import { useGlobalState } from '../../store'
 import { api } from '../../api'
 import { onMounted, watch } from 'vue';
 import { processItem } from '../../utils/email-parser'
-import { utcToLocalDate } from '../../utils';
+import MailContentRenderer from '../../components/MailContentRenderer.vue'
 
-const { telegramApp, loading, useUTCDate } = useGlobalState()
+const { telegramApp, loading } = useGlobalState()
 const route = useRoute()
 
 const curMail = ref({});
@@ -47,20 +47,7 @@ onMounted(async () => {
 <template>
     <div class="center">
         <n-card :bordered="false" embedded v-if="curMail.message" style="max-width: 800px; height: 100%;">
-            <n-tag type="info">
-                ID: {{ curMail.id }}
-            </n-tag>
-            <n-tag type="info">
-                Date: {{ utcToLocalDate(curMail.created_at, useUTCDate) }}
-            </n-tag>
-            <n-tag type="info">
-                FROM: {{ curMail.source }}
-            </n-tag>
-            <n-tag v-if="showEMailTo" type="info">
-                TO: {{ curMail.address }}
-            </n-tag>
-            <iframe :srcdoc="curMail.message" style="margin-top: 10px;width: 100%; height: 100%;">
-            </iframe>
+            <MailContentRenderer :mail="curMail" :showEMailTo="true" :showReply="false" />
         </n-card>
     </div>
 </template>
