@@ -2008,7 +2008,6 @@ onBeforeUnmount(() => {
             <header class="topbar">
                 <div class="page-title">
                     <h1>{{ activeMeta.title }}</h1>
-                    <span>{{ activeMeta.kicker }}</span>
                 </div>
 
                 <div class="topbar-controls">
@@ -2055,7 +2054,7 @@ onBeforeUnmount(() => {
             <section class="view" :aria-busy="ui.syncing ? 'true' : 'false'" aria-live="polite">
                 <div class="notice source-notice" :class="{ warn: dataSourceNotice.tone === 'warn' }">
                     <strong>{{ dataSourceNotice.title }}</strong>
-                    <span>{{ dataSourceNotice.text }}</span>
+                    <span class="help-tip" :data-tip="dataSourceNotice.text" tabindex="0" aria-label="说明">?</span>
                 </div>
 
                 <div v-if="activeView === 'overview'" class="state-band" aria-label="运行状态">
@@ -2108,6 +2107,7 @@ onBeforeUnmount(() => {
                         <div class="facet-card">
                             <div class="facet-title">
                                 <strong>队列</strong>
+                                <span class="help-tip" data-tip="常规邮件、未知收件人和渲染风险归在同一条收件链路里。" tabindex="0" aria-label="说明">?</span>
                                 <button type="button" class="facet-mini-action mobile-only" @click="ui.flowMode = 'list'; syncMailQueryToRoute({ mode: undefined })">返回列表</button>
                             </div>
                             <button v-for="queue in mailHierarchy.queues" :key="queue.id" class="facet-row"
@@ -2116,15 +2116,11 @@ onBeforeUnmount(() => {
                                 <span>{{ queue.label }}</span>
                                 <b>{{ formatNumber(queue.count) }}</b>
                             </button>
-                            <div class="facet-note">
-                                常规邮件、未知收件人和渲染风险归在同一条收件链路里，不再拆成互相抢空间的报表。
-                            </div>
                         </div>
 
                         <div class="facet-card">
                             <div class="facet-title">
                                 <strong>邮箱</strong>
-                                <span>域名 / 地址</span>
                             </div>
                             <div class="mail-tree">
                                 <button class="facet-row" :class="{ 'is-active': ui.domain === 'all' && ui.address === 'all' }"
@@ -2154,8 +2150,10 @@ onBeforeUnmount(() => {
                     <section class="mail-list-panel panel" aria-label="邮件列表">
                         <div class="panel-head">
                             <div>
-                                <h2>收件箱</h2>
-                                <p>支持 from:、to:、subject:、has:attachment、is:unread 搜索。</p>
+                                <div class="panel-title-line">
+                                    <h2>收件箱</h2>
+                                    <span class="help-tip" data-tip="搜索支持 from:、to:、subject:、has:attachment、is:unread。" tabindex="0" aria-label="搜索说明">?</span>
+                                </div>
                             </div>
                             <div class="panel-head-actions">
                                 <button type="button" class="btn compact-btn" @click="ui.flowMode = 'filters'; syncMailQueryToRoute({ mode: 'filters' })">筛选</button>
@@ -2163,7 +2161,6 @@ onBeforeUnmount(() => {
                             </div>
                         </div>
                         <div class="filter-strip">
-                            <span class="filter-scope">筛选当前已加载邮件</span>
                             <button v-for="chip in activeFilterChips" :key="chip.key" type="button" class="filter-chip"
                                 @click="clearMailFilter(chip.key)">
                                 {{ chip.label }}
@@ -2942,13 +2939,6 @@ svg {
     text-wrap: balance;
 }
 
-.page-title span {
-    display: block;
-    margin-top: 2px;
-    color: var(--muted);
-    font-size: 12px;
-}
-
 .select,
 .field,
 textarea {
@@ -3247,20 +3237,63 @@ textarea {
 .app.is-flow-view .source-notice {
     display: flex;
     align-items: center;
-    min-height: 44px;
+    gap: 8px;
+    min-height: 38px;
     margin-bottom: 0;
-    padding: 9px 12px;
-}
-
-.app.is-flow-view .source-notice span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    padding: 7px 12px;
 }
 
 .notice span {
     color: var(--muted);
     font-size: 12px;
+}
+
+.help-tip {
+    position: relative;
+    display: inline-grid;
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    place-items: center;
+    border-radius: 999px;
+    background: var(--surface-soft);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 760;
+    line-height: 1;
+    box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.help-tip::after {
+    position: absolute;
+    z-index: 30;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    width: max-content;
+    max-width: 280px;
+    border-radius: var(--radius-sm);
+    padding: 7px 9px;
+    background: var(--fg);
+    color: var(--surface);
+    font-size: 12px;
+    font-weight: 520;
+    line-height: 1.45;
+    text-align: left;
+    transform: translateX(-50%) translateY(2px);
+    opacity: 0;
+    pointer-events: none;
+    box-shadow: var(--shadow-pop);
+    content: attr(data-tip);
+    transition-property: opacity, transform;
+    transition-duration: 120ms;
+    transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+    white-space: normal;
+}
+
+.help-tip:hover::after,
+.help-tip:focus-visible::after {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
 }
 
 .panel {
@@ -3273,11 +3306,11 @@ textarea {
     display: grid;
     grid-template-columns:
         minmax(180px, var(--mail-facets-width, 220px))
-        8px
+        4px
         minmax(360px, var(--mail-list-width, 540px))
-        8px
+        4px
         minmax(420px, 1fr);
-    gap: 6px;
+    gap: 0;
     align-items: stretch;
     height: 100%;
     min-height: 0;
@@ -3290,7 +3323,7 @@ textarea {
 
 .column-resizer {
     align-self: stretch;
-    width: 8px;
+    width: 4px;
     min-height: 0;
     border: 0;
     border-radius: 999px;
@@ -3308,7 +3341,7 @@ textarea {
 
 .column-resizer::before {
     display: block;
-    width: 2px;
+    width: 1px;
     height: 100%;
     margin: 0 auto;
     border-radius: 999px;
@@ -3361,6 +3394,14 @@ textarea {
     margin-bottom: 8px;
 }
 
+.facet-title {
+    justify-content: flex-start;
+}
+
+.facet-title strong {
+    margin-right: auto;
+}
+
 .facet-title span,
 .body-section-head span {
     color: var(--muted);
@@ -3392,13 +3433,6 @@ textarea {
 .facet-row b {
     font-size: 12px;
     font-variant-numeric: tabular-nums;
-}
-
-.facet-note {
-    margin-top: 10px;
-    color: var(--muted);
-    font-size: 12px;
-    text-wrap: pretty;
 }
 
 .safety-list {
@@ -3439,14 +3473,9 @@ textarea {
     background: var(--surface-soft);
 }
 
-.filter-scope,
 .filter-clear,
 .filter-chip {
     font-size: 12px;
-}
-
-.filter-scope {
-    color: var(--muted);
 }
 
 .filter-chip,
@@ -3466,6 +3495,12 @@ textarea {
 }
 
 .panel-head-actions {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.panel-title-line {
     display: inline-flex;
     gap: 8px;
     align-items: center;
@@ -3549,11 +3584,12 @@ textarea {
 }
 
 .unread-dot {
-    width: 7px;
-    height: 7px;
+    justify-self: center;
+    width: 6px;
+    height: 6px;
     border-radius: 999px;
     background: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-soft);
+    box-shadow: 0 0 0 2px var(--accent-soft);
     align-self: center;
 }
 
@@ -3580,8 +3616,8 @@ textarea {
 
 .mail-row-top {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    gap: 8px;
+    grid-template-columns: 14px minmax(0, 1fr) auto;
+    gap: 6px;
     align-items: center;
     min-width: 0;
 }
@@ -4251,9 +4287,9 @@ tr.is-selected {
     .mail-workbench {
         grid-template-columns:
             minmax(180px, var(--mail-facets-width, 200px))
-            8px
+            4px
             minmax(340px, var(--mail-list-width, 500px))
-            8px
+            4px
             minmax(360px, 1fr);
         height: 100%;
         min-height: 0;
@@ -4273,9 +4309,9 @@ tr.is-selected {
     .mail-workbench {
         grid-template-columns:
             minmax(170px, var(--mail-facets-width, 190px))
-            8px
+            4px
             minmax(320px, var(--mail-list-width, 460px))
-            8px
+            4px
             minmax(320px, 1fr);
         height: 100%;
         min-height: 0;
@@ -4416,7 +4452,7 @@ tr.is-selected {
         padding: 10px 12px;
     }
 
-    .notice span {
+    .notice span:not(.help-tip) {
         display: none;
     }
 
@@ -4491,10 +4527,6 @@ tr.is-selected {
     .facet-card {
         flex: none;
         min-width: 0;
-    }
-
-    .facet-note {
-        display: none;
     }
 
     .facet-card + .facet-card {

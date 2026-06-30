@@ -23,6 +23,7 @@
 
 ### Bug Fixes
 
+- fix: |AdminNext| Remove visible explanatory copy from mail-flow feature areas, replace it with question-mark hover help, and fix the unread dot overlapping message subjects
 - fix: |AdminNext| Fix desktop mail-flow page scrolling, duplicated detail toolbar controls, overlapping mail-row text, and duplicated mail metadata in the message body
 - fix: |AdminNext| Make the new console mail flow scroll the list, detail, and filter panes independently, keep mobile focused on the current task pane, and support `mailId` URL state plus address/domain filters and mailbox drill-downs
 - fix: |Frontend| Reuse the same safe HTML rendering path for compose previews, sendbox messages, and Telegram mail details so HTML mail behavior and isolation stay consistent across entry points
@@ -38,6 +39,7 @@
 
 ### Improvements
 
+- improve: |AdminNext| Tighten the mail-flow column separators to a Gmail-like narrow gutter between filters, list, and detail
 - improve: |AdminNext| Add draggable resizing for the filter, message-list, and detail columns in the mail flow, and compact the read-only notice, detail summary, and HTML body presentation
 - improve: |AdminNext| Add Gmail/Outlook-style empty detail states, a mobile detail toolbar, previous/next mail navigation, HTML/text/raw view switching, copy actions, and delete entry points to the mail workbench
 - improve: |Token/User| Add retry, user-center, and home actions to invalid share-token pages; show local user-config open failures as inline warnings instead of global blocking-looking errors
