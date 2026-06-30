@@ -178,7 +178,24 @@ const ui = reactive({
     },
 })
 
+const mailListRef = ref(null)
+const collapsedMailDomains = ref(new Set())
+
+if (typeof localStorage !== 'undefined') {
+    try {
+        collapsedMailDomains.value = new Set(JSON.parse(localStorage.getItem('ets-admin-collapsed-mail-domains') || '[]'))
+    } catch {
+        collapsedMailDomains.value = new Set()
+    }
+}
+
 const clampNumber = (value, min, max) => Math.min(max, Math.max(min, value))
+
+const resetMailListScroll = () => {
+    nextTick(() => {
+        if (mailListRef.value) mailListRef.value.scrollTop = 0
+    })
+}
 
 const mailGridStyle = computed(() => ({
     '--mail-facets-width': `${ui.mailColumns.facets}px`,
@@ -1098,12 +1115,6 @@ const filterRows = (rows) => rows.filter(matches)
 
 const filteredMailRows = computed(() => filterRows(mailRows.value))
 const filteredUnknownRows = computed(() => filterRows(unknownRows.value))
-const activeFilterChips = computed(() => [
-    ui.query ? { key: 'q', label: `搜索: ${ui.query}` } : null,
-    ui.domain !== 'all' ? { key: 'domain', label: `域名: ${ui.domain}` } : null,
-    ui.address !== 'all' ? { key: 'address', label: `地址: ${ui.address}` } : null,
-    ui.status !== 'all' ? { key: 'status', label: `状态: ${ui.status}` } : null,
-].filter(Boolean))
 
 const mailHierarchy = computed(() => {
     const allCount = mailRows.value.length
@@ -1130,6 +1141,27 @@ const mailHierarchy = computed(() => {
     }
 })
 
+const selectedMailDomain = computed(() => (ui.address !== 'all' ? getDomain(ui.address) : ui.domain))
+
+const isMailDomainCollapsed = (domain) => {
+    if (!domain || domain === selectedMailDomain.value) return false
+    return collapsedMailDomains.value.has(domain)
+}
+
+const persistCollapsedMailDomains = () => {
+    if (typeof localStorage === 'undefined') return
+    localStorage.setItem('ets-admin-collapsed-mail-domains', JSON.stringify([...collapsedMailDomains.value]))
+}
+
+const toggleMailDomain = (domain) => {
+    if (!domain) return
+    const next = new Set(collapsedMailDomains.value)
+    if (next.has(domain)) next.delete(domain)
+    else next.add(domain)
+    collapsedMailDomains.value = next
+    persistCollapsedMailDomains()
+}
+
 const syncMailQueryToRoute = (extra = {}) => {
     replaceRouteQuery({
         view: 'flow',
@@ -1146,6 +1178,7 @@ const syncMailQueryToRoute = (extra = {}) => {
 const setMailStatus = (status) => {
     ui.status = status
     ui.flowMode = 'list'
+    resetMailListScroll()
     syncMailQueryToRoute({ status: status === 'all' ? undefined : status, mode: undefined })
 }
 
@@ -1153,6 +1186,7 @@ const setMailDomain = (domain) => {
     ui.domain = domain || 'all'
     ui.address = 'all'
     ui.flowMode = 'list'
+    resetMailListScroll()
     syncMailQueryToRoute({ domain: ui.domain === 'all' ? undefined : ui.domain, address: undefined, mode: undefined })
 }
 
@@ -1160,6 +1194,7 @@ const setMailAddress = (address) => {
     ui.address = address || 'all'
     ui.domain = address && address !== 'all' ? getDomain(address) || ui.domain : ui.domain
     ui.flowMode = 'list'
+    resetMailListScroll()
     syncMailQueryToRoute({
         address: ui.address === 'all' ? undefined : ui.address,
         domain: ui.domain === 'all' ? undefined : ui.domain,
@@ -1167,20 +1202,9 @@ const setMailAddress = (address) => {
     })
 }
 
-const clearMailFilter = (key) => {
-    if (key === 'q') ui.query = ''
-    if (key === 'domain') {
-        ui.domain = 'all'
-        ui.address = 'all'
-    }
-    if (key === 'address') ui.address = 'all'
-    if (key === 'status') ui.status = 'all'
-    syncMailQueryToRoute({
-        q: ui.query || undefined,
-        domain: ui.domain === 'all' ? undefined : ui.domain,
-        address: ui.address === 'all' ? undefined : ui.address,
-        status: ui.status === 'all' ? undefined : ui.status,
-    })
+const updateMailSearch = () => {
+    resetMailListScroll()
+    syncMailQueryToRoute({ q: ui.query || undefined })
 }
 
 const currentMailIndex = computed(() => filteredMailRows.value.findIndex((row) => row.id === ui.selected.flow))
@@ -1555,6 +1579,7 @@ const handleAction = async (type) => {
         ui.address = 'all'
         ui.status = 'all'
         ui.flowMode = 'list'
+        resetMailListScroll()
         replaceRouteQuery({
             q: undefined,
             domain: undefined,
@@ -1728,8 +1753,8 @@ const currentRail = computed(() => {
     if (context === 'flow') {
         return {
             title: '选择一封邮件',
-            subtitle: '从左侧列表打开邮件后，可查看正文、附件、纯文本和原始内容。',
-            tags: ['未选择', '列表保留'],
+            subtitle: '',
+            tags: [],
             empty: true,
         }
     }
@@ -2025,7 +2050,7 @@ onBeforeUnmount(() => {
                         </svg>
                         <input ref="searchInput" v-model="ui.query" class="field"
                             placeholder="搜索：from:openai to:zkc subject:codex has:attachment is:unread"
-                            @input="activeView === 'flow' ? syncMailQueryToRoute({ q: ui.query || undefined }) : replaceRouteQuery({ q: ui.query || undefined })" />
+                            @input="activeView === 'flow' ? updateMailSearch() : replaceRouteQuery({ q: ui.query || undefined })" />
                         <span class="kbd">⌘K</span>
                     </label>
 
@@ -2129,17 +2154,25 @@ onBeforeUnmount(() => {
                                     <b>{{ formatNumber(mailRows.length) }}</b>
                                 </button>
                                 <div v-for="domain in mailHierarchy.domains" :key="domain.id || domain.domain" class="tree-group">
-                                    <button class="facet-row domain-row" :class="{ 'is-active': ui.domain === domain.domain && ui.address === 'all' }"
-                                        type="button" @click="setMailDomain(domain.domain)">
-                                        <span>{{ domain.domain }}</span>
-                                        <b>{{ formatNumber(domain.mails || 0) }}</b>
-                                    </button>
-                                    <button v-for="address in domain.addresses" :key="address.address"
-                                        class="facet-row address-row" :class="{ 'is-active': ui.address === address.address }"
-                                        type="button" @click="setMailAddress(address.address)">
-                                        <span>{{ address.address }}</span>
-                                        <b>{{ formatNumber(address.count) }}</b>
-                                    </button>
+                                    <div class="domain-line" :class="{ 'is-active': ui.domain === domain.domain && ui.address === 'all' }">
+                                        <button class="tree-toggle-btn" type="button"
+                                            :class="{ 'is-collapsed': isMailDomainCollapsed(domain.domain) }"
+                                            :aria-expanded="!isMailDomainCollapsed(domain.domain)"
+                                            :aria-label="isMailDomainCollapsed(domain.domain) ? '展开域名' : '折叠域名'"
+                                            @click="toggleMailDomain(domain.domain)"></button>
+                                        <button class="facet-row domain-row" type="button" @click="setMailDomain(domain.domain)">
+                                            <span>{{ domain.domain }}</span>
+                                            <b>{{ formatNumber(domain.mails || 0) }}</b>
+                                        </button>
+                                    </div>
+                                    <div v-show="!isMailDomainCollapsed(domain.domain)" class="tree-children">
+                                        <button v-for="address in domain.addresses" :key="address.address"
+                                            class="facet-row address-row" :class="{ 'is-active': ui.address === address.address }"
+                                            type="button" @click="setMailAddress(address.address)">
+                                            <span>{{ address.address }}</span>
+                                            <b>{{ formatNumber(address.count) }}</b>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -2156,21 +2189,11 @@ onBeforeUnmount(() => {
                                 </div>
                             </div>
                             <div class="panel-head-actions">
-                                <button type="button" class="btn compact-btn" @click="ui.flowMode = 'filters'; syncMailQueryToRoute({ mode: 'filters' })">筛选</button>
+                                <button type="button" class="btn compact-btn mobile-only" @click="ui.flowMode = 'filters'; syncMailQueryToRoute({ mode: 'filters' })">邮箱</button>
                                 <span class="status neutral">{{ formatNumber(filteredMailRows.length) }} 封</span>
                             </div>
                         </div>
-                        <div class="filter-strip">
-                            <button v-for="chip in activeFilterChips" :key="chip.key" type="button" class="filter-chip"
-                                @click="clearMailFilter(chip.key)">
-                                {{ chip.label }}
-                                <span aria-hidden="true">×</span>
-                            </button>
-                            <button v-if="activeFilterChips.length" type="button" class="filter-clear" @click="handleAction('reset-filters')">
-                                清除全部
-                            </button>
-                        </div>
-                        <div class="mail-list" role="listbox" aria-label="邮件记录">
+                        <div ref="mailListRef" class="mail-list" role="listbox" aria-label="邮件记录">
                             <button v-for="row in filteredMailRows" :key="row.id" class="mail-row" type="button"
                                 role="option" :aria-selected="isSelected('flow', row)"
                                 :class="{ 'is-selected': isSelected('flow', row), 'is-unread': row.unread }"
@@ -2616,6 +2639,29 @@ onBeforeUnmount(() => {
 
 .admin-next * {
     box-sizing: border-box;
+    scrollbar-color: color-mix(in oklch, var(--muted) 55%, transparent) transparent;
+    scrollbar-width: thin;
+}
+
+.admin-next *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.admin-next *::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.admin-next *::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: color-mix(in oklch, var(--muted) 48%, transparent);
+    background-clip: content-box;
+}
+
+.admin-next *::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in oklch, var(--muted) 68%, transparent);
+    background-clip: content-box;
 }
 
 .app {
@@ -2750,7 +2796,8 @@ svg {
 
 .nav-scroll {
     min-height: 0;
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
     padding-right: 3px;
 }
 
@@ -3061,7 +3108,8 @@ textarea {
 .view {
     min-width: 0;
     min-height: 0;
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
     padding: 16px;
 }
 
@@ -3271,10 +3319,11 @@ textarea {
     left: 50%;
     width: max-content;
     max-width: 280px;
+    border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     padding: 7px 9px;
-    background: var(--fg);
-    color: var(--surface);
+    background: var(--surface);
+    color: var(--fg);
     font-size: 12px;
     font-weight: 520;
     line-height: 1.45;
@@ -3288,6 +3337,18 @@ textarea {
     transition-duration: 120ms;
     transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
     white-space: normal;
+}
+
+.source-notice .help-tip::after {
+    top: 50%;
+    bottom: auto;
+    left: calc(100% + 8px);
+    transform: translateX(2px) translateY(-50%);
+}
+
+.source-notice .help-tip:hover::after,
+.source-notice .help-tip:focus-visible::after {
+    transform: translateX(0) translateY(-50%);
 }
 
 .help-tip:hover::after,
@@ -3375,10 +3436,13 @@ textarea {
     display: grid;
     gap: 10px;
     align-content: start;
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 .facet-card {
+    min-width: 0;
     border-radius: var(--radius);
     padding: 12px;
     background: var(--surface);
@@ -3424,6 +3488,13 @@ textarea {
     text-align: left;
 }
 
+.facet-row span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .facet-row:hover,
 .facet-row.is-active {
     background: var(--accent-soft);
@@ -3444,53 +3515,75 @@ textarea {
 .mail-tree {
     display: grid;
     gap: 4px;
+    min-width: 0;
 }
 
 .tree-group {
     display: grid;
     gap: 2px;
+    min-width: 0;
 }
 
-.domain-row span,
-.address-row span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+.domain-line {
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr);
+    align-items: center;
+    border-radius: var(--radius-sm);
+}
+
+.domain-line:hover,
+.domain-line.is-active {
+    background: var(--accent-soft);
+}
+
+.tree-toggle-btn {
+    display: grid;
+    width: 22px;
+    height: 28px;
+    place-items: center;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 760;
+    line-height: 1;
+}
+
+.tree-toggle-btn::before {
+    width: 0;
+    height: 0;
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+    border-left: 5px solid currentColor;
+    content: "";
+    transform: rotate(90deg);
+    transition: transform 120ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.tree-toggle-btn.is-collapsed::before {
+    transform: rotate(0deg);
+}
+
+.tree-toggle-btn:hover,
+.tree-toggle-btn:focus-visible {
+    color: color-mix(in oklch, var(--accent) 82%, black);
+    outline: none;
+}
+
+.domain-line .domain-row,
+.domain-line .domain-row:hover {
+    background: transparent;
+}
+
+.tree-children {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
 }
 
 .address-row {
-    padding-left: 18px;
-    color: var(--muted);
-}
-
-.filter-strip {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    align-items: center;
-    border-top: 1px solid var(--border);
-    padding: 8px 10px;
-    background: var(--surface-soft);
-}
-
-.filter-clear,
-.filter-chip {
-    font-size: 12px;
-}
-
-.filter-chip,
-.filter-clear {
-    min-height: 28px;
-    border: 0;
-    border-radius: 999px;
-    padding: 0 9px;
-    background: var(--surface);
-    color: var(--fg);
-    box-shadow: inset 0 0 0 1px var(--border);
-}
-
-.filter-chip span {
-    margin-left: 5px;
+    padding-left: 26px;
     color: var(--muted);
 }
 
@@ -3550,8 +3643,17 @@ textarea {
 
 .mail-list {
     min-height: 0;
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     padding: 0 10px 10px;
+}
+
+.mail-list > .empty-state {
+    justify-content: flex-start;
+    min-height: 52px;
+    border-top: 1px solid var(--border);
+    padding: 12px 8px;
 }
 
 .mail-row {
@@ -3668,7 +3770,9 @@ textarea {
 
 .detail-pane-body {
     min-height: 0;
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 .mail-reader-actions {
@@ -4506,7 +4610,8 @@ tr.is-selected {
     .mail-facets {
         display: grid;
         grid-template-columns: minmax(0, 1fr) !important;
-        overflow: auto;
+        overflow-x: hidden;
+        overflow-y: auto;
     }
 
     .mail-workbench.flow-mode-list .mail-detail-panel,
@@ -4529,10 +4634,6 @@ tr.is-selected {
         min-width: 0;
     }
 
-    .facet-card + .facet-card {
-        display: none;
-    }
-
     .mail-row {
         grid-template-columns: 1fr;
     }
@@ -4543,7 +4644,8 @@ tr.is-selected {
 
     .view {
         min-height: 0;
-        overflow: auto;
+        overflow-x: hidden;
+        overflow-y: auto;
         padding: 12px;
     }
 

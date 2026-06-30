@@ -33,6 +33,16 @@ const router = createRouter({
         {
             path: '/',
             alias: '/:lang/',
+            beforeEnter: (to) => {
+                if (!isAdminStagingHost()) return true
+                const routeLocale = resolveSupportedLocale(to.path.split('/')[1])
+                return {
+                    path: routeLocale ? `/${routeLocale}/console` : '/console',
+                    query: to.query,
+                    hash: to.hash,
+                    replace: true,
+                }
+            },
             component: Index
         },
         {
