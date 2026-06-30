@@ -157,6 +157,11 @@ const ui = reactive({
     syncing: false,
     mailRenderMode: 'html',
     flowMode: queryValue(route.query.mode, 'list'),
+    mailColumns: {
+        facets: 220,
+        list: 540,
+        detail: 820,
+    },
     detailKind: '',
     selected: {
         flow: queryValue(route.query.mailId || route.query.item),
@@ -172,6 +177,37 @@ const ui = reactive({
         audit: '',
     },
 })
+
+const clampNumber = (value, min, max) => Math.min(max, Math.max(min, value))
+
+const mailGridStyle = computed(() => ({
+    '--mail-facets-width': `${ui.mailColumns.facets}px`,
+    '--mail-list-width': `${ui.mailColumns.list}px`,
+    '--mail-detail-width': `${ui.mailColumns.detail}px`,
+}))
+
+const startMailColumnResize = (edge, event) => {
+    if (window.matchMedia('(max-width: 900px)').matches) return
+    event.preventDefault()
+    const startX = event.clientX
+    const start = { ...ui.mailColumns }
+    const onMove = (moveEvent) => {
+        const delta = moveEvent.clientX - startX
+        if (edge === 'facets-list') {
+            ui.mailColumns.facets = clampNumber(start.facets + delta, 180, 320)
+            ui.mailColumns.list = clampNumber(start.list - delta, 360, 720)
+        } else {
+            ui.mailColumns.list = clampNumber(start.list + delta, 360, 760)
+            ui.mailColumns.detail = clampNumber(start.detail - delta, 480, 1100)
+        }
+    }
+    const onUp = () => {
+        window.removeEventListener('pointermove', onMove)
+        window.removeEventListener('pointerup', onUp)
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp, { once: true })
+}
 
 const live = reactive({
     overview: null,
@@ -2066,12 +2102,13 @@ onBeforeUnmount(() => {
                     </div>
                 </div>
 
-                <div v-if="activeView === 'flow'" class="mail-workbench" :class="`flow-mode-${ui.flowMode}`" aria-label="收件流工作台">
+                <div v-if="activeView === 'flow'" class="mail-workbench" :class="`flow-mode-${ui.flowMode}`"
+                    :style="mailGridStyle" aria-label="收件流工作台">
                     <aside class="mail-facets" aria-label="收件流筛选">
                         <div class="facet-card">
                             <div class="facet-title">
                                 <strong>队列</strong>
-                                <button type="button" class="facet-mini-action" @click="ui.flowMode = 'list'; syncMailQueryToRoute({ mode: undefined })">返回列表</button>
+                                <button type="button" class="facet-mini-action mobile-only" @click="ui.flowMode = 'list'; syncMailQueryToRoute({ mode: undefined })">返回列表</button>
                             </div>
                             <button v-for="queue in mailHierarchy.queues" :key="queue.id" class="facet-row"
                                 :class="{ 'is-active': ui.status === queue.status }" type="button"
@@ -2111,6 +2148,8 @@ onBeforeUnmount(() => {
                             </div>
                         </div>
                     </aside>
+                    <button type="button" class="column-resizer facets-resizer" aria-label="调整筛选列宽"
+                        @pointerdown="startMailColumnResize('facets-list', $event)"></button>
 
                     <section class="mail-list-panel panel" aria-label="邮件列表">
                         <div class="panel-head">
@@ -2182,6 +2221,8 @@ onBeforeUnmount(() => {
                             </div>
                         </div>
                     </section>
+                    <button type="button" class="column-resizer detail-resizer" aria-label="调整列表和详情列宽"
+                        @pointerdown="startMailColumnResize('list-detail', $event)"></button>
 
                     <aside class="mail-detail-panel panel" aria-label="邮件详情">
                         <div class="panel-head">
@@ -2197,15 +2238,26 @@ onBeforeUnmount(() => {
                             </div>
                             <template v-else>
                             <div v-if="activeView === 'flow' && currentMail" class="mail-reader-actions">
-                                <button type="button" class="btn" @click="closeMailDetail">返回列表</button>
+                                <button type="button" class="btn mobile-only" @click="closeMailDetail">返回列表</button>
                                 <button type="button" class="btn" :disabled="!canGoPrevMail" @click="selectAdjacentMail(-1)">上一封</button>
                                 <button type="button" class="btn" :disabled="!canGoNextMail" @click="selectAdjacentMail(1)">下一封</button>
-                                <button type="button" class="btn" :disabled="!currentRail.mail?.html" @click="ui.mailRenderMode = 'html'">HTML</button>
-                                <button type="button" class="btn" :disabled="!currentRail.mail?.text" @click="ui.mailRenderMode = 'text'">纯文本</button>
-                                <button type="button" class="btn" :disabled="!currentRail.mail?.raw" @click="ui.mailRenderMode = 'raw'">原始</button>
                                 <button type="button" class="btn" @click="copyCurrent">复制收件地址</button>
                                 <button type="button" class="btn danger" @click="handleAction('delete')">删除</button>
                             </div>
+                            <dl v-if="currentMail" class="mail-summary">
+                                <div>
+                                    <dt>发件人</dt>
+                                    <dd>{{ currentMail.sender }}</dd>
+                                </div>
+                                <div>
+                                    <dt>收件人</dt>
+                                    <dd>{{ currentMail.to }}</dd>
+                                </div>
+                                <div>
+                                    <dt>时间</dt>
+                                    <dd>{{ currentMail.fullTime || currentMail.time }}</dd>
+                                </div>
+                            </dl>
                             <div v-if="currentRail.tags?.length" class="tag-row rail-tags">
                                 <span v-for="tag in currentRail.tags" :key="tag" class="tag">{{ tag }}</span>
                             </div>
@@ -2225,7 +2277,7 @@ onBeforeUnmount(() => {
                                     </div>
                                 </div>
                                 <div v-if="currentRendererMail && ui.mailRenderMode === 'html'" class="mail-body html-body">
-                                    <MailContentRenderer :mail="currentRendererMail" :showEMailTo="true" :showReply="false" />
+                                    <MailContentRenderer :mail="currentRendererMail" :showEMailTo="true" :showReply="false" :showMetaBar="false" />
                                 </div>
                                 <pre v-else-if="currentRail.mail?.text && ui.mailRenderMode === 'text'" class="mail-body text-body">{{ currentRail.mail.text }}</pre>
                                 <pre v-else-if="currentRail.mail?.raw && ui.mailRenderMode === 'raw'" class="mail-body raw-body">{{ currentRail.mail.raw }}</pre>
@@ -2939,6 +2991,8 @@ textarea {
     min-height: 36px;
     padding: 0;
     box-shadow: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .kbd {
@@ -3019,6 +3073,13 @@ textarea {
     min-height: 0;
     overflow: auto;
     padding: 16px;
+}
+
+.app.is-flow-view .view {
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    gap: 10px;
+    overflow: hidden;
 }
 
 .view-grid {
@@ -3183,6 +3244,20 @@ textarea {
     margin-bottom: 14px;
 }
 
+.app.is-flow-view .source-notice {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    margin-bottom: 0;
+    padding: 9px 12px;
+}
+
+.app.is-flow-view .source-notice span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .notice span {
     color: var(--muted);
     font-size: 12px;
@@ -3196,15 +3271,64 @@ textarea {
 
 .mail-workbench {
     display: grid;
-    grid-template-columns: 220px minmax(430px, 560px) minmax(560px, 1fr);
-    gap: 14px;
+    grid-template-columns:
+        minmax(180px, var(--mail-facets-width, 220px))
+        8px
+        minmax(360px, var(--mail-list-width, 540px))
+        8px
+        minmax(420px, 1fr);
+    gap: 6px;
     align-items: stretch;
-    height: clamp(560px, calc(100dvh - 292px), 900px);
+    height: 100%;
+    min-height: 0;
     max-width: none;
 }
 
 .mail-workbench > .panel {
     grid-column: auto;
+}
+
+.column-resizer {
+    align-self: stretch;
+    width: 8px;
+    min-height: 0;
+    border: 0;
+    border-radius: 999px;
+    padding: 0;
+    background: transparent;
+    cursor: col-resize;
+    box-shadow: none;
+}
+
+.column-resizer:hover,
+.column-resizer:focus-visible {
+    background: color-mix(in oklch, var(--accent) 18%, transparent);
+    outline: none;
+}
+
+.column-resizer::before {
+    display: block;
+    width: 2px;
+    height: 100%;
+    margin: 0 auto;
+    border-radius: 999px;
+    background: color-mix(in oklch, var(--border-strong) 70%, transparent);
+    content: "";
+}
+
+.mobile-only {
+    display: none;
+}
+
+.app.is-flow-view .toolbar {
+    min-height: 44px;
+    margin-bottom: 0;
+    padding: 6px;
+}
+
+.app.is-flow-view .toolbar .btn,
+.app.is-flow-view .toolbar .select {
+    min-height: 36px;
 }
 
 .mail-facets,
@@ -3399,9 +3523,9 @@ textarea {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 10px;
-    align-items: center;
+    align-items: start;
     width: 100%;
-    min-height: 64px;
+    min-height: 76px;
     border: 0;
     border-top: 1px solid var(--border);
     border-radius: 0;
@@ -3458,7 +3582,7 @@ textarea {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
     gap: 8px;
-    align-items: baseline;
+    align-items: center;
     min-width: 0;
 }
 
@@ -3467,12 +3591,12 @@ textarea {
 }
 
 .mail-main strong {
-    display: -webkit-box;
+    display: block;
     overflow: hidden;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
     line-height: 1.28;
     overflow-wrap: anywhere;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .mail-snippet,
@@ -3520,8 +3644,51 @@ textarea {
     gap: 8px;
     border-bottom: 1px solid var(--border);
     margin: -12px -12px 12px;
-    padding: 10px 12px;
+    padding: 8px 12px;
     background: color-mix(in oklch, var(--surface) 96%, transparent);
+}
+
+.mail-reader-actions .btn {
+    min-height: 34px;
+}
+
+.mail-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0 0 8px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+}
+
+.mail-summary div {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.mail-summary dt {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.mail-summary dd {
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    color: var(--fg);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mail-detail-panel .panel-head {
+    padding: 12px 16px 8px;
+}
+
+.mail-detail-panel .panel-head p {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .reader-empty {
@@ -3530,7 +3697,7 @@ textarea {
 }
 
 .body-section {
-    margin-top: 14px;
+    margin-top: 10px;
 }
 
 .body-section-head {
@@ -3595,7 +3762,32 @@ textarea {
 }
 
 .html-body {
-    max-height: 520px;
+    max-height: none;
+    background: white;
+}
+
+.html-body :deep(.mail-content-renderer) {
+    gap: 0;
+}
+
+.html-body :deep(.mail-content) {
+    margin-top: 0;
+}
+
+.html-body :deep(img) {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+    outline: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.html-body :deep(img[alt]) {
+    min-width: 72px;
+    min-height: 32px;
+}
+
+.html-body :deep(a) {
+    overflow-wrap: anywhere;
 }
 
 .text-body,
@@ -4057,8 +4249,14 @@ tr.is-selected {
     }
 
     .mail-workbench {
-        grid-template-columns: 200px minmax(360px, 0.92fr) minmax(360px, 1fr);
-        height: clamp(520px, calc(100dvh - 300px), 720px);
+        grid-template-columns:
+            minmax(180px, var(--mail-facets-width, 200px))
+            8px
+            minmax(340px, var(--mail-list-width, 500px))
+            8px
+            minmax(360px, 1fr);
+        height: 100%;
+        min-height: 0;
         max-width: 100%;
     }
 
@@ -4073,22 +4271,36 @@ tr.is-selected {
 
 @media (max-width: 1120px) {
     .mail-workbench {
-        grid-template-columns: 190px minmax(320px, 0.9fr) minmax(320px, 1fr);
-        height: clamp(500px, calc(100dvh - 280px), 720px);
+        grid-template-columns:
+            minmax(170px, var(--mail-facets-width, 190px))
+            8px
+            minmax(320px, var(--mail-list-width, 460px))
+            8px
+            minmax(320px, 1fr);
+        height: 100%;
+        min-height: 0;
     }
 
     .mail-list-panel {
-        min-height: 460px;
+        min-height: 0;
     }
 
     .mail-detail-panel {
-        min-height: 420px;
+        min-height: 0;
     }
 }
 
 @media (max-width: 900px) {
     .mail-workbench {
         grid-template-columns: minmax(0, 1fr);
+    }
+
+    .column-resizer {
+        display: none;
+    }
+
+    .mobile-only {
+        display: inline-flex;
     }
 
     .mail-detail-panel {

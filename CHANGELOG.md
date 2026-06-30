@@ -24,6 +24,7 @@
 
 ### Bug Fixes
 
+- fix: |AdminNext| 修复收件流桌面端仍可滚动整页、详情顶部工具重复、邮件行文字重叠和邮件正文元数据重复显示的问题
 - fix: |AdminNext| 新版控制台收件流改为按列表、详情、筛选分区独立滚动，移动端优先显示当前任务页；支持 `mailId` URL 状态、地址/域名筛选和从地址/域名列表直达对应邮件
 - fix: |Frontend| 统一写信预览、发送箱和 Telegram 邮件详情的 HTML 安全渲染路径，避免不同入口的 HTML 邮件显示体验和隔离策略不一致
 - fix: |Security| Worker 运行时错误不再把内部异常细节返回给调用方，发信失败也不再直接暴露底层错误文本
@@ -38,6 +39,7 @@
 
 ### Improvements
 
+- improve: |AdminNext| 收件流三列支持拖拽调整筛选列、邮件列表和详情区域宽度；只读提示、详情摘要和邮件 HTML 正文展示更紧凑
 - improve: |AdminNext| 收件台补充 Gmail/Outlook 式的空详情态、移动详情工具栏、邮件前后切换、HTML/文本/原文视图切换、复制和删除动作入口
 - improve: |Token/User| 分享 token 失效页补充重试、进入用户中心和返回首页入口；普通用户本地配置打开失败改为内联提示，不再表现为全局阻断错误
 - improve: |AdminNext| 出站与通知页改为消费真实 `/admin/address_sender` 与 `/admin/sendbox` 数据，空表显示空态，不再用地址账本或收件箱数据冒充发送权限/发送箱

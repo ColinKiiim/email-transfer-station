@@ -23,6 +23,7 @@
 
 ### Bug Fixes
 
+- fix: |AdminNext| Fix desktop mail-flow page scrolling, duplicated detail toolbar controls, overlapping mail-row text, and duplicated mail metadata in the message body
 - fix: |AdminNext| Make the new console mail flow scroll the list, detail, and filter panes independently, keep mobile focused on the current task pane, and support `mailId` URL state plus address/domain filters and mailbox drill-downs
 - fix: |Frontend| Reuse the same safe HTML rendering path for compose previews, sendbox messages, and Telegram mail details so HTML mail behavior and isolation stay consistent across entry points
 - fix: |Security| Stop Worker runtime errors from returning internal exception details, and stop send-mail failures from echoing lower-level error text to callers
@@ -37,6 +38,7 @@
 
 ### Improvements
 
+- improve: |AdminNext| Add draggable resizing for the filter, message-list, and detail columns in the mail flow, and compact the read-only notice, detail summary, and HTML body presentation
 - improve: |AdminNext| Add Gmail/Outlook-style empty detail states, a mobile detail toolbar, previous/next mail navigation, HTML/text/raw view switching, copy actions, and delete entry points to the mail workbench
 - improve: |Token/User| Add retry, user-center, and home actions to invalid share-token pages; show local user-config open failures as inline warnings instead of global blocking-looking errors
 - improve: |AdminNext| Make the delivery page consume real `/admin/address_sender` and `/admin/sendbox` data with empty states, instead of substituting address-ledger or inbox rows

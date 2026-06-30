@@ -22,6 +22,10 @@ const props = defineProps({
     type: Boolean,
     default: true
   },
+  showMetaBar: {
+    type: Boolean,
+    default: true
+  },
   enableUserDeleteEmail: {
     type: Boolean,
     default: false
@@ -146,7 +150,7 @@ const handleSaveToS3 = async (filename, blob) => {
 <template>
   <div class="mail-content-renderer">
     <!-- 邮件信息标签 -->
-    <n-space class="mail-meta-bar">
+    <n-space v-if="showMetaBar" class="mail-meta-bar">
       <n-tag type="info" class="mail-meta-chip">
         ID: {{ mail.id }}
       </n-tag>
@@ -209,7 +213,7 @@ const handleSaveToS3 = async (filename, blob) => {
     </n-space>
 
     <!-- AI 提取信息 -->
-    <AiExtractInfo :metadata="mail.metadata" />
+    <AiExtractInfo v-if="showMetaBar" :metadata="mail.metadata" />
 
     <!-- 邮件内容 -->
     <div class="mail-content" :class="{ 'dark-mode': isDark }">
