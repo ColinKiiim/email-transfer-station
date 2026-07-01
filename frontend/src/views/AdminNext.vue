@@ -310,8 +310,8 @@ const dataSourceNotice = computed(() => {
     }
     return {
         tone: 'warn',
-        title: '生产后端只读试接入',
-        text: '当前灰度后台连接生产 Worker/D1。本页写入和破坏性按钮保持前端 no-op，未执行生产写入。',
+        title: '生产后端已接入',
+        text: '当前灰度后台连接生产 Worker/D1。收件流删除会直接写入生产数据；其他高风险配置写入仍保持未接入。',
     }
 })
 
@@ -1576,6 +1576,63 @@ const copyText = async (text) => {
     }
 }
 
+const deleteMailRows = async (rows, scopeLabel = '选中邮件') => {
+    if (demoMode.value || !showAdminPage.value) {
+        showToast('请先登录管理员会话后再执行生产删除')
+        return
+    }
+    const targets = rows
+        .filter((row) => row?.sourceId)
+        .map((row) => ({
+            id: row.sourceId,
+            label: row.subject || row.to || `Mail #${row.sourceId}`,
+        }))
+    if (targets.length === 0) {
+        showToast('没有可删除的生产邮件')
+        return
+    }
+    const confirmed = window.confirm(`确认从生产收件箱删除 ${targets.length} 封${scopeLabel}？此操作会删除 raw_mails 和对应已读状态，无法在后台撤销。`)
+    if (!confirmed) return
+    const previousSelected = ui.selected.flow
+    let deleted = 0
+    try {
+        for (const target of targets) {
+            const result = await api.fetch(`/admin/mails/${target.id}`, {
+                method: 'DELETE',
+            })
+            if (result?.success === false) throw new Error(`删除失败：${target.label}`)
+            deleted += 1
+        }
+        showToast(`已删除 ${deleted} 封生产邮件`)
+        await refreshAll()
+        const remaining = filteredMailRows.value
+        if (remaining.some((row) => row.id === previousSelected)) {
+            ui.selected.flow = previousSelected
+        } else if (remaining.length > 0) {
+            ui.selected.flow = remaining[0].id
+        } else {
+            ui.selected.flow = ''
+            ui.flowMode = 'list'
+        }
+        syncMailQueryToRoute({ mailId: ui.selected.flow || undefined })
+    } catch (error) {
+        showToast(error?.message || `已删除 ${deleted} 封后中断`)
+        await refreshAll()
+    }
+}
+
+const deleteCurrentMail = async () => {
+    if (!currentMail.value) {
+        showToast('请先选择一封邮件')
+        return
+    }
+    await deleteMailRows([currentMail.value], '当前邮件')
+}
+
+const deleteFilteredMails = async () => {
+    await deleteMailRows(filteredMailRows.value, '当前筛选结果')
+}
+
 const handleAction = async (type) => {
     if (type === 'refresh') {
         await refreshAll()
@@ -1603,11 +1660,15 @@ const handleAction = async (type) => {
         await copyCurrent()
         return
     }
+    if (type === 'delete' && activeView.value === 'flow') {
+        await deleteFilteredMails()
+        return
+    }
     const messages = {
         rotate: '灰度预览未执行凭证轮换',
         revoke: '灰度预览未撤销访问包',
         verify: '灰度预览未执行 DNS / 路由检查',
-        delete: '灰度预览未执行删除',
+        delete: '该模块删除尚未接入生产写入',
         send: '灰度预览未发送邮件',
         preview: '安全渲染策略尚未接入统一预览',
         'test-webhook': '灰度预览未发送 Webhook 测试',
@@ -2269,7 +2330,7 @@ onBeforeUnmount(() => {
                                 <button type="button" class="btn" :disabled="!canGoPrevMail" @click="selectAdjacentMail(-1)">上一封</button>
                                 <button type="button" class="btn" :disabled="!canGoNextMail" @click="selectAdjacentMail(1)">下一封</button>
                                 <button type="button" class="btn" @click="copyCurrent">复制收件地址</button>
-                                <button type="button" class="btn danger" @click="handleAction('delete')">删除</button>
+                                <button type="button" class="btn danger" @click="deleteCurrentMail">删除</button>
                             </div>
                             <dl v-if="currentMail" class="mail-summary">
                                 <div>
@@ -2545,7 +2606,7 @@ onBeforeUnmount(() => {
                     <h2 id="admin-auth-title">管理员访问</h2>
                 </div>
                 <div class="modal-body">
-                    <p class="modal-copy">请输入管理员密码进入 OpenDesign 灰度后台。当前接入生产后端，写入动作仍保持灰度 no-op。</p>
+                    <p class="modal-copy">请输入管理员密码进入 OpenDesign 灰度后台。当前连接生产后端，收件流删除会直接写入生产数据。</p>
                     <div class="form-grid">
                         <label class="form-field full">
                             <span>管理员密码</span>
@@ -2573,8 +2634,8 @@ onBeforeUnmount(() => {
                 </div>
                 <div class="modal-body">
                     <div class="notice modal-notice">
-                        <strong>灰度 no-op</strong>
-                        <span>此表单不会写入生产数据；真实写入需要后端策略和二次确认。</span>
+                        <strong>未接入生产写入</strong>
+                        <span>此表单不会写入生产数据；收件流删除已单独接入并带确认。</span>
                     </div>
                     <div class="form-grid">
                         <label v-for="field in modalFields" :key="field.label" class="form-field"
@@ -4744,13 +4805,14 @@ tr.is-selected {
     }
 
     .app.is-flow-view .mail-reader-actions {
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        scrollbar-width: thin;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        overflow-x: hidden;
     }
 
     .app.is-flow-view .mail-reader-actions .btn {
-        flex: 0 0 auto;
+        min-width: 0;
+        padding-inline: 8px;
     }
 
     .detail-drawer-backdrop {

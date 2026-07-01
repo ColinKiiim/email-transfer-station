@@ -40,6 +40,7 @@
 
 ### Improvements
 
+- improve: |AdminNext| Wire `mail-admin` mail-flow deletion to the production backend: detail delete removes the current message, bulk delete removes the current filtered result set, and both require a production-data confirmation before execution
 - improve: |AdminNext| Make mail rows use Gmail-like read/unread treatment: read rows are grayer with lighter title weight, unread rows stay white with heavier titles; move sidebar collapse to a Gmail-like hamburger button before the brand mark, keep the top brand row out of the collapse animation, and tighten only the navigation below it to an icon rail
 - improve: |AdminNext| Tighten the mail-flow column separators to a Gmail-like narrow gutter between filters, list, and detail
 - improve: |AdminNext| Add draggable resizing for the filter, message-list, and detail columns in the mail flow, and compact the read-only notice, detail summary, and HTML body presentation
