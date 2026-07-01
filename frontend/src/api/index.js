@@ -50,7 +50,7 @@ const apiFetch = async (path, options = {}) => {
             data: options.body || null,
             headers,
         });
-        if (response.status === 401 && path.startsWith("/admin")) {
+        if (response.status === 401 && (path.startsWith("/api/admin") || path.startsWith("/admin"))) {
             showAdminAuth.value = true;
         }
         if (response.status === 401 && openSettings.value.needAuth) {
@@ -194,7 +194,7 @@ const getUserSettings = async (message) => {
 
 const adminShowAddressCredential = async (id) => {
     try {
-        const { jwt: addressCredential } = await apiFetch(`/admin/show_password/${id}`);
+        const { jwt: addressCredential } = await apiFetch(`/api/admin/show_password/${id}`);
         return addressCredential;
     } catch (error) {
         throw error;
@@ -203,7 +203,7 @@ const adminShowAddressCredential = async (id) => {
 
 const adminDeleteAddress = async (id) => {
     try {
-        await apiFetch(`/admin/delete_address/${id}`, {
+        await apiFetch(`/api/admin/delete_address/${id}`, {
             method: 'DELETE'
         });
     } catch (error) {

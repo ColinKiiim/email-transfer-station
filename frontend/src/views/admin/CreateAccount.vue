@@ -42,7 +42,7 @@ const newEmail = async () => {
         return
     }
     try {
-        const res = await api.fetch(`/admin/new_address`, {
+        const res = await api.fetch(`/api/admin/new_address`, {
             method: 'POST',
             body: JSON.stringify({
                 enablePrefix: enablePrefix.value,

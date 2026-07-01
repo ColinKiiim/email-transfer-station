@@ -16,7 +16,7 @@ const tableData = ref([])
 
 const fetchUserRoles = async () => {
     try {
-        const results = await api.fetch(`/admin/user_roles`);
+        const results = await api.fetch(`/api/admin/user_roles`);
         systemRoles.value = results;
     } catch (error) {
         console.log(error)
@@ -26,7 +26,7 @@ const fetchUserRoles = async () => {
 
 const fetchRoleConfigs = async () => {
     try {
-        const { configs } = await api.fetch(`/admin/role_address_config`);
+        const { configs } = await api.fetch(`/api/admin/role_address_config`);
         tableData.value = systemRoles.value.map(roleObj => ({
             role: roleObj.role,
             max_address_count: configs[roleObj.role]?.maxAddressCount ?? null,
@@ -51,7 +51,7 @@ const saveConfig = async () => {
             }
         });
 
-        await api.fetch(`/admin/role_address_config`, {
+        await api.fetch(`/api/admin/role_address_config`, {
             method: 'POST',
             body: JSON.stringify({ configs })
         });

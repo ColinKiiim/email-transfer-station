@@ -27,7 +27,7 @@ const bindAddressName = ref('')
 const fetchData = async () => {
     try {
         const { results } = await api.fetch(
-            `/admin/users/bind_address/${props.user_id}`,
+            `/api/admin/users/bind_address/${props.user_id}`,
         );
         data.value = results;
     } catch (error) {
@@ -43,7 +43,7 @@ const bindAddress = async () => {
         return;
     }
     try {
-        await api.fetch(`/admin/users/bind_address`, {
+        await api.fetch(`/api/admin/users/bind_address`, {
             method: 'POST',
             body: JSON.stringify({
                 user_id: props.user_id,
@@ -62,7 +62,7 @@ const bindAddress = async () => {
 
 const unbindAddress = async (addressId) => {
     try {
-        await api.fetch(`/admin/users/bind_address`, {
+        await api.fetch(`/api/admin/users/bind_address`, {
             method: 'DELETE',
             body: JSON.stringify({
                 user_id: props.user_id,

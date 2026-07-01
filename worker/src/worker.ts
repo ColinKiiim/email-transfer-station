@@ -91,6 +91,8 @@ app.use('/*', async (c, next) => {
 		c.req.path.startsWith("/api/webhook")
 		|| c.req.path.startsWith("/admin/webhook")
 		|| c.req.path.startsWith("/admin/mail_webhook")
+		|| c.req.path.startsWith("/api/admin/webhook")
+		|| c.req.path.startsWith("/api/admin/mail_webhook")
 	) {
 		if (!c.env.KV) {
 			return c.text(msgs.KVNotAvailableMsg, 400);
@@ -187,6 +189,10 @@ const validateShareJwtPayload = async (
 
 // api auth
 app.use('/api/*', async (c, next) => {
+	if (c.req.path.startsWith("/api/admin/")) {
+		await next();
+		return;
+	}
 	if (c.req.path.startsWith("/api/new_address")) {
 		await checkUserPayload(c);
 		await next();
@@ -326,7 +332,7 @@ app.use('/user_api/*', async (c, next) => {
 	await next();
 });
 // admin auth
-app.use('/admin/*', async (c, next) => {
+const adminAuthMiddleware = async (c: Context<HonoCustomType>, next: () => Promise<void>) => {
 
 	// check header x-admin-auth
 	if (checkIsAdmin(c)) {
@@ -427,7 +433,10 @@ app.use('/admin/*', async (c, next) => {
 		failure_reason: "missing_admin_auth",
 	});
 	return c.text(msgs.NeedAdminPasswordMsg, 401)
-});
+};
+
+app.use('/admin/*', adminAuthMiddleware);
+app.use('/api/admin/*', adminAuthMiddleware);
 
 
 app.route('/', commonApi)
@@ -436,8 +445,10 @@ app.route('/', openShareApi)
 app.route('/', mailsApi)
 app.route('/', userApi)
 app.route('/', adminApi)
+app.route('/api', adminApi)
 app.route('/', apiSendMail)
 app.route('/', telegramApi)
+app.route('/api', telegramApi)
 
 const health_check = async (c: Context<HonoCustomType>) => {
 	const lang = c.req.raw.headers.get("x-lang") || c.env.DEFAULT_LANG;

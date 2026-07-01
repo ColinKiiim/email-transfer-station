@@ -537,26 +537,26 @@ const fetchAdminData = async () => {
         senderAccess,
         sendBox,
     ] = await Promise.all([
-        safeFetch('overview', '/admin/overview'),
-        safeFetch('statistics', '/admin/statistics'),
-        safeFetch('domains', '/admin/domains'),
-        safeFetch('mail domains', '/admin/mail_domains'),
-        safeFetch('mail addresses', '/admin/mail_addresses'),
-        safeFetch('mails', '/admin/mails?limit=20&offset=0'),
-        safeFetch('unknown mails', '/admin/mails_unknow?limit=20&offset=0'),
-        safeFetch('addresses', '/admin/address?limit=50&offset=0'),
-        safeFetch('access packages', '/admin/access_packages?limit=50&offset=0'),
-        safeFetch('audit events', '/admin/audit_events?limit=20&offset=0'),
-        safeFetch('access events', '/admin/access_events?limit=20&offset=0'),
-        safeFetch('users', '/admin/users?limit=20&offset=0'),
-        safeFetch('worker configs', '/admin/worker/configs'),
-        safeFetch('db version', '/admin/db_version'),
-        safeFetch('mail webhook', '/admin/mail_webhook/settings'),
-        safeFetch('global webhook', '/admin/webhook/settings'),
-        safeFetch('telegram', '/admin/telegram/status'),
-        safeFetch('ai extract', '/admin/ai_extract/settings'),
-        safeFetch('sender access', '/admin/address_sender?limit=20&offset=0'),
-        safeFetch('sendbox', '/admin/sendbox?limit=10&offset=0'),
+        safeFetch('overview', '/api/admin/overview'),
+        safeFetch('statistics', '/api/admin/statistics'),
+        safeFetch('domains', '/api/admin/domains'),
+        safeFetch('mail domains', '/api/admin/mail_domains'),
+        safeFetch('mail addresses', '/api/admin/mail_addresses'),
+        safeFetch('mails', '/api/admin/mails?limit=20&offset=0'),
+        safeFetch('unknown mails', '/api/admin/mails_unknow?limit=20&offset=0'),
+        safeFetch('addresses', '/api/admin/address?limit=50&offset=0'),
+        safeFetch('access packages', '/api/admin/access_packages?limit=50&offset=0'),
+        safeFetch('audit events', '/api/admin/audit_events?limit=20&offset=0'),
+        safeFetch('access events', '/api/admin/access_events?limit=20&offset=0'),
+        safeFetch('users', '/api/admin/users?limit=20&offset=0'),
+        safeFetch('worker configs', '/api/admin/worker/configs'),
+        safeFetch('db version', '/api/admin/db_version'),
+        safeFetch('mail webhook', '/api/admin/mail_webhook/settings'),
+        safeFetch('global webhook', '/api/admin/webhook/settings'),
+        safeFetch('telegram', '/api/admin/telegram/status'),
+        safeFetch('ai extract', '/api/admin/ai_extract/settings'),
+        safeFetch('sender access', '/api/admin/address_sender?limit=20&offset=0'),
+        safeFetch('sendbox', '/api/admin/sendbox?limit=10&offset=0'),
     ])
 
     live.overview = overview
@@ -800,7 +800,7 @@ const routeRows = computed(() => {
     }))
     routes.push({
         id: 'route-hook',
-        destination: '/admin/mail_webhook/settings',
+        destination: '/api/admin/mail_webhook/settings',
         domain: '全部域名',
         type: 'Webhook',
         inUse: live.mailWebhook?.enabled ? 1 : 0,
@@ -892,7 +892,7 @@ const notificationRows = computed(() => [
     {
         id: 'notify-mailhook',
         channel: '邮件 Webhook',
-        target: '/admin/mail_webhook/settings',
+        target: '/api/admin/mail_webhook/settings',
         type: '入站通知',
         status: live.mailWebhook?.enabled ? '可用' : '需更新',
         detail: live.mailWebhook?.url ? `Endpoint: ${live.mailWebhook.url}` : '后端副作用门禁未接入前，只作为通知配置入口展示',
@@ -908,7 +908,7 @@ const notificationRows = computed(() => [
     {
         id: 'notify-send',
         channel: '地址级发送',
-        target: '/admin/send_mail',
+        target: '/api/admin/send_mail',
         type: '出站邮件',
         status: openSettings.value.enableSendMail ? '可用' : '待产品化',
         detail: '发送提供商决策尚未完成时，保持为受控能力',
@@ -975,7 +975,7 @@ const opsRows = computed(() => {
             id: 'worker',
             name: 'Worker 运行配置',
             status: !showAdminPage.value ? '需登录' : diagnostics.bindings ? '可用' : '需巡检',
-            detail: `API: mail-api.20030405.xyz · bindings: ${Object.keys(diagnostics.bindings || {}).join(', ') || '-'}`,
+            detail: `API: /api/admin/* · bindings: ${Object.keys(diagnostics.bindings || {}).join(', ') || '-'}`,
             action: '打开配置',
         },
         {
@@ -1414,8 +1414,8 @@ const activePanels = computed(() => {
     if (view === 'delivery') {
         return [
             { id: 'channels', title: '出站与通知通道', note: '通知、发送和外部通道状态。', columns: tableSpecs.notifications, rows: filterRows(notificationRows.value), kind: 'delivery' },
-            { id: 'sender', title: '地址级发送', note: '来自 /admin/address_sender 的发送权限记录；空表不再用地址账本代替。', columns: tableSpecs.sender, rows: filterRows(senderAccessRows.value), kind: 'delivery', layout: 'third' },
-            { id: 'sendbox', title: '发送箱', note: '来自 /admin/sendbox 的最近发送记录；空表不再用收件箱代替。', columns: tableSpecs.mails, rows: filterRows(sendBoxRows.value), kind: 'delivery', layout: 'third' },
+            { id: 'sender', title: '地址级发送', note: '来自 /api/admin/address_sender 的发送权限记录；空表不再用地址账本代替。', columns: tableSpecs.sender, rows: filterRows(senderAccessRows.value), kind: 'delivery', layout: 'third' },
+            { id: 'sendbox', title: '发送箱', note: '来自 /api/admin/sendbox 的最近发送记录；空表不再用收件箱代替。', columns: tableSpecs.mails, rows: filterRows(sendBoxRows.value), kind: 'delivery', layout: 'third' },
         ]
     }
     if (view === 'access') {
@@ -1495,7 +1495,7 @@ const closeDetail = () => {
 const markAdminMailRead = async (row) => {
     if (!row?.sourceId || row.unread === false || row.is_read === true || demoMode.value || !showAdminPage.value) return
     try {
-        const result = await api.fetch(`/admin/mails/${row.sourceId}/read_state`, {
+        const result = await api.fetch(`/api/admin/mails/${row.sourceId}/read_state`, {
             method: 'PATCH',
             body: JSON.stringify({ read: true }),
         })
@@ -1596,7 +1596,7 @@ const deleteMailRows = async (rows, scopeLabel = '选中邮件') => {
     let deleted = 0
     try {
         for (const target of targets) {
-            const result = await api.fetch(`/admin/mails/${target.id}`, {
+            const result = await api.fetch(`/api/admin/mails/${target.id}`, {
                 method: 'DELETE',
             })
             if (result?.success === false) throw new Error(`删除失败：${target.label}`)
@@ -1668,7 +1668,7 @@ const rotateCurrentCredential = async () => {
         '凭证轮换',
         `确认轮换 ${row.address} 的地址凭证？旧地址 JWT 会失效，新的凭证只会显示一次，请在安全位置复制保存。`,
         async () => {
-            const result = await api.fetch(`/admin/address/${row.sourceId}/rotate_credential`, { method: 'POST' })
+            const result = await api.fetch(`/api/admin/address/${row.sourceId}/rotate_credential`, { method: 'POST' })
             await refreshAll()
             if (result?.jwt) {
                 await copyText(result.jwt)
@@ -1691,7 +1691,7 @@ const revokeCurrentShareTokens = async () => {
         '撤销访问包',
         `确认撤销 ${row.address} 的全部活跃访问包？已分享的只读链接会立即失效。`,
         async () => {
-            const result = await api.fetch(`/admin/address/${row.sourceId}/share_tokens`, { method: 'DELETE' })
+            const result = await api.fetch(`/api/admin/address/${row.sourceId}/share_tokens`, { method: 'DELETE' })
             if (result?.success === false) throw new Error('撤销访问包失败')
             await refreshAll()
             showToast(`已撤销 ${row.address} 的访问包`)
@@ -1710,7 +1710,7 @@ const clearCurrentAddressInbox = async () => {
         '清空地址收件',
         `确认清空 ${row.address} 的生产收件箱？此操作会删除该地址 raw_mails 和已读状态，无法在后台撤销。`,
         async () => {
-            const result = await api.fetch(`/admin/clear_inbox/${row.sourceId}`, { method: 'DELETE' })
+            const result = await api.fetch(`/api/admin/clear_inbox/${row.sourceId}`, { method: 'DELETE' })
             if (result?.success === false) throw new Error('清空地址收件失败')
             await refreshAll()
             showToast(`已清空 ${row.address} 的收件箱`)
@@ -1732,11 +1732,11 @@ const checkCurrentDomainRoute = async () => {
     actionBusy.value = 'verify'
     try {
         if (String(row.mode || '').includes('Cloudflare')) {
-            const result = await api.fetch(`/admin/domains/${row.sourceId}/cloudflare/check`, { method: 'POST' })
+            const result = await api.fetch(`/api/admin/domains/${row.sourceId}/cloudflare/check`, { method: 'POST' })
             const ruleCount = Array.isArray(result?.rules) ? result.rules.length : 0
             showToast(`Cloudflare 路由检查完成：${ruleCount} 条规则`)
         } else {
-            const result = await api.fetch(`/admin/domains/${row.sourceId}/impact`)
+            const result = await api.fetch(`/api/admin/domains/${row.sourceId}/impact`)
             showToast(`域名影响检查完成：${result?.address_count ?? 0} 个地址，${result?.mail_count ?? 0} 封邮件`)
         }
         await refreshAll()
@@ -1763,7 +1763,7 @@ const checkCurrentDomainImpact = async () => {
     }
     actionBusy.value = 'domain-impact'
     try {
-        const result = await api.fetch(`/admin/domains/${row.sourceId}/impact`)
+        const result = await api.fetch(`/api/admin/domains/${row.sourceId}/impact`)
         showToast(`停用影响：${result?.address_count ?? 0} 个地址，${result?.mail_count ?? 0} 封邮件`)
     } catch (error) {
         showToast(error?.message || '停用影响检查失败')

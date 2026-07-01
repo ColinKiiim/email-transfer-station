@@ -38,8 +38,8 @@ const fetchOverview = async () => {
     overviewError.value = ''
     statisticsError.value = ''
     const [overviewResult, statisticsResult] = await Promise.allSettled([
-        api.fetch('/admin/overview'),
-        api.fetch('/admin/statistics'),
+        api.fetch('/api/admin/overview'),
+        api.fetch('/api/admin/statistics'),
     ])
     if (overviewResult.status === 'fulfilled') {
         overview.value = overviewResult.value

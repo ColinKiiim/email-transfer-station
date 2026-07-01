@@ -4,14 +4,14 @@ import MailBox from '../../components/MailBox.vue';
 
 const fetchMailUnknowData = async (limit, offset) => {
     return await api.fetch(
-        `/admin/mails_unknow`
+        `/api/admin/mails_unknow`
         + `?limit=${limit}`
         + `&offset=${offset}`
     );
 }
 
 const deleteMail = async (curMailId) => {
-    await api.fetch(`/admin/mails/${curMailId}`, { method: 'DELETE' });
+    await api.fetch(`/api/admin/mails/${curMailId}`, { method: 'DELETE' });
 };
 </script>
 

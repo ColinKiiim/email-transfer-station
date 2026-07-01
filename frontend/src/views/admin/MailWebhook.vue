@@ -6,18 +6,18 @@ import { api } from '../../api'
 import WebhookComponent from '../../components/WebhookComponent.vue'
 
 const fetchData = async () => {
-    return await api.fetch(`/admin/mail_webhook/settings`)
+    return await api.fetch(`/api/admin/mail_webhook/settings`)
 }
 
 const saveSettings = async (webhookSettings: any) => {
-    await api.fetch(`/admin/mail_webhook/settings`, {
+    await api.fetch(`/api/admin/mail_webhook/settings`, {
         method: 'POST',
         body: JSON.stringify(webhookSettings),
     })
 }
 
 const testSettings = async (webhookSettings: any) => {
-    await api.fetch(`/admin/mail_webhook/test`, {
+    await api.fetch(`/api/admin/mail_webhook/test`, {
         method: 'POST',
         body: JSON.stringify(webhookSettings),
     })

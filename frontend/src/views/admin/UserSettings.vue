@@ -32,7 +32,7 @@ const userSettings = ref({
 
 const fetchData = async () => {
     try {
-        const res = await api.fetch(`/admin/user_settings`)
+        const res = await api.fetch(`/api/admin/user_settings`)
         Object.assign(userSettings.value, res)
     } catch (error) {
         message.error(error.message || "error");
@@ -41,7 +41,7 @@ const fetchData = async () => {
 
 const save = async () => {
     try {
-        await api.fetch(`/admin/user_settings`, {
+        await api.fetch(`/api/admin/user_settings`, {
             method: 'POST',
             body: JSON.stringify(userSettings.value)
         })

@@ -41,6 +41,7 @@
 
 ### Improvements
 
+- improve: |Admin API| 新增同源后台 API 前缀 `/api/admin/*` 并将新旧后台前端调用迁移过去；旧 `/admin/*` 后端接口暂时保留兼容，便于后续释放 `/admin/...` 前端子路由空间
 - improve: |AdminNext| 新后台主入口从 `/console` 切换到 `/admin`，旧后台隐藏保留在 `/old-admin`，`/console` 暂作为兼容入口；本阶段不改动 `/admin/...` 后端 API 前缀
 - improve: |AdminNext| 移除 `mail-admin.20030405.xyz` 独立后台自定义域的运行特判，统一使用 `mail.20030405.xyz/console` 和 `admin-next.email-transfer-station.pages.dev/console` 作为新版控制台入口
 - improve: |AdminNext| 新版 mail-admin 继续接入生产后台动作：地址身份工具栏可轮换凭证、撤销当前地址访问包、清空当前地址收件箱；域名与路由页可执行 Cloudflare 路由检查和停用影响预览；仍保留真实创建、发信、Webhook、数据库迁移等高风险操作的专用表单门禁

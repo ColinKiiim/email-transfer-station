@@ -30,7 +30,7 @@ const { t } = useScopedI18n('views.admin.Maintenance')
 
 const cleanup = async (cleanType, cleanDays) => {
     try {
-        await api.fetch('/admin/cleanup', {
+        await api.fetch('/api/admin/cleanup', {
             method: 'POST',
             body: JSON.stringify({ cleanType, cleanDays })
         });
@@ -58,7 +58,7 @@ const removeCustomSql = (index) => {
 
 const fetchData = async () => {
     try {
-        const res = await api.fetch('/admin/auto_cleanup');
+        const res = await api.fetch('/api/admin/auto_cleanup');
         if (res) Object.assign(cleanupModel.value, res);
         if (!cleanupModel.value.customSqlCleanupList) {
             cleanupModel.value.customSqlCleanupList = [];
@@ -70,7 +70,7 @@ const fetchData = async () => {
 
 const save = async () => {
     try {
-        await api.fetch('/admin/auto_cleanup', {
+        await api.fetch('/api/admin/auto_cleanup', {
             method: 'POST',
             body: JSON.stringify(cleanupModel.value)
         });

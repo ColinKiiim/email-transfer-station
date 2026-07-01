@@ -77,7 +77,7 @@ const fetchData = async () => {
     loading.value = true
     loadError.value = ''
     try {
-        const res = await api.fetch('/admin/domains')
+        const res = await api.fetch('/api/admin/domains')
         domains.value = res.results || []
         cloudflareAutomation.value = res.cloudflare_automation || { has_token: false, worker_name: '' }
     } catch (error) {
@@ -121,7 +121,7 @@ const saveDomain = async () => {
     if (saving.value) return
     saving.value = true
     try {
-        const path = editingId.value ? `/admin/domains/${editingId.value}` : '/admin/domains'
+        const path = editingId.value ? `/api/admin/domains/${editingId.value}` : '/api/admin/domains'
         const payload = {
             domain: model.domain,
             display_label: model.display_label,
@@ -154,7 +154,7 @@ const importEnv = async () => {
     if (importing.value) return
     importing.value = true
     try {
-        const res = await api.fetch('/admin/domains/import_env', {
+        const res = await api.fetch('/api/admin/domains/import_env', {
             method: 'POST',
             body: JSON.stringify({ overwrite: false }),
         })
@@ -175,7 +175,7 @@ const runAction = async (row, action) => {
     const key = actionKey(row, action)
     actionBusy.value[key] = true
     try {
-        const res = await api.fetch(`/admin/domains/${row.id}/${action}`, {
+        const res = await api.fetch(`/api/admin/domains/${row.id}/${action}`, {
             method: 'POST',
             body: JSON.stringify({ config_version: row.config_version }),
         })
@@ -200,7 +200,7 @@ const checkCloudflare = async (row, showSuccess = true) => {
     const key = actionKey(row, 'cloudflare/check')
     actionBusy.value[key] = true
     try {
-        const res = await api.fetch(`/admin/domains/${row.id}/cloudflare/check`, { method: 'POST' })
+        const res = await api.fetch(`/api/admin/domains/${row.id}/cloudflare/check`, { method: 'POST' })
         if (showSuccess) {
             message.success(res.setup_preview?.catch_all_conflict
                 ? t('cloudflareConflictFound')
@@ -220,7 +220,7 @@ const executeCloudflareSetup = async (row, confirmReplaceCatchAll) => {
     const key = actionKey(row, 'cloudflare/setup')
     actionBusy.value[key] = true
     try {
-        await api.fetch(`/admin/domains/${row.id}/cloudflare/setup`, {
+        await api.fetch(`/api/admin/domains/${row.id}/cloudflare/setup`, {
             method: 'POST',
             body: JSON.stringify({
                 config_version: row.config_version,
@@ -259,7 +259,7 @@ const prepareDisable = async (row) => {
     const key = actionKey(row, 'impact')
     actionBusy.value[key] = true
     try {
-        disableImpact.value = await api.fetch(`/admin/domains/${row.id}/impact`)
+        disableImpact.value = await api.fetch(`/api/admin/domains/${row.id}/impact`)
         disableTarget.value = row
         showDisableConfirm.value = true
     } catch (error) {
@@ -275,7 +275,7 @@ const confirmDisable = async () => {
     const key = actionKey(row, 'disable')
     actionBusy.value[key] = true
     try {
-        await api.fetch(`/admin/domains/${row.id}`, {
+        await api.fetch(`/api/admin/domains/${row.id}`, {
             method: 'DELETE',
             body: JSON.stringify({
                 confirm: true,

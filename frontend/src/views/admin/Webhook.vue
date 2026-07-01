@@ -27,7 +27,7 @@ const errorInfo = ref('')
 
 const getSettings = async () => {
     try {
-        const res = await api.fetch(`/admin/webhook/settings`)
+        const res = await api.fetch(`/api/admin/webhook/settings`)
         Object.assign(webhookSettings.value, res)
         webhookEnabled.value = true
     } catch (error) {
@@ -37,7 +37,7 @@ const getSettings = async () => {
 
 const saveSettings = async () => {
     try {
-        await api.fetch(`/admin/webhook/settings`, {
+        await api.fetch(`/api/admin/webhook/settings`, {
             method: 'POST',
             body: JSON.stringify(webhookSettings.value),
         })

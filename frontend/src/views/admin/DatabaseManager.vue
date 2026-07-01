@@ -17,7 +17,7 @@ const { t } = useScopedI18n('views.admin.DatabaseManager')
 
 const fetchData = async () => {
     try {
-        const res = await api.fetch('/admin/db_version');
+        const res = await api.fetch('/api/admin/db_version');
         if (res) Object.assign(dbVersionData.value, res);
     } catch (error) {
         message.error(error.message || "error");
@@ -27,7 +27,7 @@ const fetchData = async () => {
 const initialization = async () => {
     try {
         loading.value = true;
-        await api.fetch('/admin/db_initialize', {
+        await api.fetch('/api/admin/db_initialize', {
             method: 'POST'
         });
         await fetchData();
@@ -42,7 +42,7 @@ const initialization = async () => {
 const migration = async () => {
     try {
         loading.value = true;
-        await api.fetch('/admin/db_migration', {
+        await api.fetch('/api/admin/db_migration', {
             method: 'POST'
         });
         await fetchData();

@@ -82,7 +82,7 @@ const fetchData = async () => {
         if (action.value.trim()) params.set('action', action.value.trim())
         if (resourceType.value.trim()) params.set('resource_type', resourceType.value.trim())
         if (status.value) params.set('status', status.value)
-        const { results, count: total } = await api.fetch(`/admin/audit_events?${params.toString()}`)
+        const { results, count: total } = await api.fetch(`/api/admin/audit_events?${params.toString()}`)
         data.value = results || []
         if (total > 0 || page.value === 1) count.value = total || 0
     } catch (error) {

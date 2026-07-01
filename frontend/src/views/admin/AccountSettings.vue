@@ -277,7 +277,7 @@ const validateSendMailLimit = () => {
 
 const fetchData = async ({ suppressErrorMessage = false } = {}) => {
     try {
-        const res = await api.fetch(`/admin/account_settings`)
+        const res = await api.fetch(`/api/admin/account_settings`)
         addressBlockList.value = res.blockList || []
         sendAddressBlockList.value = res.sendBlockList || []
         verifiedAddressList.value = res.verifiedAddressList || []
@@ -332,7 +332,7 @@ const save = async () => {
             },
             sendMailLimitConfig: getSendMailLimitPayload()
         }
-        await api.fetch(`/admin/account_settings`, {
+        await api.fetch(`/api/admin/account_settings`, {
             method: 'POST',
             body: JSON.stringify(payload)
         })

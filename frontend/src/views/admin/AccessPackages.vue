@@ -76,7 +76,7 @@ const copyText = async (text) => {
 
 const fetchAddresses = async () => {
     try {
-        const { results } = await api.fetch('/admin/address?limit=100&offset=0')
+        const { results } = await api.fetch('/api/admin/address?limit=100&offset=0')
         addressOptions.value = (results || []).map((row) => ({
             label: row.name,
             value: row.id,
@@ -94,7 +94,7 @@ const fetchData = async () => {
         if (query.value.trim()) params.set('q', query.value.trim())
         if (address.value.trim()) params.set('address', address.value.trim())
         if (status.value) params.set('status', status.value)
-        const { results, count: total } = await api.fetch(`/admin/access_packages?${params.toString()}`)
+        const { results, count: total } = await api.fetch(`/api/admin/access_packages?${params.toString()}`)
         data.value = results || []
         if (total > 0 || page.value === 1) count.value = total || 0
     } catch (error) {
@@ -130,7 +130,7 @@ const createPackage = async () => {
         return
     }
     try {
-        const res = await api.fetch(`/admin/address/${createForm.value.address_id}/share_tokens`, {
+        const res = await api.fetch(`/api/admin/address/${createForm.value.address_id}/share_tokens`, {
             method: 'POST',
             body: JSON.stringify({
                 label: createForm.value.label || '',
@@ -158,7 +158,7 @@ const openEdit = (row) => {
 
 const saveEdit = async () => {
     try {
-        await api.fetch(`/admin/address_share_tokens/${editForm.value.id}`, {
+        await api.fetch(`/api/admin/address_share_tokens/${editForm.value.id}`, {
             method: 'PATCH',
             body: JSON.stringify({
                 label: editForm.value.label || '',
@@ -182,7 +182,7 @@ const revokePackage = (row) => {
 const confirmRevokePackage = async () => {
     if (!revokeTarget.value) return
     try {
-        await api.fetch(`/admin/address_share_tokens/${revokeTarget.value.id}`, { method: 'DELETE' })
+        await api.fetch(`/api/admin/address_share_tokens/${revokeTarget.value.id}`, { method: 'DELETE' })
         message.success(t('success'))
         showRevoke.value = false
         revokeTarget.value = null

@@ -97,7 +97,7 @@ const send = async () => {
 
     sending.value = true
     try {
-        await api.fetch(`/admin/send_mail`,
+        await api.fetch(`/api/admin/send_mail`,
             {
                 method: 'POST',
                 body: JSON.stringify(payload)

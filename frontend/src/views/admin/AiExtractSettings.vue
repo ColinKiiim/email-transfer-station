@@ -21,7 +21,7 @@ const settings = ref<AiExtractSettings>({
 
 const fetchData = async () => {
     try {
-        const res = await api.fetch(`/admin/ai_extract/settings`) as AiExtractSettings
+        const res = await api.fetch(`/api/admin/ai_extract/settings`) as AiExtractSettings
         Object.assign(settings.value, res)
     } catch (error) {
         message.error((error as Error).message || "error");
@@ -30,7 +30,7 @@ const fetchData = async () => {
 
 const saveSettings = async () => {
     try {
-        await api.fetch(`/admin/ai_extract/settings`, {
+        await api.fetch(`/api/admin/ai_extract/settings`, {
             method: 'POST',
             body: JSON.stringify(settings.value),
         })

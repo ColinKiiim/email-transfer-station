@@ -22,7 +22,7 @@ const dailyRequestLimit = ref(1000)
 const fetchData = async () => {
     try {
         loading.value = true
-        const res = await api.fetch(`/admin/ip_blacklist/settings`)
+        const res = await api.fetch(`/api/admin/ip_blacklist/settings`)
         enabled.value = res.enabled || false
         ipBlacklist.value = res.blacklist || []
         asnBlacklist.value = res.asnBlacklist || []
@@ -45,7 +45,7 @@ const save = async () => {
     }
     try {
         loading.value = true
-        await api.fetch(`/admin/ip_blacklist/settings`, {
+        await api.fetch(`/api/admin/ip_blacklist/settings`, {
             method: 'POST',
             body: JSON.stringify({
                 enabled: enabled.value,

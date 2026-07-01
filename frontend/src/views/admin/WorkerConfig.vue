@@ -45,7 +45,7 @@ const registryRows = computed(() => diagnostics.value.domains?.registry || [])
 
 const fetchData = async () => {
     try {
-        const res = await api.fetch(`/admin/worker/configs`)
+        const res = await api.fetch(`/api/admin/worker/configs`)
         Object.assign(settings.value, res)
     } catch (error) {
         message.error(error.message || "error");

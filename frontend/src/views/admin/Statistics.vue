@@ -25,7 +25,7 @@ const fetchStatistics = async () => {
             userCount, mailCount, sendMailCount,
             addressCount, activeAddressCount7days,
             activeAddressCount30days,
-        } = await api.fetch(`/admin/statistics`);
+        } = await api.fetch(`/api/admin/statistics`);
         statistics.value.mailCount = mailCount || 0;
         statistics.value.sendMailCount = sendMailCount || 0;
         statistics.value.userCount = userCount || 0;

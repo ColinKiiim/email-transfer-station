@@ -32,7 +32,7 @@ const newOauth2Type = ref('custom')
 
 const fetchData = async () => {
     try {
-        const res = await api.fetch(`/admin/user_oauth2_settings`)
+        const res = await api.fetch(`/api/admin/user_oauth2_settings`)
         Object.assign(userOauth2Settings.value, res)
     } catch (error) {
         message.error((error as Error).message || "error");
@@ -41,7 +41,7 @@ const fetchData = async () => {
 
 const save = async () => {
     try {
-        await api.fetch(`/admin/user_oauth2_settings`, {
+        await api.fetch(`/api/admin/user_oauth2_settings`, {
             method: 'POST',
             body: JSON.stringify(userOauth2Settings.value)
         })

@@ -116,7 +116,7 @@ const deleteEmail = async () => {
 
 const clearInbox = async () => {
     try {
-        await api.fetch(`/admin/clear_inbox/${curClearInboxAddressId.value}`, {
+        await api.fetch(`/api/admin/clear_inbox/${curClearInboxAddressId.value}`, {
             method: 'DELETE'
         });
         message.success(t("success"));
@@ -130,7 +130,7 @@ const clearInbox = async () => {
 
 const clearSentItems = async () => {
     try {
-        await api.fetch(`/admin/clear_sent_items/${curClearSentItemsAddressId.value}`, {
+        await api.fetch(`/api/admin/clear_sent_items/${curClearSentItemsAddressId.value}`, {
             method: 'DELETE'
         });
         message.success(t("success"));
@@ -149,7 +149,7 @@ const resetPassword = async () => {
         return;
     }
     try {
-        await api.fetch(`/admin/address/${curResetPasswordAddressId.value}/reset_password`, {
+        await api.fetch(`/api/admin/address/${curResetPasswordAddressId.value}/reset_password`, {
             method: 'POST',
             body: JSON.stringify({
                 password: await hashPassword(normalizedPassword)
@@ -165,7 +165,7 @@ const resetPassword = async () => {
 
 const rotateCredential = async () => {
     try {
-        const res = await api.fetch(`/admin/address/${curRotateCredentialAddressId.value}/rotate_credential`, {
+        const res = await api.fetch(`/api/admin/address/${curRotateCredentialAddressId.value}/rotate_credential`, {
             method: 'POST'
         });
         curEmailAddress.value = res.address || curRotateCredentialAddress.value;
@@ -181,7 +181,7 @@ const rotateCredential = async () => {
 
 const revokeShareLinks = async () => {
     try {
-        await api.fetch(`/admin/address/${curRevokeShareLinksAddressId.value}/share_tokens`, {
+        await api.fetch(`/api/admin/address/${curRevokeShareLinksAddressId.value}/share_tokens`, {
             method: 'DELETE'
         });
         showRevokeShareLinks.value = false;
@@ -349,7 +349,7 @@ const openShareManagement = async (row) => {
 
 const createShareLink = async () => {
     try {
-        const res = await api.fetch(`/admin/address/${shareLinkForm.value.addressId}/share_tokens`, {
+        const res = await api.fetch(`/api/admin/address/${shareLinkForm.value.addressId}/share_tokens`, {
             method: 'POST',
             body: JSON.stringify({
                 label: shareLinkForm.value.label || '',
@@ -386,7 +386,7 @@ const openEditAddress = (row) => {
 
 const saveAddressMetadata = async () => {
     try {
-        await api.fetch(`/admin/address/${editAddressForm.value.id}`, {
+        await api.fetch(`/api/admin/address/${editAddressForm.value.id}`, {
             method: 'PATCH',
             body: JSON.stringify({
                 display_label: editAddressForm.value.display_label,
@@ -405,7 +405,7 @@ const saveAddressMetadata = async () => {
 
 const fetchAddressLabelOptions = async () => {
     try {
-        const { results } = await api.fetch(`/admin/address_labels`);
+        const { results } = await api.fetch(`/api/admin/address_labels`);
         addressLabelOptions.value = (results || []).map((option) => ({
             ...option,
             label: option.value,
@@ -419,7 +419,7 @@ const deleteAddressLabel = async (label) => {
     if (!label) return;
     try {
         deletingLabel.value = label;
-        await api.fetch('/admin/address_labels', {
+        await api.fetch('/api/admin/address_labels', {
             method: 'DELETE',
             body: JSON.stringify({ label })
         });
@@ -435,7 +435,7 @@ const deleteAddressLabel = async (label) => {
 }
 
 const fetchShareTokenRecords = async (addressId) => {
-    const { results } = await api.fetch(`/admin/address/${addressId}/share_tokens`);
+    const { results } = await api.fetch(`/api/admin/address/${addressId}/share_tokens`);
     shareTokenRecords.value = results || [];
 }
 
@@ -452,7 +452,7 @@ const openShareTokenList = async (row) => {
 
 const revokeShareToken = async (tokenId) => {
     try {
-        await api.fetch(`/admin/address_share_tokens/${tokenId}`, {
+        await api.fetch(`/api/admin/address_share_tokens/${tokenId}`, {
             method: 'DELETE'
         });
         message.success(t("success"));
@@ -480,7 +480,7 @@ const openEditShareToken = (row) => {
 
 const saveShareToken = async () => {
     try {
-        await api.fetch(`/admin/address_share_tokens/${editShareTokenForm.value.id}`, {
+        await api.fetch(`/api/admin/address_share_tokens/${editShareTokenForm.value.id}`, {
             method: 'PATCH',
             body: JSON.stringify({
                 label: editShareTokenForm.value.label || '',
@@ -577,7 +577,7 @@ const multiActionDeleteAccounts = async () => {
 const multiActionClearInbox = async () => {
     await executeBatchOperation({
         shouldSkip: (address) => address.mail_count <= 0,
-        apiCall: (id) => api.fetch(`/admin/clear_inbox/${id}`, {
+        apiCall: (id) => api.fetch(`/api/admin/clear_inbox/${id}`, {
             method: 'DELETE'
         }),
         title: t('multiClearInbox') + ' ' + t('success'),
@@ -588,7 +588,7 @@ const multiActionClearInbox = async () => {
 const multiActionClearSentItems = async () => {
     await executeBatchOperation({
         shouldSkip: (address) => address.send_count <= 0,
-        apiCall: (id) => api.fetch(`/admin/clear_sent_items/${id}`, {
+        apiCall: (id) => api.fetch(`/api/admin/clear_sent_items/${id}`, {
             method: 'DELETE'
         }),
         title: t('multiClearSentItems') + ' ' + t('success'),
@@ -609,7 +609,7 @@ const fetchData = async () => {
         }
         if (sortBy.value) params.set('sort_by', sortBy.value);
         if (sortOrder.value) params.set('sort_order', sortOrder.value);
-        const { results, count: addressCount } = await api.fetch(`/admin/address?${params.toString()}`);
+        const { results, count: addressCount } = await api.fetch(`/api/admin/address?${params.toString()}`);
         data.value = results;
         if (page.value === 1 || addressCount > 0) {
             count.value = addressCount ?? 0;

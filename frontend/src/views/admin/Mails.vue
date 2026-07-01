@@ -40,13 +40,13 @@ const buildQuery = (params) => {
 }
 
 const fetchDomains = async () => {
-    const { results } = await api.fetch('/admin/mail_domains')
+    const { results } = await api.fetch('/api/admin/mail_domains')
     domains.value = results || []
 }
 
 const fetchAddresses = async () => {
     const query = buildQuery({ domain: selectedDomain.value })
-    const { results } = await api.fetch(`/admin/mail_addresses${query ? `?${query}` : ''}`)
+    const { results } = await api.fetch(`/api/admin/mail_addresses${query ? `?${query}` : ''}`)
     addresses.value = results || []
 }
 
@@ -74,12 +74,12 @@ const fetchMailData = async (limit, offset) => {
         address_prefix: normalizeFilterValue(addressPrefix.value),
     })
     return await api.fetch(
-        `/admin/mails?${query}`
+        `/api/admin/mails?${query}`
     );
 }
 
 const deleteMail = async (curMailId) => {
-    await api.fetch(`/admin/mails/${curMailId}`, { method: 'DELETE' });
+    await api.fetch(`/api/admin/mails/${curMailId}`, { method: 'DELETE' });
 };
 
 const selectDomain = (domain) => {

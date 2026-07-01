@@ -13,13 +13,13 @@ const { t } = useScopedI18n('views.admin.SendBox')
 const fetchData = async (limit, offset) => {
     adminSendBoxTabAddress.value = normalizeFilterValue(adminSendBoxTabAddress.value);
     return await api.fetch(
-        `/admin/sendbox?limit=${limit}&offset=${offset}`
+        `/api/admin/sendbox?limit=${limit}&offset=${offset}`
         + (adminSendBoxTabAddress.value ? `&address=${adminSendBoxTabAddress.value}` : '')
     );
 }
 
 const deleteSenboxMail = async (curMailId) => {
-    await api.fetch(`/admin/sendbox/${curMailId}`, { method: 'DELETE' });
+    await api.fetch(`/api/admin/sendbox/${curMailId}`, { method: 'DELETE' });
 };
 </script>
 

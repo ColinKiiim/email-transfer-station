@@ -23,7 +23,7 @@ const addressQuery = ref('')
 
 const updateData = async () => {
   try {
-    await api.fetch(`/admin/address_sender`, {
+    await api.fetch(`/api/admin/address_sender`, {
       method: 'POST',
       body: JSON.stringify({
         address: curRow.value.address,
@@ -44,7 +44,7 @@ const fetchData = async () => {
   try {
     addressQuery.value = addressQuery.value.trim();
     const { results, count: addressCount } = await api.fetch(
-      `/admin/address_sender`
+      `/api/admin/address_sender`
       + `?limit=${pageSize.value}`
       + `&offset=${(page.value - 1) * pageSize.value}`
       + (addressQuery.value ? `&address=${addressQuery.value}` : '')
@@ -106,7 +106,7 @@ const columns = [
         h(NPopconfirm,
           {
             onPositiveClick: async () => {
-              await api.fetch(`/admin/address_sender/${row.id}`, { method: 'DELETE' });
+              await api.fetch(`/api/admin/address_sender/${row.id}`, { method: 'DELETE' });
               await fetchData();
             }
           },

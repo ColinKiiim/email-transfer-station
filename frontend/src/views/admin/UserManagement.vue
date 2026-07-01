@@ -47,7 +47,7 @@ const userRolesOptions = computed(() => {
 
 const fetchUserRoles = async () => {
     try {
-        const results = await api.fetch(`/admin/user_roles`);
+        const results = await api.fetch(`/api/admin/user_roles`);
         userRoles.value = results;
     } catch (error) {
         console.log(error)
@@ -59,7 +59,7 @@ const fetchData = async () => {
     try {
         userQuery.value = userQuery.value.trim()
         const { results, count: userCount } = await api.fetch(
-            `/admin/users`
+            `/api/admin/users`
             + `?limit=${pageSize.value}`
             + `&offset=${(page.value - 1) * pageSize.value}`
             + (userQuery.value ? `&query=${userQuery.value}` : '')
@@ -80,7 +80,7 @@ const resetPassword = async () => {
         return;
     }
     try {
-        await api.fetch(`/admin/users/${curUserId.value}/reset_password`, {
+        await api.fetch(`/api/admin/users/${curUserId.value}/reset_password`, {
             method: "POST",
             body: JSON.stringify({
                 password: await hashPassword(newResetPassword.value)
@@ -100,7 +100,7 @@ const createUser = async () => {
         return;
     }
     try {
-        await api.fetch(`/admin/users`, {
+        await api.fetch(`/api/admin/users`, {
             method: "POST",
             body: JSON.stringify({
                 email: user.value.email,
@@ -124,7 +124,7 @@ const createUser = async () => {
 
 const deleteUser = async () => {
     try {
-        await api.fetch(`/admin/users/${curUserId.value}`, {
+        await api.fetch(`/api/admin/users/${curUserId.value}`, {
             method: "DELETE"
         });
         message.success(t('success'));
@@ -137,7 +137,7 @@ const deleteUser = async () => {
 
 const changeRole = async () => {
     try {
-        await api.fetch(`/admin/user_roles`, {
+        await api.fetch(`/api/admin/user_roles`, {
             method: "POST",
             body: JSON.stringify({
                 user_id: curUserId.value,

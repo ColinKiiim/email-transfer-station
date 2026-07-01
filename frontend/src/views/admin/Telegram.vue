@@ -17,7 +17,7 @@ const status = ref({
 
 const fetchStatus = async () => {
     try {
-        const res = await api.fetch(`/admin/telegram/status`)
+        const res = await api.fetch(`/api/admin/telegram/status`)
         Object.assign(status.value, res)
         status.value.fetched = true
     } catch (error) {
@@ -27,7 +27,7 @@ const fetchStatus = async () => {
 
 const init = async () => {
     try {
-        await api.fetch(`/admin/telegram/init`, {
+        await api.fetch(`/api/admin/telegram/init`, {
             method: 'POST',
         })
         message.success(t('successTip'))
@@ -59,7 +59,7 @@ const settings = ref(new TelegramSettings(false, [], '', false, []))
 
 const getSettings = async () => {
     try {
-        const res = await api.fetch(`/admin/telegram/settings`)
+        const res = await api.fetch(`/api/admin/telegram/settings`)
         Object.assign(settings.value, res)
     } catch (error) {
         message.error((error as Error).message || "error");
@@ -68,7 +68,7 @@ const getSettings = async () => {
 
 const saveSettings = async () => {
     try {
-        await api.fetch(`/admin/telegram/settings`, {
+        await api.fetch(`/api/admin/telegram/settings`, {
             method: 'POST',
             body: JSON.stringify(settings.value),
         })
