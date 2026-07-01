@@ -20,16 +20,16 @@ const adClient = import.meta.env.VITE_GOOGLE_AD_CLIENT;
 const adSlot = import.meta.env.VITE_GOOGLE_AD_SLOT;
 const { locale } = useI18n({ useScope: 'global' });
 const route = useRoute()
-const isConsolePath = computed(() => {
-  if (route.path?.includes('/console')) return true
+const isAdminShellPath = computed(() => {
+  if (route.path?.includes('/console') || route.path?.includes('/admin')) return true
   if (typeof window === 'undefined') return false
-  return window.location.pathname.includes('/console')
+  return window.location.pathname.includes('/console') || window.location.pathname.includes('/admin')
 })
 const theme = computed(() => isDark.value ? darkTheme : null)
 const localeConfig = computed(() => getNaiveLocaleConfig(isSupportedLocale(locale.value) ? locale.value : DEFAULT_LOCALE))
 const isMobile = useIsMobile()
 const isShareOnlyRoute = computed(() => route.meta?.shareOnly === true)
-const isFullScreenRoute = computed(() => route.meta?.fullScreen === true || isConsolePath.value)
+const isFullScreenRoute = computed(() => route.meta?.fullScreen === true || isAdminShellPath.value)
 const showAppChrome = computed(() => !isShareOnlyRoute.value && !isFullScreenRoute.value)
 const showSideMargin = computed(() => showAppChrome.value && !isMobile.value && useSideMargin.value);
 const showAd = computed(() => showAppChrome.value && !isMobile.value && adClient && adSlot);

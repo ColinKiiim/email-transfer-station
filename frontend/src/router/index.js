@@ -14,6 +14,16 @@ import {
 
 const { jwt, preferredLocale } = useGlobalState()
 
+function getRouteSection(path) {
+    const segments = path.split('/').filter(Boolean)
+    const first = segments[0]
+    return resolveSupportedLocale(first) ? segments[1] : first
+}
+
+function isAdminSurfacePath(path) {
+    return ['admin', 'console', 'old-admin'].includes(getRouteSection(path))
+}
+
 const router = createRouter({
     history: createWebHistory(),
     routes: [
@@ -36,6 +46,12 @@ const router = createRouter({
         {
             path: '/admin',
             alias: '/:lang/admin',
+            meta: { fullScreen: true },
+            component: () => import('../views/AdminNext.vue')
+        },
+        {
+            path: '/old-admin',
+            alias: '/:lang/old-admin',
             component: () => import('../views/Admin.vue')
         },
         {
@@ -79,7 +95,7 @@ router.beforeEach((to, from, next) => {
 
     if (Object.prototype.hasOwnProperty.call(to.query, 'jwt')) {
         const jwtQuery = Array.isArray(to.query.jwt) ? to.query.jwt[0] : to.query.jwt
-        if (typeof jwtQuery === 'string' && !to.path.includes('/console')) {
+        if (typeof jwtQuery === 'string' && !isAdminSurfacePath(to.path)) {
             jwt.value = jwtQuery
         }
         const query = { ...to.query }
