@@ -40,7 +40,7 @@
 
 ### Improvements
 
-- improve: |AdminNext| Make mail rows use Gmail-like read/unread treatment: read rows are grayer with lighter title weight, unread rows stay white with heavier titles; keep the top brand row in place while the collapsed sidebar navigation tightens to an icon rail
+- improve: |AdminNext| Make mail rows use Gmail-like read/unread treatment: read rows are grayer with lighter title weight, unread rows stay white with heavier titles; move sidebar collapse to a Gmail-like hamburger button before the brand mark, keep the top brand row out of the collapse animation, and tighten only the navigation below it to an icon rail
 - improve: |AdminNext| Tighten the mail-flow column separators to a Gmail-like narrow gutter between filters, list, and detail
 - improve: |AdminNext| Add draggable resizing for the filter, message-list, and detail columns in the mail flow, and compact the read-only notice, detail summary, and HTML body presentation
 - improve: |AdminNext| Add Gmail/Outlook-style empty detail states, a mobile detail toolbar, previous/next mail navigation, HTML/text/raw view switching, copy actions, and delete entry points to the mail workbench

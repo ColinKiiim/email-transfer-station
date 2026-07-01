@@ -73,6 +73,7 @@ const iconShapes = {
     access: [{ tag: 'path', attrs: { d: 'M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6z' } }, { tag: 'path', attrs: { d: 'm9 12 2 2 4-5' } }],
     ops: [{ tag: 'circle', attrs: { cx: '12', cy: '12', r: '3' } }, { tag: 'path', attrs: { d: 'M19 12a7.7 7.7 0 0 0-.1-1l2-1.5-2-3.4-2.4 1a7.2 7.2 0 0 0-1.8-1L14.4 3h-4.8l-.3 3.1a7.2 7.2 0 0 0-1.8 1l-2.4-1-2 3.4 2 1.5a7.7 7.7 0 0 0 0 2l-2 1.5 2 3.4 2.4-1a7.2 7.2 0 0 0 1.8 1l.3 3.1h4.8l.3-3.1a7.2 7.2 0 0 0 1.8-1l2.4 1 2-3.4-2-1.5c.1-.3.1-.7.1-1z' } }],
     roadmap: [{ tag: 'path', attrs: { d: 'M5 19V5h14v14z' } }, { tag: 'path', attrs: { d: 'M8 9h8M8 13h5M8 17h6' } }],
+    menu: [{ tag: 'path', attrs: { d: 'M4 7h16M4 12h16M4 17h16' } }],
     collapse: [{ tag: 'path', attrs: { d: 'M4 5h16v14H4z' } }, { tag: 'path', attrs: { d: 'M9 5v14M15 9l-3 3 3 3' } }],
     expand: [{ tag: 'path', attrs: { d: 'M4 5h16v14H4z' } }, { tag: 'path', attrs: { d: 'M9 5v14M12 9l3 3-3 3' } }],
     search: [{ tag: 'path', attrs: { d: 'm21 21-4.2-4.2' } }, { tag: 'circle', attrs: { cx: '11', cy: '11', r: '7' } }],
@@ -1992,6 +1993,13 @@ onBeforeUnmount(() => {
     <div class="admin-next app" :class="{ 'is-flow-view': activeView === 'flow', 'is-sidebar-collapsed': sidebarCollapsed }">
         <aside class="sidebar" aria-label="主导航">
             <div class="brand">
+                <button class="sidebar-toggle" type="button" :aria-label="sidebarCollapsed ? '展开侧栏' : '折叠侧栏'"
+                    :aria-expanded="(!sidebarCollapsed).toString()" @click="toggleSidebar">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <component :is="shape.tag" v-for="(shape, index) in shapeList('menu')" :key="index"
+                            v-bind="shape.attrs" />
+                    </svg>
+                </button>
                 <div class="brand-mark" aria-hidden="true">
                     <svg viewBox="0 0 24 24">
                         <path d="M3.5 6.5h17v11h-17z" />
@@ -1999,14 +2007,6 @@ onBeforeUnmount(() => {
                     </svg>
                 </div>
                 <div class="brand-title">Email Transfer<span>station admin</span></div>
-                <button class="sidebar-toggle" type="button" :aria-label="sidebarCollapsed ? '展开侧栏' : '折叠侧栏'"
-                    :aria-expanded="(!sidebarCollapsed).toString()" @click="toggleSidebar">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <component :is="shape.tag"
-                            v-for="(shape, index) in shapeList(sidebarCollapsed ? 'expand' : 'collapse')"
-                            :key="index" v-bind="shape.attrs" />
-                    </svg>
-                </button>
             </div>
 
             <nav class="nav-scroll">
@@ -2753,10 +2753,12 @@ svg {
 
 .brand {
     display: grid;
-    grid-template-columns: 40px minmax(0, 1fr) 40px;
+    grid-template-columns: 40px 40px minmax(0, 1fr);
     gap: 10px;
     align-items: center;
+    width: 220px;
     min-height: 44px;
+    will-change: auto;
 }
 
 .brand-mark {
@@ -2775,6 +2777,7 @@ svg {
     font-size: 15px;
     font-weight: 760;
     line-height: 1.16;
+    white-space: nowrap;
 }
 
 .brand-title span {
@@ -2792,11 +2795,12 @@ svg {
     place-items: center;
     border: 0;
     border-radius: var(--radius-sm);
-    background: var(--surface-soft);
+    background: transparent;
     color: var(--muted);
 }
 
 .sidebar-toggle:hover {
+    background: var(--surface-soft);
     color: var(--fg);
     box-shadow: var(--shadow-border);
 }
@@ -2887,9 +2891,7 @@ svg {
 }
 
 .is-sidebar-collapsed .brand {
-    grid-template-columns: 40px minmax(0, 1fr) 40px;
-    gap: 10px;
-    width: 220px;
+    transform: translateX(4px);
     pointer-events: auto;
     z-index: 2;
 }
@@ -4550,6 +4552,39 @@ tr.is-selected {
 
     .nav-link {
         min-width: 128px;
+    }
+
+    .is-sidebar-collapsed .sidebar {
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr);
+        gap: 10px;
+        width: 72px;
+        height: 100dvh;
+        padding: 18px 8px;
+    }
+
+    .is-sidebar-collapsed .brand {
+        margin-bottom: 0;
+        transform: translateX(4px);
+    }
+
+    .is-sidebar-collapsed .nav-scroll {
+        display: grid;
+        gap: 8px;
+        width: 56px;
+        max-width: 56px;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    .is-sidebar-collapsed .nav-group {
+        display: grid;
+    }
+
+    .is-sidebar-collapsed .nav-link {
+        min-width: 0;
+        width: 56px;
+        max-width: 56px;
     }
 
     .topbar {
