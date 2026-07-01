@@ -4842,9 +4842,11 @@ tr.is-selected {
     }
 
     .nav-scroll {
-        display: flex;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
         gap: 8px;
-        overflow-x: auto;
+        overflow-x: hidden;
+        overflow-y: auto;
         max-width: 100%;
     }
 
@@ -4858,7 +4860,8 @@ tr.is-selected {
     }
 
     .nav-link {
-        min-width: 128px;
+        min-width: 0;
+        width: 100%;
     }
 
     .is-sidebar-collapsed .sidebar {

@@ -40,6 +40,7 @@
 
 ### Improvements
 
+- improve: |AdminNext| Remove runtime special-casing for the standalone `mail-admin.20030405.xyz` admin custom domain, standardizing the new console entry points on `mail.20030405.xyz/console` and `admin-next.email-transfer-station.pages.dev/console`
 - improve: |AdminNext| Continue wiring the new `mail-admin` console to production backend actions: the address toolbar can rotate credentials, revoke share packages for the current address, and clear the current address inbox; the domain/routing page can run Cloudflare route checks and disable-impact previews, while real create, send-mail, Webhook, database-migration, and other high-risk writes remain behind dedicated form gates
 - improve: |AdminNext| Wire `mail-admin` mail-flow deletion to the production backend: detail delete removes the current message, bulk delete removes the current filtered result set, and both require a production-data confirmation before execution
 - improve: |AdminNext| Make mail rows use Gmail-like read/unread treatment: read rows are grayer with lighter title weight, unread rows stay white with heavier titles; move sidebar collapse to a Gmail-like hamburger button before the brand mark, keep the top brand row out of the collapse animation, and tighten only the navigation below it to an icon rail
