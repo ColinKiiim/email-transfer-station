@@ -181,6 +181,7 @@ const ui = reactive({
 
 const mailListRef = ref(null)
 const collapsedMailDomains = ref(new Set())
+const actionBusy = ref('')
 
 if (typeof localStorage !== 'undefined') {
     try {
@@ -212,10 +213,7 @@ const startMailColumnResize = (edge, event) => {
     const onMove = (moveEvent) => {
         const delta = moveEvent.clientX - startX
         if (edge === 'facets-list') {
-            const nextFacets = clampNumber(start.facets + delta, 180, 320)
-            const appliedDelta = nextFacets - start.facets
-            ui.mailColumns.facets = nextFacets
-            ui.mailColumns.list = clampNumber(start.list - appliedDelta, 360, 720)
+            ui.mailColumns.facets = clampNumber(start.facets + delta, 180, 320)
         } else {
             const nextList = clampNumber(start.list + delta, 360, 760)
             const appliedDelta = nextList - start.list
@@ -311,7 +309,7 @@ const dataSourceNotice = computed(() => {
     return {
         tone: 'warn',
         title: '生产后端已接入',
-        text: '当前灰度后台连接生产 Worker/D1。收件流删除会直接写入生产数据；其他高风险配置写入仍保持未接入。',
+        text: '当前灰度后台连接生产 Worker/D1。邮件删除、地址凭证/访问包、地址收件清理、域名检查等已接入；高风险配置写入仍需专用表单。',
     }
 })
 
@@ -615,6 +613,7 @@ const domainRows = computed(() => {
                 mode: modeLabel(row.receive_mode),
                 setup: setupLabel(row.setup_status),
                 enabled: row.enabled ? '启用' : '关闭',
+                configVersion: row.config_version,
                 creation: row.allow_address_creation ? '允许创建' : '仅管理员',
                 default: row.is_default ? '默认' : '否',
                 collector: row.collector_address || (row.receive_mode === 'cloudflare_email' ? 'catch-all -> Worker' : '-'),
@@ -1633,6 +1632,168 @@ const deleteFilteredMails = async () => {
     await deleteMailRows(filteredMailRows.value, '当前筛选结果')
 }
 
+const requireProductionWrite = (label) => {
+    if (demoMode.value || !showAdminPage.value) {
+        showToast(`请先登录管理员会话后再执行${label}`)
+        return false
+    }
+    return true
+}
+
+const runProductionAction = async (key, label, confirmText, task) => {
+    if (!requireProductionWrite(label)) return
+    if (actionBusy.value) {
+        showToast('已有生产操作执行中')
+        return
+    }
+    if (confirmText && !window.confirm(confirmText)) return
+    actionBusy.value = key
+    try {
+        await task()
+    } catch (error) {
+        showToast(error?.message || `${label}失败`)
+    } finally {
+        actionBusy.value = ''
+    }
+}
+
+const rotateCurrentCredential = async () => {
+    const row = currentAddress.value
+    if (!row?.sourceId) {
+        showToast('当前地址不是生产地址，无法轮换凭证')
+        return
+    }
+    await runProductionAction(
+        'rotate',
+        '凭证轮换',
+        `确认轮换 ${row.address} 的地址凭证？旧地址 JWT 会失效，新的凭证只会显示一次，请在安全位置复制保存。`,
+        async () => {
+            const result = await api.fetch(`/admin/address/${row.sourceId}/rotate_credential`, { method: 'POST' })
+            await refreshAll()
+            if (result?.jwt) {
+                await copyText(result.jwt)
+                showToast(`已轮换 ${row.address} 的凭证，新 JWT 已复制`)
+            } else {
+                showToast(`已轮换 ${row.address} 的凭证`)
+            }
+        }
+    )
+}
+
+const revokeCurrentShareTokens = async () => {
+    const row = currentAddress.value
+    if (!row?.sourceId) {
+        showToast('当前地址不是生产地址，无法撤销访问包')
+        return
+    }
+    await runProductionAction(
+        'revoke',
+        '撤销访问包',
+        `确认撤销 ${row.address} 的全部活跃访问包？已分享的只读链接会立即失效。`,
+        async () => {
+            const result = await api.fetch(`/admin/address/${row.sourceId}/share_tokens`, { method: 'DELETE' })
+            if (result?.success === false) throw new Error('撤销访问包失败')
+            await refreshAll()
+            showToast(`已撤销 ${row.address} 的访问包`)
+        }
+    )
+}
+
+const clearCurrentAddressInbox = async () => {
+    const row = currentAddress.value
+    if (!row?.sourceId) {
+        showToast('当前地址不是生产地址，无法清空收件')
+        return
+    }
+    await runProductionAction(
+        'clear-inbox',
+        '清空地址收件',
+        `确认清空 ${row.address} 的生产收件箱？此操作会删除该地址 raw_mails 和已读状态，无法在后台撤销。`,
+        async () => {
+            const result = await api.fetch(`/admin/clear_inbox/${row.sourceId}`, { method: 'DELETE' })
+            if (result?.success === false) throw new Error('清空地址收件失败')
+            await refreshAll()
+            showToast(`已清空 ${row.address} 的收件箱`)
+        }
+    )
+}
+
+const checkCurrentDomainRoute = async () => {
+    const row = currentDomain.value
+    if (!row?.sourceId) {
+        showToast('当前域名来自公开设置或 demo，无法执行生产检查')
+        return
+    }
+    if (!requireProductionWrite('域名路由检查')) return
+    if (actionBusy.value) {
+        showToast('已有生产操作执行中')
+        return
+    }
+    actionBusy.value = 'verify'
+    try {
+        if (String(row.mode || '').includes('Cloudflare')) {
+            const result = await api.fetch(`/admin/domains/${row.sourceId}/cloudflare/check`, { method: 'POST' })
+            const ruleCount = Array.isArray(result?.rules) ? result.rules.length : 0
+            showToast(`Cloudflare 路由检查完成：${ruleCount} 条规则`)
+        } else {
+            const result = await api.fetch(`/admin/domains/${row.sourceId}/impact`)
+            showToast(`域名影响检查完成：${result?.address_count ?? 0} 个地址，${result?.mail_count ?? 0} 封邮件`)
+        }
+        await refreshAll()
+    } catch (error) {
+        showToast(error?.message || '域名路由检查失败')
+    } finally {
+        actionBusy.value = ''
+    }
+}
+
+const checkCurrentDomainImpact = async () => {
+    const row = currentDomain.value
+    if (!row?.sourceId) {
+        showToast('当前域名来自公开设置或 demo，无法计算生产停用影响')
+        return
+    }
+    if (!showAdminPage.value) {
+        showToast('请先登录管理员会话后再检查停用影响')
+        return
+    }
+    if (actionBusy.value) {
+        showToast('已有生产操作执行中')
+        return
+    }
+    actionBusy.value = 'domain-impact'
+    try {
+        const result = await api.fetch(`/admin/domains/${row.sourceId}/impact`)
+        showToast(`停用影响：${result?.address_count ?? 0} 个地址，${result?.mail_count ?? 0} 封邮件`)
+    } catch (error) {
+        showToast(error?.message || '停用影响检查失败')
+    } finally {
+        actionBusy.value = ''
+    }
+}
+
+const runHealthCheck = async () => {
+    if (!showAdminPage.value) {
+        showToast('请先登录管理员会话后再执行健康检查')
+        return
+    }
+    if (actionBusy.value) {
+        showToast('已有生产操作执行中')
+        return
+    }
+    actionBusy.value = 'health-check'
+    try {
+        await refreshAll()
+        const apiState = workerStatusLabel.value
+        const dbState = opsRows.value[1]?.status || dbVersionLabel.value
+        showToast(`健康检查完成：Worker ${apiState}，D1 ${dbState}`)
+    } catch (error) {
+        showToast(error?.message || '健康检查失败')
+    } finally {
+        actionBusy.value = ''
+    }
+}
+
 const handleAction = async (type) => {
     if (type === 'refresh') {
         await refreshAll()
@@ -1664,19 +1825,43 @@ const handleAction = async (type) => {
         await deleteFilteredMails()
         return
     }
-    const messages = {
-        rotate: '灰度预览未执行凭证轮换',
-        revoke: '灰度预览未撤销访问包',
-        verify: '灰度预览未执行 DNS / 路由检查',
-        delete: '该模块删除尚未接入生产写入',
-        send: '灰度预览未发送邮件',
-        preview: '安全渲染策略尚未接入统一预览',
-        'test-webhook': '灰度预览未发送 Webhook 测试',
-        'health-check': '灰度预览未执行生产健康检查',
-        migration: '灰度预览未运行数据库迁移',
-        'purge-cache': '灰度预览未清理生产缓存',
+    if (type === 'delete-current') {
+        await deleteCurrentMail()
+        return
     }
-    showToast(messages[type] || '灰度预览未执行生产写入')
+    if (type === 'clear-inbox') {
+        await clearCurrentAddressInbox()
+        return
+    }
+    if (type === 'rotate') {
+        await rotateCurrentCredential()
+        return
+    }
+    if (type === 'revoke') {
+        await revokeCurrentShareTokens()
+        return
+    }
+    if (type === 'verify') {
+        await checkCurrentDomainRoute()
+        return
+    }
+    if (type === 'domain-impact') {
+        await checkCurrentDomainImpact()
+        return
+    }
+    if (type === 'health-check') {
+        await runHealthCheck()
+        return
+    }
+    const messages = {
+        delete: '该模块删除缺少明确生产对象，暂不执行',
+        send: '真实发信需要可编辑收件人、主题和正文表单，当前展示表单不写生产',
+        preview: '安全渲染策略尚未接入统一预览',
+        'test-webhook': 'Webhook 测试会向外部地址发请求，需先完成可编辑配置确认表单',
+        migration: '数据库迁移属于高风险结构写入，仍需专用确认流程',
+        'purge-cache': '缓存/清理类操作需要精确目标和影响范围，暂不一键执行',
+    }
+    showToast(messages[type] || '该操作缺少可验证的生产写入合同')
 }
 
 const toolbarActions = computed(() => {
@@ -1691,10 +1876,14 @@ const toolbarActions = computed(() => {
         { label: '新增地址身份', icon: 'plus', modal: 'new-address', primary: true },
         { label: '生成访问包', icon: 'lock', modal: 'share-package' },
         { label: '复制当前地址', icon: 'copy', action: 'copy' },
+        { label: '轮换凭证', icon: 'refresh', action: 'rotate' },
+        { label: '撤销访问包', icon: 'lock', action: 'revoke' },
+        { label: '清空收件', icon: 'check', action: 'clear-inbox', danger: true },
     ]
     if (view === 'routing') return [
         { label: '新增接收域', icon: 'plus', modal: 'new-domain', primary: true },
         { label: '检查 DNS / 路由', icon: 'check', action: 'verify' },
+        { label: '停用影响', icon: 'lock', action: 'domain-impact', danger: true },
         { label: '接收策略', icon: 'routing', modal: 'route-policy' },
     ]
     if (view === 'delivery') return [
@@ -1734,6 +1923,59 @@ const modalTitle = computed(() => {
         'roadmap-note': '记录路线事项',
     }
     return titles[actionModal.value] || '操作'
+})
+
+const modalNotice = computed(() => {
+    const notices = {
+        'new-address': {
+            title: '需要真实创建表单',
+            text: '后端已有新增地址接口，但当前字段是迁移示例值；接入前必须改成可编辑地址、域名、密码和备注表单。',
+        },
+        'quick-create': {
+            title: '需要真实创建表单',
+            text: '快捷入口暂不写生产，避免用示例地址创建真实收件身份。',
+        },
+        'share-package': {
+            title: '需要显示一次性 token',
+            text: '后端已有访问包创建接口；接入前需要可编辑标签、权限、过期时间，并提供一次性 token 的复制/隐藏流程。',
+        },
+        'new-domain': {
+            title: '需要域名配置表单',
+            text: '域名创建会改变生产接收注册表；接入前需要真实域名、接收模式、collector、Cloudflare zone 和配置版本校验。',
+        },
+        'route-policy': {
+            title: '策略写入暂未接入',
+            text: '路由策略会影响收件入口，当前只允许从详情按钮执行检查和影响预览。',
+        },
+        'compose-mail': {
+            title: '真实发信暂未接入',
+            text: '发信会对外发送邮件；接入前需要可编辑 To、主题、正文、HTML/文本模式和发送前预览确认。',
+        },
+        webhook: {
+            title: '通知配置暂未接入',
+            text: 'Webhook 保存和测试会写 KV 或对外发请求；接入前需要可编辑 endpoint、method、headers 和测试确认。',
+        },
+        'mail-policy': {
+            title: '只读策略说明',
+            text: '安全渲染已由邮件详情的隔离渲染组件执行；这里暂不写生产配置。',
+        },
+        'risk-policy': {
+            title: '风险策略暂未接入',
+            text: '风险策略需要先统一黑名单、访问包和发送权限模型，当前不写生产。',
+        },
+        'db-migration': {
+            title: '高风险维护动作',
+            text: '数据库迁移/初始化不会从新版控制台一键执行；仍需使用专用发布流程和备份校验。',
+        },
+        'roadmap-note': {
+            title: '本地路线记录入口',
+            text: '路线事项不会写生产数据；实际计划仍记录在 harness 中。',
+        },
+    }
+    return notices[actionModal.value] || {
+        title: '暂未接入生产写入',
+        text: '此入口缺少完整生产写入合同，当前不会修改 Worker/D1/KV 数据。',
+    }
 })
 
 const modalFields = computed(() => {
@@ -1788,7 +2030,7 @@ const modalFields = computed(() => {
 
 const saveModal = () => {
     closeActionModal()
-    showToast('灰度预览未写入生产；该表单仅保留迁移入口')
+    showToast(`${modalNotice.value.title}，未写入生产`)
 }
 
 const currentRail = computed(() => {
@@ -1816,7 +2058,7 @@ const currentRail = computed(() => {
             actions: [
                 { label: '回复', action: 'send' },
                 { label: '转发', action: 'send' },
-                { label: '删除', action: 'delete', danger: true },
+                { label: '删除', action: 'delete-current', danger: true },
             ],
         }
     }
@@ -1862,7 +2104,8 @@ const currentRail = computed(() => {
             actions: [
                 { label: '轮换凭证', action: 'rotate', primary: true },
                 { label: '创建访问包', modal: 'share-package' },
-                { label: '清空', action: 'delete', danger: true },
+                { label: '撤销访问包', action: 'revoke' },
+                { label: '清空收件', action: 'clear-inbox', danger: true },
             ],
         }
     }
@@ -1879,8 +2122,8 @@ const currentRail = computed(() => {
             ],
             actions: [
                 { label: '检查路由', action: 'verify', primary: true },
-                { label: '应用 Cloudflare', action: 'verify' },
-                { label: '停用影响', action: 'delete', danger: true },
+                { label: '预览 Cloudflare', action: 'verify' },
+                { label: '停用影响', action: 'domain-impact', danger: true },
             ],
         }
     }
@@ -2162,6 +2405,7 @@ onBeforeUnmount(() => {
                 <div v-if="toolbarActions.length" class="toolbar">
                     <button v-for="action in toolbarActions" :key="action.label" type="button" class="btn"
                         :class="{ primary: action.primary, danger: action.danger }"
+                        :disabled="!!actionBusy"
                         @click="action.modal ? openActionModal(action.modal) : handleAction(action.action)">
                         <svg viewBox="0 0 24 24" aria-hidden="true">
                             <component :is="shape.tag" v-for="(shape, index) in shapeList(action.icon)" :key="index"
@@ -2398,6 +2642,7 @@ onBeforeUnmount(() => {
                             <div v-if="currentRail.actions" class="tag-row rail-actions">
                                 <button v-for="action in currentRail.actions" :key="action.label" type="button" class="btn"
                                     :class="{ primary: action.primary, danger: action.danger }"
+                                    :disabled="!!actionBusy"
                                     @click="action.modal ? openActionModal(action.modal) : handleAction(action.action)">
                                     {{ action.label }}
                                 </button>
@@ -2581,6 +2826,7 @@ onBeforeUnmount(() => {
                     <div v-if="currentRail.actions" class="tag-row rail-actions">
                         <button v-for="action in currentRail.actions" :key="action.label" type="button" class="btn"
                             :class="{ primary: action.primary, danger: action.danger }"
+                            :disabled="!!actionBusy"
                             @click="action.modal ? openActionModal(action.modal) : handleAction(action.action)">
                             {{ action.label }}
                         </button>
@@ -2634,8 +2880,8 @@ onBeforeUnmount(() => {
                 </div>
                 <div class="modal-body">
                     <div class="notice modal-notice">
-                        <strong>未接入生产写入</strong>
-                        <span>此表单不会写入生产数据；收件流删除已单独接入并带确认。</span>
+                        <strong>{{ modalNotice.title }}</strong>
+                        <span>{{ modalNotice.text }}</span>
                     </div>
                     <div class="form-grid">
                         <label v-for="field in modalFields" :key="field.label" class="form-field"
