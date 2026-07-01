@@ -56,7 +56,11 @@ const mailRenderGuardStyle = `<style>
     :host {
         display: block;
         min-width: 0;
-        overflow-wrap: anywhere;
+        max-width: 100%;
+        overflow-wrap: break-word;
+    }
+    *, *::before, *::after {
+        box-sizing: border-box;
     }
     img {
         max-width: 100% !important;
@@ -68,9 +72,12 @@ const mailRenderGuardStyle = `<style>
     }
     pre, code {
         white-space: pre-wrap;
+        overflow-wrap: break-word;
     }
     a {
-        overflow-wrap: anywhere;
+        max-width: 100%;
+        overflow-wrap: break-word;
+        word-break: normal;
     }
 </style>`;
 
@@ -140,7 +147,14 @@ watch(() => [safeHtml.value, props.isDark], () => {
 <style scoped>
 .fallback-mail-html {
     min-width: 0;
-    overflow-wrap: anywhere;
+    max-width: 100%;
+    overflow-wrap: break-word;
+}
+
+.fallback-mail-html :deep(*),
+.fallback-mail-html :deep(*::before),
+.fallback-mail-html :deep(*::after) {
+    box-sizing: border-box;
 }
 
 .fallback-mail-html :deep(img) {
@@ -156,9 +170,12 @@ watch(() => [safeHtml.value, props.isDark], () => {
 .fallback-mail-html :deep(pre),
 .fallback-mail-html :deep(code) {
     white-space: pre-wrap;
+    overflow-wrap: break-word;
 }
 
 .fallback-mail-html :deep(a) {
-    overflow-wrap: anywhere;
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-break: normal;
 }
 </style>

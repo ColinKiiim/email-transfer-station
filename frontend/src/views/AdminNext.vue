@@ -211,11 +211,15 @@ const startMailColumnResize = (edge, event) => {
     const onMove = (moveEvent) => {
         const delta = moveEvent.clientX - startX
         if (edge === 'facets-list') {
-            ui.mailColumns.facets = clampNumber(start.facets + delta, 180, 320)
-            ui.mailColumns.list = clampNumber(start.list - delta, 360, 720)
+            const nextFacets = clampNumber(start.facets + delta, 180, 320)
+            const appliedDelta = nextFacets - start.facets
+            ui.mailColumns.facets = nextFacets
+            ui.mailColumns.list = clampNumber(start.list - appliedDelta, 360, 720)
         } else {
-            ui.mailColumns.list = clampNumber(start.list + delta, 360, 760)
-            ui.mailColumns.detail = clampNumber(start.detail - delta, 480, 1100)
+            const nextList = clampNumber(start.list + delta, 360, 760)
+            const appliedDelta = nextList - start.list
+            ui.mailColumns.list = nextList
+            ui.mailColumns.detail = clampNumber(start.detail - appliedDelta, 480, 1100)
         }
     }
     const onUp = () => {
@@ -695,6 +699,7 @@ const mailRows = computed(() => {
             const subject = compactText(row.subject, extractHeader(row.raw, 'Subject') || row.message_id || `Mail #${row.id}`)
             const sender = compactText(row.sender, extractHeader(row.raw, 'From') || row.source || '-')
             const address = row.address || row.original_recipient || '-'
+            const effectiveDomain = getDomain(address)
             const text = compactText(row.text)
             const html = String(row.html || row.message || '')
             const body = text || compactText(stripHtml(html), compactRaw(row.raw))
@@ -721,7 +726,8 @@ const mailRows = computed(() => {
                 created_at: row.created_at,
                 sender,
                 to: address,
-                domain: row.original_domain || getDomain(address),
+                domain: effectiveDomain,
+                originalDomain: row.original_domain || effectiveDomain,
                 subject,
                 size: row.raw ? `${(String(row.raw).length / 1024).toFixed(1)} KB` : '-',
                 result: address === '-' ? '未知地址' : '已保存',
@@ -774,7 +780,8 @@ const unknownRows = computed(() => {
                 owner: row.address || row.original_recipient || '收件流',
                 status: '未知地址',
                 detail,
-                domain: row.original_domain || getDomain(row.address),
+                domain: getDomain(row.address || row.original_recipient),
+                originalDomain: row.original_domain || '',
             }
         })
     }
@@ -1075,6 +1082,7 @@ const matchesQuery = (row) => {
         row.to,
         row.address,
         row.domain,
+        row.originalDomain,
         row.body,
         row.text,
         row.risk,
@@ -2201,7 +2209,6 @@ onBeforeUnmount(() => {
                                 @keydown="handleRowKey($event, 'flow', row)">
                                 <span class="mail-main">
                                     <span class="mail-row-top">
-                                        <span v-if="row.unread" class="unread-dot" aria-label="未读"></span>
                                         <strong>{{ row.subject }}</strong>
                                         <span class="mail-time">{{ row.time }}</span>
                                     </span>
@@ -2876,28 +2883,44 @@ svg {
 .is-sidebar-collapsed .sidebar {
     gap: 14px;
     padding: 18px 8px;
+    overflow: visible;
 }
 
 .is-sidebar-collapsed .brand {
-    grid-template-columns: 1fr;
-    gap: 8px;
-    justify-items: center;
+    grid-template-columns: 40px minmax(0, 1fr) 40px;
+    gap: 10px;
+    width: 220px;
+    pointer-events: auto;
+    z-index: 2;
 }
 
-.is-sidebar-collapsed .brand-title,
 .is-sidebar-collapsed .nav-group-title,
 .is-sidebar-collapsed .sidebar-foot {
     display: none;
 }
 
+.is-sidebar-collapsed .brand-title {
+    display: block;
+}
+
 .is-sidebar-collapsed .nav-group {
     gap: 8px;
     margin-bottom: 12px;
+    width: 56px;
+}
+
+.is-sidebar-collapsed .nav-scroll {
+    width: 56px;
+    max-width: 56px;
+    overflow-x: hidden;
+    padding-right: 0;
 }
 
 .is-sidebar-collapsed .nav-link {
     grid-template-columns: 1fr;
     justify-items: center;
+    width: 56px;
+    max-width: 56px;
     min-height: 44px;
     padding: 0;
 }
@@ -2927,6 +2950,12 @@ svg {
     min-width: 18px;
     padding: 0 5px;
     font-size: 10px;
+}
+
+@media (min-width: 901px) {
+    .is-sidebar-collapsed .topbar {
+        padding-left: 220px;
+    }
 }
 
 .health-dot {
@@ -3667,9 +3696,13 @@ textarea {
     border-top: 1px solid var(--border);
     border-radius: 0;
     padding: 10px 8px;
-    background: transparent;
+    background: oklch(95.6% 0.012 255);
     color: var(--fg);
     text-align: left;
+}
+
+.mail-row.is-unread {
+    background: var(--surface);
 }
 
 .mail-row:hover,
@@ -3682,17 +3715,13 @@ textarea {
 }
 
 .mail-row.is-unread .mail-main strong {
-    font-weight: 650;
+    color: var(--fg);
+    font-weight: 760;
 }
 
-.unread-dot {
-    justify-self: center;
-    width: 6px;
-    height: 6px;
-    border-radius: 999px;
-    background: var(--accent);
-    box-shadow: 0 0 0 2px var(--accent-soft);
-    align-self: center;
+.mail-row:not(.is-unread) .mail-main strong {
+    color: color-mix(in oklch, var(--fg) 82%, white);
+    font-weight: 520;
 }
 
 .mail-time {
@@ -3718,14 +3747,10 @@ textarea {
 
 .mail-row-top {
     display: grid;
-    grid-template-columns: 14px minmax(0, 1fr) auto;
-    gap: 6px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
     align-items: center;
     min-width: 0;
-}
-
-.mail-row-top:not(:has(.unread-dot)) {
-    grid-template-columns: minmax(0, 1fr) auto;
 }
 
 .mail-main strong {
@@ -3927,7 +3952,8 @@ textarea {
 }
 
 .html-body :deep(a) {
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
+    word-break: normal;
 }
 
 .text-body,

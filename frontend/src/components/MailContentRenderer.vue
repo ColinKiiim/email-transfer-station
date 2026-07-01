@@ -93,6 +93,13 @@ const safeMessage = computed(() => removeInsecureMedia(DOMPurify.sanitize(String
   ADD_ATTR: ['target', 'rel'],
 })));
 const iframeRenderGuardStyle = `<style>
+  html, body {
+    margin: 0;
+    max-width: 100%;
+  }
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
   img {
     max-width: 100% !important;
     height: auto !important;
@@ -103,9 +110,12 @@ const iframeRenderGuardStyle = `<style>
   }
   pre, code {
     white-space: pre-wrap;
+    overflow-wrap: break-word;
   }
   a {
-    overflow-wrap: anywhere;
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-break: normal;
   }
 </style>`;
 const iframeMessage = computed(() => `${safeMessage.value}${iframeRenderGuardStyle}`);
