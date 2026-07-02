@@ -41,6 +41,7 @@
 ### Improvements
 
 - improve: |Admin API| Add the same-origin admin API prefix `/api/admin/*` and move new/legacy admin frontend calls to it; keep the old `/admin/*` backend endpoints temporarily compatible so `/admin/...` can become frontend route space later
+- improve: |AdminNext| Fix the mail flow loading only the latest 20 messages while showing global unread counts, and clean up cross-page status filters, global Telegram warnings, and migration-explainer panel copy
 - improve: |AdminNext| Isolate the mail-flow workbench background so the production-backend notice color no longer leaks behind the queue, inbox, and detail columns
 - improve: |AdminNext| Move the primary new admin entry from `/console` to `/admin`, keep the legacy admin hidden at `/old-admin`, and retain `/console` as a temporary compatibility entry; this phase does not change the `/admin/...` backend API prefix
 - improve: |AdminNext| Remove runtime special-casing for the standalone `mail-admin.20030405.xyz` admin custom domain, standardizing the new console entry points on `mail.20030405.xyz/console` and `admin-next.email-transfer-station.pages.dev/console`

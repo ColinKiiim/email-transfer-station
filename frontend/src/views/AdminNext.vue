@@ -130,14 +130,6 @@ const roadmapRows = [
     { id: 'road-loading', capability: '局部请求状态', status: '必须保留', maps: 'api/index.js global loading / MailBox refresh', next: '每个模块维护自己的 pending key，刷新保留选中邮件' },
 ]
 
-const migrationMapRows = [
-    { id: 'map-1', newName: '地址身份', old: 'Account / CreateAccount / AddressCredentialModal / SenderAccess', rule: '按邮箱地址聚合凭证、标签、发送权限和分享包' },
-    { id: 'map-2', newName: '收件流', old: 'Mails / MailsUnknow / MailBox / SendBox', rule: '按邮件生命周期聚合列表、详情、异常、刷新状态和附件操作' },
-    { id: 'map-3', newName: '域名与路由', old: 'Domains / QuickSetup / WorkerConfig domains', rule: '按接收域、collector 和验证动作组织' },
-    { id: 'map-4', newName: '访问治理', old: 'AccessPackages / AccessLogs / AuditLogs', rule: '按权限生命周期和审计证据组织' },
-    { id: 'map-5', newName: '出站与通知', old: 'SendMail / SenderAccess / Webhook / MailWebhook / Telegram / AI', rule: '按通道与副作用队列组织' },
-]
-
 const selectedInitialView = () => {
     const queryView = Array.isArray(route.query.view) ? route.query.view[0] : route.query.view
     const stored = typeof localStorage === 'undefined' ? '' : localStorage.getItem('ets-admin-next-view')
@@ -192,6 +184,10 @@ if (typeof localStorage !== 'undefined') {
 }
 
 const clampNumber = (value, min, max) => Math.min(max, Math.max(min, value))
+const ADMIN_MAIL_PAGE_LIMIT = 100
+const ADMIN_MAIL_FETCH_MAX = 500
+const FLOW_STATUS_OPTIONS = ['all', '未读', '已读', 'attachment', '已保存', '未知地址']
+const ACCESS_STATUS_OPTIONS = ['all', 'active', 'success']
 
 const resetMailListScroll = () => {
     nextTick(() => {
@@ -236,6 +232,7 @@ const live = reactive({
     mailDomains: [],
     mailAddresses: [],
     mails: [],
+    mailTotalCount: null,
     mailUnreadCount: null,
     unknownMails: [],
     addresses: [],
@@ -299,17 +296,17 @@ const dataSourceNotice = computed(() => {
     if (demoMode.value) return {
         tone: 'warn',
         title: 'Demo 数据模式',
-        text: '当前显示显式 demo seed，用于原型审阅；不要按这些邮件、用户、访问包判断生产状态。',
+        text: '当前显示 demo 数据。',
     }
     if (!showAdminPage.value) return {
         tone: 'warn',
         title: '未登录只读预览',
-        text: '当前只读取公开域名设置；邮件、用户、访问包和审计表不会用 seed 数据伪装真实后台。',
+        text: '当前只读取公开设置。',
     }
     return {
         tone: 'warn',
         title: '生产后端已接入',
-        text: '当前灰度后台连接生产 Worker/D1。邮件删除、地址凭证/访问包、地址收件清理、域名检查等已接入；高风险配置写入仍需专用表单。',
+        text: '连接生产 Worker/D1。',
     }
 })
 
@@ -371,8 +368,15 @@ const setView = async (view) => {
     ui.view = view
     ui.detailKind = ''
     detailOpen.value = false
+    const statusOptions = view === 'flow'
+        ? FLOW_STATUS_OPTIONS
+        : (view === 'access' ? ACCESS_STATUS_OPTIONS : ['all'])
+    if (!statusOptions.includes(ui.status)) ui.status = 'all'
     localStorage.setItem('ets-admin-next-view', view)
-    await replaceRouteQuery({ view })
+    await replaceRouteQuery({
+        view,
+        status: ui.status === 'all' ? undefined : ui.status,
+    }, view === 'flow' ? [] : ['mailId', 'item', 'mode'])
 }
 
 const getDomain = (value) => {
@@ -488,12 +492,38 @@ const mailRenderLabel = (row) => {
     return '仅原始邮件'
 }
 
-const safeFetch = async (label, path) => {
+const safeFetch = async (label, path, options = {}) => {
     try {
         return await api.fetch(path)
     } catch (error) {
-        live.errors.push(`${label}: ${error.message || 'error'}`)
+        if (options.recordError !== false) {
+            live.errors.push(`${label}: ${error.message || 'error'}`)
+        }
         return null
+    }
+}
+
+const fetchAdminMailPages = async () => {
+    const first = await safeFetch('mails', `/api/admin/mails?limit=${ADMIN_MAIL_PAGE_LIMIT}&offset=0`)
+    if (!first) return null
+    const count = Number(first.count || first.results?.length || 0)
+    const pageCount = Math.min(
+        Math.ceil(count / ADMIN_MAIL_PAGE_LIMIT),
+        Math.ceil(ADMIN_MAIL_FETCH_MAX / ADMIN_MAIL_PAGE_LIMIT),
+    )
+    if (pageCount <= 1) return first
+    const rest = await Promise.all(
+        Array.from({ length: pageCount - 1 }, (_, index) => {
+            const offset = (index + 1) * ADMIN_MAIL_PAGE_LIMIT
+            return safeFetch('mails', `/api/admin/mails?limit=${ADMIN_MAIL_PAGE_LIMIT}&offset=${offset}`)
+        }),
+    )
+    return {
+        ...first,
+        results: [
+            ...(first.results || []),
+            ...rest.flatMap((page) => page?.results || []),
+        ],
     }
 }
 
@@ -542,8 +572,8 @@ const fetchAdminData = async () => {
         safeFetch('domains', '/api/admin/domains'),
         safeFetch('mail domains', '/api/admin/mail_domains'),
         safeFetch('mail addresses', '/api/admin/mail_addresses'),
-        safeFetch('mails', '/api/admin/mails?limit=20&offset=0'),
-        safeFetch('unknown mails', '/api/admin/mails_unknow?limit=20&offset=0'),
+        fetchAdminMailPages(),
+        safeFetch('unknown mails', '/api/admin/mails_unknow?limit=100&offset=0'),
         safeFetch('addresses', '/api/admin/address?limit=50&offset=0'),
         safeFetch('access packages', '/api/admin/access_packages?limit=50&offset=0'),
         safeFetch('audit events', '/api/admin/audit_events?limit=20&offset=0'),
@@ -553,7 +583,7 @@ const fetchAdminData = async () => {
         safeFetch('db version', '/api/admin/db_version'),
         safeFetch('mail webhook', '/api/admin/mail_webhook/settings'),
         safeFetch('global webhook', '/api/admin/webhook/settings'),
-        safeFetch('telegram', '/api/admin/telegram/status'),
+        safeFetch('telegram', '/api/admin/telegram/status', { recordError: false }),
         safeFetch('ai extract', '/api/admin/ai_extract/settings'),
         safeFetch('sender access', '/api/admin/address_sender?limit=20&offset=0'),
         safeFetch('sendbox', '/api/admin/sendbox?limit=10&offset=0'),
@@ -565,6 +595,7 @@ const fetchAdminData = async () => {
     live.mailDomains = mailDomains?.results || []
     live.mailAddresses = mailAddresses?.results || []
     live.mails = mails?.results || []
+    live.mailTotalCount = Number.isFinite(Number(mails?.count)) ? Number(mails.count) : null
     live.mailUnreadCount = Number.isFinite(Number(mails?.unread_count)) ? Number(mails.unread_count) : null
     live.unknownMails = unknownMails?.results || []
     live.addresses = addresses?.results || []
@@ -895,7 +926,7 @@ const notificationRows = computed(() => [
         target: '/api/admin/mail_webhook/settings',
         type: '入站通知',
         status: live.mailWebhook?.enabled ? '可用' : '需更新',
-        detail: live.mailWebhook?.url ? `Endpoint: ${live.mailWebhook.url}` : '后端副作用门禁未接入前，只作为通知配置入口展示',
+        detail: live.mailWebhook?.url ? `Endpoint: ${live.mailWebhook.url}` : '未配置 endpoint',
     },
     {
         id: 'notify-telegram',
@@ -903,7 +934,7 @@ const notificationRows = computed(() => [
         target: 'Telegram WebApp',
         type: '移动通知',
         status: live.telegram?.enabled || live.telegram?.ok ? '可用' : '待配置',
-        detail: '保留旧 Telegram 能力，但在新版里归入通知通道',
+        detail: live.telegram?.enabled || live.telegram?.ok ? '已配置' : '需要 TELEGRAM_BOT_TOKEN',
     },
     {
         id: 'notify-send',
@@ -911,7 +942,7 @@ const notificationRows = computed(() => [
         target: '/api/admin/send_mail',
         type: '出站邮件',
         status: openSettings.value.enableSendMail ? '可用' : '待产品化',
-        detail: '发送提供商决策尚未完成时，保持为受控能力',
+        detail: openSettings.value.enableSendMail ? '已启用' : '未启用',
     },
     {
         id: 'notify-ai',
@@ -919,7 +950,7 @@ const notificationRows = computed(() => [
         target: 'AiExtractInfo',
         type: '内容处理',
         status: live.aiSettings?.enabled ? '可用' : '灰度中',
-        detail: '从邮件详情进入，不单独占用顶层菜单',
+        detail: live.aiSettings?.enabled ? '已启用' : '未启用',
     },
 ])
 
@@ -1017,6 +1048,7 @@ const explicitUnreadMailCount = computed(() => {
         || row.read_at === null
     )).length
 })
+const blockingLoadErrors = computed(() => live.errors.filter((item) => !String(item).startsWith('telegram:')))
 const navBadges = computed(() => ({
     overview: null,
     mails: explicitUnreadMailCount.value > 0
@@ -1026,10 +1058,33 @@ const navBadges = computed(() => ({
     domains: null,
     delivery: null,
     access: null,
-    ops: live.errors.length > 0 ? { dot: true, label: '部分后台接口暂不可用' } : null,
+    ops: blockingLoadErrors.value.length > 0 ? { dot: true, label: '部分后台接口暂不可用' } : null,
     roadmap: null,
 }))
 const navBadgeFor = (item) => navBadges.value[item.badgeKey] || null
+
+const activeStatusOptions = computed(() => {
+    if (activeView.value === 'flow') return [
+        { value: 'all', label: '全部状态' },
+        { value: '未读', label: '未读' },
+        { value: '已读', label: '已读' },
+        { value: 'attachment', label: '有附件' },
+        { value: '已保存', label: '已保存' },
+        { value: '未知地址', label: '未知地址' },
+    ]
+    if (activeView.value === 'access') return [
+        { value: 'all', label: '全部状态' },
+        { value: 'active', label: 'active' },
+        { value: 'success', label: 'success' },
+    ]
+    return []
+})
+const activeStatusValue = computed({
+    get: () => activeStatusOptions.value.some((option) => option.value === ui.status) ? ui.status : 'all',
+    set: (value) => {
+        ui.status = value || 'all'
+    },
+})
 
 const domainOptions = computed(() => {
     const domains = new Set(domainRows.value.map((row) => row.domain).filter(Boolean))
@@ -1115,7 +1170,11 @@ const matches = (row) => {
         row.unread ? '未读 unread' : '',
         Number(row.attachmentCount || 0) > 0 ? 'attachment 有附件' : '',
     ].filter(Boolean).join(' ').toLowerCase()
-    const inStatus = ui.status === 'all' || statusText.includes(ui.status.toLowerCase())
+    const statusOptions = activeView.value === 'flow'
+        ? FLOW_STATUS_OPTIONS
+        : (activeView.value === 'access' ? ACCESS_STATUS_OPTIONS : ['all'])
+    const activeStatus = statusOptions.includes(ui.status) ? ui.status : 'all'
+    const inStatus = activeStatus === 'all' || statusText.includes(activeStatus.toLowerCase())
     return inQuery && inDomain && inAddress && inStatus
 }
 
@@ -1125,10 +1184,19 @@ const filteredMailRows = computed(() => filterRows(mailRows.value))
 const filteredUnknownRows = computed(() => filterRows(unknownRows.value))
 
 const mailHierarchy = computed(() => {
-    const allCount = mailRows.value.length
+    const allCount = demoMode.value
+        ? mailRows.value.length
+        : (Number.isFinite(Number(live.mailTotalCount)) ? Number(live.mailTotalCount) : mailRows.value.length)
     const unreadCount = explicitUnreadMailCount.value
     const attachmentCount = mailRows.value.filter((row) => Number(row.attachmentCount || 0) > 0).length
     const unknownCount = unknownRows.value.length
+    const domainMailCount = (domain) => {
+        const scoped = mailRows.value.filter((row) => row.domain === domain || getDomain(row.to) === domain)
+        if (demoMode.value || scoped.length > 0) return scoped.length
+        return Number.isFinite(Number(domainRows.value.find((row) => row.domain === domain)?.mails))
+            ? Number(domainRows.value.find((row) => row.domain === domain).mails)
+            : 0
+    }
     return {
         queues: [
             { id: 'queue-all', label: '全部邮件', count: allCount, status: 'all' },
@@ -1139,6 +1207,7 @@ const mailHierarchy = computed(() => {
         ],
         domains: domainRows.value.map((domain) => ({
             ...domain,
+            mails: domainMailCount(domain.domain),
             addresses: addressOptions.value
                 .filter((address) => address !== 'all' && address.endsWith(`@${domain.domain}`))
                 .map((address) => ({
@@ -1257,9 +1326,10 @@ const openMailFromDomain = (domain) => {
 const stateCards = computed(() => {
     const db = live.workerConfig?.DIAGNOSTICS?.database || {}
     const webhookStatus = live.mailWebhook?.enabled ? '入站通知已启用' : '通知通道需复核'
+    const mailTotal = Number.isFinite(Number(live.mailTotalCount)) ? Number(live.mailTotalCount) : mailRows.value.length
     return [
         { value: workerStatusLabel.value, label: 'Worker / D1', tone: db.ok === false || !showAdminPage.value ? 'warn' : 'ok' },
-        { value: `${mailRows.value.length}`, label: '最近收件', tone: 'ok' },
+        { value: `${mailTotal}`, label: '邮件总数', tone: 'ok' },
         { value: webhookStatus, label: '通知通道', tone: live.mailWebhook?.enabled ? 'ok' : 'warn' },
     ]
 })
@@ -1291,9 +1361,9 @@ const tableSpecs = {
         { label: '结果', key: 'result', type: 'status' },
     ],
     roadmap: [
-        { label: '新版模块', key: 'capability', type: 'strong' },
-        { label: '承接旧功能', key: 'maps' },
+        { label: '能力', key: 'capability', type: 'strong' },
         { label: '状态', key: 'status', type: 'status' },
+        { label: '下一步', key: 'next' },
     ],
     logs: [
         { label: '时间', key: 'time', type: 'time' },
@@ -1377,62 +1447,56 @@ const tableSpecs = {
         { label: '状态', key: 'status', type: 'status' },
         { label: '动作', key: 'action' },
     ],
-    mapping: [
-        { label: '新对象', key: 'newName', type: 'strong' },
-        { label: '吸收旧功能', key: 'old' },
-        { label: '处理原则', key: 'rule' },
-    ],
 }
 
 const activePanels = computed(() => {
     const view = activeView.value
     if (view === 'overview') {
         return [
-            { id: 'domains', title: '入口状态', note: '域名、collector 和接收方式的当前状态。', columns: tableSpecs.domains, rows: filterRows(domainRows.value), kind: 'routing', layout: 'split' },
-            { id: 'logs', title: '最近处理', note: '保存、异常和通知排队的最近记录。', columns: tableSpecs.logs, rows: filterRows(processingRows.value), kind: 'logs' },
+            { id: 'domains', title: '入口状态', columns: tableSpecs.domains, rows: filterRows(domainRows.value), kind: 'routing', layout: 'split' },
+            { id: 'logs', title: '最近处理', columns: tableSpecs.logs, rows: filterRows(processingRows.value), kind: 'logs' },
         ]
     }
     if (view === 'flow') {
         return [
-            { id: 'mails', title: '邮件记录', note: '按域名、地址和状态查看收件。', columns: tableSpecs.mails, rows: filterRows(mailRows.value), kind: 'flow', layout: 'split' },
-            { id: 'unknown', title: '异常队列', note: '未知收件人和失败记录。', columns: tableSpecs.risks, rows: filterRows(unknownRows.value), kind: 'access', layout: 'split' },
-            { id: 'logs', title: '处理日志', note: '最近处理步骤和耗时。', columns: tableSpecs.logs, rows: filterRows(processingRows.value), kind: 'logs' },
+            { id: 'mails', title: '邮件记录', columns: tableSpecs.mails, rows: filterRows(mailRows.value), kind: 'flow', layout: 'split' },
+            { id: 'unknown', title: '异常队列', columns: tableSpecs.risks, rows: filterRows(unknownRows.value), kind: 'access', layout: 'split' },
+            { id: 'logs', title: '处理日志', columns: tableSpecs.logs, rows: filterRows(processingRows.value), kind: 'logs' },
         ]
     }
     if (view === 'identity') {
         return [
-            { id: 'addresses', title: '地址账本', note: '地址、标签、凭证和分享状态。', columns: tableSpecs.addresses, rows: filterRows(addressRows.value), kind: 'identity' },
-            { id: 'users', title: '用户与角色', note: '账号和可访问地址。', columns: tableSpecs.users, rows: filterRows(userRows.value), kind: 'users', layout: 'third' },
+            { id: 'addresses', title: '地址账本', columns: tableSpecs.addresses, rows: filterRows(addressRows.value), kind: 'identity' },
+            { id: 'users', title: '用户与角色', columns: tableSpecs.users, rows: filterRows(userRows.value), kind: 'users', layout: 'third' },
         ]
     }
     if (view === 'routing') {
         return [
-            { id: 'domains', title: '域名与接收方式', note: '旧 Domains 的字段保留，但用新 UI 把 Cloudflare、ImprovMX、Webhook、Manual 合在一张路由表', columns: tableSpecs.routing, rows: filterRows(domainRows.value), kind: 'routing' },
-            { id: 'destinations', title: '转发目的地', note: '参考图里的 Forwarding Destinations，但内容换成本项目真实接收链路', columns: tableSpecs.destinations, rows: filterRows(routeRows.value), kind: 'routing', layout: 'split' },
+            { id: 'domains', title: '域名与接收方式', columns: tableSpecs.routing, rows: filterRows(domainRows.value), kind: 'routing' },
+            { id: 'destinations', title: '转发目的地', columns: tableSpecs.destinations, rows: filterRows(routeRows.value), kind: 'routing', layout: 'split' },
         ]
     }
     if (view === 'delivery') {
         return [
-            { id: 'channels', title: '出站与通知通道', note: '通知、发送和外部通道状态。', columns: tableSpecs.notifications, rows: filterRows(notificationRows.value), kind: 'delivery' },
-            { id: 'sender', title: '地址级发送', note: '来自 /api/admin/address_sender 的发送权限记录；空表不再用地址账本代替。', columns: tableSpecs.sender, rows: filterRows(senderAccessRows.value), kind: 'delivery', layout: 'third' },
-            { id: 'sendbox', title: '发送箱', note: '来自 /api/admin/sendbox 的最近发送记录；空表不再用收件箱代替。', columns: tableSpecs.mails, rows: filterRows(sendBoxRows.value), kind: 'delivery', layout: 'third' },
+            { id: 'channels', title: '出站与通知通道', columns: tableSpecs.notifications, rows: filterRows(notificationRows.value), kind: 'delivery' },
+            { id: 'sender', title: '地址级发送', columns: tableSpecs.sender, rows: filterRows(senderAccessRows.value), kind: 'delivery', layout: 'third' },
+            { id: 'sendbox', title: '发送箱', columns: tableSpecs.mails, rows: filterRows(sendBoxRows.value), kind: 'delivery', layout: 'third' },
         ]
     }
     if (view === 'access') {
         return [
-            { id: 'shares', title: '访问包', note: '旧 AccessPackages 继续保留，但作为分享 token 生命周期管理', columns: tableSpecs.shares, rows: filterRows(shareRows.value), kind: 'access', layout: 'split' },
-            { id: 'risks', title: '审阅风险', note: '审阅 P1/P2 不是文档摘要，而是后台里的治理队列', columns: tableSpecs.risks, rows: filterRows(staticRisks), kind: 'access', layout: 'split' },
-            { id: 'audit', title: '审计与访问日志', note: '旧 AuditLogs / AccessLogs 合并筛选，actor、resource、IP 和结果始终可见', columns: tableSpecs.audit, rows: filterRows(auditRows.value), kind: 'audit' },
+            { id: 'shares', title: '访问包', columns: tableSpecs.shares, rows: filterRows(shareRows.value), kind: 'access', layout: 'split' },
+            { id: 'risks', title: '审阅风险', columns: tableSpecs.risks, rows: filterRows(staticRisks), kind: 'access', layout: 'split' },
+            { id: 'audit', title: '审计与访问日志', columns: tableSpecs.audit, rows: filterRows(auditRows.value), kind: 'audit' },
         ]
     }
     if (view === 'ops') {
         return [
-            { id: 'ops', title: '运行维护', note: '旧 DatabaseManager / WorkerConfig / Maintenance / IpBlacklistSettings 合并成运行面板', columns: tableSpecs.ops, rows: filterRows(opsRows.value), kind: 'ops' },
+            { id: 'ops', title: '运行维护', columns: tableSpecs.ops, rows: filterRows(opsRows.value), kind: 'ops' },
         ]
     }
     return [
-        { id: 'roadmap', title: '保留的新能力方向', note: '这些不是旧 UI 里的菜单，但对后续产品化有价值，所以在新版里保留为可开发入口', columns: tableSpecs.roadmap, rows: filterRows(roadmapRows), kind: 'roadmap' },
-        { id: 'mapping', title: '旧功能归并规则', note: '迁移时看对象，不看旧菜单名', columns: tableSpecs.mapping, rows: migrationMapRows, kind: 'roadmap' },
+        { id: 'roadmap', title: '能力路线', columns: tableSpecs.roadmap, rows: filterRows(roadmapRows), kind: 'roadmap' },
     ]
 })
 
@@ -1869,41 +1933,24 @@ const toolbarActions = computed(() => {
     if (view === 'flow') return [
         { label: '保留选择刷新', icon: 'refresh', action: 'refresh' },
         { label: '复制收件地址', icon: 'copy', action: 'copy' },
-        { label: '渲染策略', icon: 'lock', modal: 'mail-policy' },
         { label: '批量删除', icon: 'check', action: 'delete', danger: true },
     ]
     if (view === 'identity') return [
-        { label: '新增地址身份', icon: 'plus', modal: 'new-address', primary: true },
-        { label: '生成访问包', icon: 'lock', modal: 'share-package' },
         { label: '复制当前地址', icon: 'copy', action: 'copy' },
         { label: '轮换凭证', icon: 'refresh', action: 'rotate' },
         { label: '撤销访问包', icon: 'lock', action: 'revoke' },
         { label: '清空收件', icon: 'check', action: 'clear-inbox', danger: true },
     ]
     if (view === 'routing') return [
-        { label: '新增接收域', icon: 'plus', modal: 'new-domain', primary: true },
         { label: '检查 DNS / 路由', icon: 'check', action: 'verify' },
         { label: '停用影响', icon: 'lock', action: 'domain-impact', danger: true },
-        { label: '接收策略', icon: 'routing', modal: 'route-policy' },
     ]
     if (view === 'delivery') return [
-        { label: '写信', icon: 'delivery', modal: 'compose-mail', primary: true },
-        { label: '配置通知', icon: 'routing', modal: 'webhook' },
-        { label: '测试通道', icon: 'check', action: 'test-webhook' },
+        { label: '刷新通道', icon: 'refresh', action: 'refresh' },
     ]
-    if (view === 'access') return [
-        { label: '新建访问包', icon: 'plus', modal: 'share-package', primary: true },
-        { label: '导出审计', icon: 'copy', action: 'copy' },
-        { label: '风险策略', icon: 'lock', modal: 'risk-policy' },
-    ]
+    if (view === 'access') return []
     if (view === 'ops') return [
-        { label: '数据库迁移', icon: 'ops', modal: 'db-migration' },
         { label: '健康检查', icon: 'check', action: 'health-check' },
-        { label: '清理缓存', icon: 'lock', action: 'purge-cache', danger: true },
-    ]
-    if (view === 'roadmap') return [
-        { label: '记录路线事项', icon: 'plus', modal: 'roadmap-note', primary: true },
-        { label: '复制迁移清单', icon: 'copy', action: 'copy' },
     ]
     return []
 })
@@ -2183,6 +2230,10 @@ watch(() => route.query.view, (value) => {
         ui.view = nextView
         ui.detailKind = ''
         detailOpen.value = false
+        const statusOptions = nextView === 'flow'
+            ? FLOW_STATUS_OPTIONS
+            : (nextView === 'access' ? ACCESS_STATUS_OPTIONS : ['all'])
+        if (!statusOptions.includes(ui.status)) ui.status = 'all'
     }
 })
 
@@ -2199,7 +2250,11 @@ watch(() => route.query.address, (value) => {
 })
 
 watch(() => route.query.status, (value) => {
-    ui.status = queryValue(value, 'all')
+    const nextStatus = queryValue(value, 'all')
+    const statusOptions = activeView.value === 'flow'
+        ? FLOW_STATUS_OPTIONS
+        : (activeView.value === 'access' ? ACCESS_STATUS_OPTIONS : ['all'])
+    ui.status = statusOptions.includes(nextStatus) ? nextStatus : 'all'
 })
 
 watch(() => route.query.mode, (value) => {
@@ -2377,13 +2432,6 @@ onBeforeUnmount(() => {
                             </svg>
                             同步
                         </button>
-                        <button class="btn primary" type="button" @click="openActionModal('quick-create')">
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                                <component :is="shape.tag" v-for="(shape, index) in shapeList('plus')" :key="index"
-                                    v-bind="shape.attrs" />
-                            </svg>
-                            新建入口
-                        </button>
                     </div>
                 </div>
             </header>
@@ -2413,23 +2461,18 @@ onBeforeUnmount(() => {
                         </svg>
                         {{ action.label }}
                     </button>
-                    <select v-if="activeView === 'flow' || activeView === 'access'" v-model="ui.status" class="select"
+                    <select v-if="activeStatusOptions.length" v-model="activeStatusValue" class="select"
                         @change="activeView === 'flow' ? setMailStatus(ui.status) : replaceRouteQuery({ status: ui.status === 'all' ? undefined : ui.status })">
-                        <option value="all">全部状态</option>
-                        <option v-if="activeView === 'flow'" value="未读">未读</option>
-                        <option v-if="activeView === 'flow'" value="已读">已读</option>
-                        <option v-if="activeView === 'flow'" value="attachment">有附件</option>
-                        <option value="已保存">已保存</option>
-                        <option value="未知地址">未知地址</option>
-                        <option value="active">active</option>
-                        <option value="success">success</option>
+                        <option v-for="option in activeStatusOptions" :key="option.value" :value="option.value">
+                            {{ option.label }}
+                        </option>
                     </select>
                     <button class="btn" type="button" @click="handleAction('reset-filters')">清除筛选</button>
                 </div>
 
-                <div v-if="live.errors.length && showAdminPage" class="notice warn">
+                <div v-if="activeView === 'ops' && blockingLoadErrors.length && showAdminPage" class="notice warn">
                     <strong>部分后台接口暂不可用</strong>
-                    <span>{{ live.errors.slice(0, 2).join('；') }}</span>
+                    <span>{{ blockingLoadErrors.slice(0, 2).join('；') }}</span>
                 </div>
 
                 <div v-if="activeView === 'ops'" class="ops-boundary-strip" aria-label="运行边界">
@@ -2464,7 +2507,7 @@ onBeforeUnmount(() => {
                                 <button class="facet-row" :class="{ 'is-active': ui.domain === 'all' && ui.address === 'all' }"
                                     type="button" @click="setMailDomain('all')">
                                     <span>全部域名</span>
-                                    <b>{{ formatNumber(mailRows.length) }}</b>
+                                    <b>{{ formatNumber(mailHierarchy.queues[0]?.count ?? mailRows.length) }}</b>
                                 </button>
                                 <div v-for="domain in mailHierarchy.domains" :key="domain.id || domain.domain" class="tree-group">
                                     <div class="domain-line" :class="{ 'is-active': ui.domain === domain.domain && ui.address === 'all' }">
@@ -2670,7 +2713,7 @@ onBeforeUnmount(() => {
                     </button>
                     <button type="button" class="overview-entry" @click="setView('ops')">
                         <span class="overview-entry-kicker">运行维护</span>
-                        <strong>{{ live.errors.length ? '需复核' : workerStatusLabel }}</strong>
+                        <strong>{{ blockingLoadErrors.length ? '需复核' : workerStatusLabel }}</strong>
                         <span>查看 Worker、D1、KV、DB 版本和后台接口状态。</span>
                     </button>
                 </div>
@@ -2680,7 +2723,7 @@ onBeforeUnmount(() => {
                         <div class="panel-head">
                             <div>
                                 <h2>{{ panel.title }}</h2>
-                                <p>{{ panel.note }}</p>
+                                <p v-if="panel.note">{{ panel.note }}</p>
                             </div>
                         </div>
                         <div class="table-wrap">
@@ -2852,7 +2895,7 @@ onBeforeUnmount(() => {
                     <h2 id="admin-auth-title">管理员访问</h2>
                 </div>
                 <div class="modal-body">
-                    <p class="modal-copy">请输入管理员密码进入 OpenDesign 灰度后台。当前连接生产后端，收件流删除会直接写入生产数据。</p>
+                    <p class="modal-copy">请输入管理员密码进入后台。当前连接生产后端，收件流删除会直接写入生产数据。</p>
                     <div class="form-grid">
                         <label class="form-field full">
                             <span>管理员密码</span>
@@ -3618,16 +3661,20 @@ textarea {
 }
 
 .source-notice {
+    display: flex;
+    gap: 8px;
+    align-items: center;
     margin-bottom: 14px;
 }
 
 .app.is-flow-view .source-notice {
-    display: flex;
-    align-items: center;
-    gap: 8px;
     min-height: 38px;
     margin-bottom: 0;
     padding: 7px 12px;
+}
+
+.source-notice strong {
+    white-space: nowrap;
 }
 
 .notice span {
@@ -4344,12 +4391,14 @@ textarea {
 }
 
 .table-wrap {
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 table {
     width: 100%;
-    min-width: 760px;
+    min-width: 100%;
+    table-layout: fixed;
     border-collapse: collapse;
 }
 
@@ -4359,6 +4408,7 @@ td {
     border-top: 1px solid var(--border);
     text-align: left;
     vertical-align: top;
+    overflow-wrap: anywhere;
 }
 
 th {
@@ -4384,7 +4434,7 @@ tr.is-selected {
 .cell-main {
     display: grid;
     gap: 3px;
-    min-width: 170px;
+    min-width: 0;
 }
 
 .cell-main strong {
@@ -4396,6 +4446,10 @@ tr.is-selected {
     color: var(--muted);
     font-size: 12px;
     text-wrap: pretty;
+}
+
+.table-wrap .time-text {
+    white-space: normal;
 }
 
 .status,
@@ -5032,7 +5086,6 @@ tr.is-selected {
         overflow: hidden;
     }
 
-    .app.is-flow-view .source-notice,
     .app.is-flow-view .toolbar {
         display: none;
     }

@@ -42,6 +42,7 @@
 ### Improvements
 
 - improve: |Admin API| 新增同源后台 API 前缀 `/api/admin/*` 并将新旧后台前端调用迁移过去；旧 `/admin/*` 后端接口暂时保留兼容，便于后续释放 `/admin/...` 前端子路由空间
+- improve: |AdminNext| 修正收件流邮件列表只取最近 20 封导致未读筛选与全局未读计数不一致的问题，并清理跨页面状态筛选、Telegram 全局告警和迁移说明类页面文案
 - improve: |AdminNext| 隔离收件流三栏工作台背景，避免“生产后端已接入”提示条颜色泄漏到队列、收件箱和详情列顶部
 - improve: |AdminNext| 新后台主入口从 `/console` 切换到 `/admin`，旧后台隐藏保留在 `/old-admin`，`/console` 暂作为兼容入口；本阶段不改动 `/admin/...` 后端 API 前缀
 - improve: |AdminNext| 移除 `mail-admin.20030405.xyz` 独立后台自定义域的运行特判，统一使用 `mail.20030405.xyz/console` 和 `admin-next.email-transfer-station.pages.dev/console` 作为新版控制台入口
