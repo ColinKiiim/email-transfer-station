@@ -3456,6 +3456,7 @@ textarea {
     grid-template-rows: auto auto minmax(0, 1fr);
     gap: 10px;
     overflow: hidden;
+    background: var(--bg);
 }
 
 .view-grid {
@@ -3702,6 +3703,7 @@ textarea {
 }
 
 .mail-workbench {
+    position: relative;
     display: grid;
     grid-template-columns:
         minmax(180px, var(--mail-facets-width, 220px))
@@ -3714,6 +3716,9 @@ textarea {
     height: 100%;
     min-height: 0;
     max-width: none;
+    border-radius: var(--radius);
+    background: var(--bg);
+    isolation: isolate;
 }
 
 .mail-workbench > .panel {
