@@ -271,10 +271,7 @@ const sidebarCollapsed = ref(
 const activeView = computed(() => viewMeta[ui.view] ? ui.view : 'overview')
 const activeMeta = computed(() => viewMeta[activeView.value])
 const pageTitle = computed(() => `${activeMeta.value.title} · Email Transfer Station`)
-const demoMode = computed(() => {
-    const value = Array.isArray(route.query.demo) ? route.query.demo[0] : route.query.demo
-    return value === '1' || value === 'true'
-})
+const demoMode = computed(() => false)
 const showAdminPasswordModal = computed(() => !demoMode.value && (!showAdminPage.value || showAdminAuth.value))
 const detailContext = computed(() => ui.detailKind || activeView.value)
 const workerStatusLabel = computed(() => {
@@ -290,14 +287,10 @@ const dbVersionLabel = computed(() => {
 const syncLabel = computed(() => {
     if (ui.syncing) return '同步中'
     if (!showAdminPage.value) return '公开设置'
+    if (blockingLoadErrors.value.length) return '同步部分失败'
     return live.lastSynced ? `已同步 ${live.lastSynced}` : '待同步'
 })
 const dataSourceNotice = computed(() => {
-    if (demoMode.value) return {
-        tone: 'warn',
-        title: 'Demo 数据模式',
-        text: '当前显示 demo 数据。',
-    }
     if (!showAdminPage.value) return {
         tone: 'warn',
         title: '未登录只读预览',
@@ -361,6 +354,10 @@ const replaceRouteQuery = (patch = {}, remove = []) => {
         query,
         hash: route.hash,
     }).catch(() => {})
+}
+
+const stripRetiredDemoQuery = () => {
+    if (route.query.demo !== undefined) replaceRouteQuery({}, ['demo'])
 }
 
 const setView = async (view) => {
@@ -1049,6 +1046,27 @@ const explicitUnreadMailCount = computed(() => {
     )).length
 })
 const blockingLoadErrors = computed(() => live.errors.filter((item) => !String(item).startsWith('telegram:')))
+const pageLoadErrors = computed(() => {
+    const errors = blockingLoadErrors.value
+    const pick = (patterns) => errors.filter((item) => patterns.some((pattern) => pattern.test(String(item))))
+    if (activeView.value === 'flow') {
+        return pick([/^mails:/, /^mail domains:/, /^mail addresses:/, /^unknown mails:/])
+    }
+    if (activeView.value === 'routing') {
+        return pick([/^overview:/, /^domains:/, /^mail domains:/, /^worker configs:/])
+    }
+    if (activeView.value === 'identity') {
+        return pick([/^addresses:/, /^users:/])
+    }
+    if (activeView.value === 'access') {
+        return pick([/^access packages:/, /^audit events:/, /^access events:/])
+    }
+    if (activeView.value === 'delivery') {
+        return pick([/^mail webhook:/, /^global webhook:/, /^ai extract:/, /^sender access:/, /^sendbox:/])
+    }
+    if (activeView.value === 'ops') return errors
+    return []
+})
 const navBadges = computed(() => ({
     overview: null,
     mails: explicitUnreadMailCount.value > 0
@@ -2273,6 +2291,8 @@ watch(() => route.query.item, (value) => {
     }
 }, { immediate: true })
 
+watch(() => route.query.demo, stripRetiredDemoQuery, { immediate: true })
+
 watch(mailRows, (rows) => {
     if (!rows.length) {
         ui.selected.flow = ''
@@ -2337,6 +2357,7 @@ const syncSelectionFromRoute = () => {
 watch(() => [route.query.mailId, route.query.item], syncSelectionFromRoute)
 
 onMounted(() => {
+    stripRetiredDemoQuery()
     syncSelectionFromRoute()
     refreshAll()
     window.addEventListener('keydown', handleGlobalKeydown)
@@ -2392,7 +2413,6 @@ onBeforeUnmount(() => {
             <div class="sidebar-foot">
                 <span class="health-dot">Worker / D1 {{ workerStatusLabel }}</span>
                 <span class="mono">DB_VERSION {{ dbVersionLabel }}</span>
-                <span>桌面后台 · 预留移动拆分</span>
             </div>
         </aside>
 
@@ -2470,9 +2490,9 @@ onBeforeUnmount(() => {
                     <button class="btn" type="button" @click="handleAction('reset-filters')">清除筛选</button>
                 </div>
 
-                <div v-if="activeView === 'ops' && blockingLoadErrors.length && showAdminPage" class="notice warn">
-                    <strong>部分后台接口暂不可用</strong>
-                    <span>{{ blockingLoadErrors.slice(0, 2).join('；') }}</span>
+                <div v-if="pageLoadErrors.length && showAdminPage" class="notice warn">
+                    <strong>后台数据加载失败</strong>
+                    <span>{{ pageLoadErrors.slice(0, 2).join('；') }}</span>
                 </div>
 
                 <div v-if="activeView === 'ops'" class="ops-boundary-strip" aria-label="运行边界">
@@ -2719,7 +2739,8 @@ onBeforeUnmount(() => {
                 </div>
 
                 <div v-else class="view-grid">
-                    <section v-for="panel in activePanels" :key="panel.id" class="panel" :class="panel.layout">
+                    <section v-for="panel in activePanels" :key="panel.id" class="panel"
+                        :class="[panel.layout, `panel-${panel.id}`]">
                         <div class="panel-head">
                             <div>
                                 <h2>{{ panel.title }}</h2>
@@ -2757,11 +2778,6 @@ onBeforeUnmount(() => {
                                                         <button type="button" @click.stop="copyText(row.address)">复制</button>
                                                         <button type="button" @click.stop="openActionModal('share-package')">分享</button>
                                                     </span>
-                                                    <span v-if="panel.kind === 'routing' && column.main === 'domain'" class="cell-actions">
-                                                        <button type="button" @click.stop="openMailFromDomain(row.domain)">查看邮件</button>
-                                                        <button type="button" @click.stop="openActionModal('new-address')">创建地址</button>
-                                                        <button type="button" @click.stop="copyText(row.collector)">复制 Collector</button>
-                                                    </span>
                                                 </div>
                                             </template>
                                             <span v-else-if="column.type === 'status'" class="status"
@@ -2770,7 +2786,8 @@ onBeforeUnmount(() => {
                                             </span>
                                             <strong v-else-if="column.type === 'strong'">{{ cellText(row, column.key) }}</strong>
                                             <span v-else-if="column.type === 'time'" class="time-text">{{ cellText(row, column.key) }}</span>
-                                            <span v-else-if="column.type === 'mono'" class="mono">{{ cellText(row, column.key) }}</span>
+                                            <span v-else-if="column.type === 'mono'" class="mono"
+                                                :title="cellText(row, column.key)">{{ cellText(row, column.key) }}</span>
                                             <span v-else-if="column.type === 'number'">{{ Number.isFinite(Number(row[column.key])) ? formatNumber(row[column.key]) : '-' }}</span>
                                             <span v-else>{{ cellText(row, column.key) }}</span>
                                         </td>
@@ -2792,7 +2809,6 @@ onBeforeUnmount(() => {
                         <div class="panel-head">
                             <div>
                                 <h2>固定凭证链接</h2>
-                                <p>保留旧 fixed credential 能力，但明确版本、轮换和泄露处理</p>
                             </div>
                         </div>
                         <div class="inner-pad">
@@ -2809,7 +2825,6 @@ onBeforeUnmount(() => {
                         <div class="panel-head">
                             <div>
                                 <h2>配置检查</h2>
-                                <p>旧说明卡片改为可执行检查清单</p>
                             </div>
                         </div>
                         <div class="inner-pad timeline">
@@ -2824,7 +2839,6 @@ onBeforeUnmount(() => {
                         <div class="panel-head">
                             <div>
                                 <h2>内容处理</h2>
-                                <p>AI 提取不删掉，但从独立配置页收敛成邮件详情里的处理能力</p>
                             </div>
                         </div>
                         <div class="inner-pad">
@@ -3419,7 +3433,8 @@ textarea {
     background: var(--surface-soft);
     color: var(--subtle);
     font-size: 11px;
-    font-family: "JetBrains Mono", "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: var(--ets-ui-font, inherit);
+    font-variant-numeric: tabular-nums;
 }
 
 .top-actions,
@@ -4330,7 +4345,7 @@ textarea {
 }
 
 .raw-body {
-    font-family: "JetBrains Mono", "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 12px;
     line-height: 1.55;
 }
@@ -4438,18 +4453,69 @@ tr.is-selected {
 }
 
 .cell-main strong {
+    min-width: 0;
+    overflow: hidden;
     overflow-wrap: anywhere;
     line-height: 1.3;
+    text-overflow: ellipsis;
 }
 
 .cell-sub {
+    min-width: 0;
+    overflow: hidden;
     color: var(--muted);
     font-size: 12px;
+    text-overflow: ellipsis;
     text-wrap: pretty;
 }
 
 .table-wrap .time-text {
     white-space: normal;
+}
+
+.panel-domains th:nth-child(1),
+.panel-domains td:nth-child(1) {
+    width: 17%;
+}
+
+.panel-domains th:nth-child(2),
+.panel-domains td:nth-child(2) {
+    width: 17%;
+}
+
+.panel-domains th:nth-child(3),
+.panel-domains td:nth-child(3) {
+    width: 10%;
+}
+
+.panel-domains th:nth-child(4),
+.panel-domains td:nth-child(4) {
+    width: 9%;
+}
+
+.panel-domains th:nth-child(5),
+.panel-domains td:nth-child(5) {
+    width: 13%;
+}
+
+.panel-domains th:nth-child(6),
+.panel-domains td:nth-child(6) {
+    width: 8%;
+}
+
+.panel-domains th:nth-child(7),
+.panel-domains td:nth-child(7) {
+    width: 16%;
+}
+
+.panel-domains th:nth-child(8),
+.panel-domains td:nth-child(8) {
+    width: 10%;
+}
+
+.panel-destinations th:nth-child(1),
+.panel-destinations td:nth-child(1) {
+    width: 34%;
 }
 
 .status,
@@ -4705,8 +4771,14 @@ tr.is-selected {
 }
 
 .mono {
-    font-family: "JetBrains Mono", "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    font-family: var(--ets-ui-font, inherit);
     font-variant-numeric: tabular-nums;
+    text-overflow: ellipsis;
+    vertical-align: top;
+    white-space: nowrap;
 }
 
 .sr-only {
