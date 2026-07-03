@@ -1,11 +1,20 @@
-import { Hono } from 'hono'
+import { Context, Hono } from 'hono'
 import { Jwt } from 'hono/utils/jwt'
 
-import utils, { checkCfTurnstile, getPasswords, getAdminPasswords, hashPassword } from '../utils';
+import utils, { checkCfTurnstile, getPasswords, getAdminPasswords, hashPassword, getStringArray } from '../utils';
 import i18n from '../i18n';
 import { recordAccessEvent } from '../audit';
 
 const api = new Hono<HonoCustomType>()
+
+const getAdminUsernames = (c: Context<HonoCustomType>): string[] => {
+    const configured = getStringArray(c.env.ADMIN_USERNAMES);
+    return configured.length > 0 ? configured : ["admin"];
+}
+
+const normalizeAdminUsername = (value: unknown): string => (
+    typeof value === "string" ? value.trim().toLowerCase() : ""
+)
 
 api.post('/open_api/site_login', async (c) => {
     const { password, cf_token } = await c.req.json();
@@ -42,9 +51,19 @@ api.post('/open_api/site_login', async (c) => {
     return c.json({ success: true })
 })
 
+api.get('/open_api/admin_login_settings', async (c) => {
+    return c.json({
+        enableGlobalTurnstileCheck: utils.isGlobalTurnstileEnabled(c),
+        cfTurnstileSiteKey: c.env.CF_TURNSTILE_SITE_KEY || "",
+        accountHint: getAdminUsernames(c).length === 1 ? getAdminUsernames(c)[0] : "",
+    })
+})
+
 api.post('/open_api/admin_login', async (c) => {
-    const { password, cf_token } = await c.req.json();
+    const { username, password, cf_token } = await c.req.json();
     const msgs = i18n.getMessagesbyContext(c);
+    const normalizedUsername = normalizeAdminUsername(username);
+    const adminUsernames = getAdminUsernames(c).map(normalizeAdminUsername);
     if (utils.isGlobalTurnstileEnabled(c)) {
         try {
             await checkCfTurnstile(c, cf_token);
@@ -60,21 +79,35 @@ api.post('/open_api/admin_login', async (c) => {
     }
     const adminPasswords = getAdminPasswords(c);
     const hashedPasswords = await Promise.all(adminPasswords.map(p => hashPassword(p)));
-    if (!hashedPasswords.length || !password || !hashedPasswords.includes(password)) {
+    if (
+        !adminUsernames.length
+        || !normalizedUsername
+        || !adminUsernames.includes(normalizedUsername)
+        || !hashedPasswords.length
+        || !password
+        || !hashedPasswords.includes(password)
+    ) {
         await recordAccessEvent(c, {
             event_type: "admin.login.failed",
             actor_type: "admin",
+            actor_label: normalizedUsername || null,
             status: "failed",
-            failure_reason: "invalid_password",
+            failure_reason: "invalid_account_or_password",
         });
         return c.text(msgs.NeedAdminPasswordMsg, 401)
     }
     await recordAccessEvent(c, {
         event_type: "admin.login.success",
         actor_type: "admin",
+        actor_label: normalizedUsername,
         status: "success",
     });
-    return c.json({ success: true })
+    const token = await Jwt.sign({
+        scope: "admin_session",
+        username: normalizedUsername,
+        exp: Math.floor(Date.now() / 1000) + 8 * 60 * 60,
+    }, c.env.JWT_SECRET, "HS256");
+    return c.json({ success: true, token, username: normalizedUsername })
 })
 
 api.post('/open_api/credential_login', async (c) => {

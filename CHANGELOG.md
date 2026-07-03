@@ -41,6 +41,7 @@
 
 ### Improvements
 
+- improve: |AdminNext| 后台未登录状态改为独立账号+密码登录页，登录前不渲染后台壳、不加载域名/收件流业务数据，登录成功后使用短期管理员会话访问 `/api/admin/*`
 - improve: |AdminNext| 移除新版后台顶部全局“生产后端已接入 / 未登录只读预览”状态条，避免把无操作价值的接入说明放在每个页面首屏
 - improve: |AdminNext| 移除 URL 触发的 demo seed 后台模式，清理后台开发说明文案与 routing 表格字体/列宽，并恢复 Pages Functions 发布路径，确保 `/api/admin/*` 同源请求实际代理到生产 Worker
 - improve: |Admin API| 新增同源后台 API 前缀 `/api/admin/*` 并将新旧后台前端调用迁移过去；旧 `/admin/*` 后端接口暂时保留兼容，便于后续释放 `/admin/...` 前端子路由空间

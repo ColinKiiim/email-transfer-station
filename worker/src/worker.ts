@@ -347,6 +347,30 @@ const adminAuthMiddleware = async (c: Context<HonoCustomType>, next: () => Promi
 		await next();
 		return;
 	}
+	const adminSession = c.req.raw.headers.get("x-admin-auth");
+	if (adminSession) {
+		try {
+			const payload = await Jwt.verify(adminSession, c.env.JWT_SECRET, "HS256");
+			if (
+				payload.scope === "admin_session"
+				&& payload.exp
+				&& payload.exp >= Math.floor(Date.now() / 1000)
+			) {
+				queueAccessEvent(c, {
+					event_type: "admin.access.granted",
+					actor_type: "admin",
+					actor_label: typeof payload.username === "string" ? payload.username : "admin_session",
+					resource_type: "admin_api",
+					resource_label: c.req.path,
+					status: "success",
+				});
+				await next();
+				return;
+			}
+		} catch (e) {
+			console.error(e);
+		}
+	}
 	const lang = c.req.raw.headers.get("x-lang") || c.env.DEFAULT_LANG;
 	const msgs = i18n.getMessages(lang);
 	// check if user is admin

@@ -253,9 +253,11 @@ const live = reactive({
     lastSynced: '',
 })
 
+const tmpAdminAccount = ref('admin')
 const tmpAdminAuth = ref('')
 const cfToken = ref('')
 const turnstileRef = ref(null)
+const adminLoginSettingsFetched = ref(false)
 const actionModal = ref('')
 const detailOpen = ref(false)
 const searchInput = ref(null)
@@ -272,7 +274,8 @@ const activeView = computed(() => viewMeta[ui.view] ? ui.view : 'overview')
 const activeMeta = computed(() => viewMeta[activeView.value])
 const pageTitle = computed(() => `${activeMeta.value.title} · Email Transfer Station`)
 const demoMode = computed(() => false)
-const showAdminPasswordModal = computed(() => !demoMode.value && (!showAdminPage.value || showAdminAuth.value))
+const needsAdminLogin = computed(() => !demoMode.value && (!showAdminPage.value || showAdminAuth.value))
+const showAdminPasswordModal = computed(() => false)
 const detailContext = computed(() => ui.detailKind || activeView.value)
 const workerStatusLabel = computed(() => {
     if (!showAdminPage.value) return '需登录'
@@ -299,17 +302,68 @@ useHead({
     ],
 })
 
+const fetchAdminLoginSettings = async () => {
+    if (adminLoginSettingsFetched.value) return
+    try {
+        const res = await api.fetch('/open_api/admin_login_settings')
+        openSettings.value.enableGlobalTurnstileCheck = !!res.enableGlobalTurnstileCheck
+        openSettings.value.cfTurnstileSiteKey = res.cfTurnstileSiteKey || ''
+        if (res.accountHint && !tmpAdminAccount.value) tmpAdminAccount.value = res.accountHint
+    } catch (error) {
+        openSettings.value.enableGlobalTurnstileCheck = false
+        openSettings.value.cfTurnstileSiteKey = ''
+    } finally {
+        adminLoginSettingsFetched.value = true
+    }
+}
+
+const clearAdminSessionState = () => {
+    live.overview = null
+    live.statistics = null
+    live.domains = []
+    live.mailDomains = []
+    live.mailAddresses = []
+    live.mails = []
+    live.mailTotalCount = null
+    live.mailUnreadCount = null
+    live.unknownMails = []
+    live.addresses = []
+    live.accessPackages = []
+    live.auditEvents = []
+    live.accessEvents = []
+    live.users = []
+    live.workerConfig = null
+    live.dbVersion = null
+    live.mailWebhook = null
+    live.globalWebhook = null
+    live.telegram = null
+    live.aiSettings = null
+    live.senderAccess = []
+    live.sendBox = []
+    live.errors = []
+    live.fetchedAdmin = false
+    live.lastSynced = ''
+}
+
+const resetAdminLogin = () => {
+    adminAuth.value = ''
+    clearAdminSessionState()
+}
+
 const authFunc = async () => {
     try {
         await api.fetch('/open_api/admin_login', {
             method: 'POST',
             body: JSON.stringify({
+                username: tmpAdminAccount.value.trim(),
                 password: await hashPassword(tmpAdminAuth.value),
                 cf_token: cfToken.value,
             }),
+        }).then((res) => {
+            adminAuth.value = res.token || tmpAdminAuth.value
         })
-        adminAuth.value = tmpAdminAuth.value
         showAdminAuth.value = false
+        tmpAdminAuth.value = ''
         await refreshAll()
         showToast('管理员会话已建立')
     } catch (error) {
@@ -603,6 +657,7 @@ const fetchAdminData = async () => {
 const refreshAll = async () => {
     ui.syncing = true
     try {
+        if (!showAdminPage.value || showAdminAuth.value) return
         if (!openSettings.value.fetched) await api.getOpenSettings(adminMessageSink, adminNotificationSink)
         if (!userSettings.value.fetched) await api.getUserSettings(adminMessageSink)
         await fetchAdminData()
@@ -2297,6 +2352,10 @@ watch(showAdminPage, async (allowed) => {
     if (allowed && !live.fetchedAdmin) await fetchAdminData()
 })
 
+watch(showAdminAuth, (value) => {
+    if (value) clearAdminSessionState()
+})
+
 watch(pageTitle, (title) => {
     if (typeof document !== 'undefined') {
         document.title = title
@@ -2347,7 +2406,8 @@ watch(() => [route.query.mailId, route.query.item], syncSelectionFromRoute)
 onMounted(() => {
     stripRetiredDemoQuery()
     syncSelectionFromRoute()
-    refreshAll()
+    fetchAdminLoginSettings()
+    if (showAdminPage.value && !showAdminAuth.value) refreshAll()
     window.addEventListener('keydown', handleGlobalKeydown)
 })
 
@@ -2358,7 +2418,45 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <div class="admin-next app" :class="{ 'is-flow-view': activeView === 'flow', 'is-sidebar-collapsed': sidebarCollapsed }">
+    <section v-if="needsAdminLogin" class="admin-next login-page" aria-labelledby="admin-auth-title">
+        <div class="login-shell">
+            <div class="login-brand" aria-hidden="true">
+                <span class="brand-mark login-mark">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M3.5 6.5h17v11h-17z" />
+                        <path d="m4 7 8 6 8-6" />
+                    </svg>
+                </span>
+                <span>Email Transfer Station</span>
+            </div>
+            <form class="login-card" @submit.prevent="authFunc">
+                <div class="login-copy">
+                    <h1 id="admin-auth-title">管理员登录</h1>
+                    <p>请输入管理员账号和密码。登录前不会加载后台数据。</p>
+                </div>
+                <div class="form-grid">
+                    <label class="form-field full">
+                        <span>管理员账号</span>
+                        <input v-model="tmpAdminAccount" class="field" type="text" autocomplete="username"
+                            autocapitalize="none" spellcheck="false" />
+                    </label>
+                    <label class="form-field full">
+                        <span>密码</span>
+                        <input v-model="tmpAdminAuth" class="field" type="password" autocomplete="current-password" />
+                    </label>
+                </div>
+                <Turnstile ref="turnstileRef" v-if="openSettings.enableGlobalTurnstileCheck" v-model:value="cfToken" />
+                <button class="btn primary login-submit" type="submit" :disabled="loading">
+                    {{ loading ? '登录中' : '登录' }}
+                </button>
+            </form>
+        </div>
+        <div class="toast" :class="{ 'is-visible': toastState.visible }" role="status" aria-live="polite">
+            {{ toastState.text }}
+        </div>
+    </section>
+
+    <div v-else class="admin-next app" :class="{ 'is-flow-view': activeView === 'flow', 'is-sidebar-collapsed': sidebarCollapsed }">
         <aside class="sidebar" aria-label="主导航">
             <div class="brand">
                 <button class="sidebar-toggle" type="button" :aria-label="sidebarCollapsed ? '展开侧栏' : '折叠侧栏'"
@@ -2433,6 +2531,7 @@ onBeforeUnmount(() => {
                         <span class="sync-state" :class="{ 'is-loading': ui.syncing }" role="status" aria-live="polite">
                             {{ syncLabel }}
                         </span>
+                        <button class="btn" type="button" @click="resetAdminLogin">退出</button>
                         <button class="btn" type="button" @click="handleAction('refresh')">
                             <svg viewBox="0 0 24 24" aria-hidden="true">
                                 <component :is="shape.tag" v-for="(shape, index) in shapeList('refresh')" :key="index"
@@ -3016,6 +3115,67 @@ onBeforeUnmount(() => {
 .admin-next *::-webkit-scrollbar-thumb:hover {
     background: color-mix(in oklch, var(--muted) 68%, transparent);
     background-clip: content-box;
+}
+
+.login-page {
+    display: grid;
+    place-items: start center;
+    min-height: 100dvh;
+    padding: clamp(56px, 10vh, 112px) 20px 32px;
+    background:
+        linear-gradient(180deg, oklch(100% 0 0), var(--bg) 72%),
+        var(--bg);
+    overflow: auto;
+}
+
+.login-shell {
+    width: min(100%, 420px);
+}
+
+.login-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 22px;
+    color: var(--fg);
+    font-weight: 760;
+}
+
+.login-mark {
+    width: 34px;
+    height: 34px;
+}
+
+.login-card {
+    display: grid;
+    gap: 20px;
+    padding: 28px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: var(--shadow-border);
+}
+
+.login-copy {
+    display: grid;
+    gap: 8px;
+}
+
+.login-copy h1 {
+    margin: 0;
+    font-size: 26px;
+    line-height: 1.18;
+    letter-spacing: 0;
+}
+
+.login-copy p {
+    margin: 0;
+    color: var(--muted);
+}
+
+.login-submit {
+    width: 100%;
+    justify-content: center;
 }
 
 .app {

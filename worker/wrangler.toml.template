@@ -42,8 +42,10 @@ PREFIX = "tmp"
 # IF YOU WANT TO MAKE YOUR SITE PRIVATE, UNCOMMENT THE FOLLOWING LINES
 # PASSWORDS = ["123", "456"]
 # For admin panel. Configure production values with:
+#   printf '%s' '["admin"]' | pnpm exec wrangler secret put ADMIN_USERNAMES
 #   printf '%s' '["strong-password"]' | pnpm exec wrangler secret put ADMIN_PASSWORDS
-# warning: no password or user check for admin portal
+# If ADMIN_USERNAMES is omitted, the admin login account defaults to "admin".
+# warning: disabling this removes account/password checks for admin portal
 # DISABLE_ADMIN_PASSWORD_CHECK = false
 # ADMIN CONTACT, CAN BE ANY STRING
 # ADMIN_CONTACT = "xx@xx.xxx"
