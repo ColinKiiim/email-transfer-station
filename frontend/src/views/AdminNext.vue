@@ -2432,7 +2432,6 @@ onBeforeUnmount(() => {
             <form class="login-card" @submit.prevent="authFunc">
                 <div class="login-copy">
                     <h1 id="admin-auth-title">管理员登录</h1>
-                    <p>请输入管理员账号和密码。登录前不会加载后台数据。</p>
                 </div>
                 <div class="form-grid">
                     <label class="form-field full">
