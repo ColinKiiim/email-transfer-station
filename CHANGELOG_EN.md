@@ -40,6 +40,7 @@
 
 ### Improvements
 
+- improve: |AdminNext| Remove the global "production backend connected / read-only preview" status strip from the new admin console so non-actionable connection copy no longer occupies the top of every page
 - improve: |AdminNext| Remove the URL-triggered demo seed console mode, clean up admin-facing implementation copy and routing table typography/column sizing, and restore the Pages Functions deploy path so same-origin `/api/admin/*` requests actually proxy to the production Worker
 - improve: |Admin API| Add the same-origin admin API prefix `/api/admin/*` and move new/legacy admin frontend calls to it; keep the old `/admin/*` backend endpoints temporarily compatible so `/admin/...` can become frontend route space later
 - improve: |AdminNext| Fix the mail flow loading only the latest 20 messages while showing global unread counts, and clean up cross-page status filters, global Telegram warnings, and migration-explainer panel copy

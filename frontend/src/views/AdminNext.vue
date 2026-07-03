@@ -290,18 +290,6 @@ const syncLabel = computed(() => {
     if (blockingLoadErrors.value.length) return '同步部分失败'
     return live.lastSynced ? `已同步 ${live.lastSynced}` : '待同步'
 })
-const dataSourceNotice = computed(() => {
-    if (!showAdminPage.value) return {
-        tone: 'warn',
-        title: '未登录只读预览',
-        text: '当前只读取公开设置。',
-    }
-    return {
-        tone: 'warn',
-        title: '生产后端已接入',
-        text: '连接生产 Worker/D1。',
-    }
-})
 
 useHead({
     title: () => pageTitle.value,
@@ -2457,11 +2445,6 @@ onBeforeUnmount(() => {
             </header>
 
             <section class="view" :aria-busy="ui.syncing ? 'true' : 'false'" aria-live="polite">
-                <div class="notice source-notice" :class="{ warn: dataSourceNotice.tone === 'warn' }">
-                    <strong>{{ dataSourceNotice.title }}</strong>
-                    <span class="help-tip" :data-tip="dataSourceNotice.text" tabindex="0" aria-label="说明">?</span>
-                </div>
-
                 <div v-if="activeView === 'overview'" class="state-band" aria-label="运行状态">
                     <div v-for="card in stateCards" :key="card.label" class="state-card"
                         :class="{ warn: card.tone === 'warn', error: card.tone === 'danger' }">
@@ -2909,7 +2892,7 @@ onBeforeUnmount(() => {
                     <h2 id="admin-auth-title">管理员访问</h2>
                 </div>
                 <div class="modal-body">
-                    <p class="modal-copy">请输入管理员密码进入后台。当前连接生产后端，收件流删除会直接写入生产数据。</p>
+                    <p class="modal-copy">请输入管理员密码进入后台。</p>
                     <div class="form-grid">
                         <label class="form-field full">
                             <span>管理员密码</span>
@@ -3675,23 +3658,6 @@ textarea {
     background: var(--warn-soft);
 }
 
-.source-notice {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    margin-bottom: 14px;
-}
-
-.app.is-flow-view .source-notice {
-    min-height: 38px;
-    margin-bottom: 0;
-    padding: 7px 12px;
-}
-
-.source-notice strong {
-    white-space: nowrap;
-}
-
 .notice span {
     color: var(--muted);
     font-size: 12px;
@@ -3738,18 +3704,6 @@ textarea {
     transition-duration: 120ms;
     transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
     white-space: normal;
-}
-
-.source-notice .help-tip::after {
-    top: 50%;
-    bottom: auto;
-    left: calc(100% + 8px);
-    transform: translateX(2px) translateY(-50%);
-}
-
-.source-notice .help-tip:hover::after,
-.source-notice .help-tip:focus-visible::after {
-    transform: translateX(0) translateY(-50%);
 }
 
 .help-tip:hover::after,
