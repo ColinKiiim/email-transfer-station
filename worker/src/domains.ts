@@ -315,6 +315,18 @@ export const getManagedReceiveDomains = async (
     return results.filter((domain): domain is string => !!domain);
 }
 
+export const getDirectReceiveDomains = async (
+    c: Context<HonoCustomType>
+): Promise<string[]> => {
+    const cloudflareDomains = (await getDomainRegistry(c))
+        .filter((domain) => domain.receive_mode === "cloudflare_email");
+    const results = await Promise.all(cloudflareDomains.map(async (domain) => {
+        if (domain.enabled && domain.setup_status === "active") return domain.domain;
+        return await domainHasExistingAddress(c, domain.domain) ? domain.domain : null;
+    }));
+    return results.filter((domain): domain is string => !!domain);
+}
+
 export const getPendingVerificationRecipients = async (
     c: Context<HonoCustomType>
 ): Promise<string[]> => {

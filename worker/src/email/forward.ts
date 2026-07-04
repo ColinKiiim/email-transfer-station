@@ -3,6 +3,7 @@ import { Context } from "hono";
 import { getEnvStringList, getJsonObjectValue, getJsonSetting } from "../utils";
 import { EmailRuleSettings } from "../models";
 import { CONSTANTS } from "../constants";
+import { getDirectReceiveDomains, normalizeDomain } from "../domains";
 
 // 正则表达式最大长度限制，防止 ReDoS 攻击
 const MAX_REGEX_PATTERN_LENGTH = 200;
@@ -46,6 +47,29 @@ function matchSourcePatterns(
     } else {
         // 任一匹配模式（默认）：任一正则匹配即可
         return sourcePatterns.some(pattern => safeRegexTest(pattern, from));
+    }
+}
+
+function getAddressDomain(address: string | undefined | null): string {
+    const normalized = String(address || "").trim().toLowerCase();
+    const at = normalized.lastIndexOf("@");
+    return at >= 0 ? normalizeDomain(normalized.slice(at + 1)) : "";
+}
+
+async function shouldSkipForwardingForDirectReceiveDomain(
+    env: Bindings,
+    recipientAddress: string
+): Promise<boolean> {
+    const recipientDomain = getAddressDomain(recipientAddress);
+    if (!recipientDomain) {
+        return false;
+    }
+    try {
+        const directDomains = await getDirectReceiveDomains({ env } as Context<HonoCustomType>);
+        return directDomains.includes(recipientDomain);
+    } catch (error) {
+        console.error("direct receive domain lookup failed", error);
+        return false;
     }
 }
 
@@ -126,6 +150,10 @@ async function forwardEmail(
     env: Bindings,
     recipientAddress: string = message.to
 ): Promise<void> {
+    if (await shouldSkipForwardingForDirectReceiveDomain(env, recipientAddress)) {
+        return;
+    }
+
     // 全局转发
     await forwardToGlobalAddresses(message, env);
 

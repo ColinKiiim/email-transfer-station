@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { Context } from "hono";
 
 import {
     isDomainWithinZone,
@@ -6,6 +7,7 @@ import {
 } from "../cloudflare_api";
 import {
     findMatchedAddressCreationDomain,
+    getDirectReceiveDomains,
     isVerificationPending,
     ManagedDomain,
     toPublicManagedDomain,
@@ -29,6 +31,35 @@ const domain = (overrides: Partial<ManagedDomain> = {}): ManagedDomain => ({
 });
 
 describe("managed domain policy", () => {
+    const contextWithEnvDomains = (env: Partial<Bindings>) => ({
+        env: {
+            DOMAINS: ["20030405.xyz", "example.net"],
+            DEFAULT_DOMAINS: ["20030405.xyz"],
+            RANDOM_SUBDOMAIN_DOMAINS: [],
+            DOMAIN_LABELS: [],
+            MANAGED_RECEIVE_DOMAINS: [],
+            COLLECTOR_ADDRESSES: [],
+            ENABLE_CREATE_ADDRESS_SUBDOMAIN_MATCH: false,
+            DB: {
+                prepare: () => ({
+                    all: async () => ({ results: [] }),
+                }),
+            },
+            ...env,
+        },
+    } as unknown as Context<HonoCustomType>);
+
+    it("treats Cloudflare Email Routing domains as direct-receive domains", async () => {
+        await expect(getDirectReceiveDomains(contextWithEnvDomains({})))
+            .resolves.toEqual(["20030405.xyz", "example.net"]);
+    });
+
+    it("does not treat ImprovMX collector domains as direct-receive domains", async () => {
+        await expect(getDirectReceiveDomains(contextWithEnvDomains({
+            MANAGED_RECEIVE_DOMAINS: ["example.net"],
+        }))).resolves.toEqual(["20030405.xyz"]);
+    });
+
     it("keeps the public DTO free of verification and Cloudflare identifiers", () => {
         const result = toPublicManagedDomain(domain({
             verification_token: "secret-token",

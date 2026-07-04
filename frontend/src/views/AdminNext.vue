@@ -1189,6 +1189,13 @@ const activeStatusValue = computed({
     },
 })
 
+const hasActiveFilters = computed(() =>
+    !!ui.query
+    || ui.domain !== 'all'
+    || ui.address !== 'all'
+    || ui.status !== 'all'
+)
+
 const domainOptions = computed(() => {
     const domains = new Set(domainRows.value.map((row) => row.domain).filter(Boolean))
     return ['all', ...domains]
@@ -1508,6 +1515,7 @@ const tableSpecs = {
         { label: '默认', key: 'default' },
         { label: 'Collector / 规则', key: 'collector', type: 'mono' },
         { label: '最后验证', key: 'updated', type: 'time' },
+        { label: '操作', key: 'actions', type: 'domainActions' },
     ],
     destinations: [
         { label: '目的地', type: 'entity', main: 'destination', sub: 'next' },
@@ -2181,12 +2189,8 @@ const handleAction = async (type) => {
         await runHealthCheck()
         return
     }
-    if (type === 'new-domain-cloudflare') {
+    if (type === 'new-domain') {
         openDomainActivation('cloudflare_email')
-        return
-    }
-    if (type === 'new-domain-improvmx') {
-        openDomainActivation('improvmx_forward')
         return
     }
     if (type === 'cloudflare-setup') {
@@ -2217,6 +2221,13 @@ const handleAction = async (type) => {
     showToast(messages[type] || '该操作缺少可验证的生产写入合同')
 }
 
+const handleDomainRowAction = async (row, type) => {
+    if (!row) return
+    ui.selected.routing = row.id
+    await nextTick()
+    await handleAction(type)
+}
+
 const toolbarActions = computed(() => {
     const view = activeView.value
     if (view === 'flow') return [
@@ -2231,13 +2242,7 @@ const toolbarActions = computed(() => {
         { label: '清空收件', icon: 'check', action: 'clear-inbox', danger: true },
     ]
     if (view === 'routing') return [
-        { label: '新增 CF 域名', icon: 'plus', action: 'new-domain-cloudflare' },
-        { label: '新增 ImprovMX', icon: 'plus', action: 'new-domain-improvmx' },
-        { label: '自动配置 CF', icon: 'check', action: 'cloudflare-setup' },
-        { label: '开始验证', icon: 'refresh', action: 'verify-start' },
-        { label: '检查验证', icon: 'check', action: 'verify-check' },
-        { label: '检查 DNS / 路由', icon: 'check', action: 'verify' },
-        { label: '停用影响', icon: 'lock', action: 'domain-impact', danger: true },
+        { label: '新增域名', icon: 'plus', action: 'new-domain' },
     ]
     if (view === 'delivery') return [
         { label: '刷新通道', icon: 'refresh', action: 'refresh' },
@@ -2803,7 +2808,7 @@ onBeforeUnmount(() => {
                             {{ option.label }}
                         </option>
                     </select>
-                    <button class="btn" type="button" @click="handleAction('reset-filters')">清除筛选</button>
+                    <button v-if="hasActiveFilters" class="btn" type="button" @click="handleAction('reset-filters')">清除筛选</button>
                 </div>
 
                 <div v-if="pageLoadErrors.length && showAdminPage" class="notice warn">
@@ -2928,7 +2933,7 @@ onBeforeUnmount(() => {
 
                             <div v-if="filteredMailRows.length === 0 && filteredUnknownRows.length === 0" class="empty-state">
                                 <strong>没有匹配结果</strong>
-                                <button class="btn" type="button" @click="handleAction('reset-filters')">清除筛选</button>
+                                <button v-if="hasActiveFilters" class="btn" type="button" @click="handleAction('reset-filters')">清除筛选</button>
                             </div>
                         </div>
                     </section>
@@ -3100,6 +3105,25 @@ onBeforeUnmount(() => {
                                                 :class="statusClass(row[column.key])">
                                                 {{ cellText(row, column.key) }}
                                             </span>
+                                            <span v-else-if="column.type === 'domainActions'" class="cell-actions domain-actions">
+                                                <button v-if="row.receiveMode === 'cloudflare_email'" type="button"
+                                                    :disabled="!row.sourceId || !!actionBusy"
+                                                    @click.stop="handleDomainRowAction(row, 'cloudflare-setup')">
+                                                    自动配置
+                                                </button>
+                                                <button type="button" :disabled="!row.sourceId || !!actionBusy"
+                                                    @click.stop="handleDomainRowAction(row, 'verify-start')">
+                                                    开始验证
+                                                </button>
+                                                <button type="button" :disabled="!row.sourceId || !row.verificationAddress || !!actionBusy"
+                                                    @click.stop="handleDomainRowAction(row, 'verify-check')">
+                                                    检查验证
+                                                </button>
+                                                <button type="button" :disabled="!row.sourceId || !!actionBusy"
+                                                    @click.stop="handleDomainRowAction(row, 'verify')">
+                                                    检查路由
+                                                </button>
+                                            </span>
                                             <strong v-else-if="column.type === 'strong'">{{ cellText(row, column.key) }}</strong>
                                             <span v-else-if="column.type === 'time'" class="time-text">{{ cellText(row, column.key) }}</span>
                                             <span v-else-if="column.type === 'mono'" class="mono"
@@ -3112,7 +3136,7 @@ onBeforeUnmount(() => {
                                         <td :colspan="panel.columns.length">
                                             <div class="empty-state">
                                                 <strong>没有匹配结果</strong>
-                                                <button class="btn" type="button" @click="handleAction('reset-filters')">清除筛选</button>
+                                                <button v-if="hasActiveFilters" class="btn" type="button" @click="handleAction('reset-filters')">清除筛选</button>
                                             </div>
                                         </td>
                                     </tr>
@@ -4436,9 +4460,11 @@ textarea {
     flex-wrap: wrap;
     gap: 5px;
     margin-top: 7px;
+    max-width: 100%;
 }
 
 .cell-actions button {
+    flex: 0 1 auto;
     min-height: 26px;
     border: 0;
     border-radius: 999px;
@@ -4451,6 +4477,15 @@ textarea {
 .cell-actions button:hover {
     color: var(--fg);
     box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.cell-actions button:disabled {
+    cursor: not-allowed;
+    opacity: 0.48;
+}
+
+.domain-actions {
+    margin-top: 0;
 }
 
 .mail-list-panel,
@@ -4888,42 +4923,47 @@ tr.is-selected {
 
 .panel-domains th:nth-child(1),
 .panel-domains td:nth-child(1) {
-    width: 17%;
+    width: 16%;
 }
 
 .panel-domains th:nth-child(2),
 .panel-domains td:nth-child(2) {
-    width: 17%;
+    width: 14%;
 }
 
 .panel-domains th:nth-child(3),
 .panel-domains td:nth-child(3) {
-    width: 10%;
+    width: 8%;
 }
 
 .panel-domains th:nth-child(4),
 .panel-domains td:nth-child(4) {
-    width: 9%;
+    width: 7%;
 }
 
 .panel-domains th:nth-child(5),
 .panel-domains td:nth-child(5) {
-    width: 13%;
+    width: 9%;
 }
 
 .panel-domains th:nth-child(6),
 .panel-domains td:nth-child(6) {
-    width: 8%;
+    width: 6%;
 }
 
 .panel-domains th:nth-child(7),
 .panel-domains td:nth-child(7) {
-    width: 16%;
+    width: 14%;
 }
 
 .panel-domains th:nth-child(8),
 .panel-domains td:nth-child(8) {
     width: 10%;
+}
+
+.panel-domains th:nth-child(9),
+.panel-domains td:nth-child(9) {
+    width: 16%;
 }
 
 .panel-destinations th:nth-child(1),

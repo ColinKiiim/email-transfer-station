@@ -42,7 +42,9 @@
 ### Improvements
 
 - improve: |AdminNext| 后台未登录状态改为独立账号+密码登录页，登录前不渲染后台壳、不加载域名/收件流业务数据，登录成功后使用短期管理员会话访问 `/api/admin/*`
-- improve: |AdminNext| 域名与路由页接入域名激活闭环：可新增 Cloudflare Email Routing 域名并自动配置 Email Routing DNS/catch-all 到 Worker，也可新增 ImprovMX free forwarding 域名并生成 collector 与验证地址
+- improve: |AdminNext| 域名与路由页通过单一“新增域名”入口接入激活闭环：可新增 Cloudflare Email Routing 域名并自动配置 Email Routing DNS/catch-all 到 Worker，也可新增 ImprovMX free forwarding 域名并生成 collector 与验证地址
+- improve: |Email Worker| Cloudflare Email Routing 直收域名的入站邮件保存到本站后默认不再触发全局/规则转发，避免 20030405.xyz catch-all 改到 Worker 后仍继续转发到 Gmail
+- fix: |Admin API| 收件流后台列表改为轻量解析信头与摘要，避免单封复杂 MIME 邮件导致 `/api/admin/mails` 同步 500
 - improve: |AdminNext| 移除新版后台顶部全局“生产后端已接入 / 未登录只读预览”状态条，避免把无操作价值的接入说明放在每个页面首屏
 - improve: |AdminNext| 移除 URL 触发的 demo seed 后台模式，清理后台开发说明文案与 routing 表格字体/列宽，并恢复 Pages Functions 发布路径，确保 `/api/admin/*` 同源请求实际代理到生产 Worker
 - improve: |Admin API| 新增同源后台 API 前缀 `/api/admin/*` 并将新旧后台前端调用迁移过去；旧 `/admin/*` 后端接口暂时保留兼容，便于后续释放 `/admin/...` 前端子路由空间

@@ -1,5 +1,4 @@
 import { Context } from "hono";
-import { commonParseMail } from "../common";
 import {
     ADMIN_MAIL_READ_ACTOR,
     listRawMailsWithReadState,
@@ -12,33 +11,60 @@ const fallbackHeader = (raw: string, name: string): string => {
     return match?.[1]?.trim() || "";
 };
 
+const unfoldHeaders = (value: string): string => value.replace(/\r?\n[ \t]+/g, " ");
+
+const stripHtml = (value: string): string => value
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<[^>]+>/g, " ");
+
+const decodeMimeWords = (value: string): string => value.replace(
+    /=\?([^?]+)\?([bq])\?([^?]+)\?=/gi,
+    (_match, charset: string, encoding: string, text: string) => {
+        try {
+            const bytes = encoding.toLowerCase() === "b"
+                ? Uint8Array.from(atob(text), (char) => char.charCodeAt(0))
+                : Uint8Array.from(
+                    text
+                        .replace(/_/g, " ")
+                        .replace(/=([0-9a-f]{2})/gi, (_hexMatch, hex) => String.fromCharCode(parseInt(hex, 16))),
+                    (char) => char.charCodeAt(0),
+                );
+            return new TextDecoder(charset).decode(bytes);
+        } catch {
+            return text;
+        }
+    },
+);
+
+const normalizeMailText = (value: string): string => decodeMimeWords(value)
+    .replace(/\s+/g, " ")
+    .trim();
+
+const fallbackBodyPreview = (raw: string): string => {
+    const separator = raw.includes("\r\n\r\n") ? "\r\n\r\n" : "\n\n";
+    const body = raw.split(separator).slice(1).join(separator);
+    return normalizeMailText(stripHtml(body).slice(0, 4000)).slice(0, 1000);
+};
+
 const toAdminParsedMailRow = async (row: Record<string, unknown>): Promise<Record<string, unknown>> => {
     const raw = typeof row.raw === "string" ? row.raw : "";
-    const parsed = raw ? await commonParseMail({ rawEmail: raw }) : undefined;
-    const attachments = (parsed?.attachments ?? []).map((attachment) => ({
-        filename: attachment.filename,
-        mimeType: attachment.mimeType,
-        disposition: attachment.disposition,
-        size: attachment.content?.length ?? 0,
-    }));
-    const sender = parsed?.sender?.trim()
-        || fallbackHeader(raw, "From")
+    const headers = unfoldHeaders(raw);
+    const sender = normalizeMailText(fallbackHeader(headers, "From"))
         || (typeof row.source === "string" ? row.source : "");
-    const subject = parsed?.subject?.trim()
-        || fallbackHeader(raw, "Subject")
+    const subject = normalizeMailText(fallbackHeader(headers, "Subject"))
         || (typeof row.message_id === "string" ? row.message_id : `Mail #${row.id}`);
-    const text = parsed?.text?.trim() || "";
-    const html = parsed?.html || "";
+    const text = fallbackBodyPreview(raw);
     return {
         ...row,
         sender,
         subject,
         text,
-        html,
-        message: html || text,
-        attachments,
-        attachment_count: attachments.length,
-        parse_status: parsed ? "parsed" : (raw ? "raw" : "empty"),
+        html: "",
+        message: text,
+        attachments: [],
+        attachment_count: 0,
+        parse_status: raw ? "lightweight" : "empty",
     };
 };
 
