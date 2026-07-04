@@ -41,6 +41,7 @@
 ### Improvements
 
 - improve: |AdminNext| Replace the unauthenticated admin surface with a standalone account-and-password login page; the console shell and domain/mail-flow business data are not rendered before login, and successful login now uses a short-lived admin session for `/api/admin/*`
+- improve: |AdminNext| Add the domain activation loop to the Domain & Routing page: admins can add Cloudflare Email Routing domains and automatically configure Email Routing DNS/catch-all to the Worker, or add ImprovMX free-forwarding domains with generated collector and verification addresses
 - improve: |AdminNext| Remove the global "production backend connected / read-only preview" status strip from the new admin console so non-actionable connection copy no longer occupies the top of every page
 - improve: |AdminNext| Remove the URL-triggered demo seed console mode, clean up admin-facing implementation copy and routing table typography/column sizing, and restore the Pages Functions deploy path so same-origin `/api/admin/*` requests actually proxy to the production Worker
 - improve: |Admin API| Add the same-origin admin API prefix `/api/admin/*` and move new/legacy admin frontend calls to it; keep the old `/admin/*` backend endpoints temporarily compatible so `/admin/...` can become frontend route space later

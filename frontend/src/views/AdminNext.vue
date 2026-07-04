@@ -229,6 +229,7 @@ const live = reactive({
     overview: null,
     statistics: null,
     domains: [],
+    domainAutomation: null,
     mailDomains: [],
     mailAddresses: [],
     mails: [],
@@ -259,6 +260,8 @@ const cfToken = ref('')
 const turnstileRef = ref(null)
 const adminLoginSettingsFetched = ref(false)
 const actionModal = ref('')
+const domainActivationOpen = ref(false)
+const domainActivationBusy = ref(false)
 const detailOpen = ref(false)
 const searchInput = ref(null)
 const toastState = reactive({ visible: false, text: '已处理' })
@@ -269,6 +272,15 @@ const sidebarCollapsed = ref(
         ? false
         : localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1'
 )
+
+const domainActivationForm = reactive({
+    domain: '',
+    displayLabel: '',
+    receiveMode: 'cloudflare_email',
+    collectorAddress: '',
+    cloudflareZoneId: '',
+    allowRandomSubdomain: false,
+})
 
 const activeView = computed(() => viewMeta[ui.view] ? ui.view : 'overview')
 const activeMeta = computed(() => viewMeta[activeView.value])
@@ -321,6 +333,7 @@ const clearAdminSessionState = () => {
     live.overview = null
     live.statistics = null
     live.domains = []
+    live.domainAutomation = null
     live.mailDomains = []
     live.mailAddresses = []
     live.mails = []
@@ -631,6 +644,7 @@ const fetchAdminData = async () => {
     live.overview = overview
     live.statistics = statistics
     live.domains = domains?.results || []
+    live.domainAutomation = domains?.cloudflare_automation || null
     live.mailDomains = mailDomains?.results || []
     live.mailAddresses = mailAddresses?.results || []
     live.mails = mails?.results || []
@@ -679,12 +693,20 @@ const domainRows = computed(() => {
             return {
                 id: `domain-${row.id || row.domain}`,
                 sourceId: row.id,
+                source: row.source,
                 domain: row.domain,
                 label: row.display_label || row.domain,
+                receiveMode: row.receive_mode,
+                setupStatus: row.setup_status,
                 mode: modeLabel(row.receive_mode),
                 setup: setupLabel(row.setup_status),
                 enabled: row.enabled ? '启用' : '关闭',
                 configVersion: row.config_version,
+                verificationAddress: row.verification_address,
+                verificationExpiresAt: row.verification_expires_at,
+                lastError: row.last_error,
+                canAutoSetupCloudflare: !!row.can_auto_setup_cloudflare,
+                missingRequirements: row.missing_requirements || [],
                 creation: row.allow_address_creation ? '允许创建' : '仅管理员',
                 default: row.is_default ? '默认' : '否',
                 collector: row.collector_address || (row.receive_mode === 'cloudflare_email' ? 'catch-all -> Worker' : '-'),
@@ -700,6 +722,9 @@ const domainRows = computed(() => {
         return openSettings.value.domainRegistry.map((row, index) => ({
             id: `registry-${row.domain || index}`,
             domain: row.domain,
+            source: row.source,
+            receiveMode: row.receive_mode,
+            setupStatus: row.setup_status,
             label: row.display_label || row.label || row.domain,
             mode: modeLabel(row.receive_mode),
             setup: setupLabel(row.setup_status),
@@ -708,6 +733,7 @@ const domainRows = computed(() => {
             default: row.is_default ? '默认' : '否',
             collector: row.collector_address || '-',
             verification: row.verification_address || '-',
+            verificationAddress: row.verification_address,
             auth: row.source || 'open settings',
             addresses: 0,
             mails: 0,
@@ -879,6 +905,22 @@ const routeRows = computed(() => {
         next: '保存成功门禁未接入前仅显示配置状态',
     })
     return routes
+})
+
+const routingActivationRows = computed(() => {
+    const domains = domainRows.value
+    const cloudflareDomains = domains.filter((row) => row.receiveMode === 'cloudflare_email' || String(row.mode || '').includes('Cloudflare'))
+    const improvmxDomains = domains.filter((row) => row.receiveMode === 'improvmx_forward' || String(row.mode || '').includes('ImprovMX'))
+    const cloudflareReady = cloudflareDomains.some((row) => row.setup === '已验证' || row.setupStatus === 'active')
+    const improvmxReady = improvmxDomains.some((row) => row.collector && row.collector !== '-')
+    const hasPendingVerification = domains.some((row) => row.verificationAddress)
+    const hasCloudflareToken = !!live.domainAutomation?.has_token || domains.some((row) => row.canAutoSetupCloudflare)
+    return [
+        { code: '01', title: 'Cloudflare 自动配置', state: hasCloudflareToken ? '可用' : '缺 token', tone: hasCloudflareToken ? 'ok' : 'warn' },
+        { code: '02', title: 'catch-all 到 Worker', state: cloudflareReady ? '已验证' : '待配置', tone: cloudflareReady ? 'ok' : 'warn' },
+        { code: '03', title: 'ImprovMX collector 激活', state: improvmxReady ? '可用' : '待生成', tone: improvmxReady ? 'ok' : 'warn' },
+        { code: '04', title: '验证邮件闭环', state: hasPendingVerification ? '待检查' : '按需生成', tone: hasPendingVerification ? 'warn' : 'ok' },
+    ]
 })
 
 const shareRows = computed(() => {
@@ -1897,6 +1939,167 @@ const checkCurrentDomainImpact = async () => {
     }
 }
 
+const resetDomainActivationForm = (mode = 'cloudflare_email') => {
+    Object.assign(domainActivationForm, {
+        domain: '',
+        displayLabel: '',
+        receiveMode: mode,
+        collectorAddress: '',
+        cloudflareZoneId: '',
+        allowRandomSubdomain: false,
+    })
+}
+
+const openDomainActivation = (mode = 'cloudflare_email') => {
+    resetDomainActivationForm(mode)
+    domainActivationOpen.value = true
+}
+
+const findLiveDomain = (id) => live.domains.find((row) => String(row.id) === String(id))
+
+const refreshAndFindDomain = async (id) => {
+    await refreshAll()
+    return findLiveDomain(id)
+}
+
+const startDomainVerification = async (domainRow, silent = false) => {
+    if (!domainRow?.sourceId && !domainRow?.id) throw new Error('当前域名不是 D1 管理记录')
+    const id = domainRow.sourceId || domainRow.id
+    const configVersion = domainRow.configVersion || domainRow.config_version
+    const result = await api.fetch(`/api/admin/domains/${id}/verify/start`, {
+        method: 'POST',
+        body: JSON.stringify({ config_version: configVersion }),
+    })
+    await refreshAll()
+    if (!silent) {
+        const target = result?.verification_address || '验证地址'
+        showToast(`验证已开始，请向 ${target} 发送测试邮件`)
+    }
+    return result
+}
+
+const checkDomainVerification = async (domainRow) => {
+    if (!domainRow?.sourceId) {
+        showToast('当前域名不是 D1 管理记录，无法检查验证')
+        return
+    }
+    await runProductionAction(
+        'domain-verify-check',
+        '检查域名验证',
+        '',
+        async () => {
+            const result = await api.fetch(`/api/admin/domains/${domainRow.sourceId}/verify/check`, {
+                method: 'POST',
+                body: JSON.stringify({ config_version: domainRow.configVersion }),
+            })
+            await refreshAll()
+            if (result?.success === false) {
+                showToast(`还没有收到验证邮件：${result?.verification_address || domainRow.verificationAddress || domainRow.domain}`)
+            } else {
+                showToast(`${domainRow.domain} 已验证，可进入地址创建流程`)
+            }
+        }
+    )
+}
+
+const performCloudflareSetup = async (domainRow) => {
+    const check = await api.fetch(`/api/admin/domains/${domainRow.sourceId}/cloudflare/check`, { method: 'POST' })
+    if (!check?.automatic_setup_supported) {
+        throw new Error('当前域名不是 Cloudflare zone 根域，暂不支持自动配置子域名')
+    }
+    const replaceCatchAll = !!check?.setup_preview?.catch_all_conflict
+        && window.confirm(`Cloudflare 上已有 catch-all 规则。确认替换为发送到 Worker：${domainRow.domain}？`)
+    if (check?.setup_preview?.catch_all_conflict && !replaceCatchAll) return null
+    await api.fetch(`/api/admin/domains/${domainRow.sourceId}/cloudflare/setup`, {
+        method: 'POST',
+        body: JSON.stringify({
+            config_version: domainRow.configVersion,
+            confirm_replace_catch_all: replaceCatchAll,
+        }),
+    })
+    const updated = await refreshAndFindDomain(domainRow.sourceId)
+    return updated ? await startDomainVerification({
+        id: updated.id,
+        config_version: updated.config_version,
+    }, true) : null
+}
+
+const setupCloudflareDomain = async (domainRow) => {
+    if (!domainRow?.sourceId) {
+        showToast('当前域名不是 D1 管理记录，无法自动配置 Cloudflare')
+        return
+    }
+    if (domainRow.receiveMode && domainRow.receiveMode !== 'cloudflare_email') {
+        showToast('当前域名不是 Cloudflare Email Routing 模式')
+        return
+    }
+    await runProductionAction(
+        'cloudflare-setup',
+        'Cloudflare 自动配置',
+        `确认在 Cloudflare 为 ${domainRow.domain} 配置 Email Routing DNS 和 catch-all 到 Worker？如检测到已有 catch-all，会先要求二次确认。`,
+        async () => {
+            const verification = await performCloudflareSetup(domainRow)
+            showToast(verification?.verification_address
+                ? `Cloudflare 已配置，请向 ${verification.verification_address} 发送测试邮件后检查验证`
+                : 'Cloudflare 已配置，请开始域名验证')
+        }
+    )
+}
+
+const createAndActivateDomain = async () => {
+    if (domainActivationBusy.value) return
+    const domain = domainActivationForm.domain.trim().toLowerCase()
+    if (!domain) {
+        showToast('请输入域名')
+        return
+    }
+    if (!requireProductionWrite('新增接收域')) return
+    const mode = domainActivationForm.receiveMode
+    const label = mode === 'cloudflare_email' ? 'Cloudflare 自动配置' : 'ImprovMX 转发验证'
+    if (!window.confirm(`确认新增 ${domain} 并启动 ${label}？`)) return
+    domainActivationBusy.value = true
+    actionBusy.value = mode === 'cloudflare_email' ? 'cloudflare-create' : 'improvmx-create'
+    try {
+        const created = await api.fetch('/api/admin/domains', {
+            method: 'POST',
+            body: JSON.stringify({
+                domain,
+                display_label: domainActivationForm.displayLabel,
+                receive_mode: mode,
+                collector_address: domainActivationForm.collectorAddress,
+                cloudflare_zone_id: domainActivationForm.cloudflareZoneId,
+                allow_random_subdomain: domainActivationForm.allowRandomSubdomain,
+            }),
+        })
+        const row = await refreshAndFindDomain(created?.id)
+        if (!row) throw new Error('域名已创建，但刷新后未找到记录')
+        const rowRef = {
+            sourceId: row.id,
+            domain: row.domain,
+            receiveMode: row.receive_mode,
+            configVersion: row.config_version,
+        }
+        if (mode === 'cloudflare_email') {
+            const verification = await performCloudflareSetup(rowRef)
+            showToast(verification?.verification_address
+                ? `Cloudflare 已配置，请向 ${verification.verification_address} 发送测试邮件后检查验证`
+                : 'Cloudflare 已配置，请开始域名验证')
+        } else if (mode === 'improvmx_forward') {
+            const verification = await startDomainVerification({
+                id: row.id,
+                config_version: row.config_version,
+            }, true)
+            showToast(`ImprovMX collector 已生成：${verification?.collector_address || row.collector_address || '请刷新查看'}`)
+        }
+        domainActivationOpen.value = false
+    } catch (error) {
+        showToast(error?.message || '新增域名失败')
+    } finally {
+        domainActivationBusy.value = false
+        actionBusy.value = ''
+    }
+}
+
 const runHealthCheck = async () => {
     if (!showAdminPage.value) {
         showToast('请先登录管理员会话后再执行健康检查')
@@ -1978,6 +2181,31 @@ const handleAction = async (type) => {
         await runHealthCheck()
         return
     }
+    if (type === 'new-domain-cloudflare') {
+        openDomainActivation('cloudflare_email')
+        return
+    }
+    if (type === 'new-domain-improvmx') {
+        openDomainActivation('improvmx_forward')
+        return
+    }
+    if (type === 'cloudflare-setup') {
+        await setupCloudflareDomain(currentDomain.value)
+        return
+    }
+    if (type === 'verify-start') {
+        await runProductionAction(
+            'domain-verify-start',
+            '开始域名验证',
+            `确认为 ${currentDomain.value?.domain || '当前域名'} 生成新的验证地址？旧验证地址会失效。`,
+            async () => startDomainVerification(currentDomain.value)
+        )
+        return
+    }
+    if (type === 'verify-check') {
+        await checkDomainVerification(currentDomain.value)
+        return
+    }
     const messages = {
         delete: '该模块删除缺少明确生产对象，暂不执行',
         send: '真实发信需要可编辑收件人、主题和正文表单，当前展示表单不写生产',
@@ -2003,6 +2231,11 @@ const toolbarActions = computed(() => {
         { label: '清空收件', icon: 'check', action: 'clear-inbox', danger: true },
     ]
     if (view === 'routing') return [
+        { label: '新增 CF 域名', icon: 'plus', action: 'new-domain-cloudflare' },
+        { label: '新增 ImprovMX', icon: 'plus', action: 'new-domain-improvmx' },
+        { label: '自动配置 CF', icon: 'check', action: 'cloudflare-setup' },
+        { label: '开始验证', icon: 'refresh', action: 'verify-start' },
+        { label: '检查验证', icon: 'check', action: 'verify-check' },
         { label: '检查 DNS / 路由', icon: 'check', action: 'verify' },
         { label: '停用影响', icon: 'lock', action: 'domain-impact', danger: true },
     ]
@@ -2229,8 +2462,10 @@ const currentRail = computed(() => {
                 ['验证', currentDomain.value.updated],
             ],
             actions: [
-                { label: '检查路由', action: 'verify', primary: true },
-                { label: '预览 Cloudflare', action: 'verify' },
+                { label: currentDomain.value.receiveMode === 'improvmx_forward' ? 'ImprovMX 指引' : '自动配置 CF', action: currentDomain.value.receiveMode === 'improvmx_forward' ? 'verify-start' : 'cloudflare-setup', primary: true },
+                { label: '开始验证', action: 'verify-start' },
+                { label: '检查验证', action: 'verify-check' },
+                { label: '检查路由', action: 'verify' },
                 { label: '停用影响', action: 'domain-impact', danger: true },
             ],
         }
@@ -2909,10 +3144,11 @@ onBeforeUnmount(() => {
                             </div>
                         </div>
                         <div class="inner-pad timeline">
-                            <div class="timeline-row"><span class="mono">01</span><strong>Cloudflare token</strong><span class="status ok">可用</span></div>
-                            <div class="timeline-row"><span class="mono">02</span><strong>catch-all 到 Worker</strong><span class="status ok">已验证</span></div>
-                            <div class="timeline-row"><span class="mono">03</span><strong>ImprovMX collector 地址</strong><span class="status ok">可用</span></div>
-                            <div class="timeline-row"><span class="mono">04</span><strong>DMARC enforcement</strong><span class="status warn">需复核</span></div>
+                            <div v-for="item in routingActivationRows" :key="item.code" class="timeline-row">
+                                <span class="mono">{{ item.code }}</span>
+                                <strong>{{ item.title }}</strong>
+                                <span class="status" :class="item.tone">{{ item.state }}</span>
+                            </div>
                         </div>
                     </section>
 
@@ -2981,6 +3217,70 @@ onBeforeUnmount(() => {
                     </div>
                 </div>
             </aside>
+        </div>
+
+        <div v-if="domainActivationOpen" class="modal-backdrop is-open" role="dialog" aria-modal="true"
+            aria-labelledby="domain-activation-title" @click.self="domainActivationOpen = false">
+            <form class="modal domain-activation-modal" @submit.prevent="createAndActivateDomain">
+                <div class="modal-head">
+                    <div>
+                        <h2 id="domain-activation-title">新增并激活接收域</h2>
+                        <p>{{ domainActivationForm.receiveMode === 'cloudflare_email' ? 'Cloudflare Email Routing 自动配置' : 'ImprovMX collector 转发验证' }}</p>
+                    </div>
+                    <button class="icon-btn" type="button" aria-label="关闭" @click="domainActivationOpen = false">
+                        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" /></svg>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="activation-tabs" role="tablist" aria-label="域名激活方案">
+                        <button type="button" class="btn" :class="{ primary: domainActivationForm.receiveMode === 'cloudflare_email' }"
+                            @click="domainActivationForm.receiveMode = 'cloudflare_email'">
+                            Cloudflare
+                        </button>
+                        <button type="button" class="btn" :class="{ primary: domainActivationForm.receiveMode === 'improvmx_forward' }"
+                            @click="domainActivationForm.receiveMode = 'improvmx_forward'">
+                            ImprovMX
+                        </button>
+                    </div>
+                    <div class="form-grid">
+                        <label class="form-field full">
+                            <span>域名</span>
+                            <input v-model="domainActivationForm.domain" class="field" placeholder="example.com" autocomplete="off" />
+                        </label>
+                        <label class="form-field">
+                            <span>显示名</span>
+                            <input v-model="domainActivationForm.displayLabel" class="field" placeholder="可选" autocomplete="off" />
+                        </label>
+                        <label v-if="domainActivationForm.receiveMode === 'cloudflare_email'" class="form-field">
+                            <span>Cloudflare Zone ID</span>
+                            <input v-model="domainActivationForm.cloudflareZoneId" class="field" placeholder="可选，留空自动匹配根域" autocomplete="off" />
+                        </label>
+                        <label v-else class="form-field">
+                            <span>Collector 地址</span>
+                            <input v-model="domainActivationForm.collectorAddress" class="field" placeholder="留空自动生成" autocomplete="off" />
+                        </label>
+                    </div>
+                    <label class="check-row">
+                        <input v-model="domainActivationForm.allowRandomSubdomain" type="checkbox" />
+                        <span>允许随机子域名创建</span>
+                    </label>
+                    <div class="notice modal-notice">
+                        <strong>{{ domainActivationForm.receiveMode === 'cloudflare_email' ? '自动配置范围' : 'ImprovMX 操作边界' }}</strong>
+                        <span v-if="domainActivationForm.receiveMode === 'cloudflare_email'">
+                            提交后会调用 Cloudflare API 启用 Email Routing DNS，并把 catch-all 规则指向当前 Worker；随后生成验证地址。
+                        </span>
+                        <span v-else>
+                            提交后会生成 collector 和验证地址。请在 ImprovMX 域名 Aliases 中把 * 通配 alias 转发到 collector，再发送验证邮件并回到这里检查。
+                        </span>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn" type="button" :disabled="domainActivationBusy" @click="domainActivationOpen = false">取消</button>
+                    <button class="btn primary" type="submit" :disabled="domainActivationBusy">
+                        {{ domainActivationBusy ? '执行中' : '新增并启动' }}
+                    </button>
+                </div>
+            </form>
         </div>
 
         <div v-if="showAdminPasswordModal" class="modal-backdrop is-open" role="dialog" aria-modal="true"
@@ -4765,6 +5065,10 @@ tr.is-selected {
     box-shadow: var(--shadow-pop);
 }
 
+.domain-activation-modal {
+    width: min(720px, calc(100vw - 36px));
+}
+
 .modal-head,
 .modal-actions {
     display: flex;
@@ -4794,6 +5098,22 @@ tr.is-selected {
 
 .modal-notice {
     margin-bottom: 14px;
+}
+
+.activation-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.check-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    color: var(--text);
+    font-size: 13px;
 }
 
 .modal-actions {
