@@ -6,6 +6,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api'
 import { useGlobalState } from '../store'
 import { hashPassword } from '../utils'
+import { processItem } from '../utils/email-parser'
 import Turnstile from '../components/Turnstile.vue'
 import ShadowHtmlComponent from '../components/ShadowHtmlComponent.vue'
 import MailContentRenderer from '../components/MailContentRenderer.vue'
@@ -174,6 +175,8 @@ const ui = reactive({
 const mailListRef = ref(null)
 const collapsedMailDomains = ref(new Set())
 const actionBusy = ref('')
+const parsedAdminMailCache = reactive({})
+const parsedAdminMailPending = ref('')
 
 if (typeof localStorage !== 'undefined') {
     try {
@@ -1689,8 +1692,52 @@ const markAdminMailRead = async (row) => {
 }
 
 const currentMail = computed(() => mailRows.value.find((row) => row.id === ui.selected.flow) || null)
-const currentRendererMail = computed(() => {
+const adminMailCacheKey = (row) => row?.sourceId ? String(row.sourceId) : row?.id || ''
+const parseAdminMailDetail = async (row) => {
+    const key = adminMailCacheKey(row)
+    if (!key || !row?.raw || parsedAdminMailCache[key] || parsedAdminMailPending.value === key) return
+    parsedAdminMailPending.value = key
+    try {
+        parsedAdminMailCache[key] = await processItem({
+            id: row.sourceId || row.id,
+            raw: row.raw,
+            source: row.sender,
+            address: row.to,
+            subject: row.subject,
+            created_at: row.created_at || row.fullTime || row.time,
+            attachments: row.attachments || [],
+            metadata: row.metadata || {},
+        })
+    } catch (error) {
+        console.error(error)
+    } finally {
+        if (parsedAdminMailPending.value === key) parsedAdminMailPending.value = ''
+    }
+}
+const currentParsedMail = computed(() => parsedAdminMailCache[adminMailCacheKey(currentMail.value)] || null)
+const currentDisplayMail = computed(() => {
     const row = currentMail.value
+    if (!row) return null
+    const parsed = currentParsedMail.value
+    const html = parsed?.html || (parsed?.messageIsHtml ? parsed?.message : '') || row.html || ''
+    const text = parsed?.text || row.text || (!html ? row.body : '')
+    const attachments = parsed?.attachments || row.attachments || []
+    return {
+        ...row,
+        subject: parsed?.subject || row.subject,
+        sender: parsed?.source || row.sender,
+        html,
+        text,
+        message: parsed?.message || html || text || row.body || '',
+        messageIsHtml: !!(parsed?.messageIsHtml || html),
+        attachments,
+        attachmentCount: attachments.length || row.attachmentCount,
+        attachmentLabel: formatAttachmentCount(attachments.length || row.attachmentCount),
+        parseFailed: !!parsed?.parseFailed || row.parseStatus === 'failed',
+    }
+})
+const currentRendererMail = computed(() => {
+    const row = currentDisplayMail.value
     if (!row) return null
     return {
         id: row.sourceId || row.id,
@@ -1698,13 +1745,13 @@ const currentRendererMail = computed(() => {
         source: row.sender,
         address: row.to,
         created_at: row.created_at || row.fullTime || row.time,
-        message: row.html || row.text || row.body || '',
-        messageIsHtml: !!row.html,
-        text: row.text || (!row.html ? row.body : ''),
+        message: row.message || row.html || row.text || row.body || '',
+        messageIsHtml: !!row.messageIsHtml,
+        text: ui.mailRenderMode === 'html' ? '' : (row.text || (!row.html ? row.body : '')),
         raw: row.raw || '',
         attachments: row.attachments || [],
         metadata: row.metadata || {},
-        parseFailed: row.parseStatus === 'failed',
+        parseFailed: row.parseFailed || row.parseStatus === 'failed',
     }
 })
 const currentException = computed(() => unknownRows.value.find((row) => row.id === ui.selected.exception) || unknownRows.value[0])
@@ -2382,25 +2429,26 @@ const saveModal = () => {
 const currentRail = computed(() => {
     const context = detailContext.value
     if (context === 'flow' && currentMail.value) {
+        const mail = currentDisplayMail.value || currentMail.value
         return {
             title: '邮件详情',
-            subtitle: currentMail.value.subject,
+            subtitle: mail.subject,
             tags: [
-                currentMail.value.unread ? '未读' : '已读',
-                currentMail.value.risk,
-                currentMail.value.attachmentLabel,
+                mail.unread ? '未读' : '已读',
+                mail.messageIsHtml ? 'HTML 已隔离渲染' : mail.risk,
+                mail.attachmentLabel,
             ].filter(Boolean),
             kv: [
-                ['发件人', currentMail.value.sender],
-                ['收件地址', currentMail.value.to],
-                ['接收时间', currentMail.value.fullTime || currentMail.value.time],
-                ['认证', currentMail.value.auth],
-                ['来源', currentMail.value.ip],
-                ['附件', currentMail.value.attachmentLabel],
-                ['渲染', currentMail.value.risk, 'status'],
+                ['发件人', mail.sender],
+                ['收件地址', mail.to],
+                ['接收时间', mail.fullTime || mail.time],
+                ['认证', mail.auth],
+                ['来源', mail.ip],
+                ['附件', mail.attachmentLabel],
+                ['渲染', mail.messageIsHtml ? 'HTML 已隔离渲染' : mail.risk, 'status'],
             ],
-            body: currentMail.value.body,
-            mail: currentMail.value,
+            body: mail.body,
+            mail,
             actions: [
                 { label: '回复', action: 'send' },
                 { label: '转发', action: 'send' },
@@ -2587,6 +2635,14 @@ watch(mailRows, (rows) => {
         if (activeView.value === 'flow') replaceRouteQuery({ mailId: undefined, mode: undefined }, ['item'])
     }
 }, { immediate: true })
+
+watch(currentMail, (row) => {
+    if (row) parseAdminMailDetail(row)
+}, { immediate: true })
+
+watch(currentParsedMail, (mail) => {
+    if (mail?.messageIsHtml && ui.mailRenderMode !== 'raw') ui.mailRenderMode = 'html'
+})
 
 watch(showAdminPage, async (allowed) => {
     if (allowed && !live.fetchedAdmin) await fetchAdminData()
