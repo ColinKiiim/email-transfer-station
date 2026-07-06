@@ -18,6 +18,15 @@ const stripHtml = (value: string): string => value
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<[^>]+>/g, " ");
 
+const splitHeadersAndBody = (value: string): { headers: string, body: string } => {
+    const match = value.match(/\r?\n\r?\n/);
+    if (!match || match.index === undefined) return { headers: value, body: "" };
+    return {
+        headers: value.slice(0, match.index),
+        body: value.slice(match.index + match[0].length),
+    };
+};
+
 const decodeMimeWords = (value: string): string => value.replace(
     /=\?([^?]+)\?([bq])\?([^?]+)\?=/gi,
     (_match, charset: string, encoding: string, text: string) => {
@@ -41,9 +50,74 @@ const normalizeMailText = (value: string): string => decodeMimeWords(value)
     .replace(/\s+/g, " ")
     .trim();
 
-const fallbackBodyPreview = (raw: string): string => {
-    const separator = raw.includes("\r\n\r\n") ? "\r\n\r\n" : "\n\n";
-    const body = raw.split(separator).slice(1).join(separator);
+const headerParam = (value: string, name: string): string => {
+    const match = value.match(new RegExp(`(?:^|;)\\s*${name}=("([^"]+)"|[^;\\s]+)`, "i"));
+    return (match?.[2] || match?.[1] || "").replace(/^"|"$/g, "");
+};
+
+const decodeBytes = (bytes: Uint8Array, charset: string): string => {
+    try {
+        return new TextDecoder(charset || "utf-8").decode(bytes);
+    } catch {
+        return new TextDecoder().decode(bytes);
+    }
+};
+
+const decodeQuotedPrintable = (value: string, charset: string): string => {
+    const bytes: number[] = [];
+    const input = value.replace(/=\r?\n/g, "");
+    for (let i = 0; i < input.length; i += 1) {
+        const hex = input.slice(i + 1, i + 3);
+        if (input[i] === "=" && /^[0-9a-f]{2}$/i.test(hex)) {
+            bytes.push(parseInt(hex, 16));
+            i += 2;
+        } else {
+            bytes.push(input.charCodeAt(i) & 0xff);
+        }
+    }
+    return decodeBytes(Uint8Array.from(bytes), charset);
+};
+
+const decodeTransferBody = (body: string, encoding: string, charset: string): string => {
+    if (encoding === "quoted-printable") return decodeQuotedPrintable(body, charset);
+    if (encoding === "base64") {
+        try {
+            return decodeBytes(Uint8Array.from(atob(body.replace(/\s+/g, "")), (char) => char.charCodeAt(0)), charset);
+        } catch {
+            return body;
+        }
+    }
+    return body;
+};
+
+const textParts = (raw: string, depth = 0): { body: string, contentType: string, transferEncoding: string, charset: string, disposition: string }[] => {
+    const { headers, body } = splitHeadersAndBody(raw);
+    const unfolded = unfoldHeaders(headers);
+    const contentTypeHeader = fallbackHeader(unfolded, "Content-Type") || "text/plain";
+    const contentType = contentTypeHeader.split(";")[0].trim().toLowerCase();
+    const boundary = headerParam(contentTypeHeader, "boundary");
+    if (boundary && depth < 3) {
+        return body
+            .split(`--${boundary}`)
+            .slice(1)
+            .filter((part) => !part.trimStart().startsWith("--"))
+            .flatMap((part) => textParts(part.replace(/^\r?\n/, ""), depth + 1));
+    }
+    return [{
+        body,
+        contentType,
+        transferEncoding: fallbackHeader(unfolded, "Content-Transfer-Encoding").toLowerCase(),
+        charset: headerParam(contentTypeHeader, "charset") || "utf-8",
+        disposition: fallbackHeader(unfolded, "Content-Disposition").toLowerCase(),
+    }];
+};
+
+export const fallbackBodyPreview = (raw: string): string => {
+    const parts = textParts(raw).filter((part) => part.contentType.startsWith("text/") && !part.disposition.includes("attachment"));
+    const part = parts.find((item) => item.contentType === "text/plain") || parts.find((item) => item.contentType === "text/html");
+    const body = part
+        ? decodeTransferBody(part.body, part.transferEncoding, part.charset)
+        : splitHeadersAndBody(raw).body;
     return normalizeMailText(stripHtml(body).slice(0, 4000)).slice(0, 1000);
 };
 

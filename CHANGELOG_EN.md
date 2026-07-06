@@ -23,6 +23,7 @@
 
 ### Bug Fixes
 
+- fix: |Admin API| Decode quoted-printable/base64 bodies in the new admin mail-flow lightweight parser so message details and list previews no longer show transfer-encoding fragments such as `=20` or `=E2=80=99`
 - fix: |AdminNext| Fix mail-flow filter-column resizing so dragging past the minimum width no longer expands the message list, and make domain filters use the actual recipient-address domain instead of the forwarding original domain
 - fix: |AdminNext| Remove visible explanatory copy from mail-flow feature areas, replace it with question-mark hover help, and fix the unread dot overlapping message subjects
 - fix: |AdminNext| Fix desktop mail-flow page scrolling, duplicated detail toolbar controls, overlapping mail-row text, and duplicated mail metadata in the message body
