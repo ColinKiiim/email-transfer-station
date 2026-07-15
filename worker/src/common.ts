@@ -1,6 +1,6 @@
 import { Context } from 'hono';
 import { Jwt } from 'hono/utils/jwt'
-import { WorkerMailerOptions } from 'worker-mailer';
+import type { WorkerMailerOptions } from 'worker-mailer';
 
 import { getBooleanValue, getStringArray, getStringValue, getIntValue, getUserRoles, getJsonSetting, getAnotherWorkerList, hashPassword, getJsonObjectValue } from './utils';
 import { unbindTelegramByAddress } from './telegram_api/common';
