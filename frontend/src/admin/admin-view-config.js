@@ -1,5 +1,3 @@
-export const ADMIN_MAIL_PAGE_LIMIT = 100
-export const ADMIN_MAIL_FETCH_MAX = 500
 export const FLOW_STATUS_OPTIONS = ['all', '未读', '已读', 'attachment', '已保存', '未知地址']
 export const ACCESS_STATUS_OPTIONS = ['all', 'active', 'success']
 export const SIDEBAR_COLLAPSED_KEY = 'ets-admin-next-sidebar-collapsed'

@@ -10,6 +10,7 @@ import { processItem } from '../utils/email-parser'
 import Turnstile from '../components/Turnstile.vue'
 import ShadowHtmlComponent from '../components/ShadowHtmlComponent.vue'
 import MailContentRenderer from '../components/MailContentRenderer.vue'
+import { adminApi, loadAdminSnapshot } from '../admin/admin-api'
 import {
     adminMailCacheKey,
     cellText,
@@ -35,8 +36,6 @@ import {
 } from '../admin/admin-formatters'
 import {
     ACCESS_STATUS_OPTIONS,
-    ADMIN_MAIL_FETCH_MAX,
-    ADMIN_MAIL_PAGE_LIMIT,
     FLOW_STATUS_OPTIONS,
     ICON_SHAPES as iconShapes,
     NAV_GROUPS as navGroups,
@@ -255,7 +254,7 @@ useHead({
 const fetchAdminLoginSettings = async () => {
     if (adminLoginSettingsFetched.value) return
     try {
-        const res = await api.fetch('/open_api/admin_login_settings')
+        const res = await adminApi.getLoginSettings()
         openSettings.value.enableGlobalTurnstileCheck = !!res.enableGlobalTurnstileCheck
         openSettings.value.cfTurnstileSiteKey = res.cfTurnstileSiteKey || ''
         if (res.accountHint && !tmpAdminAccount.value) tmpAdminAccount.value = res.accountHint
@@ -303,16 +302,12 @@ const resetAdminLogin = () => {
 
 const authFunc = async () => {
     try {
-        await api.fetch('/open_api/admin_login', {
-            method: 'POST',
-            body: JSON.stringify({
-                username: tmpAdminAccount.value.trim(),
-                password: await hashPassword(tmpAdminAuth.value),
-                cf_token: cfToken.value,
-            }),
-        }).then((res) => {
-            adminAuth.value = res.token || tmpAdminAuth.value
+        const res = await adminApi.login({
+            username: tmpAdminAccount.value.trim(),
+            passwordHash: await hashPassword(tmpAdminAuth.value),
+            cfToken: cfToken.value,
         })
+        adminAuth.value = res.token || tmpAdminAuth.value
         showAdminAuth.value = false
         tmpAdminAuth.value = ''
         await refreshAll()
@@ -369,41 +364,6 @@ const setView = async (view) => {
     }, view === 'flow' ? [] : ['mailId', 'item', 'mode'])
 }
 
-const safeFetch = async (label, path, options = {}) => {
-    try {
-        return await api.fetch(path)
-    } catch (error) {
-        if (options.recordError !== false) {
-            live.errors.push(`${label}: ${error.message || 'error'}`)
-        }
-        return null
-    }
-}
-
-const fetchAdminMailPages = async () => {
-    const first = await safeFetch('mails', `/api/admin/mails?limit=${ADMIN_MAIL_PAGE_LIMIT}&offset=0`)
-    if (!first) return null
-    const count = Number(first.count || first.results?.length || 0)
-    const pageCount = Math.min(
-        Math.ceil(count / ADMIN_MAIL_PAGE_LIMIT),
-        Math.ceil(ADMIN_MAIL_FETCH_MAX / ADMIN_MAIL_PAGE_LIMIT),
-    )
-    if (pageCount <= 1) return first
-    const rest = await Promise.all(
-        Array.from({ length: pageCount - 1 }, (_, index) => {
-            const offset = (index + 1) * ADMIN_MAIL_PAGE_LIMIT
-            return safeFetch('mails', `/api/admin/mails?limit=${ADMIN_MAIL_PAGE_LIMIT}&offset=${offset}`)
-        }),
-    )
-    return {
-        ...first,
-        results: [
-            ...(first.results || []),
-            ...rest.flatMap((page) => page?.results || []),
-        ],
-    }
-}
-
 const recordLoadError = (label, error) => {
     const text = `${label}: ${error?.message || error || 'error'}`
     if (!live.errors.includes(text)) live.errors.push(text)
@@ -419,74 +379,7 @@ const adminNotificationSink = {
 
 const fetchAdminData = async () => {
     if (!showAdminPage.value) return
-    live.errors = []
-    const [
-        overview,
-        statistics,
-        domains,
-        mailDomains,
-        mailAddresses,
-        mails,
-        unknownMails,
-        addresses,
-        accessPackages,
-        auditEvents,
-        accessEvents,
-        users,
-        workerConfig,
-        dbVersion,
-        mailWebhook,
-        globalWebhook,
-        telegram,
-        aiSettings,
-        senderAccess,
-        sendBox,
-    ] = await Promise.all([
-        safeFetch('overview', '/api/admin/overview'),
-        safeFetch('statistics', '/api/admin/statistics'),
-        safeFetch('domains', '/api/admin/domains'),
-        safeFetch('mail domains', '/api/admin/mail_domains'),
-        safeFetch('mail addresses', '/api/admin/mail_addresses'),
-        fetchAdminMailPages(),
-        safeFetch('unknown mails', '/api/admin/mails_unknow?limit=100&offset=0'),
-        safeFetch('addresses', '/api/admin/address?limit=50&offset=0'),
-        safeFetch('access packages', '/api/admin/access_packages?limit=50&offset=0'),
-        safeFetch('audit events', '/api/admin/audit_events?limit=20&offset=0'),
-        safeFetch('access events', '/api/admin/access_events?limit=20&offset=0'),
-        safeFetch('users', '/api/admin/users?limit=20&offset=0'),
-        safeFetch('worker configs', '/api/admin/worker/configs'),
-        safeFetch('db version', '/api/admin/db_version'),
-        safeFetch('mail webhook', '/api/admin/mail_webhook/settings'),
-        safeFetch('global webhook', '/api/admin/webhook/settings'),
-        safeFetch('telegram', '/api/admin/telegram/status', { recordError: false }),
-        safeFetch('ai extract', '/api/admin/ai_extract/settings'),
-        safeFetch('sender access', '/api/admin/address_sender?limit=20&offset=0'),
-        safeFetch('sendbox', '/api/admin/sendbox?limit=10&offset=0'),
-    ])
-
-    live.overview = overview
-    live.statistics = statistics
-    live.domains = domains?.results || []
-    live.domainAutomation = domains?.cloudflare_automation || null
-    live.mailDomains = mailDomains?.results || []
-    live.mailAddresses = mailAddresses?.results || []
-    live.mails = mails?.results || []
-    live.mailTotalCount = Number.isFinite(Number(mails?.count)) ? Number(mails.count) : null
-    live.mailUnreadCount = Number.isFinite(Number(mails?.unread_count)) ? Number(mails.unread_count) : null
-    live.unknownMails = unknownMails?.results || []
-    live.addresses = addresses?.results || []
-    live.accessPackages = accessPackages?.results || []
-    live.auditEvents = auditEvents?.results || []
-    live.accessEvents = accessEvents?.results || []
-    live.users = users?.results || []
-    live.workerConfig = workerConfig
-    live.dbVersion = dbVersion
-    live.mailWebhook = mailWebhook
-    live.globalWebhook = globalWebhook
-    live.telegram = telegram
-    live.aiSettings = aiSettings
-    live.senderAccess = senderAccess?.results || []
-    live.sendBox = sendBox?.results || []
+    Object.assign(live, await loadAdminSnapshot())
     live.fetchedAdmin = true
     live.lastSynced = new Date().toLocaleTimeString('zh-CN', { hour12: false })
 }
@@ -1362,10 +1255,7 @@ const closeDetail = () => {
 const markAdminMailRead = async (row) => {
     if (!row?.sourceId || row.unread === false || row.is_read === true || !showAdminPage.value) return
     try {
-        const result = await api.fetch(`/api/admin/mails/${row.sourceId}/read_state`, {
-            method: 'PATCH',
-            body: JSON.stringify({ read: true }),
-        })
+        const result = await adminApi.markMailRead(row.sourceId)
         const target = live.mails.find((item) => String(item.id) === String(row.sourceId))
         if (target) {
             target.read_at = result?.read_at || target.read_at || new Date().toISOString()
@@ -1531,9 +1421,7 @@ const deleteMailRows = async (rows, scopeLabel = '选中邮件') => {
     let deleted = 0
     try {
         for (const target of targets) {
-            const result = await api.fetch(`/api/admin/mails/${target.id}`, {
-                method: 'DELETE',
-            })
+            const result = await adminApi.deleteMail(target.id)
             if (result?.success === false) throw new Error(`删除失败：${target.label}`)
             deleted += 1
         }
@@ -1614,14 +1502,11 @@ const createAddressIdentity = async () => {
     if (!window.confirm(`确认创建 ${name}@${domain}？创建成功后地址凭证只显示一次。`)) return
     actionBusy.value = 'address-create'
     try {
-        const result = await api.fetch('/api/admin/new_address', {
-            method: 'POST',
-            body: JSON.stringify({
-                name,
-                domain,
-                enablePrefix: addressCreateForm.enablePrefix,
-                enableRandomSubdomain: addressCreateForm.enableRandomSubdomain,
-            }),
+        const result = await adminApi.createAddress({
+            name,
+            domain,
+            enablePrefix: addressCreateForm.enablePrefix,
+            enableRandomSubdomain: addressCreateForm.enableRandomSubdomain,
         })
         await refreshAll()
         const address = result?.address || `${name}@${domain}`
@@ -1655,13 +1540,9 @@ const createSharePackage = async () => {
     if (!window.confirm(`确认为 ${row.address} 创建只读访问包？分享链接只显示一次。`)) return
     actionBusy.value = 'share-create'
     try {
-        const result = await api.fetch(`/api/admin/address/${row.sourceId}/share_tokens`, {
-            method: 'POST',
-            body: JSON.stringify({
-                label: shareCreateForm.label.trim(),
-                scopes: ['read'],
-                expires_at: toD1DateTime(shareCreateForm.expiresAt),
-            }),
+        const result = await adminApi.createShareToken(row.sourceId, {
+            label: shareCreateForm.label.trim(),
+            expiresAt: toD1DateTime(shareCreateForm.expiresAt),
         })
         await refreshAll()
         const shareUrl = result?.token ? `${window.location.origin}/i/${encodeURIComponent(result.token)}` : ''
@@ -1689,7 +1570,7 @@ const deleteCurrentAddress = async () => {
         '删除地址',
         `确认删除 ${row.address}？该地址的 ${row.mails} 封收件、${row.sent} 封发送记录和访问包会一起删除，无法撤销。`,
         async () => {
-            const result = await api.fetch(`/api/admin/delete_address/${row.sourceId}`, { method: 'DELETE' })
+            const result = await adminApi.deleteAddress(row.sourceId)
             if (result?.success === false) throw new Error('删除地址失败')
             await refreshAll()
             ui.selected.identity = addressRows.value[0]?.id || ''
@@ -1711,14 +1592,13 @@ const disableCurrentDomain = async () => {
     }
     actionBusy.value = 'domain-disable'
     try {
-        const impact = await api.fetch(`/api/admin/domains/${row.sourceId}/impact`)
+        const impact = await adminApi.getDomainImpact(row.sourceId)
         const confirmed = window.confirm(
             `确认停用 ${row.domain}？影响 ${impact?.address_count ?? 0} 个地址和 ${impact?.mail_count ?? 0} 封邮件；已有数据不会自动迁移。`,
         )
         if (!confirmed) return
-        const result = await api.fetch(`/api/admin/domains/${row.sourceId}`, {
-            method: 'DELETE',
-            body: JSON.stringify({ config_version: row.configVersion, confirm: true }),
+        const result = await adminApi.disableDomain(row.sourceId, {
+            configVersion: row.configVersion,
         })
         if (result?.success === false) throw new Error('停用域名失败')
         await refreshAll()
@@ -1741,7 +1621,7 @@ const showCurrentCredential = async () => {
         '显示地址凭证',
         `确认显示 ${row.address} 的当前 JWT 和固定登录链接？请确保屏幕不会被无关人员看到。`,
         async () => {
-            const result = await api.fetch(`/api/admin/show_password/${row.sourceId}`)
+            const result = await adminApi.showAddressCredential(row.sourceId)
             showOneTimeResult(
                 `地址凭证：${row.address}`,
                 formatAddressCredential(row.address, result?.jwt, '', window.location.origin),
@@ -1762,7 +1642,7 @@ const rotateCurrentCredential = async () => {
         '凭证轮换',
         `确认轮换 ${row.address} 的地址凭证？旧地址 JWT 会失效，新的凭证只会显示一次，请在安全位置复制保存。`,
         async () => {
-            const result = await api.fetch(`/api/admin/address/${row.sourceId}/rotate_credential`, { method: 'POST' })
+            const result = await adminApi.rotateAddressCredential(row.sourceId)
             await refreshAll()
             if (result?.jwt) {
                 showOneTimeResult(
@@ -1788,7 +1668,7 @@ const revokeCurrentShareTokens = async () => {
         '撤销访问包',
         `确认撤销 ${row.address} 的全部活跃访问包？已分享的只读链接会立即失效。`,
         async () => {
-            const result = await api.fetch(`/api/admin/address/${row.sourceId}/share_tokens`, { method: 'DELETE' })
+            const result = await adminApi.revokeShareTokens(row.sourceId)
             if (result?.success === false) throw new Error('撤销访问包失败')
             await refreshAll()
             showToast(`已撤销 ${row.address} 的访问包`)
@@ -1807,7 +1687,7 @@ const clearCurrentAddressInbox = async () => {
         '清空地址收件',
         `确认清空 ${row.address} 的生产收件箱？此操作会删除该地址 raw_mails 和已读状态，无法在后台撤销。`,
         async () => {
-            const result = await api.fetch(`/api/admin/clear_inbox/${row.sourceId}`, { method: 'DELETE' })
+            const result = await adminApi.clearAddressInbox(row.sourceId)
             if (result?.success === false) throw new Error('清空地址收件失败')
             await refreshAll()
             showToast(`已清空 ${row.address} 的收件箱`)
@@ -1829,11 +1709,11 @@ const checkCurrentDomainRoute = async () => {
     actionBusy.value = 'verify'
     try {
         if (String(row.mode || '').includes('Cloudflare')) {
-            const result = await api.fetch(`/api/admin/domains/${row.sourceId}/cloudflare/check`, { method: 'POST' })
+            const result = await adminApi.checkCloudflareDomain(row.sourceId)
             const ruleCount = Array.isArray(result?.rules) ? result.rules.length : 0
             showToast(`Cloudflare 路由检查完成：${ruleCount} 条规则`)
         } else {
-            const result = await api.fetch(`/api/admin/domains/${row.sourceId}/impact`)
+            const result = await adminApi.getDomainImpact(row.sourceId)
             showToast(`域名影响检查完成：${result?.address_count ?? 0} 个地址，${result?.mail_count ?? 0} 封邮件`)
         }
         await refreshAll()
@@ -1860,7 +1740,7 @@ const checkCurrentDomainImpact = async () => {
     }
     actionBusy.value = 'domain-impact'
     try {
-        const result = await api.fetch(`/api/admin/domains/${row.sourceId}/impact`)
+        const result = await adminApi.getDomainImpact(row.sourceId)
         showToast(`停用影响：${result?.address_count ?? 0} 个地址，${result?.mail_count ?? 0} 封邮件`)
     } catch (error) {
         showToast(error?.message || '停用影响检查失败')
@@ -1896,10 +1776,7 @@ const startDomainVerification = async (domainRow, silent = false) => {
     if (!domainRow?.sourceId && !domainRow?.id) throw new Error('当前域名不是 D1 管理记录')
     const id = domainRow.sourceId || domainRow.id
     const configVersion = domainRow.configVersion || domainRow.config_version
-    const result = await api.fetch(`/api/admin/domains/${id}/verify/start`, {
-        method: 'POST',
-        body: JSON.stringify({ config_version: configVersion }),
-    })
+    const result = await adminApi.startDomainVerification(id, configVersion)
     await refreshAll()
     if (!silent) {
         const target = result?.verification_address || '验证地址'
@@ -1918,10 +1795,7 @@ const checkDomainVerification = async (domainRow) => {
         '检查域名验证',
         '',
         async () => {
-            const result = await api.fetch(`/api/admin/domains/${domainRow.sourceId}/verify/check`, {
-                method: 'POST',
-                body: JSON.stringify({ config_version: domainRow.configVersion }),
-            })
+            const result = await adminApi.checkDomainVerification(domainRow.sourceId, domainRow.configVersion)
             await refreshAll()
             if (result?.success === false) {
                 showToast(`还没有收到验证邮件：${result?.verification_address || domainRow.verificationAddress || domainRow.domain}`)
@@ -1933,19 +1807,16 @@ const checkDomainVerification = async (domainRow) => {
 }
 
 const performCloudflareSetup = async (domainRow) => {
-    const check = await api.fetch(`/api/admin/domains/${domainRow.sourceId}/cloudflare/check`, { method: 'POST' })
+    const check = await adminApi.checkCloudflareDomain(domainRow.sourceId)
     if (!check?.automatic_setup_supported) {
         throw new Error('当前域名不是 Cloudflare zone 根域，暂不支持自动配置子域名')
     }
     const replaceCatchAll = !!check?.setup_preview?.catch_all_conflict
         && window.confirm(`Cloudflare 上已有 catch-all 规则。确认替换为发送到 Worker：${domainRow.domain}？`)
     if (check?.setup_preview?.catch_all_conflict && !replaceCatchAll) return null
-    await api.fetch(`/api/admin/domains/${domainRow.sourceId}/cloudflare/setup`, {
-        method: 'POST',
-        body: JSON.stringify({
-            config_version: domainRow.configVersion,
-            confirm_replace_catch_all: replaceCatchAll,
-        }),
+    await adminApi.setupCloudflareDomain(domainRow.sourceId, {
+        configVersion: domainRow.configVersion,
+        confirmReplaceCatchAll: replaceCatchAll,
     })
     const updated = await refreshAndFindDomain(domainRow.sourceId)
     return updated ? await startDomainVerification({
@@ -1990,16 +1861,13 @@ const createAndActivateDomain = async () => {
     domainActivationBusy.value = true
     actionBusy.value = mode === 'cloudflare_email' ? 'cloudflare-create' : 'improvmx-create'
     try {
-        const created = await api.fetch('/api/admin/domains', {
-            method: 'POST',
-            body: JSON.stringify({
-                domain,
-                display_label: domainActivationForm.displayLabel,
-                receive_mode: mode,
-                collector_address: domainActivationForm.collectorAddress,
-                cloudflare_zone_id: domainActivationForm.cloudflareZoneId,
-                allow_random_subdomain: domainActivationForm.allowRandomSubdomain,
-            }),
+        const created = await adminApi.createDomain({
+            domain,
+            displayLabel: domainActivationForm.displayLabel,
+            receiveMode: mode,
+            collectorAddress: domainActivationForm.collectorAddress,
+            cloudflareZoneId: domainActivationForm.cloudflareZoneId,
+            allowRandomSubdomain: domainActivationForm.allowRandomSubdomain,
         })
         const row = await refreshAndFindDomain(created?.id)
         if (!row) throw new Error('域名已创建，但刷新后未找到记录')
