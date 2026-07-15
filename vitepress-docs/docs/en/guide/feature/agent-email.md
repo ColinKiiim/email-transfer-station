@@ -12,19 +12,11 @@ After creating or logging in, the **Address JWT** is displayed in the frontend U
 2. **API base URL** — same origin as the frontend, e.g. `https://mail.example.com`
 3. *(optional)* **Site password** — only if the deployment enabled `x-custom-auth`
 
-### Credential persistence
+### Credential handling
 
-To avoid entering credentials every time, the agent saves them to `~/.cf-temp-mail/credentials.json`:
+By default, read credentials only from the process environment, a tool secret input, or a user-selected ignored local file; do not create a credential file automatically. Persist credentials only when the user explicitly asks, after confirming the destination is untracked and accessible only to that user. Never echo the JWT in output, logs, or chat.
 
-```json
-{
-  "base": "https://mail.example.com",
-  "jwt": "<ADDRESS_JWT>",
-  "site_password": ""
-}
-```
-
-On first use, the agent reads the file if it exists, otherwise asks the user and saves for next time. Before each request it validates the JWT via `GET /api/settings` — if it returns `401`, the agent informs the user the JWT is expired, asks for a fresh one, and updates the file.
+Validate the JWT with `GET /api/settings` before the first request. Treat `401` as an incorrect, expired, or mismatched credential without echoing or overwriting the old value.
 
 ## Why `parsed_mail` API
 
@@ -93,6 +85,8 @@ curl -s "$BASE/api/parsed_mails?limit=20&offset=0" \
 
 Requires `send_balance > 0` (check via `/api/settings`). The deployment must have a send method configured (Resend / SMTP / Cloudflare Email Routing binding).
 
+Sending, requesting send access, and deleting sent records are external side effects. Perform them only when the user's current request explicitly authorizes the matching action, and never automatically retry an ambiguous failed send.
+
 | Task                    | Method | Path                            | Body / Returns                              |
 | ----------------------- | ------ | ------------------------------- | ------------------------------------------- |
 | Request send access     | POST   | `/api/request_send_mail_access` | `{}` → `{ status: "ok" }`                  |
@@ -126,9 +120,7 @@ curl -s -X POST "$BASE/api/send_mail" \
 
 If `/api/parsed_mails` / `/api/parsed_mail/:id` returns `404` (older deployment) or a parse error, fall back to `/api/mails` / `/api/mail/:id` (RFC822 `raw`) and **parse locally with the same strategy as the frontend**: `mail-parser-wasm` first, `postal-mime` as fallback (implementation reference: `frontend/src/utils/email-parser.js`).
 
-```bash
-npm i mail-parser-wasm postal-mime
-```
+Prefer parser dependencies already installed in a trusted project checkout. Do not run `npm install` in an unknown working directory; if isolated parsing is necessary, use an explicit temporary directory and remove temporary credentials and mail material afterward.
 
 ```js
 async function parseRaw(raw) {
@@ -182,27 +174,17 @@ For attachment bytes, use `postal-mime` directly — `parsed.attachments[i].cont
 - Never poll faster than once per second
 - Respect `429` — sleep and retry
 
-## `cf-temp-mail-agent-mail` Skill
+## `email-transfer-station-agent-mail` Skill
 
-The repo ships an agent skill at `skills/cf-temp-mail-agent-mail/` that wraps the flow above. Works with Claude Code / Cursor / Codex / OpenClaw and other agents.
+The canonical Agent Skill lives at `skills/email-transfer-station-agent-mail/` and works with Claude Code, Cursor, Codex, OpenClaw, and similar tools. It does not persist Address JWTs or install parser dependencies in an unknown working directory by default.
 
-Pick any install method:
+Until public release coordinates are finalized, copy it only from a trusted checkout of this repository:
 
 ```bash
-# Option 1: npx skills (recommended, auto-detects multiple agents)
-npx skills add dreamhunter2333/cloudflare_temp_email --skill cf-temp-mail-agent-mail
-# Add -g to install globally
-npx skills add dreamhunter2333/cloudflare_temp_email --skill cf-temp-mail-agent-mail -g
-
-# Option 2: npx degit to copy into your agent's skills folder
-npx degit dreamhunter2333/cloudflare_temp_email/skills/cf-temp-mail-agent-mail <your-agent-skills-dir>/cf-temp-mail-agent-mail
-
-# Option 3: clone and copy
-git clone --depth 1 https://github.com/dreamhunter2333/cloudflare_temp_email.git /tmp/cf-temp-mail
-cp -r /tmp/cf-temp-mail/skills/cf-temp-mail-agent-mail <your-agent-skills-dir>/
+cp -r skills/email-transfer-station-agent-mail <your-agent-skills-dir>/
 ```
 
-See [SKILL.md](https://github.com/dreamhunter2333/cloudflare_temp_email/blob/main/skills/cf-temp-mail-agent-mail/SKILL.md) for details.
+Read that directory's `SKILL.md` before use and provide the JWT through the process environment, a tool secret input, or a user-selected ignored local file.
 
 ## Common errors
 

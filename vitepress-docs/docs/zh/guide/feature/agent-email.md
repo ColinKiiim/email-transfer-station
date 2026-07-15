@@ -12,19 +12,11 @@
 2. **API 地址** — 与前端同源，如 `https://mail.example.com`
 3. *(可选)* **站点密码** — 仅当部署启用了 `x-custom-auth` 时需要
 
-### 凭证持久化
+### 凭证处理
 
-为避免每次都要输入，Agent 会将凭证保存到 `~/.cf-temp-mail/credentials.json`：
+Agent 默认只从进程环境、工具的秘密输入或用户明确指定且已忽略的本地文件读取凭证，不会自动创建凭证文件。只有用户明确要求持久化时，才可写入已确认不受 Git 跟踪且仅当前用户可访问的位置；不得在输出、日志或聊天中回显 JWT。
 
-```json
-{
-  "base": "https://mail.example.com",
-  "jwt": "<ADDRESS_JWT>",
-  "site_password": ""
-}
-```
-
-首次使用时如果文件存在则直接读取，不存在则向用户索要后保存。每次请求前通过 `GET /api/settings` 校验 JWT，若返回 `401` 则提示用户 JWT 已过期并更新文件。
+首次请求前通过 `GET /api/settings` 校验 JWT。若返回 `401`，提示用户凭证错误、过期或与 `BASE` 不匹配，但不要回显或覆盖旧值。
 
 ## 为什么需要 `parsed_mail` API
 
@@ -93,6 +85,8 @@ curl -s "$BASE/api/parsed_mails?limit=20&offset=0" \
 
 需要 `send_balance > 0`（通过 `/api/settings` 查看），且部署方已配置发送方式（Resend / SMTP / Cloudflare Email Routing binding）。
 
+发送、申请发信权限和删除发送记录都是外部副作用，只能在用户当前请求明确授权对应操作时执行；结果不明确的发送失败不得自动重试。
+
 | 任务             | 方法   | 路径                            | 请求体 / 返回                              |
 | ---------------- | ------ | ------------------------------- | ------------------------------------------ |
 | 申请发信权限     | POST   | `/api/request_send_mail_access` | `{}` → `{ status: "ok" }`                 |
@@ -126,9 +120,7 @@ curl -s -X POST "$BASE/api/send_mail" \
 
 若 `/api/parsed_mails` / `/api/parsed_mail/:id` 返回 `404`（较早部署未包含）或解析异常，回退到 `/api/mails` / `/api/mail/:id` 取 `raw`，**在本地按前端同款策略解析**：`mail-parser-wasm` 优先，失败时退回 `postal-mime`（实现参见 `frontend/src/utils/email-parser.js`）。
 
-```bash
-npm i mail-parser-wasm postal-mime
-```
+优先复用可信项目 checkout 中已安装的解析依赖。不要在未知工作目录执行 `npm install`；确需独立解析时，使用明确隔离的临时目录并在完成后清理临时凭证和邮件材料。
 
 ```js
 async function parseRaw(raw) {
@@ -182,27 +174,17 @@ const parsed = await parseRaw(row.raw);
 - 不要快于每秒 1 次
 - 遇到 `429` 必须 sleep 后重试
 
-## `cf-temp-mail-agent-mail` Skill
+## `email-transfer-station-agent-mail` Skill
 
-仓库内置了 Agent 技能：`skills/cf-temp-mail-agent-mail/`，把上述流程封装成 AI Agent 可直接调用的形式，支持 Claude Code / Cursor / Codex / OpenClaw 等。
+仓库中的 canonical Agent 技能位于 `skills/email-transfer-station-agent-mail/`，支持 Claude Code、Cursor、Codex、OpenClaw 等工具。它默认不持久化 Address JWT，也不会在未知工作目录安装解析依赖。
 
-安装方式任选其一：
+正式发布坐标确定前，请只从可信的本仓库 checkout 复制：
 
 ```bash
-# 方式 1：npx skills（推荐，自动适配多种 agent）
-npx skills add dreamhunter2333/cloudflare_temp_email --skill cf-temp-mail-agent-mail
-# 加 -g 安装到全局
-npx skills add dreamhunter2333/cloudflare_temp_email --skill cf-temp-mail-agent-mail -g
-
-# 方式 2：npx degit 拷贝到你的 agent skills 目录
-npx degit dreamhunter2333/cloudflare_temp_email/skills/cf-temp-mail-agent-mail <your-agent-skills-dir>/cf-temp-mail-agent-mail
-
-# 方式 3：克隆后复制
-git clone --depth 1 https://github.com/dreamhunter2333/cloudflare_temp_email.git /tmp/cf-temp-mail
-cp -r /tmp/cf-temp-mail/skills/cf-temp-mail-agent-mail <your-agent-skills-dir>/
+cp -r skills/email-transfer-station-agent-mail <your-agent-skills-dir>/
 ```
 
-详情见 [SKILL.md](https://github.com/dreamhunter2333/cloudflare_temp_email/blob/main/skills/cf-temp-mail-agent-mail/SKILL.md)。
+使用前阅读该目录中的 `SKILL.md`，并把 JWT 放在进程环境、工具的秘密输入或用户明确指定且已忽略的本地文件中。
 
 ## 常见错误
 
