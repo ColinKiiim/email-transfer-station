@@ -134,6 +134,12 @@ account first. A minimum deployment needs:
    `pages/wrangler.toml`, followed by the canonical build/deploy command from
    `pages/` only.
 
+For the address-password compatibility migration, deploy the Worker before an
+updated Pages frontend or SMTP/IMAP proxy. Keep `ENABLE_ADDRESS_PASSWORD_V2=false`
+until old and new callers have been verified and a restorable D1 backup exists,
+then enable it explicitly. After enablement, retain the new reader; a full rollback
+to the old Worker requires restoring the pre-enable backup.
+
 ```bash
 cd worker
 corepack pnpm run deploy

@@ -102,14 +102,15 @@ test.describe('Turnstile Login Endpoints (ENABLE_GLOBAL_TURNSTILE_CHECK disabled
         // Set a password
         await request.post(`${WORKER_URL}/api/address_change_password`, {
           headers: { Authorization: `Bearer ${jwt}` },
-          data: { new_password: hashPassword('addr-pass-123') },
+          data: { new_password: 'addr-pass-123', password_format: 'plain' },
         });
 
         // Login with cf_token field present but empty
         const loginRes = await request.post(`${WORKER_URL}/api/address_login`, {
           data: {
             email: address,
-            password: hashPassword('addr-pass-123'),
+            password: 'addr-pass-123',
+            password_format: 'plain',
             cf_token: ''
           },
         });

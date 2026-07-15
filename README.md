@@ -121,6 +121,10 @@ npm run test:down
 6. 核对 `pages/wrangler.toml` 的 Pages 项目名及 `BACKEND` service binding，然后只从
    `pages/` 运行规范构建/部署命令。
 
+地址密码兼容迁移必须先部署 Worker，再更新 Pages 前端或 SMTP/IMAP proxy。默认保持
+`ENABLE_ADDRESS_PASSWORD_V2=false`；确认新旧调用方均兼容并取得可恢复的 D1 备份后，
+才可显式启用。启用后必须保留新版读取逻辑，完整回滚旧 Worker 需要恢复启用前备份。
+
 ```bash
 cd worker
 corepack pnpm run deploy

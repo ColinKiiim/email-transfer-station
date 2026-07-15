@@ -62,6 +62,7 @@ type Bindings = {
     DISABLE_ANONYMOUS_USER_CREATE_EMAIL: string | boolean | undefined
     ENABLE_USER_DELETE_EMAIL: string | boolean | undefined
     ENABLE_ADDRESS_PASSWORD: string | boolean | undefined
+    ENABLE_ADDRESS_PASSWORD_V2: string | boolean | undefined
     ENABLE_AGENT_EMAIL_INFO: string | boolean | undefined
     SMTP_IMAP_PROXY_CONFIG: string | SmtpImapProxyConfig | undefined
     ENABLE_INDEX_ABOUT: string | boolean | undefined

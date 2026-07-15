@@ -90,6 +90,8 @@ ENABLE_AUTO_REPLY = false
 # ENABLE_ADDRESS_WEBHOOK = false
 # Enable address password feature, if set true, will generate password for new address and support password login and change
 # ENABLE_ADDRESS_PASSWORD = false
+# Write versioned PBKDF2 address credentials. Keep false through compatibility validation and backup.
+# ENABLE_ADDRESS_PASSWORD_V2 = false
 # Show AI Agent mailbox connection info in the address credential modal
 # ENABLE_AGENT_EMAIL_INFO = true
 # Show SMTP/IMAP client connection info in the address credential modal

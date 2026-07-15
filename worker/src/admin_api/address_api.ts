@@ -4,6 +4,11 @@ import i18n from '../i18n'
 import { getBooleanValue } from '../utils'
 import { newAddress, issueAddressJwt, hideObjectFields } from '../common'
 import { recordAuditEvent } from '../audit'
+import {
+    createAddressPasswordRecord,
+    isAddressPasswordV2Enabled,
+    normalizeAddressPasswordInput,
+} from '../address_password'
 
 const normalizeLabelNames = (value: unknown): string[] => {
     if (!Array.isArray(value)) return [];
@@ -467,17 +472,23 @@ const rotateCredential = async (c: Context<HonoCustomType>) => {
 const resetPassword = async (c: Context<HonoCustomType>) => {
     const msgs = i18n.getMessagesbyContext(c);
     const { id } = c.req.param();
-    const { password } = await c.req.json();
-    // NOTE: Keep the admin API field as password, but the value is a frontend SHA-256 hash.
+    const { password, password_format } = await c.req.json();
     if (!getBooleanValue(c.env.ENABLE_ADDRESS_PASSWORD)) {
         return c.text(msgs.PasswordChangeDisabledMsg, 403);
     }
-    if (!password) {
+    let passwordInput;
+    try {
+        passwordInput = normalizeAddressPasswordInput(password, password_format);
+    } catch {
         return c.text(msgs.NewPasswordRequiredMsg, 400);
     }
+    const storedPassword = await createAddressPasswordRecord(
+        passwordInput,
+        isAddressPasswordV2Enabled(c.env.ENABLE_ADDRESS_PASSWORD_V2),
+    );
     const { success } = await c.env.DB.prepare(
         `UPDATE address SET password = ?, updated_at = datetime('now') WHERE id = ?`
-    ).bind(password, id).run();
+    ).bind(storedPassword, id).run();
     if (!success) {
         return c.text(msgs.FailedUpdatePasswordMsg, 500);
     }

@@ -9,7 +9,7 @@ import Turnstile from '../../components/Turnstile.vue'
 
 import { useGlobalState } from '../../store'
 import { api } from '../../api'
-import { getRouterPathWithLang, hashPassword } from '../../utils'
+import { getRouterPathWithLang } from '../../utils'
 
 const props = defineProps({
     bindUserAddress: {
@@ -76,7 +76,8 @@ const login = async () => {
                 method: 'POST',
                 body: JSON.stringify({
                     email: loginAddress.value,
-                    password: await hashPassword(loginPassword.value),
+                    password: loginPassword.value,
+                    password_format: 'plain',
                     cf_token: loginCfToken.value
                 })
             });

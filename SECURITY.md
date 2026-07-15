@@ -38,3 +38,18 @@ content and secrets removed. Particularly sensitive boundaries include:
 - HTML/MIME rendering and attachment handling;
 - Pages-to-Worker service bindings and CORS;
 - Webhook, Telegram, OAuth, outbound-mail, S3, AI, and SMTP/IMAP integrations.
+
+## Address-password migration
+
+The Worker can read legacy address-password records and the versioned PBKDF2 format.
+New-format writes are disabled unless `ENABLE_ADDRESS_PASSWORD_V2` is explicitly set
+to `true`. Deploy the compatibility Worker before any frontend or SMTP/IMAP proxy
+that sends `password_format`, and keep the flag disabled until compatibility has
+been verified and a restorable D1 backup exists.
+
+After the flag is enabled, successful address login and explicit password creation,
+change, or reset can write PBKDF2 records. Disabling the flag stops further upgrades
+but the compatibility reader must remain deployed. Once a PBKDF2 row exists, rolling
+back to an older Worker requires restoring the pre-enable database backup or applying
+a forward fix; the older Worker cannot read the new record. The repository does not
+enable this flag or migrate production data automatically.

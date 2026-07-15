@@ -2,7 +2,7 @@ import { Context } from 'hono';
 import { Jwt } from 'hono/utils/jwt'
 import type { WorkerMailerOptions } from 'worker-mailer';
 
-import { getBooleanValue, getStringArray, getStringValue, getIntValue, getUserRoles, getJsonSetting, getAnotherWorkerList, hashPassword, getJsonObjectValue } from './utils';
+import { getBooleanValue, getStringArray, getStringValue, getIntValue, getUserRoles, getJsonSetting, getAnotherWorkerList, getJsonObjectValue } from './utils';
 import { unbindTelegramByAddress } from './telegram_api/common';
 import { CONSTANTS } from './constants';
 import { AddressCreationSettings, AdminWebhookSettings, WebhookMail, WebhookSettings } from './models';
@@ -16,6 +16,11 @@ import {
     normalizeDomain as normalizeManagedDomain,
 } from './domains';
 import { secureRandomInt, secureRandomString } from './security_random';
+import {
+    createAddressPasswordRecord,
+    isAddressPasswordV2Enabled,
+    normalizeAddressPasswordInput,
+} from './address_password';
 
 const DEFAULT_NAME_REGEX = /[^a-z0-9]/g;
 const DEFAULT_RANDOM_SUBDOMAIN_LENGTH = 8;
@@ -296,10 +301,13 @@ const generatePasswordForAddress = async (
     }
 
     const plainPassword = generateRandomPassword();
-    const hashedPassword = await hashPassword(plainPassword);
+    const storedPassword = await createAddressPasswordRecord(
+        normalizeAddressPasswordInput(plainPassword, "plain"),
+        isAddressPasswordV2Enabled(c.env.ENABLE_ADDRESS_PASSWORD_V2),
+    );
     const { success } = await c.env.DB.prepare(
         `UPDATE address SET password = ?, updated_at = datetime('now') WHERE name = ?`
-    ).bind(hashedPassword, address).run();
+    ).bind(storedPassword, address).run();
 
     if (!success) {
         console.warn("Failed to set generated password for address:", address);

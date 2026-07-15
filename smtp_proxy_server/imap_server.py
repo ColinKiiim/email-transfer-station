@@ -164,7 +164,11 @@ class CustomChecker:
         """Exchange address+password for a JWT via backend."""
         res = httpx.post(
             f"{settings.proxy_url}/api/address_login",
-            json={"email": username, "password": password},
+            json={
+                "email": username,
+                "password": password,
+                "password_format": "plain",
+            },
             headers={
                 "x-custom-auth": settings.basic_password,
                 "Content-Type": "application/json",

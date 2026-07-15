@@ -1,13 +1,19 @@
 import { Context } from 'hono';
 import i18n from '../i18n';
-import utils, { getBooleanValue, hashPassword, checkCfTurnstile } from '../utils';
+import utils, { getBooleanValue, checkCfTurnstile } from '../utils';
 import { issueAddressJwt } from '../common';
 import { recordAccessEvent, recordAuditEvent } from '../audit';
+import {
+    createAddressPasswordRecord,
+    isAddressPasswordV2Enabled,
+    normalizeAddressPasswordInput,
+    verifyAddressPassword,
+} from '../address_password';
 
 export default {
     // 修改地址密码
     changePassword: async (c: Context<HonoCustomType>) => {
-        const { new_password } = await c.req.json();
+        const { new_password, password_format } = await c.req.json();
         const msgs = i18n.getMessagesbyContext(c);
         const { address, address_id } = c.get("jwtPayload");
 
@@ -16,7 +22,10 @@ export default {
             return c.text(msgs.PasswordChangeDisabledMsg, 403);
         }
 
-        if (!new_password) {
+        let passwordInput;
+        try {
+            passwordInput = normalizeAddressPasswordInput(new_password, password_format);
+        } catch {
             return c.text(msgs.NewPasswordRequiredMsg, 400);
         }
 
@@ -24,10 +33,13 @@ export default {
             return c.text(msgs.InvalidAddressTokenMsg, 400);
         }
 
-        // NOTE: new_password is the frontend SHA-256 hash, stored directly in address.password.
+        const storedPassword = await createAddressPasswordRecord(
+            passwordInput,
+            isAddressPasswordV2Enabled(c.env.ENABLE_ADDRESS_PASSWORD_V2),
+        );
         const { success } = await c.env.DB.prepare(
             `UPDATE address SET password = ?, updated_at = datetime('now') WHERE id = ?`
-        ).bind(new_password, address_id).run();
+        ).bind(storedPassword, address_id).run();
 
         if (!success) {
             return c.text(msgs.FailedUpdatePasswordMsg, 500);
@@ -49,7 +61,7 @@ export default {
 
     // 地址密码登录
     login: async (c: Context<HonoCustomType>) => {
-        const { email, password, cf_token } = await c.req.json();
+        const { email, password, password_format, cf_token } = await c.req.json();
         const msgs = i18n.getMessagesbyContext(c);
 
         // 检查功能是否启用
@@ -79,6 +91,22 @@ export default {
             return c.text(msgs.EmailPasswordRequiredMsg, 400);
         }
 
+        let passwordInput;
+        try {
+            passwordInput = normalizeAddressPasswordInput(password, password_format);
+        } catch {
+            await recordAccessEvent(c, {
+                event_type: "address.password_login.failed",
+                actor_type: "address",
+                actor_label: email,
+                resource_type: "address",
+                resource_label: email,
+                status: "failed",
+                failure_reason: "invalid_password_format",
+            });
+            return c.text(msgs.InvalidEmailOrPasswordMsg, 401);
+        }
+
         // check cf turnstile if global turnstile is enabled
         if (utils.isGlobalTurnstileEnabled(c)) {
             try {
@@ -100,7 +128,12 @@ export default {
         // 查找地址
         const address = await c.env.DB.prepare(
             `SELECT * FROM address WHERE name = ?`
-        ).bind(email).first();
+        ).bind(email).first<{
+            id: number,
+            name: string,
+            password: string | null,
+            credential_version: number,
+        }>();
 
         if (!address) {
             await recordAccessEvent(c, {
@@ -115,8 +148,12 @@ export default {
             return c.text(msgs.AddressNotFoundMsg, 404);
         }
 
-        // NOTE: password is the frontend SHA-256 hash, compared directly with address.password.
-        if (address.password !== password) {
+        const verification = await verifyAddressPassword(
+            address.password,
+            passwordInput,
+            isAddressPasswordV2Enabled(c.env.ENABLE_ADDRESS_PASSWORD_V2),
+        );
+        if (!verification.valid) {
             await recordAccessEvent(c, {
                 event_type: "address.password_login.failed",
                 actor_type: "address",
@@ -129,6 +166,28 @@ export default {
                 failure_reason: "invalid_password",
             });
             return c.text(msgs.InvalidEmailOrPasswordMsg, 401);
+        }
+
+        if (verification.upgradedRecord) {
+            const upgrade = await c.env.DB.prepare(
+                `UPDATE address SET password = ?, updated_at = datetime('now') WHERE id = ? AND password = ?`
+            ).bind(verification.upgradedRecord, address.id, address.password).run();
+            if (upgrade.success && (upgrade.meta.changes || 0) > 0) {
+                await recordAuditEvent(c, {
+                    action: "address.password.upgrade",
+                    actor_type: "address",
+                    actor_id: address.id,
+                    actor_label: address.name,
+                    resource_type: "address",
+                    resource_id: address.id,
+                    resource_label: address.name,
+                    status: "success",
+                    metadata: {
+                        from: verification.storedMode,
+                        to: passwordInput.mode,
+                    },
+                });
+            }
         }
 
         const jwt = await issueAddressJwt(c, address.name, address.id, address.credential_version);
