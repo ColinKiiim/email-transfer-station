@@ -10,6 +10,42 @@ import { processItem } from '../utils/email-parser'
 import Turnstile from '../components/Turnstile.vue'
 import ShadowHtmlComponent from '../components/ShadowHtmlComponent.vue'
 import MailContentRenderer from '../components/MailContentRenderer.vue'
+import {
+    adminMailCacheKey,
+    cellText,
+    clampNumber,
+    compactRaw,
+    compactText,
+    extractHeader,
+    formatAddressCredential,
+    formatAttachmentCount,
+    formatBadgeCount,
+    formatDate,
+    formatNumber,
+    formatShortDate,
+    getDomain,
+    mailRenderLabel,
+    modeLabel,
+    normalizedAttachments,
+    queryValue,
+    setupLabel,
+    statusClass,
+    stripHtml,
+    toD1DateTime,
+} from '../admin/admin-formatters'
+import {
+    ACCESS_STATUS_OPTIONS,
+    ADMIN_MAIL_FETCH_MAX,
+    ADMIN_MAIL_PAGE_LIMIT,
+    FLOW_STATUS_OPTIONS,
+    ICON_SHAPES as iconShapes,
+    NAV_GROUPS as navGroups,
+    ROADMAP_ROWS as roadmapRows,
+    SIDEBAR_COLLAPSED_KEY,
+    STATIC_RISKS as staticRisks,
+    TABLE_SPECS as tableSpecs,
+    VIEW_META as viewMeta,
+} from '../admin/admin-view-config'
 
 const route = useRoute()
 const router = useRouter()
@@ -25,121 +61,10 @@ const {
     isDark,
 } = useGlobalState()
 
-const viewMeta = {
-    overview: { title: '运行总控', kicker: 'receiving operations' },
-    flow: { title: '收件流', kicker: 'mail intake and rendering' },
-    identity: { title: '地址身份', kicker: 'address ledger and credentials' },
-    routing: { title: '域名与路由', kicker: 'domains and ingress routes' },
-    delivery: { title: '出站与通知', kicker: 'send access and notifications' },
-    access: { title: '访问治理', kicker: 'share packages and audit' },
-    ops: { title: '运行维护', kicker: 'worker, d1, kv and policies' },
-    roadmap: { title: '能力路线', kicker: 'planned product capabilities' },
-}
-
-const navGroups = [
-    {
-        label: '工作台',
-        items: [
-            { id: 'overview', title: '运行总控', badgeKey: 'overview', icon: 'overview' },
-            { id: 'flow', title: '收件流', badgeKey: 'mails', icon: 'flow' },
-        ],
-    },
-    {
-        label: '资源',
-        items: [
-            { id: 'identity', title: '地址身份', badgeKey: 'addresses', icon: 'identity' },
-            { id: 'routing', title: '域名与路由', badgeKey: 'domains', icon: 'routing' },
-            { id: 'delivery', title: '出站与通知', badgeKey: 'delivery', icon: 'delivery' },
-        ],
-    },
-    {
-        label: '治理',
-        items: [
-            { id: 'access', title: '访问治理', badgeKey: 'access', icon: 'access' },
-            { id: 'ops', title: '运行维护', badgeKey: 'ops', icon: 'ops' },
-            { id: 'roadmap', title: '能力路线', badgeKey: 'roadmap', icon: 'roadmap' },
-        ],
-    },
-]
-
-const iconShapes = {
-    overview: [{ tag: 'path', attrs: { d: 'M4 13h7V4H4zM13 20h7V4h-7zM4 20h7v-5H4z' } }],
-    flow: [{ tag: 'path', attrs: { d: 'M4 6h16v12H4z' } }, { tag: 'path', attrs: { d: 'm4 7 8 6 8-6' } }],
-    identity: [{ tag: 'path', attrs: { d: 'M4 7h16v10H4z' } }, { tag: 'path', attrs: { d: 'M8 11h5M8 14h8' } }],
-    routing: [
-        { tag: 'circle', attrs: { cx: '12', cy: '12', r: '8' } },
-        { tag: 'path', attrs: { d: 'M4 12h16M12 4c2 2.2 3 4.8 3 8s-1 5.8-3 8M12 4c-2 2.2-3 4.8-3 8s1 5.8 3 8' } },
-    ],
-    delivery: [{ tag: 'path', attrs: { d: 'M4 12 20 4l-5 16-3-7z' } }],
-    access: [{ tag: 'path', attrs: { d: 'M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6z' } }, { tag: 'path', attrs: { d: 'm9 12 2 2 4-5' } }],
-    ops: [{ tag: 'circle', attrs: { cx: '12', cy: '12', r: '3' } }, { tag: 'path', attrs: { d: 'M19 12a7.7 7.7 0 0 0-.1-1l2-1.5-2-3.4-2.4 1a7.2 7.2 0 0 0-1.8-1L14.4 3h-4.8l-.3 3.1a7.2 7.2 0 0 0-1.8 1l-2.4-1-2 3.4 2 1.5a7.7 7.7 0 0 0 0 2l-2 1.5 2 3.4 2.4-1a7.2 7.2 0 0 0 1.8 1l.3 3.1h4.8l.3-3.1a7.2 7.2 0 0 0 1.8-1l2.4 1 2-3.4-2-1.5c.1-.3.1-.7.1-1z' } }],
-    roadmap: [{ tag: 'path', attrs: { d: 'M5 19V5h14v14z' } }, { tag: 'path', attrs: { d: 'M8 9h8M8 13h5M8 17h6' } }],
-    menu: [{ tag: 'path', attrs: { d: 'M4 7h16M4 12h16M4 17h16' } }],
-    collapse: [{ tag: 'path', attrs: { d: 'M4 5h16v14H4z' } }, { tag: 'path', attrs: { d: 'M9 5v14M15 9l-3 3 3 3' } }],
-    expand: [{ tag: 'path', attrs: { d: 'M4 5h16v14H4z' } }, { tag: 'path', attrs: { d: 'M9 5v14M12 9l3 3-3 3' } }],
-    search: [{ tag: 'path', attrs: { d: 'm21 21-4.2-4.2' } }, { tag: 'circle', attrs: { cx: '11', cy: '11', r: '7' } }],
-    refresh: [{ tag: 'path', attrs: { d: 'M20 12a8 8 0 1 1-2.3-5.7' } }, { tag: 'path', attrs: { d: 'M20 4v6h-6' } }],
-    plus: [{ tag: 'path', attrs: { d: 'M12 5v14M5 12h14' } }],
-    copy: [{ tag: 'path', attrs: { d: 'M8 8h11v11H8z' } }, { tag: 'path', attrs: { d: 'M5 16H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h11a1 1 0 0 1 1 1v1' } }],
-    lock: [{ tag: 'rect', attrs: { x: '5', y: '10', width: '14', height: '10', rx: '2' } }, { tag: 'path', attrs: { d: 'M8 10V7a4 4 0 0 1 8 0v3' } }],
-    check: [{ tag: 'path', attrs: { d: 'm5 12 4 4L19 6' } }],
-}
-
-const designSeed = {
-    domains: [
-        { id: 'domain-cloudflare', domain: '20030405.xyz', label: 'Cloudflare 主收件域', mode: 'Cloudflare Email Routing', setup: '已验证', enabled: '启用', creation: '允许管理员创建', default: '默认', collector: 'catch-all -> Worker', verification: 'routing rule active', auth: 'SPF / DKIM / DMARC 巡检通过', addresses: 9, mails: 1284, updated: '2026-06-25 10:42' },
-        { id: 'domain-fnrry', domain: 'colin.fnrry.com', label: '非 Cloudflare 转发域', mode: 'ImprovMX free forwarding', setup: '需复核', enabled: '启用', creation: '仅管理员', default: '否', collector: 'mx-colin-fnrry-com@20030405.xyz', verification: 'collector receiving', auth: 'DMARC 未强制', addresses: 5, mails: 642, updated: '2026-06-25 09:18' },
-        { id: 'domain-cmd', domain: 'colin.cmd.gd', label: '非 Cloudflare 转发域', mode: 'ImprovMX free forwarding', setup: '已验证', enabled: '启用', creation: '仅管理员', default: '否', collector: 'mx-colin-cmd-gd@20030405.xyz', verification: 'collector receiving', auth: 'SPF 正常，DMARC 观察中', addresses: 4, mails: 304, updated: '2026-06-24 18:32' },
-    ],
-    addresses: [
-        { id: 'addr-ops', address: 'ops@20030405.xyz', label: '运行告警入口', domain: '20030405.xyz', owner: 'admin', tags: ['系统告警', '值班'], source: '管理员创建', mails: 428, sent: 23, packages: 2, credential: '已轮换', password: '启用', note: 'Cloudflare / D1 / Worker 运行告警进入此地址', updated: '2026-06-25 10:51' },
-        { id: 'addr-support', address: 'support@colin.fnrry.com', label: '外部联系入口', domain: 'colin.fnrry.com', owner: 'shared', tags: ['支持', 'ImprovMX'], source: '域名规则', mails: 612, sent: 84, packages: 3, credential: '正常', password: '启用', note: '非 Cloudflare 域转入 collector 后写入本站', updated: '2026-06-25 09:44' },
-        { id: 'addr-collector-a', address: 'mx-colin-fnrry-com@20030405.xyz', label: 'collector · fnrry', domain: '20030405.xyz', owner: 'system', tags: ['Collector', '只接收入站'], source: '路由策略', mails: 642, sent: 0, packages: 0, credential: '系统保留', password: '关闭', note: 'ImprovMX 免费转发落点，不作为普通共享地址', updated: '2026-06-24 22:09' },
-        { id: 'addr-lab', address: 'lab@20030405.xyz', label: '渲染验证', domain: '20030405.xyz', owner: 'admin', tags: ['测试隔离', 'HTML'], source: '管理员创建', mails: 96, sent: 18, packages: 1, credential: '待轮换', password: '启用', note: '用于 HTML 隔离渲染与附件下载策略验证', updated: '2026-06-24 16:37' },
-    ],
-    mails: [
-        { id: 'mail-240625-03', time: '2026-06-25 11:24:31', sender: 'alerts@cloudflare.com', to: 'ops@20030405.xyz', domain: '20030405.xyz', subject: 'D1 query latency exceeded baseline', size: '12.2 KB', result: '已保存', auth: 'SPF DKIM DMARC', ip: '198.41.200.13', risk: '入站副作用已排队', body: 'Cloudflare 告警已写入 raw_mails。转发、Webhook、自动回复会等待保存结果确认后执行，避免保存失败仍触发副作用。', attachments: '0' },
-        { id: 'mail-240625-02', time: '2026-06-25 11:17:36', sender: 'invoice@vendor.example', to: 'support@colin.fnrry.com', domain: 'colin.fnrry.com', subject: '月度账单与附件', size: '146.8 KB', result: '已保存', auth: 'SPF DMARC', ip: '203.0.113.44', risk: '附件可下载', body: '该邮件带 PDF 附件。访问包允许只读查看与附件下载，不允许删除、转发或查看原始凭证。', attachments: '2' },
-        { id: 'mail-240625-01', time: '2026-06-25 11:12:09', sender: 'mailer-daemon@remote.net', to: 'unknown@colin.fnrry.com', domain: 'colin.fnrry.com', subject: 'Delivery status notification', size: '7.1 KB', result: '未知地址', auth: 'SPF', ip: '192.0.2.61', risk: '进入异常队列', body: '收件人没有匹配地址。当前策略保留在异常队列，管理员可创建地址、合并到现有地址或清理。', attachments: '0' },
-        { id: 'mail-240624-19', time: '2026-06-24 22:09:48', sender: 'github@github.com', to: 'lab@20030405.xyz', domain: '20030405.xyz', subject: '[GitHub] Email Transfer Station workflow failed', size: '18.7 KB', result: '已保存', auth: 'SPF DKIM DMARC', ip: '140.82.113.21', risk: 'HTML 隔离渲染', body: 'HTML 正文通过隔离容器展示，详情栏保留文本和原始内容切换，避免把邮件源码直接暴露给普通阅读路径。', attachments: '0' },
-    ],
-    shares: [
-        { id: 'pkg-duty', label: '值班只读包', address: 'ops@20030405.xyz', scopes: 'read, attachment', status: '活跃', expires: '2026-07-02 09:00', last: '2026-06-25 10:26', path: '/i/:token' },
-        { id: 'pkg-support', label: '外部协作包', address: 'support@colin.fnrry.com', scopes: 'read', status: '活跃', expires: '2026-06-30 18:00', last: '2026-06-25 09:14', path: '/i/:token' },
-        { id: 'pkg-old', label: '迁移观察包', address: 'lab@20030405.xyz', scopes: 'read', status: '已撤销', expires: '2026-06-20 18:00', last: '2026-06-19 20:11', path: '/i/:token' },
-    ],
-    users: [
-        { id: 'u-admin', user: 'Admin User', role: 'Super Admin', addresses: '全部地址', auth: '管理员密码', status: '启用', last: '2026-06-25 10:59' },
-        { id: 'u-friend', user: 'friend-account', role: '受限协作者', addresses: 'support@colin.fnrry.com', auth: 'OAuth / Passkey', status: '启用', last: '2026-06-24 21:07' },
-        { id: 'u-ops', user: 'ops-reviewer', role: '值班审阅', addresses: 'ops@20030405.xyz', auth: '只读访问包', status: '观察', last: '2026-06-23 18:20' },
-    ],
-}
-
-const staticRisks = [
-    { id: 'risk-html', level: 'P1', title: 'HTML 渲染策略', owner: '邮件阅读器', status: '隔离中', detail: '所有邮件正文入口应走隔离容器、附件链接策略和文本回退，不把原始源码作为默认阅读内容。' },
-    { id: 'risk-side-effect', level: 'P1', title: '入站保存失败后的副作用门禁', owner: 'Email ingress', status: '设计中', detail: '转发、Webhook、自动回复必须在保存成功后进入副作用队列。' },
-    { id: 'risk-loading', level: 'P2', title: '全局 loading 竞争', owner: 'Frontend state', status: '待拆分', detail: '全局 loading 仅保留路由启动，邮件刷新、多删、域名验证使用局部状态。' },
-    { id: 'risk-token', level: 'P1', title: '凭证与 token 存储模型', owner: 'Security model', status: '需决策', detail: '固定地址凭证、分享 token、管理员登录 token 需要产品级会话边界。' },
-]
-
-const roadmapRows = [
-    { id: 'road-renderer', capability: '统一安全渲染层', status: '必须保留', maps: 'MailContentRenderer / ShadowHtmlComponent / SendMail HTML 预览', next: '收敛邮件正文入口，所有 HTML sink 强制走隔离渲染策略' },
-    { id: 'road-gate', capability: '入站副作用门禁', status: '必须保留', maps: 'email/index.ts / forward.ts / mail webhook', next: '保存成功后再触发转发、Webhook、自动回复' },
-    { id: 'road-mobile', capability: '移动端后台壳', status: '预留', maps: '现有响应式导航 / MailBox mobile drawer', next: '桌面信息架构稳定后拆成底部导航 + 抽屉详情' },
-    { id: 'road-rbac', capability: '访问评审与 JIT 操作', status: '规划中', maps: 'AccessPackages / AuditLogs / RoleAddressConfig', next: '高风险操作先请求授权，再写审计事件' },
-    { id: 'road-send', capability: '出站提供商决策', status: '待决策', maps: 'SendMail / SendBox / SenderAccess', next: '确定 Resend、SMTP 或 Cloudflare Send Email 后再固化表单' },
-    { id: 'road-loading', capability: '局部请求状态', status: '必须保留', maps: 'api/index.js global loading / MailBox refresh', next: '每个模块维护自己的 pending key，刷新保留选中邮件' },
-]
-
 const selectedInitialView = () => {
     const queryView = Array.isArray(route.query.view) ? route.query.view[0] : route.query.view
     const stored = typeof localStorage === 'undefined' ? '' : localStorage.getItem('ets-admin-next-view')
     return viewMeta[queryView] ? queryView : (viewMeta[stored] ? stored : 'overview')
-}
-
-const queryValue = (value, fallback = '') => {
-    const text = Array.isArray(value) ? value[0] : value
-    return text == null || text === '' ? fallback : String(text)
 }
 
 const ui = reactive({
@@ -185,12 +110,6 @@ if (typeof localStorage !== 'undefined') {
         collapsedMailDomains.value = new Set()
     }
 }
-
-const clampNumber = (value, min, max) => Math.min(max, Math.max(min, value))
-const ADMIN_MAIL_PAGE_LIMIT = 100
-const ADMIN_MAIL_FETCH_MAX = 500
-const FLOW_STATUS_OPTIONS = ['all', '未读', '已读', 'attachment', '已保存', '未知地址']
-const ACCESS_STATUS_OPTIONS = ['all', 'active', 'success']
 
 const resetMailListScroll = () => {
     nextTick(() => {
@@ -269,7 +188,6 @@ const detailOpen = ref(false)
 const searchInput = ref(null)
 const toastState = reactive({ visible: false, text: '已处理' })
 let toastTimer = 0
-const SIDEBAR_COLLAPSED_KEY = 'ets-admin-next-sidebar-collapsed'
 const sidebarCollapsed = ref(
     typeof localStorage === 'undefined'
         ? false
@@ -306,8 +224,7 @@ const oneTimeResult = reactive({
 const activeView = computed(() => viewMeta[ui.view] ? ui.view : 'overview')
 const activeMeta = computed(() => viewMeta[activeView.value])
 const pageTitle = computed(() => `${activeMeta.value.title} · Email Transfer Station`)
-const demoMode = computed(() => false)
-const needsAdminLogin = computed(() => !demoMode.value && (!showAdminPage.value || showAdminAuth.value))
+const needsAdminLogin = computed(() => !showAdminPage.value || showAdminAuth.value)
 const showAdminPasswordModal = computed(() => false)
 const detailContext = computed(() => ui.detailKind || activeView.value)
 const workerStatusLabel = computed(() => {
@@ -452,119 +369,6 @@ const setView = async (view) => {
     }, view === 'flow' ? [] : ['mailId', 'item', 'mode'])
 }
 
-const getDomain = (value) => {
-    const text = String(value || '')
-    const at = text.lastIndexOf('@')
-    return at >= 0 ? text.slice(at + 1).toLowerCase() : ''
-}
-
-const modeLabel = (mode) => {
-    const map = {
-        cloudflare_email: 'Cloudflare Email Routing',
-        improvmx_forward: 'ImprovMX free forwarding',
-        external_webhook: 'External webhook',
-        manual: 'Manual',
-    }
-    return map[mode] || mode || '-'
-}
-
-const setupLabel = (status) => {
-    const map = {
-        active: '已验证',
-        pending_verification: '需验证',
-        draft: '草稿',
-        error: '失败',
-        disabled: '停用',
-    }
-    return map[status] || status || '需复核'
-}
-
-const statusClass = (value) => {
-    const v = String(value || '')
-    if (/失败|撤销|异常|删除|危险|阻止|未知地址|停用|关闭|denied|failed|revoked/i.test(v)) return 'danger'
-    if (/待|需|观察|警告|复核|灰度|规划|巡检|设计|pending|draft|expired|skipped/i.test(v)) return 'warn'
-    if (/可用|启用|活跃|成功|已保存|已验证|正常|通过|默认|active|success|ok/i.test(v)) return 'ok'
-    return 'neutral'
-}
-
-const cellText = (row, key) => row?.[key] == null || row?.[key] === '' ? '-' : row[key]
-
-const formatNumber = (value) => Number(value || 0).toLocaleString('zh-CN')
-const formatBadgeCount = (value) => Number(value || 0) > 99 ? '99+' : formatNumber(value)
-
-const formatDate = (value) => {
-    if (!value) return '-'
-    return String(value).replace('T', ' ').replace(/\.\d+Z?$/, '').replace(/Z$/, '')
-}
-
-const formatShortDate = (value) => {
-    const full = formatDate(value)
-    if (full === '-') return full
-    const match = full.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}:\d{2})(?::\d{2})?/)
-    if (match) return `${match[2]}-${match[3]} ${match[4]}`
-    return full
-}
-
-const extractHeader = (raw, name) => {
-    if (!raw) return ''
-    const match = String(raw).match(new RegExp(`^${name}:\\s*(.+)$`, 'im'))
-    return match?.[1]?.trim() || ''
-}
-
-const stripHtml = (html) => String(html || '')
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/g, "'")
-
-const compactText = (value, fallback = '') => {
-    const text = String(value || '')
-        .replace(/\r/g, '\n')
-        .replace(/\n{3,}/g, '\n\n')
-        .replace(/[ \t]{2,}/g, ' ')
-        .trim()
-    return text || fallback
-}
-
-const compactRaw = (raw) => {
-    const text = String(raw || '')
-        .replace(/\r/g, '')
-        .split('\n\n')
-        .slice(1)
-        .join('\n\n')
-        .replace(/\s+/g, ' ')
-        .trim()
-    return text ? text.slice(0, 240) : '邮件正文会在详情页通过安全渲染策略呈现。'
-}
-
-const normalizedAttachments = (value) => {
-    if (Array.isArray(value)) return value
-    if (Number.isFinite(Number(value)) && Number(value) > 0) {
-        return Array.from({ length: Number(value) }, (_, index) => ({
-            filename: `attachment-${index + 1}`,
-            size: 0,
-        }))
-    }
-    return []
-}
-
-const formatAttachmentCount = (value) => {
-    const count = Number(value || 0)
-    return count > 0 ? `${count} 个附件` : '无附件'
-}
-
-const mailRenderLabel = (row) => {
-    if (row?.html) return 'HTML 已隔离渲染'
-    if (row?.text) return '纯文本'
-    if (row?.parseStatus === 'parsed') return '已解析'
-    return '仅原始邮件'
-}
-
 const safeFetch = async (label, path, options = {}) => {
     try {
         return await api.fetch(path)
@@ -612,8 +416,6 @@ const adminMessageSink = {
 const adminNotificationSink = {
     info: () => {},
 }
-
-const demoRows = (rows) => demoMode.value ? rows : []
 
 const fetchAdminData = async () => {
     if (!showAdminPage.value) return
@@ -782,7 +584,7 @@ const domainRows = computed(() => {
             updated: '-',
         }))
     }
-    return demoRows(designSeed.domains)
+    return []
 })
 
 const addressDomainOptions = computed(() => domainRows.value.filter((row) => row.enabled === '启用'))
@@ -819,7 +621,7 @@ const addressRows = computed(() => {
             }
         })
     }
-    return demoRows(designSeed.addresses)
+    return []
 })
 
 const mailRows = computed(() => {
@@ -876,25 +678,7 @@ const mailRows = computed(() => {
             }
         })
     }
-    return demoRows(designSeed.mails).map((row) => {
-        const attachments = normalizedAttachments(row.attachments)
-        const attachmentCount = Number.isFinite(Number(row.attachments))
-            ? Number(row.attachments)
-            : attachments.length
-        return {
-            ...row,
-            fullTime: row.time,
-            is_read: true,
-            unread: false,
-            text: row.body,
-            html: '',
-            raw: '',
-            attachments,
-            attachmentCount,
-            attachmentLabel: formatAttachmentCount(attachmentCount),
-            parseStatus: 'demo',
-        }
-    })
+    return []
 })
 
 const unknownRows = computed(() => {
@@ -915,7 +699,7 @@ const unknownRows = computed(() => {
             }
         })
     }
-    return demoRows(staticRisks)
+    return []
 })
 
 const routeRows = computed(() => {
@@ -970,7 +754,7 @@ const shareRows = computed(() => {
             path: '/i/:token',
         }))
     }
-    return demoRows(designSeed.shares)
+    return []
 })
 
 const senderAccessRows = computed(() => {
@@ -987,7 +771,7 @@ const senderAccessRows = computed(() => {
                 : '地址级发送权限记录',
         }))
     }
-    return demoRows([])
+    return []
 })
 
 const sendBoxRows = computed(() => {
@@ -1016,7 +800,7 @@ const sendBoxRows = computed(() => {
             }
         })
     }
-    return demoRows([])
+    return []
 })
 
 const userRows = computed(() => {
@@ -1031,7 +815,7 @@ const userRows = computed(() => {
             last: formatDate(row.updated_at || row.created_at),
         }))
     }
-    return demoRows(designSeed.users)
+    return []
 })
 
 const notificationRows = computed(() => [
@@ -1089,11 +873,7 @@ const auditRows = computed(() => {
         ip: row.ip || '-',
     }))
     if (audit.length || access.length) return [...audit, ...access]
-    return demoRows([
-        { id: 'audit-1', time: '11:22:18', actor: 'share_token', action: 'mail.read', resource: '值班只读包', status: 'success', ip: '198.51.100.23' },
-        { id: 'audit-2', time: '11:19:42', actor: 'admin', action: 'domain.cloudflare_check', resource: 'colin.fnrry.com', status: 'warning', ip: '203.0.113.45' },
-        { id: 'audit-3', time: '10:58:03', actor: 'admin', action: 'address.rotate_credential', resource: 'lab@20030405.xyz', status: 'success', ip: '203.0.113.45' },
-    ])
+    return []
 })
 
 const processingRows = computed(() => {
@@ -1107,10 +887,7 @@ const processingRows = computed(() => {
         duration: row.status,
     }))
     if (events.length) return events
-    return demoRows([
-        { id: 'log-1', time: '11:24:31', event: 'Saved', detail: 'raw_mails 写入成功，副作用队列等待确认', domain: '20030405.xyz', inbox: 'ops@20030405.xyz', duration: '210 ms' },
-        { id: 'log-2', time: '11:24:32', event: 'Webhook queued', detail: '入站通知排队，避免保存失败时误触发', domain: '20030405.xyz', inbox: 'ops@20030405.xyz', duration: '8 ms' },
-    ])
+    return []
 })
 
 const opsRows = computed(() => {
@@ -1327,15 +1104,13 @@ const filteredMailRows = computed(() => filterRows(mailRows.value))
 const filteredUnknownRows = computed(() => filterRows(unknownRows.value))
 
 const mailHierarchy = computed(() => {
-    const allCount = demoMode.value
-        ? mailRows.value.length
-        : (Number.isFinite(Number(live.mailTotalCount)) ? Number(live.mailTotalCount) : mailRows.value.length)
+    const allCount = Number.isFinite(Number(live.mailTotalCount)) ? Number(live.mailTotalCount) : mailRows.value.length
     const unreadCount = explicitUnreadMailCount.value
     const attachmentCount = mailRows.value.filter((row) => Number(row.attachmentCount || 0) > 0).length
     const unknownCount = unknownRows.value.length
     const domainMailCount = (domain) => {
         const scoped = mailRows.value.filter((row) => row.domain === domain || getDomain(row.to) === domain)
-        if (demoMode.value || scoped.length > 0) return scoped.length
+        if (scoped.length > 0) return scoped.length
         return Number.isFinite(Number(domainRows.value.find((row) => row.domain === domain)?.mails))
             ? Number(domainRows.value.find((row) => row.domain === domain).mails)
             : 0
@@ -1477,122 +1252,6 @@ const stateCards = computed(() => {
     ]
 })
 
-const tableSpecs = {
-    domains: [
-        { label: '域名', type: 'entity', main: 'domain', sub: 'label' },
-        { label: '接收方式', key: 'mode' },
-        { label: '地址', key: 'addresses', type: 'number' },
-        { label: '邮件', key: 'mails', type: 'number' },
-        { label: '配置', key: 'setup', type: 'status' },
-        { label: '认证', key: 'auth' },
-    ],
-    mails: [
-        { label: '接收时间', key: 'time', type: 'time' },
-        { label: '发件人', key: 'sender' },
-        { label: '收件地址', key: 'to' },
-        { label: '主题', type: 'entity', main: 'subject', sub: 'risk' },
-        { label: '附件', key: 'attachmentCount', type: 'number' },
-        { label: '结果', key: 'result', type: 'status' },
-        { label: 'Auth', key: 'auth' },
-        { label: 'IP / Source', key: 'ip', type: 'mono' },
-    ],
-    mailSummary: [
-        { label: '接收时间', key: 'time', type: 'time' },
-        { label: '发件人', type: 'entity', main: 'sender', sub: 'to' },
-        { label: '主题', type: 'entity', main: 'subject', sub: 'risk' },
-        { label: '附件', key: 'attachmentCount', type: 'number' },
-        { label: '结果', key: 'result', type: 'status' },
-    ],
-    roadmap: [
-        { label: '能力', key: 'capability', type: 'strong' },
-        { label: '状态', key: 'status', type: 'status' },
-        { label: '下一步', key: 'next' },
-    ],
-    logs: [
-        { label: '时间', key: 'time', type: 'time' },
-        { label: '事件', key: 'event', type: 'strong' },
-        { label: '详情', key: 'detail' },
-        { label: '域名', key: 'domain' },
-        { label: '地址 / Actor', key: 'inbox' },
-        { label: '耗时 / 状态', key: 'duration', type: 'mono' },
-    ],
-    risks: [
-        { label: '级别', key: 'level', type: 'mono' },
-        { label: '问题', type: 'entity', main: 'title', sub: 'detail' },
-        { label: '负责人', key: 'owner' },
-        { label: '状态', key: 'status', type: 'status' },
-    ],
-    addresses: [
-        { label: '地址', type: 'entity', main: 'address', sub: 'note', tags: 'tags' },
-        { label: '归属', key: 'owner' },
-        { label: '来源', key: 'source' },
-        { label: '收件', key: 'mails', type: 'number' },
-        { label: '发送', key: 'sent', type: 'number' },
-        { label: '访问包', key: 'packages', type: 'number' },
-        { label: '密码', key: 'password', type: 'status' },
-        { label: '凭证', key: 'credential', type: 'status' },
-    ],
-    users: [
-        { label: '用户', key: 'user', type: 'strong' },
-        { label: '角色', key: 'role' },
-        { label: '地址范围', key: 'addresses' },
-        { label: '登录', key: 'auth' },
-        { label: '状态', key: 'status', type: 'status' },
-    ],
-    routing: [
-        { label: '域名', type: 'entity', main: 'domain', sub: 'label' },
-        { label: '接收方式', key: 'mode' },
-        { label: '配置', key: 'setup', type: 'status' },
-        { label: '启用', key: 'enabled', type: 'status' },
-        { label: '地址创建', key: 'creation' },
-        { label: '默认', key: 'default' },
-        { label: 'Collector / 规则', key: 'collector', type: 'mono' },
-        { label: '最后验证', key: 'updated', type: 'time' },
-        { label: '操作', key: 'actions', type: 'domainActions' },
-    ],
-    destinations: [
-        { label: '目的地', type: 'entity', main: 'destination', sub: 'next' },
-        { label: '域名', key: 'domain' },
-        { label: '类型', key: 'type' },
-        { label: '使用', key: 'inUse', type: 'number' },
-        { label: '状态', key: 'status', type: 'status' },
-    ],
-    notifications: [
-        { label: '通道', type: 'entity', main: 'channel', sub: 'detail' },
-        { label: '入口', key: 'target', type: 'mono' },
-        { label: '类型', key: 'type' },
-        { label: '状态', key: 'status', type: 'status' },
-    ],
-    sender: [
-        { label: '地址', key: 'address' },
-        { label: '余额', key: 'balance', type: 'number' },
-        { label: '状态', key: 'status', type: 'status' },
-        { label: '创建时间', key: 'created', type: 'time' },
-        { label: '说明', key: 'note' },
-    ],
-    shares: [
-        { label: '标签', type: 'entity', main: 'label', sub: 'path' },
-        { label: '地址', key: 'address' },
-        { label: '权限', key: 'scopes' },
-        { label: '状态', key: 'status', type: 'status' },
-        { label: '过期', key: 'expires', type: 'time' },
-        { label: '最近使用', key: 'last', type: 'time' },
-    ],
-    audit: [
-        { label: '时间', key: 'time', type: 'time' },
-        { label: 'Actor', key: 'actor' },
-        { label: 'Action', key: 'action' },
-        { label: 'Resource', key: 'resource' },
-        { label: 'Status', key: 'status', type: 'status' },
-        { label: 'IP', key: 'ip', type: 'mono' },
-    ],
-    ops: [
-        { label: '项目', type: 'entity', main: 'name', sub: 'detail' },
-        { label: '状态', key: 'status', type: 'status' },
-        { label: '动作', key: 'action' },
-    ],
-}
-
 const activePanels = computed(() => {
     const view = activeView.value
     if (view === 'overview') {
@@ -1701,7 +1360,7 @@ const closeDetail = () => {
 }
 
 const markAdminMailRead = async (row) => {
-    if (!row?.sourceId || row.unread === false || row.is_read === true || demoMode.value || !showAdminPage.value) return
+    if (!row?.sourceId || row.unread === false || row.is_read === true || !showAdminPage.value) return
     try {
         const result = await api.fetch(`/api/admin/mails/${row.sourceId}/read_state`, {
             method: 'PATCH',
@@ -1722,7 +1381,6 @@ const markAdminMailRead = async (row) => {
 }
 
 const currentMail = computed(() => mailRows.value.find((row) => row.id === ui.selected.flow) || null)
-const adminMailCacheKey = (row) => row?.sourceId ? String(row.sourceId) : row?.id || ''
 const parseAdminMailDetail = async (row) => {
     const key = adminMailCacheKey(row)
     if (!key || !row?.raw || parsedAdminMailCache[key] || parsedAdminMailPending.value === key) return
@@ -1853,7 +1511,7 @@ const copyText = async (text) => {
 }
 
 const deleteMailRows = async (rows, scopeLabel = '选中邮件') => {
-    if (demoMode.value || !showAdminPage.value) {
+    if (!showAdminPage.value) {
         showToast('请先登录管理员会话后再执行生产删除')
         return
     }
@@ -1910,7 +1568,7 @@ const deleteFilteredMails = async () => {
 }
 
 const requireProductionWrite = (label) => {
-    if (demoMode.value || !showAdminPage.value) {
+    if (!showAdminPage.value) {
         showToast(`请先登录管理员会话后再执行${label}`)
         return false
     }
@@ -1941,13 +1599,6 @@ const showOneTimeResult = (title, value, note) => {
     actionModal.value = 'one-time-result'
 }
 
-const formatAddressCredential = (address, jwt, password = '') => [
-    `地址: ${address}`,
-    jwt ? `JWT: ${jwt}` : '',
-    jwt ? `登录链接: ${window.location.origin}/?jwt=${encodeURIComponent(jwt)}` : '',
-    password ? `地址密码: ${password}` : '',
-].filter(Boolean).join('\n')
-
 const createAddressIdentity = async () => {
     const name = addressCreateForm.name.trim()
     const domain = addressCreateForm.domain.trim().toLowerCase()
@@ -1974,7 +1625,7 @@ const createAddressIdentity = async () => {
         })
         await refreshAll()
         const address = result?.address || `${name}@${domain}`
-        const credential = formatAddressCredential(address, result?.jwt, result?.password)
+        const credential = formatAddressCredential(address, result?.jwt, result?.password, window.location.origin)
         showOneTimeResult(
             `地址已创建：${address}`,
             credential,
@@ -1988,12 +1639,6 @@ const createAddressIdentity = async () => {
     } finally {
         actionBusy.value = ''
     }
-}
-
-const toD1DateTime = (value) => {
-    const normalized = String(value || '').trim().replace('T', ' ')
-    if (!normalized) return null
-    return normalized.length === 16 ? `${normalized}:00` : normalized
 }
 
 const createSharePackage = async () => {
@@ -2099,7 +1744,7 @@ const showCurrentCredential = async () => {
             const result = await api.fetch(`/api/admin/show_password/${row.sourceId}`)
             showOneTimeResult(
                 `地址凭证：${row.address}`,
-                formatAddressCredential(row.address, result?.jwt),
+                formatAddressCredential(row.address, result?.jwt, '', window.location.origin),
                 '结果在关闭后会从页面状态清除；轮换凭证前当前 JWT 仍然有效。',
             )
         },
@@ -2122,7 +1767,7 @@ const rotateCurrentCredential = async () => {
             if (result?.jwt) {
                 showOneTimeResult(
                     `凭证已轮换：${row.address}`,
-                    formatAddressCredential(result?.address || row.address, result.jwt),
+                    formatAddressCredential(result?.address || row.address, result.jwt, '', window.location.origin),
                     '旧 JWT 已失效；新凭证在关闭后会从页面状态清除。',
                 )
             } else {
