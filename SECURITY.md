@@ -67,6 +67,22 @@ normal authentication behavior and receive no CORS headers. CORS is not an
 authorization control: bearer credentials, admin sessions, endpoint permissions,
 and write confirmations remain required for every caller.
 
+## Agent bearer credentials
+
+Treat an Address JWT as a mailbox bearer secret. The canonical
+`skills/email-transfer-station-agent-mail/` contract keeps it out of URLs, command
+arguments, shell text, chat/history, diagnostics, logs and Git, and it does not
+create a credential file by default. Prefer a tool-provided secret channel; a
+process-scoped environment variable is a fallback, and a local file requires the
+user's explicit persistence request plus an ignored, user-restricted destination.
+
+Validate the API origin before attaching authorization, never forward secret
+headers across an origin-changing redirect, and report only safe status/application
+error codes. Mailbox sends and deletes require current explicit authority and are
+not retried automatically after ambiguous failures. The repository CI validates
+this instruction-only Skill contract with synthetic canaries; it never uses a real
+credential.
+
 ## Browser HTML boundaries
 
 The frontend applies separate allowlists at each HTML-producing boundary. Operator

@@ -36,6 +36,8 @@ Run scoped commands from the affected package:
 (cd worker && corepack pnpm run lint && corepack pnpm run test && corepack pnpm run build)
 (cd frontend && corepack pnpm run test && corepack pnpm run build && corepack pnpm run build:pages)
 (cd pages && corepack pnpm install --frozen-lockfile && node --check functions/_middleware.js)
+node --test scripts/validate-agent-mail-skill.test.mjs
+node scripts/validate-agent-mail-skill.mjs
 git diff --check
 ```
 

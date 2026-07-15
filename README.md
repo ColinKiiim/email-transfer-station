@@ -34,7 +34,7 @@ Email Transfer Station 是一个运行在 Cloudflare 上的自托管邮件接收
 - 轮换地址凭据，使旧的固定自动登录链接失效。
 - 按管理员、地址凭据、分享链接和用户会话分别记录已读状态。
 - 使用仓库内的 `skills/email-transfer-station-agent-mail/` 让 Agent 在持有者授权下读取
-  邮箱；发送和删除仍需调用者明确授权。
+  邮箱；Skill 不默认落盘或回显 Address JWT，发送和删除仍需调用者明确授权。
 
 Webhook、Telegram、SMTP/IMAP proxy、OAuth、出站邮件、S3 附件和 AI 提取等继承能力
 仍保留为可选兼容表面，但不属于最小部署门禁。启用前应单独验证对应绑定、秘密、成本

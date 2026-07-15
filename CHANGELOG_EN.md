@@ -49,6 +49,9 @@
   test-mode and optional-secret gates.
 - Fixed mail-flow filtering, unread state, whole-page scrolling, transfer decoding,
   and selected HTML body rendering.
+- Explicitly prohibited leaking Agent mailbox Address JWTs through URLs, command
+  arguments, terminal output, logs, or cross-origin redirects, with synthetic-canary
+  and read-only CI enforcement.
 
 ## Source baseline
 

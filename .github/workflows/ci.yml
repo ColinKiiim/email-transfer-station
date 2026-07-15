@@ -19,6 +19,10 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
+      - name: Validate Agent credential contract
+        run: |
+          node --test scripts/validate-agent-mail-skill.test.mjs
+          node scripts/validate-agent-mail-skill.mjs
       - name: Validate Worker
         working-directory: worker
         run: |

@@ -38,8 +38,9 @@ same-origin Pages frontend provides inbox, sharing, and administration surfaces.
 - Track read state separately for admin, address credential, share-link, and user
   sessions.
 - Let an Agent read a mailbox under holder authorization through
-  `skills/email-transfer-station-agent-mail/`; sending and deleting still require
-  explicit caller authorization.
+  `skills/email-transfer-station-agent-mail/`. The Skill does not persist or echo an
+  Address JWT by default, and sending or deleting still requires explicit caller
+  authorization.
 
 Inherited Webhook, Telegram, SMTP/IMAP proxy, OAuth, outbound mail, S3 attachment,
 and AI extraction capabilities remain optional compatibility surfaces. They are not

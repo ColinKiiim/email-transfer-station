@@ -17,15 +17,17 @@ Do not confuse the Address JWT with the user-account token used by `x-user-token
 
 ## Credentials
 
-Prefer process environment variables, the current tool's secret input, or a user-designated ignored local file. Never create a credential file by default, print a token, place it in chat/history, or commit it. If the user explicitly requests persistence, verify the destination is ignored and restrict it to the user account.
+Prefer the current tool's secret input. If that is unavailable, use a process-scoped environment variable and avoid launching unrelated child processes while it is present. Use a user-designated local file only when the user explicitly requests persistence; first verify the destination is ignored and restrict it to the user account. Never create a credential file by default.
 
-Send these headers only to the configured `BASE` origin:
+Never place the JWT or site password in a URL, query string, command-line argument, or shell command. Never print or echo a secret, place it in chat/history, dump it in request/response diagnostics, or commit it. Resolve and approve `BASE` before reading a secret; require HTTPS except for an explicitly requested loopback test.
+
+Send secret headers only to the configured `BASE` origin. Do not follow an origin-changing redirect with secret headers:
 
 - `Authorization: Bearer <JWT>` on mailbox `/api/*` requests.
 - `x-custom-auth: <SITE_PASSWORD>` only when required.
 - optional `x-lang: en` or `zh`.
 
-Smoke-test once with `GET /api/settings`. Treat `401` as an expired, mismatched, or incorrectly supplied credential; ask for a fresh credential without echoing the old one.
+Smoke-test once with `GET /api/settings`. Treat `401` as an expired, mismatched, or incorrectly supplied credential; ask for a fresh credential without echoing the old one. Report only the HTTP status and documented application error code; never include request headers, response headers, or complete bodies in diagnostics.
 
 ## Read mail
 
@@ -71,7 +73,7 @@ Send body:
 
 ## Raw fallback
 
-If parsed endpoints are unavailable, fetch `/api/mails` and `/api/mail/:id`, then parse the RFC822 `raw` field with the existing Email Transfer Station dependencies (`mail-parser-wasm`, then `postal-mime`). Do not run `npm install` in an unknown working directory. Use an existing project checkout or an explicitly isolated temporary directory and remove temporary credential/material files afterward.
+If parsed endpoints are unavailable, fetch `/api/mails` and `/api/mail/:id`, then parse the RFC822 `raw` field with the existing Email Transfer Station dependencies (`mail-parser-wasm`, then `postal-mime`). Do not run `npm install` in an unknown working directory. Use an existing project checkout or an explicitly isolated temporary directory. Do not copy credentials into the temporary directory; remove temporary message/material files afterward.
 
 ## Errors
 
