@@ -75,8 +75,8 @@ test.describe('Passkey Browser Flow', () => {
       // Wait for user settings to load (shows user email)
       await expect(page.getByText(TEST_USER_EMAIL)).toBeVisible({ timeout: 15_000 });
 
-      // === Step 2: Click "User Settings" tab ===
-      await page.getByText('User Settings').click();
+      // === Step 2: Open the current account-security rail item ===
+      await page.getByRole('button', { name: 'Account Security' }).click();
 
       // === Step 3: Create a passkey ===
       await page.getByRole('button', { name: 'Create Passkey' }).click();
@@ -102,13 +102,9 @@ test.describe('Passkey Browser Flow', () => {
       await page.keyboard.press('Escape');
 
       // === Step 5: Logout ===
-      await page.getByRole('button', { name: 'Logout' }).click();
-      const logoutModal = page.locator('.n-dialog');
-      await expect(logoutModal).toBeVisible({ timeout: 5_000 });
-      await logoutModal.getByRole('button', { name: 'Logout' }).click();
+      await page.getByRole('button', { name: '退出' }).click();
 
       // Wait for logout to complete and navigate to user page
-      await page.waitForTimeout(2000);
       await page.goto(`${FRONTEND_URL}/en/user`);
 
       // === Step 6: Login with passkey ===

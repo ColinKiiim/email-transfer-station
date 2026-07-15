@@ -30,7 +30,6 @@ config.server = {\
   },\
   proxy: {\
     "/api": { target: workerTarget, changeOrigin: true },\
-    "/admin": { target: workerTarget, changeOrigin: true },\
     "/user_api": { target: workerTarget, changeOrigin: true },\
     "/open_api": { target: workerTarget, changeOrigin: true },\
     "/external": { target: workerTarget, changeOrigin: true },\
