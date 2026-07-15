@@ -1,4 +1,4 @@
-import DOMPurify from 'dompurify';
+import { sanitizeMailHtml } from '../security/safe-html';
 
 /**
  * HTML-escape special characters for plain text content.
@@ -18,7 +18,7 @@ function escapeHtml(str) {
  */
 function sanitizeContent(mail) {
   if (mail.message) {
-    return DOMPurify.sanitize(mail.message);
+    return sanitizeMailHtml(mail.message);
   }
   if (mail.text) {
     return escapeHtml(mail.text);

@@ -6,6 +6,7 @@ import i18n from '../i18n'
 import { getFingerprint } from '../utils/fingerprint'
 import { safeBearerHeader, safeHeaderValue } from '../utils/headers'
 import { ApiRequestError, formatApiErrorData } from '../utils/api-error'
+import { sanitizeRichText } from '../security/safe-html'
 
 const API_BASE = import.meta.env.VITE_API_BASE || "";
 const {
@@ -123,11 +124,11 @@ const getOpenSettings = async (message, notification) => {
             && (openSettings.value.announcement != announcement.value
                 || openSettings.value.alwaysShowAnnouncement)
         ) {
-            announcement.value = openSettings.value.announcement;
+            announcement.value = sanitizeRichText(openSettings.value.announcement);
             notification.info({
                 content: () => {
                     return h("div", {
-                        innerHTML: announcement.value
+                        innerHTML: sanitizeRichText(announcement.value)
                     });
                 }
             });

@@ -57,7 +57,6 @@ export const deMessages = {
   "components.AddressSelect.copy": "Kopieren",
   "views.index.SimpleIndex.copyAddress": "Kopieren",
   "components.AiExtractInfo.copyFailed": "Kopieren fehlgeschlagen",
-  "views.Footer.copyright": "Urheberrecht",
   "views.common.Login.getNewEmail": "Neue E-Mail erstellen",
   "views.user.AddressManagement.create_or_bind": "Erstellen oder verknüpfen",
   "views.index.LocalAddress.create_or_bind": "Erstellen oder verknüpfen",

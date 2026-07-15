@@ -12,6 +12,8 @@ describe('ShadowHtmlComponent mail safety boundary', () => {
                 htmlContent: [
                     '<script>window.compromised = true</script>',
                     '<img src="http://tracker.example/pixel" onerror="window.compromised = true">',
+                    '<img src="https://tracker.example/secure-pixel">',
+                    '<img src="data:image/png;base64,AA==">',
                     '<div style="background:url(http://tracker.example/bg)">body</div>',
                     '<a href="https://safe.example">safe link</a>',
                 ].join(''),
@@ -23,9 +25,13 @@ describe('ShadowHtmlComponent mail safety boundary', () => {
         expect(shadow.innerHTML).not.toContain('<script')
         expect(shadow.innerHTML).not.toContain('onerror')
         expect(shadow.innerHTML).not.toContain('src="http://')
+        expect(shadow.innerHTML).not.toContain('src="https://')
         expect(shadow.innerHTML).not.toContain('url(http://')
-        expect(shadow.innerHTML).toContain('data-removed-insecure-media')
+        expect(shadow.innerHTML).toContain('data-removed-remote-media')
+        expect(shadow.innerHTML).toContain('data-removed-unsafe-style')
+        expect(shadow.innerHTML).toContain('src="data:image/png;base64,AA=="')
         expect(shadow.innerHTML).toContain('href="https://safe.example"')
+        expect(shadow.innerHTML).toContain('rel="noopener noreferrer nofollow"')
         expect(shadow.innerHTML).toContain('max-width: 100%')
         wrapper.unmount()
     })

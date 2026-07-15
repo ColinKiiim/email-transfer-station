@@ -8,6 +8,7 @@ import ShadowHtmlComponent from '../../components/ShadowHtmlComponent.vue'
 
 import { useGlobalState } from '../../store'
 import { api } from '../../api'
+import { sanitizeMailHtml } from '../../security/safe-html'
 
 const message = useMessage()
 const isPreview = ref(false)
@@ -42,7 +43,7 @@ const hasSendMailContent = (content, contentType) => {
     }
 
     const container = document.createElement('div')
-    container.innerHTML = content
+    container.innerHTML = sanitizeMailHtml(content)
     container.querySelectorAll('script, style, noscript, template').forEach((node) => node.remove())
 
     const plainContent = normalizeSendMailText(container.textContent ?? '')

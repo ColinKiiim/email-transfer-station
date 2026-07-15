@@ -509,12 +509,6 @@ export const MESSAGE_REGISTRY = {
       "zh": "Webhook 设置"
     }
   },
-  "views.Footer": {
-    "copyright": {
-      "en": "Copyright",
-      "zh": "版权所有"
-    }
-  },
   "views.user.UserSettings": {
     "actions": {
       "en": "Actions",

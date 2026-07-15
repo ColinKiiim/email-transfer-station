@@ -167,7 +167,8 @@ are sensitive data. At minimum, a production operator should:
 - use separate, least-privilege Cloudflare resources and API tokens;
 - keep admin authentication enabled and rotate admin/address credentials;
 - restrict public creation, deletion, sending, and Webhook features;
-- back up D1 before migrations and define retention for message and audit data; and
+- back up D1 before migrations and define retention for message and audit data;
+- keep mail HTML sanitization and automatic remote-media blocking enabled; and
 - keep real mailbox contents, browser storage state, and Wrangler configuration out
   of Git.
 

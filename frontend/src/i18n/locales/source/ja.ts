@@ -57,7 +57,6 @@ export const jaMessages = {
   "components.AddressSelect.copy": "コピー",
   "views.index.SimpleIndex.copyAddress": "コピー",
   "components.AiExtractInfo.copyFailed": "コピーに失敗しました",
-  "views.Footer.copyright": "著作権",
   "views.common.Login.getNewEmail": "新しいメールを作成",
   "views.user.AddressManagement.create_or_bind": "作成または紐付け",
   "views.index.LocalAddress.create_or_bind": "作成または紐付け",

@@ -66,3 +66,19 @@ Requests without `Origin`, including Agent and SMTP/IMAP clients, retain their
 normal authentication behavior and receive no CORS headers. CORS is not an
 authorization control: bearer credentials, admin sessions, endpoint permissions,
 and write confirmations remain required for every caller.
+
+## Browser HTML boundaries
+
+The frontend applies separate allowlists at each HTML-producing boundary. Operator
+announcements keep basic text formatting and safe links only. OAuth provider icons
+keep static SVG geometry only. Received-message HTML keeps a restricted mail markup
+subset, removes active content and automatic remote-media loads, limits inline CSS,
+and hardens outbound links. Reply and forward composition reuses that same mail
+sanitizer before copying received content into the editor.
+
+Mail HTML is still untrusted after sanitization. The iframe renderer therefore uses
+an empty `sandbox` and a no-referrer policy; the Shadow DOM renderer is an isolation
+and styling mechanism, not a security boundary by itself. Raster `data:` images and
+same-document `blob:` images may render, while network image URLs are removed rather
+than fetched automatically. Operators should treat attachments and links as
+potentially hostile and should not weaken these policies to preserve sender styling.

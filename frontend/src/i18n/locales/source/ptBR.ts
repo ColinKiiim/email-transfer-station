@@ -57,7 +57,6 @@ export const ptBRMessages = {
   "components.AddressSelect.copy": "Copiar",
   "views.index.SimpleIndex.copyAddress": "Copiar",
   "components.AiExtractInfo.copyFailed": "Falha ao copiar",
-  "views.Footer.copyright": "Direitos autorais",
   "views.common.Login.getNewEmail": "Criar novo e-mail",
   "views.user.AddressManagement.create_or_bind": "Criar ou vincular",
   "views.index.LocalAddress.create_or_bind": "Criar ou vincular",

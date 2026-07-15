@@ -42,10 +42,9 @@ test.describe('Reply HTML & XSS Sanitization', () => {
         from: 'attacker@test.example.com',
       });
 
-      // Single dialog handler with phase tracking.
-      // During email rendering, the mail viewer uses an unsandboxed iframe so
-      // inline event handlers like onerror may fire — we dismiss those.
-      // After clicking Reply, any dialog means the compose path failed to sanitize.
+      // Single dialog handler with phase tracking. The mail viewer sanitizes before
+      // its empty-sandbox iframe/Shadow DOM sink. Any dialog is therefore a failure,
+      // including one that appears after the content enters the compose editor.
       let inComposePhase = false;
       let composeDialogAppeared = false;
       page.on('dialog', async (dialog) => {

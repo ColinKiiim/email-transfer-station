@@ -57,7 +57,6 @@ export const esMessages = {
   "components.AddressSelect.copy": "Copiar",
   "views.index.SimpleIndex.copyAddress": "Copiar",
   "components.AiExtractInfo.copyFailed": "Error al copiar",
-  "views.Footer.copyright": "Derechos de autor",
   "views.common.Login.getNewEmail": "Crear nuevo correo",
   "views.user.AddressManagement.create_or_bind": "Crear o vincular",
   "views.index.LocalAddress.create_or_bind": "Crear o vincular",

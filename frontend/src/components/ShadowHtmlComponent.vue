@@ -4,8 +4,8 @@
 </template>
 
 <script setup>
-import DOMPurify from 'dompurify';
 import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue';
+import { sanitizeMailHtml } from '../security/safe-html';
 
 const props = defineProps({
     htmlContent: {
@@ -22,35 +22,7 @@ const shadowHost = ref(null);
 let shadowRoot = null;
 const useFallback = ref(false);
 
-const removeInsecureMedia = (html) => {
-    if (typeof document === 'undefined') return html;
-    const template = document.createElement('template');
-    template.innerHTML = html;
-    template.content.querySelectorAll('[src], [srcset], [poster], [style]').forEach((element) => {
-        for (const attr of ['src', 'poster']) {
-            const value = element.getAttribute(attr);
-            if (value && /^http:\/\//i.test(value.trim())) {
-                element.removeAttribute(attr);
-                element.setAttribute('data-removed-insecure-media', attr);
-            }
-        }
-        const srcset = element.getAttribute('srcset');
-        if (srcset && /(^|,\s*)http:\/\//i.test(srcset)) {
-            element.removeAttribute('srcset');
-            element.setAttribute('data-removed-insecure-media', 'srcset');
-        }
-        const style = element.getAttribute('style');
-        if (style && /url\(\s*['"]?http:\/\//i.test(style)) {
-            element.removeAttribute('style');
-            element.setAttribute('data-removed-insecure-media', 'style');
-        }
-    });
-    return template.innerHTML;
-};
-
-const safeHtml = computed(() => removeInsecureMedia(DOMPurify.sanitize(String(props.htmlContent || ''), {
-    ADD_ATTR: ['target', 'rel'],
-})));
+const safeHtml = computed(() => sanitizeMailHtml(props.htmlContent));
 
 const mailRenderGuardStyle = `<style>
     :host {
