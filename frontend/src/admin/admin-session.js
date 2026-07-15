@@ -50,9 +50,9 @@ export const useAdminSession = ({
             showAdminAuth.value = false
             tmpAdminAuth.value = ''
             await refreshAdminData()
-            notify('管理员会话已建立')
+            notify('管理员会话已建立', 'success')
         } catch (error) {
-            notify(error?.message || '管理员登录失败')
+            notify(error?.message || '管理员登录失败', 'error')
             turnstileRef.value?.refresh?.()
         }
     }

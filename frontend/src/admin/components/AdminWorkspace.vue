@@ -5,6 +5,7 @@ import { statusClass } from '../admin-formatters'
 import { ICON_SHAPES as iconShapes } from '../admin-view-config'
 import AdminMailWorkspace from './AdminMailWorkspace.vue'
 import AdminResourceWorkspace from './AdminResourceWorkspace.vue'
+import AdminViewFeedback from './AdminViewFeedback.vue'
 
 defineProps({
     model: { type: Object, required: true },
@@ -50,10 +51,8 @@ defineExpose({
                 @click="actions.handleAction('reset-filters')">清除筛选</button>
         </div>
 
-        <div v-if="model.pageLoadErrors.length && model.showAdminPage" class="notice warn">
-            <strong>后台数据加载失败</strong>
-            <span>{{ model.pageLoadErrors.slice(0, 2).join('；') }}</span>
-        </div>
+        <AdminViewFeedback :syncing="model.ui.syncing" :errors="model.pageLoadErrors"
+            :show-errors="model.showAdminPage" @retry="actions.handleAction('refresh')" />
 
         <div v-if="model.activeView === 'ops'" class="ops-boundary-strip" aria-label="运行边界">
             <div v-for="item in model.opsBoundaryItems" :key="item.label" class="ops-boundary-item">

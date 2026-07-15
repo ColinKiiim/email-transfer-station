@@ -96,7 +96,7 @@ describe('admin console action controller', () => {
         await harness.actions.createAddressIdentity()
 
         expect(apiMocks.createAddress).not.toHaveBeenCalled()
-        expect(harness.showToast).toHaveBeenCalledWith('请先登录管理员会话后再执行新增地址')
+        expect(harness.showToast).toHaveBeenCalledWith('请先登录管理员会话后再执行新增地址', 'warning')
     })
 
     it('creates an address through the canonical adapter and exposes credentials once', async () => {
@@ -156,6 +156,6 @@ describe('admin console action controller', () => {
         expect(harness.ui.selected.routing).toBe('domain-1')
         expect(apiMocks.checkCloudflareDomain).toHaveBeenCalledWith(1)
         expect(harness.refreshAll).toHaveBeenCalledOnce()
-        expect(harness.showToast).toHaveBeenCalledWith('Cloudflare 路由检查完成：1 条规则')
+        expect(harness.showToast).toHaveBeenCalledWith('Cloudflare 路由检查完成：1 条规则', 'success')
     })
 })

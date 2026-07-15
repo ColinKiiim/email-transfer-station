@@ -9,9 +9,11 @@ import { hashPassword } from '../utils'
 import { processItem } from '../utils/email-parser'
 import { adminApi, loadAdminSnapshot } from '../admin/admin-api'
 import { useAdminConsoleActions } from '../admin/admin-console-actions'
+import { useAdminFeedback } from '../admin/admin-feedback'
 import AdminConsoleShell from '../admin/components/AdminConsoleShell.vue'
 import AdminLoginView from '../admin/components/AdminLoginView.vue'
 import AdminOverlays from '../admin/components/AdminOverlays.vue'
+import AdminToast from '../admin/components/AdminToast.vue'
 import AdminWorkspace from '../admin/components/AdminWorkspace.vue'
 import { buildAdminMailHierarchy, buildAdminMailRail, useAdminMailFlow } from '../admin/admin-mail-flow'
 import {
@@ -175,8 +177,11 @@ const live = reactive({
     lastSynced: '',
 })
 
-const toastState = reactive({ visible: false, text: '已处理' })
-let toastTimer = 0
+const {
+    disposeFeedback,
+    showToast,
+    toastState,
+} = useAdminFeedback()
 const sidebarCollapsed = ref(
     typeof localStorage === 'undefined'
         ? false
@@ -239,15 +244,6 @@ const clearAdminSessionState = () => {
     live.errors = []
     live.fetchedAdmin = false
     live.lastSynced = ''
-}
-
-const showToast = (text) => {
-    toastState.text = text
-    toastState.visible = true
-    window.clearTimeout(toastTimer)
-    toastTimer = window.setTimeout(() => {
-        toastState.visible = false
-    }, 1800)
 }
 
 const {
@@ -839,7 +835,6 @@ const overlayModel = computed(() => ({
     currentAddress: currentAddress.value,
     shareCreateForm,
     modalPrimaryLabel: modalPrimaryLabel.value,
-    toastState,
 }))
 
 const shellActions = {
@@ -918,7 +913,7 @@ const handleGlobalKeydown = (event) => {
         nextTick(() => shellRef.value?.focusSearch?.())
         return
     }
-    if (event.key === 'Escape' && detailOpen.value) closeDetail()
+    if (event.key === 'Escape' && detailOpen.value && !actionModal.value && !domainActivationOpen.value) closeDetail()
 }
 
 onMounted(() => {
@@ -929,7 +924,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
     window.removeEventListener('keydown', handleGlobalKeydown)
-    window.clearTimeout(toastTimer)
+    disposeFeedback()
 })
 </script>
 
@@ -937,7 +932,7 @@ onBeforeUnmount(() => {
     <div class="admin-next-host">
         <AdminLoginView v-if="needsAdminLogin" ref="turnstileRef"
             v-model:account="tmpAdminAccount" v-model:password="tmpAdminAuth" v-model:cf-token="cfToken"
-            :loading="loading" :open-settings="openSettings" :toast-state="toastState" @submit="authFunc" />
+            :loading="loading" :open-settings="openSettings" @submit="authFunc" />
 
         <AdminConsoleShell v-else ref="shellRef" :model="shellModel" :actions="shellActions">
             <AdminWorkspace ref="mailListRef" :model="workspaceModel" :actions="workspaceActions" />
@@ -945,6 +940,7 @@ onBeforeUnmount(() => {
                 <AdminOverlays :model="overlayModel" :actions="overlayActions" />
             </template>
         </AdminConsoleShell>
+        <AdminToast :state="toastState" />
     </div>
 </template>
 

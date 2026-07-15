@@ -3,6 +3,7 @@ import { ref } from 'vue'
 
 import MailContentRenderer from '../../components/MailContentRenderer.vue'
 import { formatNumber, statusClass } from '../admin-formatters'
+import AdminEmptyState from './AdminEmptyState.vue'
 
 defineProps({
     model: { type: Object, required: true },
@@ -131,11 +132,9 @@ defineExpose({
                     </button>
                 </div>
 
-                <div v-if="model.filteredMailRows.length === 0 && model.filteredUnknownRows.length === 0" class="empty-state">
-                    <strong>没有匹配结果</strong>
-                    <button v-if="model.hasActiveFilters" class="btn" type="button"
-                        @click="actions.handleAction('reset-filters')">清除筛选</button>
-                </div>
+                <AdminEmptyState v-if="model.filteredMailRows.length === 0 && model.filteredUnknownRows.length === 0"
+                    :action-label="model.hasActiveFilters ? '清除筛选' : ''"
+                    @action="actions.handleAction('reset-filters')" />
             </div>
         </section>
         <button type="button" class="column-resizer detail-resizer" aria-label="调整列表和详情列宽"
@@ -149,10 +148,8 @@ defineExpose({
                 </div>
             </div>
             <div class="inner-pad detail-pane-body">
-                <div v-if="model.currentRail.empty" class="empty-state reader-empty">
-                    <strong>{{ model.currentRail.title }}</strong>
-                    <span>{{ model.currentRail.subtitle }}</span>
-                </div>
+                <AdminEmptyState v-if="model.currentRail.empty" class="reader-empty"
+                    :title="model.currentRail.title" :description="model.currentRail.subtitle" />
                 <template v-else>
                     <div v-if="model.currentMail" class="mail-reader-actions">
                         <button type="button" class="btn mobile-only" @click="actions.closeMailDetail">返回列表</button>

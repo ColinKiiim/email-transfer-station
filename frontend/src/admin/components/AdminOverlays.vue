@@ -1,20 +1,106 @@
 <script setup>
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+
 import { statusClass } from '../admin-formatters'
 
-defineProps({
+const props = defineProps({
     model: { type: Object, required: true },
     actions: { type: Object, required: true },
+})
+
+const detailDialog = ref(null)
+const domainDialog = ref(null)
+const actionDialog = ref(null)
+let previousFocus = null
+
+const activeOverlay = computed(() => {
+    if (props.model.actionModal) return `action:${props.model.actionModal}`
+    if (props.model.domainActivationOpen) return 'domain'
+    if (props.model.detailOpen) return 'detail'
+    return ''
+})
+
+const activeDialog = () => {
+    if (activeOverlay.value.startsWith('action:')) return actionDialog.value
+    if (activeOverlay.value === 'domain') return domainDialog.value
+    if (activeOverlay.value === 'detail') return detailDialog.value
+    return null
+}
+
+const focusableSelector = [
+    '[data-autofocus]',
+    'a[href]',
+    'button:not([disabled])',
+    'input:not([disabled])',
+    'select:not([disabled])',
+    'textarea:not([disabled])',
+    '[tabindex]:not([tabindex="-1"])',
+].join(',')
+
+const focusActiveOverlay = async () => {
+    await nextTick()
+    const dialog = activeDialog()
+    const target = dialog?.querySelector?.('[data-autofocus]')
+        || dialog?.querySelector?.(focusableSelector)
+        || dialog
+    target?.focus?.()
+}
+
+watch(activeOverlay, async (value, previous) => {
+    if (value && !previous) previousFocus = document.activeElement
+    if (value) {
+        await focusActiveOverlay()
+        return
+    }
+    if (previous) {
+        await nextTick()
+        previousFocus?.focus?.()
+        previousFocus = null
+    }
+})
+
+const handleOverlayKeydown = (event, close, dialog) => {
+    if (event.key === 'Escape') {
+        event.preventDefault()
+        event.stopPropagation()
+        close()
+        return
+    }
+    if (event.key !== 'Tab') return
+    const focusable = [...(dialog?.querySelectorAll?.(focusableSelector) || [])]
+        .filter((element) => !element.hasAttribute('disabled'))
+    if (focusable.length === 0) {
+        event.preventDefault()
+        dialog?.focus?.()
+        return
+    }
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+    const active = document.activeElement
+    if (event.shiftKey && (active === first || !dialog.contains(active))) {
+        event.preventDefault()
+        last.focus()
+    } else if (!event.shiftKey && active === last) {
+        event.preventDefault()
+        first.focus()
+    }
+}
+
+onBeforeUnmount(() => {
+    previousFocus?.focus?.()
 })
 </script>
 
 <template>
-    <div v-if="model.detailOpen" class="detail-drawer-backdrop" role="dialog" aria-modal="true"
-        aria-labelledby="detail-drawer-title" @click.self="actions.closeDetail" @keydown.esc="actions.closeDetail">
+    <div v-if="model.detailOpen" ref="detailDialog" class="detail-drawer-backdrop" role="dialog" aria-modal="true"
+        aria-labelledby="detail-drawer-title" aria-describedby="detail-drawer-description" tabindex="-1"
+        @click.self="actions.closeDetail"
+        @keydown="handleOverlayKeydown($event, actions.closeDetail, detailDialog)">
         <aside class="detail-drawer" tabindex="-1" aria-label="上下文详情抽屉">
             <div class="modal-head">
                 <div>
                     <h2 id="detail-drawer-title">{{ model.currentRail.title }}</h2>
-                    <p>{{ model.currentRail.subtitle }}</p>
+                    <p id="detail-drawer-description">{{ model.currentRail.subtitle }}</p>
                 </div>
                 <button class="icon-btn" type="button" aria-label="关闭详情" @click="actions.closeDetail">
                     <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" /></svg>
@@ -56,9 +142,12 @@ defineProps({
         </aside>
     </div>
 
-    <div v-if="model.domainActivationOpen" class="modal-backdrop is-open" role="dialog" aria-modal="true"
-        aria-labelledby="domain-activation-title" @click.self="actions.closeDomainActivation">
-        <form class="modal domain-activation-modal" @submit.prevent="actions.createAndActivateDomain">
+    <div v-if="model.domainActivationOpen" ref="domainDialog" class="modal-backdrop is-open" role="dialog"
+        aria-modal="true" aria-labelledby="domain-activation-title" aria-describedby="domain-activation-description"
+        tabindex="-1" @click.self="actions.closeDomainActivation"
+        @keydown="handleOverlayKeydown($event, actions.closeDomainActivation, domainDialog)">
+        <form class="modal domain-activation-modal" :aria-busy="model.domainActivationBusy ? 'true' : 'false'"
+            @submit.prevent="actions.createAndActivateDomain">
             <div class="modal-head">
                 <div>
                     <h2 id="domain-activation-title">新增并激活接收域</h2>
@@ -84,8 +173,8 @@ defineProps({
                 <div class="form-grid">
                     <label class="form-field full">
                         <span>域名</span>
-                        <input v-model="model.domainActivationForm.domain" class="field" placeholder="example.com"
-                            autocomplete="off" />
+                        <input v-model="model.domainActivationForm.domain" data-autofocus class="field"
+                            placeholder="example.com" autocomplete="off" />
                     </label>
                     <label class="form-field">
                         <span>显示名</span>
@@ -107,7 +196,7 @@ defineProps({
                     <input v-model="model.domainActivationForm.allowRandomSubdomain" type="checkbox" />
                     <span>允许随机子域名创建</span>
                 </label>
-                <div class="notice modal-notice">
+                <div id="domain-activation-description" class="notice modal-notice">
                     <strong>{{ model.domainActivationForm.receiveMode === 'cloudflare_email' ? '自动配置范围' : 'ImprovMX 操作边界' }}</strong>
                     <span v-if="model.domainActivationForm.receiveMode === 'cloudflare_email'">
                         提交后会调用 Cloudflare API 启用 Email Routing DNS，并把 catch-all 规则指向当前 Worker；随后生成验证地址。
@@ -127,9 +216,12 @@ defineProps({
         </form>
     </div>
 
-    <div v-if="model.actionModal" class="modal-backdrop is-open" role="dialog" aria-modal="true"
-        aria-labelledby="action-modal-title" @click.self="actions.closeActionModal">
-        <form class="modal" @submit.prevent="actions.submitActionModal">
+    <div v-if="model.actionModal" ref="actionDialog" class="modal-backdrop is-open" role="dialog" aria-modal="true"
+        aria-labelledby="action-modal-title" aria-describedby="action-modal-description" tabindex="-1"
+        @click.self="actions.closeActionModal"
+        @keydown="handleOverlayKeydown($event, actions.closeActionModal, actionDialog)">
+        <form class="modal" :aria-busy="model.actionBusy ? 'true' : 'false'"
+            @submit.prevent="actions.submitActionModal">
             <div class="modal-head">
                 <h2 id="action-modal-title">{{ model.modalTitle }}</h2>
                 <button class="icon-btn" type="button" aria-label="关闭" @click="actions.closeActionModal">
@@ -138,25 +230,26 @@ defineProps({
             </div>
             <div class="modal-body">
                 <template v-if="model.actionModal === 'one-time-result'">
-                    <div class="notice modal-notice">
+                    <div id="action-modal-description" class="notice modal-notice">
                         <strong>仅显示本次</strong>
                         <span>{{ model.oneTimeResult.note }}</span>
                     </div>
                     <label class="form-field full">
                         <span>一次性结果</span>
-                        <textarea data-testid="one-time-result" :value="model.oneTimeResult.value" rows="6" readonly />
+                        <textarea data-testid="one-time-result" data-autofocus :value="model.oneTimeResult.value"
+                            rows="6" readonly />
                     </label>
                 </template>
                 <template v-else-if="model.actionModal === 'new-address' || model.actionModal === 'quick-create'">
-                    <div class="notice modal-notice">
+                    <div id="action-modal-description" class="notice modal-notice">
                         <strong>生产地址</strong>
                         <span>创建后会立即写入 D1；JWT 和地址密码只在成功后显示一次。</span>
                     </div>
                     <div class="form-grid">
                         <label class="form-field">
                             <span>地址名</span>
-                            <input v-model="model.addressCreateForm.name" data-testid="address-name" class="field"
-                                placeholder="team-inbox" autocomplete="off" required />
+                            <input v-model="model.addressCreateForm.name" data-testid="address-name" data-autofocus
+                                class="field" placeholder="team-inbox" autocomplete="off" required />
                         </label>
                         <label class="form-field">
                             <span>域名</span>
@@ -182,7 +275,7 @@ defineProps({
                     </div>
                 </template>
                 <template v-else-if="model.actionModal === 'share-package'">
-                    <div class="notice modal-notice">
+                    <div id="action-modal-description" class="notice modal-notice">
                         <strong>只读访问</strong>
                         <span>访问链接只显示一次，持有者可查看该地址的邮件。</span>
                     </div>
@@ -194,8 +287,8 @@ defineProps({
                         </label>
                         <label class="form-field">
                             <span>标签</span>
-                            <input v-model="model.shareCreateForm.label" data-testid="share-label" class="field"
-                                placeholder="例如：临时协作" autocomplete="off" />
+                            <input v-model="model.shareCreateForm.label" data-testid="share-label" data-autofocus
+                                class="field" placeholder="例如：临时协作" autocomplete="off" />
                         </label>
                         <label class="form-field">
                             <span>过期时间</span>
@@ -221,9 +314,5 @@ defineProps({
                 </template>
             </div>
         </form>
-    </div>
-
-    <div class="toast" :class="{ 'is-visible': model.toastState.visible }" role="status" aria-live="polite">
-        {{ model.toastState.text }}
     </div>
 </template>

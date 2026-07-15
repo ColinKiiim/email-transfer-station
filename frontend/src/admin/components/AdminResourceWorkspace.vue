@@ -1,5 +1,6 @@
 <script setup>
 import { cellText, formatNumber, statusClass } from '../admin-formatters'
+import AdminEmptyState from './AdminEmptyState.vue'
 
 defineProps({
     model: { type: Object, required: true },
@@ -114,11 +115,8 @@ defineProps({
                         </tr>
                         <tr v-if="panel.rows.length === 0">
                             <td :colspan="panel.columns.length">
-                                <div class="empty-state">
-                                    <strong>没有匹配结果</strong>
-                                    <button v-if="model.hasActiveFilters" class="btn" type="button"
-                                        @click="actions.handleAction('reset-filters')">清除筛选</button>
-                                </div>
+                                <AdminEmptyState :action-label="model.hasActiveFilters ? '清除筛选' : ''"
+                                    @action="actions.handleAction('reset-filters')" />
                             </td>
                         </tr>
                     </tbody>

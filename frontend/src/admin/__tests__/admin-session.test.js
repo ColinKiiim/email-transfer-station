@@ -68,7 +68,7 @@ describe('admin session state', () => {
         expect(dependencies.adminAuth.value).toBe('fixture-session')
         expect(session.tmpAdminAuth.value).toBe('')
         expect(dependencies.refreshAdminData).toHaveBeenCalledTimes(1)
-        expect(dependencies.notify).toHaveBeenCalledWith('管理员会话已建立')
+        expect(dependencies.notify).toHaveBeenCalledWith('管理员会话已建立', 'success')
     })
 
     it('keeps the login challenge active and refreshes Turnstile after failure', async () => {
@@ -87,7 +87,7 @@ describe('admin session state', () => {
         expect(dependencies.adminAuth.value).toBe('')
         expect(session.tmpAdminAuth.value).toBe('wrong')
         expect(refreshTurnstile).toHaveBeenCalledTimes(1)
-        expect(dependencies.notify).toHaveBeenCalledWith(error.message)
+        expect(dependencies.notify).toHaveBeenCalledWith(error.message, 'error')
     })
 
     it('clears data on logout or a renewed challenge and refreshes on authorization', async () => {

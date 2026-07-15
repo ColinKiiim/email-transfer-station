@@ -10,7 +10,6 @@ const cfToken = defineModel('cfToken', { type: String, default: '' })
 defineProps({
     loading: { type: Boolean, default: false },
     openSettings: { type: Object, required: true },
-    toastState: { type: Object, required: true },
 })
 
 const emit = defineEmits(['submit'])
@@ -53,9 +52,6 @@ defineExpose({
                     {{ loading ? '登录中' : '登录' }}
                 </button>
             </form>
-        </div>
-        <div class="toast" :class="{ 'is-visible': toastState.visible }" role="status" aria-live="polite">
-            {{ toastState.text }}
         </div>
     </section>
 </template>

@@ -222,6 +222,7 @@ describe('AdminNext behavior baseline', () => {
         expect(state.adminAuth.value).toBe('fixture-admin-session')
         expect(wrapper.find('.admin-next.app').exists()).toBe(true)
         expect(wrapper.get('.toast').text()).toContain('管理员会话已建立')
+        expect(wrapper.get('.toast').attributes('role')).toBe('status')
         wrapper.unmount()
     })
 
@@ -239,6 +240,7 @@ describe('AdminNext behavior baseline', () => {
         expect(state.adminAuth.value).toBe('')
         expect(wrapper.find('#admin-auth-title').exists()).toBe(true)
         expect(wrapper.get('.toast').text()).toContain(error.message)
+        expect(wrapper.get('.toast').attributes('role')).toBe('alert')
         wrapper.unmount()
     })
 
@@ -311,6 +313,7 @@ describe('AdminNext behavior baseline', () => {
         const pending = await mountAdmin({ path: '/admin?view=flow', waitForData: false })
         await nextTick()
         expect(pending.wrapper.get('.sync-state').text()).toBe('同步中')
+        expect(pending.wrapper.text()).toContain('后台数据同步中')
         resolveOverview({ totals: {}, domains: [] })
         await settle()
         expect(pending.wrapper.text()).toContain('没有匹配结果')
@@ -326,6 +329,8 @@ describe('AdminNext behavior baseline', () => {
         expect(failed.wrapper.text()).toContain('邮件接口不可用')
         expect(failed.wrapper.get('.sync-state').text()).toBe('同步部分失败')
         expect(failed.wrapper.get('.sync-state').text()).not.toContain('已同步')
+        expect(failed.wrapper.get('.notice[role="alert"]').text()).toContain('邮件接口不可用')
+        expect(failed.wrapper.get('.notice[role="alert"] button').text()).toBe('重新同步')
 
         state.showAdminAuth.value = true
         await nextTick()
@@ -356,6 +361,7 @@ describe('AdminNext behavior baseline', () => {
         await settle()
 
         expect(wrapper.get('.toast').text()).toContain('删除接口失败')
+        expect(wrapper.get('.toast').attributes('role')).toBe('alert')
         expect(wrapper.find('.mail-row').exists()).toBe(true)
         wrapper.unmount()
     })
@@ -369,8 +375,10 @@ describe('AdminNext behavior baseline', () => {
 
         expect(mocks.fetch).toHaveBeenCalledWith('/api/admin/mails/7', { method: 'DELETE' })
         expect(wrapper.get('.toast').text()).toContain('已删除 1 封生产邮件')
+        expect(wrapper.get('.toast').attributes('role')).toBe('status')
         expect(wrapper.find('.mail-row').exists()).toBe(false)
         expect(wrapper.text()).toContain('没有匹配结果')
+        expect(wrapper.get('.empty-state').attributes('role')).toBe('status')
         wrapper.unmount()
     })
 
@@ -408,6 +416,39 @@ describe('AdminNext behavior baseline', () => {
         expect(oneTimeResult).toContain('fixture-address-password')
         expect(oneTimeResult).toContain('/?jwt=fixture-address-jwt')
         expect(wrapper.text()).toContain('仅显示本次')
+        wrapper.unmount()
+    })
+
+    it('keeps modal focus contained and restores the trigger after Escape', async () => {
+        runtime.domains = [{
+            id: 1,
+            domain: 'example.test',
+            enabled: true,
+            receive_mode: 'cloudflare_email',
+            setup_status: 'active',
+            allow_address_creation: true,
+            config_version: 7,
+        }]
+        const { wrapper } = await mountAdmin({ path: '/admin?view=identity' })
+        const createButton = wrapper.findAll('.toolbar button').find((button) => button.text().includes('新增地址'))
+        createButton.element.focus()
+
+        await createButton.trigger('click')
+        await settle()
+
+        const modal = wrapper.get('[aria-labelledby="action-modal-title"]')
+        const addressInput = wrapper.get('[data-testid="address-name"]')
+        expect(document.activeElement).toBe(addressInput.element)
+
+        const submit = wrapper.get('[data-testid="action-submit"]')
+        submit.element.focus()
+        await modal.trigger('keydown', { key: 'Tab' })
+        expect(document.activeElement).toBe(modal.get('button[aria-label="关闭"]').element)
+
+        await modal.trigger('keydown', { key: 'Escape' })
+        await settle()
+        expect(wrapper.find('[aria-labelledby="action-modal-title"]').exists()).toBe(false)
+        expect(document.activeElement).toBe(createButton.element)
         wrapper.unmount()
     })
 
