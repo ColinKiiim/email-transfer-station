@@ -12,6 +12,12 @@ import ShadowHtmlComponent from '../components/ShadowHtmlComponent.vue'
 import MailContentRenderer from '../components/MailContentRenderer.vue'
 import { adminApi, loadAdminSnapshot } from '../admin/admin-api'
 import {
+    createInitialAdminRouteState,
+    statusOptionsForView,
+    useAdminRouteState,
+} from '../admin/admin-route-state'
+import { useAdminSession } from '../admin/admin-session'
+import {
     adminMailCacheKey,
     cellText,
     clampNumber,
@@ -28,15 +34,12 @@ import {
     mailRenderLabel,
     modeLabel,
     normalizedAttachments,
-    queryValue,
     setupLabel,
     statusClass,
     stripHtml,
     toD1DateTime,
 } from '../admin/admin-formatters'
 import {
-    ACCESS_STATUS_OPTIONS,
-    FLOW_STATUS_OPTIONS,
     ICON_SHAPES as iconShapes,
     NAV_GROUPS as navGroups,
     ROADMAP_ROWS as roadmapRows,
@@ -60,36 +63,29 @@ const {
     isDark,
 } = useGlobalState()
 
-const selectedInitialView = () => {
-    const queryView = Array.isArray(route.query.view) ? route.query.view[0] : route.query.view
-    const stored = typeof localStorage === 'undefined' ? '' : localStorage.getItem('ets-admin-next-view')
-    return viewMeta[queryView] ? queryView : (viewMeta[stored] ? stored : 'overview')
-}
+const detailOpen = ref(false)
+const initialRouteState = createInitialAdminRouteState(
+    route.query,
+    typeof localStorage === 'undefined' ? undefined : localStorage,
+)
 
 const ui = reactive({
-    view: selectedInitialView(),
-    query: queryValue(route.query.q),
-    domain: queryValue(route.query.domain, 'all'),
-    address: queryValue(route.query.address, 'all'),
-    status: queryValue(route.query.status, 'all'),
+    ...initialRouteState,
     syncing: false,
     mailRenderMode: 'html',
-    flowMode: queryValue(route.query.mode, 'list'),
     mailColumns: {
         facets: 220,
         list: 540,
         detail: 820,
     },
-    detailKind: '',
     selected: {
-        flow: queryValue(route.query.mailId || route.query.item),
+        ...initialRouteState.selected,
         identity: 'addr-ops',
         routing: 'domain-cloudflare',
         delivery: 'notify-mailhook',
         access: 'risk-html',
         ops: 'worker',
         roadmap: 'road-mobile',
-        exception: '',
         logs: '',
         users: '',
         audit: '',
@@ -175,15 +171,9 @@ const live = reactive({
     lastSynced: '',
 })
 
-const tmpAdminAccount = ref('admin')
-const tmpAdminAuth = ref('')
-const cfToken = ref('')
-const turnstileRef = ref(null)
-const adminLoginSettingsFetched = ref(false)
 const actionModal = ref('')
 const domainActivationOpen = ref(false)
 const domainActivationBusy = ref(false)
-const detailOpen = ref(false)
 const searchInput = ref(null)
 const toastState = reactive({ visible: false, text: '已处理' })
 let toastTimer = 0
@@ -223,7 +213,6 @@ const oneTimeResult = reactive({
 const activeView = computed(() => viewMeta[ui.view] ? ui.view : 'overview')
 const activeMeta = computed(() => viewMeta[activeView.value])
 const pageTitle = computed(() => `${activeMeta.value.title} · Email Transfer Station`)
-const needsAdminLogin = computed(() => !showAdminPage.value || showAdminAuth.value)
 const showAdminPasswordModal = computed(() => false)
 const detailContext = computed(() => ui.detailKind || activeView.value)
 const workerStatusLabel = computed(() => {
@@ -250,21 +239,6 @@ useHead({
         { name: 'apple-mobile-web-app-title', content: 'Email Transfer Station Admin' },
     ],
 })
-
-const fetchAdminLoginSettings = async () => {
-    if (adminLoginSettingsFetched.value) return
-    try {
-        const res = await adminApi.getLoginSettings()
-        openSettings.value.enableGlobalTurnstileCheck = !!res.enableGlobalTurnstileCheck
-        openSettings.value.cfTurnstileSiteKey = res.cfTurnstileSiteKey || ''
-        if (res.accountHint && !tmpAdminAccount.value) tmpAdminAccount.value = res.accountHint
-    } catch (error) {
-        openSettings.value.enableGlobalTurnstileCheck = false
-        openSettings.value.cfTurnstileSiteKey = ''
-    } finally {
-        adminLoginSettingsFetched.value = true
-    }
-}
 
 const clearAdminSessionState = () => {
     live.overview = null
@@ -295,29 +269,6 @@ const clearAdminSessionState = () => {
     live.lastSynced = ''
 }
 
-const resetAdminLogin = () => {
-    adminAuth.value = ''
-    clearAdminSessionState()
-}
-
-const authFunc = async () => {
-    try {
-        const res = await adminApi.login({
-            username: tmpAdminAccount.value.trim(),
-            passwordHash: await hashPassword(tmpAdminAuth.value),
-            cfToken: cfToken.value,
-        })
-        adminAuth.value = res.token || tmpAdminAuth.value
-        showAdminAuth.value = false
-        tmpAdminAuth.value = ''
-        await refreshAll()
-        showToast('管理员会话已建立')
-    } catch (error) {
-        showToast(error.message || '管理员登录失败')
-        turnstileRef.value?.refresh?.()
-    }
-}
-
 const shapeList = (name) => iconShapes[name] || iconShapes.check
 
 const showToast = (text) => {
@@ -329,40 +280,19 @@ const showToast = (text) => {
     }, 1800)
 }
 
-const replaceRouteQuery = (patch = {}, remove = []) => {
-    const query = { ...route.query, ...patch }
-    remove.forEach((key) => {
-        delete query[key]
-    })
-    Object.keys(query).forEach((key) => {
-        if (query[key] === '' || query[key] == null || query[key] === 'all') delete query[key]
-    })
-    router.replace({
-        path: route.path,
-        query,
-        hash: route.hash,
-    }).catch(() => {})
-}
-
-const stripRetiredDemoQuery = () => {
-    if (route.query.demo !== undefined) replaceRouteQuery({}, ['demo'])
-}
-
-const setView = async (view) => {
-    if (!viewMeta[view]) return
-    ui.view = view
-    ui.detailKind = ''
-    detailOpen.value = false
-    const statusOptions = view === 'flow'
-        ? FLOW_STATUS_OPTIONS
-        : (view === 'access' ? ACCESS_STATUS_OPTIONS : ['all'])
-    if (!statusOptions.includes(ui.status)) ui.status = 'all'
-    localStorage.setItem('ets-admin-next-view', view)
-    await replaceRouteQuery({
-        view,
-        status: ui.status === 'all' ? undefined : ui.status,
-    }, view === 'flow' ? [] : ['mailId', 'item', 'mode'])
-}
+const {
+    persistView,
+    replaceRouteQuery,
+    setView,
+    syncMailQueryToRoute,
+    syncSelectionFromRoute,
+} = useAdminRouteState({
+    route,
+    router,
+    ui,
+    detailOpen,
+    storage: typeof localStorage === 'undefined' ? undefined : localStorage,
+})
 
 const recordLoadError = (label, error) => {
     const text = `${label}: ${error?.message || error || 'error'}`
@@ -395,6 +325,28 @@ const refreshAll = async () => {
         ui.syncing = false
     }
 }
+
+const {
+    authFunc,
+    cfToken,
+    initializeAdminSession,
+    needsAdminLogin,
+    resetAdminLogin,
+    tmpAdminAccount,
+    tmpAdminAuth,
+    turnstileRef,
+} = useAdminSession({
+    client: adminApi,
+    adminAuth,
+    showAdminAuth,
+    showAdminPage,
+    openSettings,
+    hashPassword,
+    hasAdminData: () => live.fetchedAdmin,
+    clearAdminData: clearAdminSessionState,
+    refreshAdminData: refreshAll,
+    notify: showToast,
+})
 
 const overviewTotals = computed(() => live.overview?.totals || {})
 const overviewDomains = computed(() => live.overview?.domains || [])
@@ -983,9 +935,7 @@ const matches = (row) => {
         row.unread ? '未读 unread' : '',
         Number(row.attachmentCount || 0) > 0 ? 'attachment 有附件' : '',
     ].filter(Boolean).join(' ').toLowerCase()
-    const statusOptions = activeView.value === 'flow'
-        ? FLOW_STATUS_OPTIONS
-        : (activeView.value === 'access' ? ACCESS_STATUS_OPTIONS : ['all'])
+    const statusOptions = statusOptionsForView(activeView.value)
     const activeStatus = statusOptions.includes(ui.status) ? ui.status : 'all'
     const inStatus = activeStatus === 'all' || statusText.includes(activeStatus.toLowerCase())
     return inQuery && inDomain && inAddress && inStatus
@@ -1050,19 +1000,6 @@ const toggleMailDomain = (domain) => {
     persistCollapsedMailDomains()
 }
 
-const syncMailQueryToRoute = (extra = {}) => {
-    replaceRouteQuery({
-        view: 'flow',
-        q: ui.query || undefined,
-        domain: ui.domain === 'all' ? undefined : ui.domain,
-        address: ui.address === 'all' ? undefined : ui.address,
-        status: ui.status === 'all' ? undefined : ui.status,
-        mailId: ui.selected.flow || undefined,
-        mode: ui.flowMode === 'list' ? undefined : ui.flowMode,
-        ...extra,
-    }, ['item'])
-}
-
 const setMailStatus = (status) => {
     ui.status = status
     ui.flowMode = 'list'
@@ -1120,7 +1057,7 @@ const openMailFromAddress = (address) => {
     ui.address = address
     ui.status = 'all'
     ui.flowMode = 'list'
-    if (typeof localStorage !== 'undefined') localStorage.setItem('ets-admin-next-view', 'flow')
+    persistView('flow')
     syncMailQueryToRoute({ address, domain: ui.domain === 'all' ? undefined : ui.domain, status: undefined, mode: undefined })
 }
 
@@ -1131,7 +1068,7 @@ const openMailFromDomain = (domain) => {
     ui.address = 'all'
     ui.status = 'all'
     ui.flowMode = 'list'
-    if (typeof localStorage !== 'undefined') localStorage.setItem('ets-admin-next-view', 'flow')
+    persistView('flow')
     syncMailQueryToRoute({ domain, address: undefined, status: undefined, mode: undefined })
 }
 const stateCards = computed(() => {
@@ -1205,7 +1142,7 @@ const selectRow = (kind, id) => {
         ui.detailKind = kind
         ui.flowMode = 'detail'
         detailOpen.value = false
-        if (typeof localStorage !== 'undefined') localStorage.setItem('ets-admin-next-view', 'flow')
+        persistView('flow')
         replaceRouteQuery({
             view: 'flow',
             mailId: kind === 'flow' ? id : undefined,
@@ -2214,57 +2151,6 @@ const currentRail = computed(() => {
     }
 })
 
-watch(() => route.query.view, (value) => {
-    const nextView = Array.isArray(value) ? value[0] : value
-    if (viewMeta[nextView] && nextView !== ui.view) {
-        ui.view = nextView
-        ui.detailKind = ''
-        detailOpen.value = false
-        const statusOptions = nextView === 'flow'
-            ? FLOW_STATUS_OPTIONS
-            : (nextView === 'access' ? ACCESS_STATUS_OPTIONS : ['all'])
-        if (!statusOptions.includes(ui.status)) ui.status = 'all'
-    }
-})
-
-watch(() => route.query.q, (value) => {
-    ui.query = queryValue(value)
-})
-
-watch(() => route.query.domain, (value) => {
-    ui.domain = queryValue(value, 'all')
-})
-
-watch(() => route.query.address, (value) => {
-    ui.address = queryValue(value, 'all')
-})
-
-watch(() => route.query.status, (value) => {
-    const nextStatus = queryValue(value, 'all')
-    const statusOptions = activeView.value === 'flow'
-        ? FLOW_STATUS_OPTIONS
-        : (activeView.value === 'access' ? ACCESS_STATUS_OPTIONS : ['all'])
-    ui.status = statusOptions.includes(nextStatus) ? nextStatus : 'all'
-})
-
-watch(() => route.query.mode, (value) => {
-    ui.flowMode = queryValue(value, 'list')
-})
-
-watch(() => route.query.item, (value) => {
-    const item = Array.isArray(value) ? value[0] : value
-    if (!item) return
-    if (String(item).startsWith('mail-')) {
-        ui.selected.flow = String(item)
-        ui.detailKind = 'flow'
-    } else if (String(item).startsWith('unknown-')) {
-        ui.selected.exception = String(item)
-        ui.detailKind = 'exception'
-    }
-}, { immediate: true })
-
-watch(() => route.query.demo, stripRetiredDemoQuery, { immediate: true })
-
 watch(mailRows, (rows) => {
     if (!rows.length) {
         ui.selected.flow = ''
@@ -2283,14 +2169,6 @@ watch(currentMail, (row) => {
 
 watch(currentParsedMail, (mail) => {
     if (mail?.messageIsHtml && ui.mailRenderMode !== 'raw') ui.mailRenderMode = 'html'
-})
-
-watch(showAdminPage, async (allowed) => {
-    if (allowed && !live.fetchedAdmin) await fetchAdminData()
-})
-
-watch(showAdminAuth, (value) => {
-    if (value) clearAdminSessionState()
 })
 
 watch(pageTitle, (title) => {
@@ -2317,34 +2195,9 @@ const handleGlobalKeydown = (event) => {
     if (event.key === 'Escape' && detailOpen.value) closeDetail()
 }
 
-const syncSelectionFromRoute = () => {
-    const mailId = queryValue(route.query.mailId)
-    if (mailId) {
-        ui.selected.flow = mailId
-        ui.detailKind = 'flow'
-        ui.flowMode = queryValue(route.query.mode, 'detail')
-        return
-    }
-    const item = Array.isArray(route.query.item) ? route.query.item[0] : route.query.item
-    if (!item) return
-    if (String(item).startsWith('unknown-')) {
-        ui.selected.exception = item
-        ui.detailKind = 'exception'
-        return
-    }
-    if (String(item).startsWith('mail-')) {
-        ui.selected.flow = item
-        ui.detailKind = 'flow'
-    }
-}
-
-watch(() => [route.query.mailId, route.query.item], syncSelectionFromRoute)
-
 onMounted(() => {
-    stripRetiredDemoQuery()
     syncSelectionFromRoute()
-    fetchAdminLoginSettings()
-    if (showAdminPage.value && !showAdminAuth.value) refreshAll()
+    initializeAdminSession()
     window.addEventListener('keydown', handleGlobalKeydown)
 })
 

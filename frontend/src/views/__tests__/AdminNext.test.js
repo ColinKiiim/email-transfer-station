@@ -272,6 +272,38 @@ describe('AdminNext behavior baseline', () => {
         wrapper.unmount()
     })
 
+    it('restores canonical view state after back, forward, and refresh', async () => {
+        const selectedPath = '/admin?view=flow&q=invoice&mailId=mail-7&mode=detail'
+        const mounted = await mountAdmin({ path: '/admin?view=overview' })
+
+        await mounted.router.push(selectedPath)
+        await settle()
+        expect(mounted.wrapper.get('.searchbox input').element.value).toBe('invoice')
+        expect(mounted.wrapper.get('.mail-row').attributes('aria-selected')).toBe('true')
+        expect(mounted.wrapper.get('.mail-workbench').classes()).toContain('flow-mode-detail')
+
+        await mounted.router.push('/admin?view=overview')
+        await settle()
+        expect(mounted.wrapper.get('h1').text()).toBe('运行总控')
+
+        mounted.router.back()
+        await settle()
+        expect(mounted.router.currentRoute.value.fullPath).toBe(selectedPath)
+        expect(mounted.wrapper.get('.mail-row').attributes('aria-selected')).toBe('true')
+
+        mounted.router.forward()
+        await settle()
+        expect(mounted.router.currentRoute.value.query.view).toBe('overview')
+        expect(mounted.wrapper.get('h1').text()).toBe('运行总控')
+        mounted.wrapper.unmount()
+
+        const refreshed = await mountAdmin({ path: selectedPath })
+        expect(refreshed.wrapper.get('.searchbox input').element.value).toBe('invoice')
+        expect(refreshed.wrapper.get('.mail-row').attributes('aria-selected')).toBe('true')
+        expect(refreshed.wrapper.get('.mail-workbench').classes()).toContain('flow-mode-detail')
+        refreshed.wrapper.unmount()
+    })
+
     it('shows loading, a real empty state, API failure, and unauthorized state without fake data', async () => {
         let resolveOverview
         runtime.mails = []
