@@ -157,6 +157,12 @@ export const getEnvDomainRegistry = (c: Context<HonoCustomType>): ManagedDomain[
     const randomDomains = new Set(getRandomSubdomainDomains(c).map(normalizeDomain));
     const labels = getStringArray(c.env.DOMAIN_LABELS);
     const managedReceiveDomains = new Set(getEnvManagedReceiveDomains(c));
+    const subdomainMatchValue = c.env.ENABLE_CREATE_ADDRESS_SUBDOMAIN_MATCH;
+    const allowSubdomainMatch = subdomainMatchValue === undefined
+        || subdomainMatchValue === null
+        || subdomainMatchValue === ""
+        ? null
+        : getBooleanValue(subdomainMatchValue);
     return domains.map((domain, index) => {
         const receiveMode: ReceiveMode = managedReceiveDomains.has(domain)
             ? "improvmx_forward"
@@ -169,7 +175,7 @@ export const getEnvDomainRegistry = (c: Context<HonoCustomType>): ManagedDomain[
             allow_address_creation: true,
             is_default: defaultDomains.has(domain),
             allow_random_subdomain: randomDomains.has(domain),
-            allow_subdomain_match: getBooleanValue(c.env.ENABLE_CREATE_ADDRESS_SUBDOMAIN_MATCH),
+            allow_subdomain_match: allowSubdomainMatch,
             collector_address: receiveMode === "improvmx_forward"
                 ? findEnvCollectorAddress(c, domain)
                 : null,

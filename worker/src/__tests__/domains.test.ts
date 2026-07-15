@@ -8,6 +8,7 @@ import {
 import {
     findMatchedAddressCreationDomain,
     getDirectReceiveDomains,
+    getEnvDomainRegistry,
     isVerificationPending,
     ManagedDomain,
     toPublicManagedDomain,
@@ -89,6 +90,18 @@ describe("managed domain policy", () => {
             .toBe("allowed.example");
         expect(findMatchedAddressCreationDomain("team.allowed.example", [allowed], true, true))
             .toBeNull();
+    });
+
+    it("preserves an unset environment subdomain policy for the stored global fallback", () => {
+        expect(getEnvDomainRegistry(contextWithEnvDomains({
+            ENABLE_CREATE_ADDRESS_SUBDOMAIN_MATCH: undefined,
+        }))[0]?.allow_subdomain_match).toBeNull();
+        expect(getEnvDomainRegistry(contextWithEnvDomains({
+            ENABLE_CREATE_ADDRESS_SUBDOMAIN_MATCH: true,
+        }))[0]?.allow_subdomain_match).toBe(true);
+        expect(getEnvDomainRegistry(contextWithEnvDomains({
+            ENABLE_CREATE_ADDRESS_SUBDOMAIN_MATCH: false,
+        }))[0]?.allow_subdomain_match).toBe(false);
     });
 
     it("requires a live, unconsumed verification window", () => {

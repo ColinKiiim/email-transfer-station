@@ -1,12 +1,24 @@
 import { expect, test } from '@playwright/test';
 
-import { deleteAddress, TEST_DOMAIN, WORKER_URL } from '../../fixtures/test-helpers';
+import {
+  deleteAddress,
+  getAdminSessionHeaders,
+  TEST_DOMAIN,
+  WORKER_URL,
+} from '../../fixtures/test-helpers';
 
 test.describe('Admin console', () => {
   test('preserves route state and confirms sensitive admin actions', async ({ page, request }) => {
+    const adminHeaders = await getAdminSessionHeaders(request);
+    const adminToken = adminHeaders['x-admin-auth'];
+    await page.addInitScript((token) => {
+      sessionStorage.setItem('adminAuth', token);
+    }, adminToken);
+
     const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const subject = `Admin console fixture ${suffix}`;
     const created = await request.post(`${WORKER_URL}/api/admin/new_address`, {
+      headers: adminHeaders,
       data: { name: `admin-ui-${suffix}`, domain: TEST_DOMAIN },
     });
     expect(created.ok()).toBe(true);
@@ -14,6 +26,7 @@ test.describe('Admin console', () => {
 
     try {
       const seeded = await request.post(`${WORKER_URL}/api/admin/test/receive_mail`, {
+        headers: adminHeaders,
         data: {
           from: `sender@${TEST_DOMAIN}`,
           to: address.address,

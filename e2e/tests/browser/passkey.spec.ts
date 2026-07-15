@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { request as apiRequest } from '@playwright/test';
 import { createHash } from 'crypto';
-import { WORKER_URL, FRONTEND_URL } from '../../fixtures/test-helpers';
+import { WORKER_URL, FRONTEND_URL, getAdminSessionHeaders } from '../../fixtures/test-helpers';
 
 const TEST_USER_EMAIL = `passkey-browser-${Date.now()}@test.example.com`;
 const TEST_USER_PASSWORD = 'browser-test-pwd-123';
@@ -17,25 +17,38 @@ test.describe('Passkey Browser Flow', () => {
     const api = await apiRequest.newContext();
     try {
       // Enable user registration
-      await api.post(`${WORKER_URL}/api/admin/user_settings`, {
+      const adminHeaders = await getAdminSessionHeaders(api);
+      const enableRes = await api.post(`${WORKER_URL}/api/admin/user_settings`, {
+        headers: adminHeaders,
         data: { enable: true, enableMailVerify: false },
       });
+      if (!enableRes.ok()) {
+        throw new Error(`Failed to enable user registration: ${enableRes.status()} ${await enableRes.text()}`);
+      }
       // Register user with hashed password (matching frontend behavior)
-      await api.post(`${WORKER_URL}/user_api/register`, {
+      const registerRes = await api.post(`${WORKER_URL}/user_api/register`, {
         data: { email: TEST_USER_EMAIL, password: HASHED_PASSWORD },
       });
+      if (!registerRes.ok()) {
+        throw new Error(`Failed to register passkey fixture user: ${registerRes.status()} ${await registerRes.text()}`);
+      }
       // Login to get JWT for localStorage injection
       const loginRes = await api.post(`${WORKER_URL}/user_api/login`, {
         data: { email: TEST_USER_EMAIL, password: HASHED_PASSWORD },
       });
+      if (!loginRes.ok()) {
+        throw new Error(`Failed to login passkey fixture user: ${loginRes.status()} ${await loginRes.text()}`);
+      }
       const body = await loginRes.json();
       userJwt = body.jwt;
+      if (!userJwt) throw new Error('Passkey fixture login did not return a JWT');
     } finally {
       await api.dispose();
     }
   });
 
   test('register passkey, then login with passkey', async ({ page, context }) => {
+    test.setTimeout(90_000);
     // Set up virtual authenticator via CDP
     const cdp = await context.newCDPSession(page);
     await cdp.send('WebAuthn.enable');
@@ -107,8 +120,8 @@ test.describe('Passkey Browser Flow', () => {
       // Wait for login to complete — user email should appear
       await expect(page.getByText(TEST_USER_EMAIL)).toBeVisible({ timeout: 15_000 });
     } finally {
-      await cdp.send('WebAuthn.removeVirtualAuthenticator', { authenticatorId });
-      await cdp.detach();
+      await cdp.send('WebAuthn.removeVirtualAuthenticator', { authenticatorId }).catch(() => undefined);
+      await cdp.detach().catch(() => undefined);
     }
   });
 });

@@ -299,3 +299,34 @@ export async function deleteAddress(
     throw new Error(`Failed to delete address: ${res.status()} ${await res.text()}`);
   }
 }
+
+/**
+ * Delete a fixture through the guarded admin contract when user deletion is
+ * intentionally disabled for the worker under test.
+ */
+export async function deleteAddressAsAdmin(
+  ctx: APIRequestContext,
+  opts: {
+    addressId: number;
+    credentialVersion?: number;
+    mailCount?: number;
+    sentCount?: number;
+    shareCount?: number;
+  },
+  workerUrl: string = WORKER_URL
+): Promise<void> {
+  const headers = await getAdminSessionHeaders(ctx, workerUrl);
+  const res = await ctx.delete(`${workerUrl}/api/admin/delete_address/${opts.addressId}`, {
+    headers,
+    data: {
+      confirm: true,
+      expected_credential_version: opts.credentialVersion ?? 1,
+      expected_mail_count: opts.mailCount ?? 0,
+      expected_sent_count: opts.sentCount ?? 0,
+      expected_share_count: opts.shareCount ?? 0,
+    },
+  });
+  if (!res.ok()) {
+    throw new Error(`Failed to delete address as admin: ${res.status()} ${await res.text()}`);
+  }
+}

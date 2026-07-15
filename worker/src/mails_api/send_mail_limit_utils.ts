@@ -4,7 +4,7 @@ import { SendMailLimitConfig } from "../models";
 import { CONSTANTS } from "../constants";
 import { getJsonObjectValue, getSetting } from "../utils";
 
-class SendMailLimitError extends Error {
+export class SendMailLimitError extends Error {
     constructor(message: string) {
         super(message);
     }

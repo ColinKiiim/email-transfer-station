@@ -10,7 +10,7 @@ import { getJsonSetting, getBooleanValue, getJsonObjectValue } from '../utils';
 import { GeoData } from '../models'
 import { handleListQuery, isSendMailBindingEnabled, updateAddressUpdatedAt } from '../common'
 import { getSendBalanceState, requestSendMailAccess } from './send_balance';
-import { ensureSendMailLimit, increaseSendMailLimitCount } from './send_mail_limit_utils';
+import { ensureSendMailLimit, increaseSendMailLimitCount, SendMailLimitError } from './send_mail_limit_utils';
 import { getActiveDomainNames } from '../domains';
 
 
@@ -257,7 +257,7 @@ api.post('/api/send_mail', async (c) => {
         await sendMail(c, address, reqJson);
     } catch (e) {
         console.error("Failed to send mail", e);
-        return c.text("Failed to send mail", 400)
+        return c.text(e instanceof SendMailLimitError ? e.message : "Failed to send mail", 400)
     }
     return c.json({ status: "ok" })
 })
@@ -275,7 +275,7 @@ api.post('/external/api/send_mail', async (c) => {
         return c.json({ status: "ok" })
     } catch (e) {
         console.error("Failed to send mail", e);
-        return c.text("Failed to send mail", 400)
+        return c.text(e instanceof SendMailLimitError ? e.message : "Failed to send mail", 400)
     }
 })
 

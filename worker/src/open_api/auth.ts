@@ -1,4 +1,5 @@
 import { Context, Hono } from 'hono'
+import { Jwt } from 'hono/utils/jwt'
 import utils, { checkCfTurnstile, getPasswords, getAdminPasswords, hashPassword, getStringArray } from '../utils';
 import i18n from '../i18n';
 import { recordAccessEvent } from '../audit';

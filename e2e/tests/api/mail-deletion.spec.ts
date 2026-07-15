@@ -1,6 +1,13 @@
 import { createHash } from 'node:crypto';
 import { test, expect } from '@playwright/test';
-import { WORKER_URL, WORKER_URL_ENV_OFF, createTestAddress, seedTestMail, deleteAddress } from '../../fixtures/test-helpers';
+import {
+  WORKER_URL,
+  WORKER_URL_ENV_OFF,
+  createTestAddress,
+  seedTestMail,
+  deleteAddress,
+  deleteAddressAsAdmin,
+} from '../../fixtures/test-helpers';
 
 test.describe('Mail Deletion', () => {
   test('user mail deletion is disabled when ENABLE_USER_DELETE_EMAIL is false', async ({ request }) => {
@@ -37,7 +44,7 @@ test.describe('Mail Deletion', () => {
       },
     });
     expect(createRes.ok()).toBe(true);
-    const { jwt, address } = await createRes.json();
+    const { jwt, address, address_id: addressId } = await createRes.json();
 
     try {
       const bindRes = await request.post(`${WORKER_URL_ENV_OFF}/user_api/bind_address`, {
@@ -98,7 +105,10 @@ test.describe('Mail Deletion', () => {
       expect(after.results).toHaveLength(1);
       expect(after.results[0].id).toBe(targetId);
     } finally {
-      await deleteAddress(request, jwt, WORKER_URL_ENV_OFF);
+      await deleteAddressAsAdmin(request, {
+        addressId,
+        mailCount: 1,
+      }, WORKER_URL_ENV_OFF);
     }
   });
 
