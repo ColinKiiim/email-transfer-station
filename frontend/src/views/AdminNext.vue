@@ -285,6 +285,24 @@ const domainActivationForm = reactive({
     allowRandomSubdomain: false,
 })
 
+const addressCreateForm = reactive({
+    name: '',
+    domain: '',
+    enablePrefix: true,
+    enableRandomSubdomain: false,
+})
+
+const shareCreateForm = reactive({
+    label: '',
+    expiresAt: '',
+})
+
+const oneTimeResult = reactive({
+    title: '',
+    value: '',
+    note: '',
+})
+
 const activeView = computed(() => viewMeta[ui.view] ? ui.view : 'overview')
 const activeMeta = computed(() => viewMeta[activeView.value])
 const pageTitle = computed(() => `${activeMeta.value.title} · Email Transfer Station`)
@@ -704,6 +722,7 @@ const domainRows = computed(() => {
                 mode: modeLabel(row.receive_mode),
                 setup: setupLabel(row.setup_status),
                 enabled: row.enabled ? '启用' : '关闭',
+                allowRandomSubdomain: !!row.allow_random_subdomain,
                 configVersion: row.config_version,
                 verificationAddress: row.verification_address,
                 verificationExpiresAt: row.verification_expires_at,
@@ -732,6 +751,7 @@ const domainRows = computed(() => {
             mode: modeLabel(row.receive_mode),
             setup: setupLabel(row.setup_status),
             enabled: row.enabled === false ? '关闭' : '启用',
+            allowRandomSubdomain: !!row.allow_random_subdomain,
             creation: row.allow_address_creation ? '允许创建' : '仅管理员',
             default: row.is_default ? '默认' : '否',
             collector: row.collector_address || '-',
@@ -751,6 +771,7 @@ const domainRows = computed(() => {
             mode: 'Worker env registry',
             setup: '需复核',
             enabled: '启用',
+            allowRandomSubdomain: false,
             creation: openSettings.value.defaultDomains?.includes(row.value) ? '允许创建' : '仅管理员',
             default: openSettings.value.defaultDomains?.[0] === row.value ? '默认' : '否',
             collector: '-',
@@ -762,6 +783,15 @@ const domainRows = computed(() => {
         }))
     }
     return demoRows(designSeed.domains)
+})
+
+const addressDomainOptions = computed(() => domainRows.value.filter((row) => row.enabled === '启用'))
+const selectedAddressDomain = computed(() => addressDomainOptions.value.find((row) => row.domain === addressCreateForm.domain))
+
+watch(() => addressCreateForm.domain, () => {
+    if (!selectedAddressDomain.value?.allowRandomSubdomain) {
+        addressCreateForm.enableRandomSubdomain = false
+    }
 })
 
 const addressRows = computed(() => {
@@ -1759,12 +1789,37 @@ const currentAddress = computed(() => addressRows.value.find((row) => row.id ===
 const currentDomain = computed(() => domainRows.value.find((row) => row.id === ui.selected.routing) || domainRows.value[0])
 const currentNotification = computed(() => notificationRows.value.find((row) => row.id === ui.selected.delivery) || notificationRows.value[0])
 
+const clearOneTimeResult = () => {
+    oneTimeResult.title = ''
+    oneTimeResult.value = ''
+    oneTimeResult.note = ''
+}
+
 const openActionModal = (type) => {
+    clearOneTimeResult()
+    if (type === 'new-address' || type === 'quick-create') {
+        addressCreateForm.name = ''
+        addressCreateForm.domain = currentDomain.value?.enabled === '启用'
+            ? currentDomain.value.domain
+            : addressDomainOptions.value[0]?.domain || ''
+        addressCreateForm.enablePrefix = !!openSettings.value.prefix
+        addressCreateForm.enableRandomSubdomain = false
+    }
+    if (type === 'share-package') {
+        shareCreateForm.label = ''
+        shareCreateForm.expiresAt = ''
+    }
     actionModal.value = type
 }
 
 const closeActionModal = () => {
     actionModal.value = ''
+    clearOneTimeResult()
+}
+
+const openSharePackage = (row = currentAddress.value) => {
+    if (row?.id) ui.selected.identity = row.id
+    openActionModal('share-package')
 }
 
 const copyCurrent = async () => {
@@ -1879,6 +1934,178 @@ const runProductionAction = async (key, label, confirmText, task) => {
     }
 }
 
+const showOneTimeResult = (title, value, note) => {
+    oneTimeResult.title = title
+    oneTimeResult.value = value
+    oneTimeResult.note = note
+    actionModal.value = 'one-time-result'
+}
+
+const formatAddressCredential = (address, jwt, password = '') => [
+    `地址: ${address}`,
+    jwt ? `JWT: ${jwt}` : '',
+    jwt ? `登录链接: ${window.location.origin}/?jwt=${encodeURIComponent(jwt)}` : '',
+    password ? `地址密码: ${password}` : '',
+].filter(Boolean).join('\n')
+
+const createAddressIdentity = async () => {
+    const name = addressCreateForm.name.trim()
+    const domain = addressCreateForm.domain.trim().toLowerCase()
+    if (!name || !domain) {
+        showToast('请输入地址名并选择域名')
+        return
+    }
+    if (!requireProductionWrite('新增地址')) return
+    if (actionBusy.value) {
+        showToast('已有生产操作执行中')
+        return
+    }
+    if (!window.confirm(`确认创建 ${name}@${domain}？创建成功后地址凭证只显示一次。`)) return
+    actionBusy.value = 'address-create'
+    try {
+        const result = await api.fetch('/api/admin/new_address', {
+            method: 'POST',
+            body: JSON.stringify({
+                name,
+                domain,
+                enablePrefix: addressCreateForm.enablePrefix,
+                enableRandomSubdomain: addressCreateForm.enableRandomSubdomain,
+            }),
+        })
+        await refreshAll()
+        const address = result?.address || `${name}@${domain}`
+        const credential = formatAddressCredential(address, result?.jwt, result?.password)
+        showOneTimeResult(
+            `地址已创建：${address}`,
+            credential,
+            result?.jwt || result?.password
+                ? '凭证只显示本次。请复制到可信密码管理器。'
+                : '地址已创建，但接口未返回凭证。',
+        )
+        showToast('地址已创建')
+    } catch (error) {
+        showToast(error?.message || '新增地址失败')
+    } finally {
+        actionBusy.value = ''
+    }
+}
+
+const toD1DateTime = (value) => {
+    const normalized = String(value || '').trim().replace('T', ' ')
+    if (!normalized) return null
+    return normalized.length === 16 ? `${normalized}:00` : normalized
+}
+
+const createSharePackage = async () => {
+    const row = currentAddress.value
+    if (!row?.sourceId) {
+        showToast('请先选择一个生产地址')
+        return
+    }
+    if (!requireProductionWrite('创建访问包')) return
+    if (actionBusy.value) {
+        showToast('已有生产操作执行中')
+        return
+    }
+    if (!window.confirm(`确认为 ${row.address} 创建只读访问包？分享链接只显示一次。`)) return
+    actionBusy.value = 'share-create'
+    try {
+        const result = await api.fetch(`/api/admin/address/${row.sourceId}/share_tokens`, {
+            method: 'POST',
+            body: JSON.stringify({
+                label: shareCreateForm.label.trim(),
+                scopes: ['read'],
+                expires_at: toD1DateTime(shareCreateForm.expiresAt),
+            }),
+        })
+        await refreshAll()
+        const shareUrl = result?.token ? `${window.location.origin}/i/${encodeURIComponent(result.token)}` : ''
+        showOneTimeResult(
+            `访问包已创建：${row.address}`,
+            shareUrl,
+            shareUrl ? '链接仅显示本次；持有者可只读查看该地址。' : '访问包已创建，但接口未返回 token。',
+        )
+        showToast('访问包已创建')
+    } catch (error) {
+        showToast(error?.message || '创建访问包失败')
+    } finally {
+        actionBusy.value = ''
+    }
+}
+
+const deleteCurrentAddress = async () => {
+    const row = currentAddress.value
+    if (!row?.sourceId) {
+        showToast('当前地址不是生产地址，无法删除')
+        return
+    }
+    await runProductionAction(
+        'address-delete',
+        '删除地址',
+        `确认删除 ${row.address}？该地址的 ${row.mails} 封收件、${row.sent} 封发送记录和访问包会一起删除，无法撤销。`,
+        async () => {
+            const result = await api.fetch(`/api/admin/delete_address/${row.sourceId}`, { method: 'DELETE' })
+            if (result?.success === false) throw new Error('删除地址失败')
+            await refreshAll()
+            ui.selected.identity = addressRows.value[0]?.id || ''
+            showToast(`已删除 ${row.address}`)
+        },
+    )
+}
+
+const disableCurrentDomain = async () => {
+    const row = currentDomain.value
+    if (!row?.sourceId) {
+        showToast('当前域名不是 D1 管理记录，无法停用')
+        return
+    }
+    if (!requireProductionWrite('停用域名')) return
+    if (actionBusy.value) {
+        showToast('已有生产操作执行中')
+        return
+    }
+    actionBusy.value = 'domain-disable'
+    try {
+        const impact = await api.fetch(`/api/admin/domains/${row.sourceId}/impact`)
+        const confirmed = window.confirm(
+            `确认停用 ${row.domain}？影响 ${impact?.address_count ?? 0} 个地址和 ${impact?.mail_count ?? 0} 封邮件；已有数据不会自动迁移。`,
+        )
+        if (!confirmed) return
+        const result = await api.fetch(`/api/admin/domains/${row.sourceId}`, {
+            method: 'DELETE',
+            body: JSON.stringify({ config_version: row.configVersion, confirm: true }),
+        })
+        if (result?.success === false) throw new Error('停用域名失败')
+        await refreshAll()
+        showToast(`已停用 ${row.domain}`)
+    } catch (error) {
+        showToast(error?.message || '停用域名失败')
+    } finally {
+        actionBusy.value = ''
+    }
+}
+
+const showCurrentCredential = async () => {
+    const row = currentAddress.value
+    if (!row?.sourceId) {
+        showToast('当前地址不是生产地址，无法显示凭证')
+        return
+    }
+    await runProductionAction(
+        'credential-show',
+        '显示地址凭证',
+        `确认显示 ${row.address} 的当前 JWT 和固定登录链接？请确保屏幕不会被无关人员看到。`,
+        async () => {
+            const result = await api.fetch(`/api/admin/show_password/${row.sourceId}`)
+            showOneTimeResult(
+                `地址凭证：${row.address}`,
+                formatAddressCredential(row.address, result?.jwt),
+                '结果在关闭后会从页面状态清除；轮换凭证前当前 JWT 仍然有效。',
+            )
+        },
+    )
+}
+
 const rotateCurrentCredential = async () => {
     const row = currentAddress.value
     if (!row?.sourceId) {
@@ -1893,8 +2120,11 @@ const rotateCurrentCredential = async () => {
             const result = await api.fetch(`/api/admin/address/${row.sourceId}/rotate_credential`, { method: 'POST' })
             await refreshAll()
             if (result?.jwt) {
-                await copyText(result.jwt)
-                showToast(`已轮换 ${row.address} 的凭证，新 JWT 已复制`)
+                showOneTimeResult(
+                    `凭证已轮换：${row.address}`,
+                    formatAddressCredential(result?.address || row.address, result.jwt),
+                    '旧 JWT 已失效；新凭证在关闭后会从页面状态清除。',
+                )
             } else {
                 showToast(`已轮换 ${row.address} 的凭证`)
             }
@@ -2212,12 +2442,20 @@ const handleAction = async (type) => {
         await deleteCurrentMail()
         return
     }
+    if (type === 'delete-address') {
+        await deleteCurrentAddress()
+        return
+    }
     if (type === 'clear-inbox') {
         await clearCurrentAddressInbox()
         return
     }
     if (type === 'rotate') {
         await rotateCurrentCredential()
+        return
+    }
+    if (type === 'show-credential') {
+        await showCurrentCredential()
         return
     }
     if (type === 'revoke') {
@@ -2230,6 +2468,10 @@ const handleAction = async (type) => {
     }
     if (type === 'domain-impact') {
         await checkCurrentDomainImpact()
+        return
+    }
+    if (type === 'domain-disable') {
+        await disableCurrentDomain()
         return
     }
     if (type === 'health-check') {
@@ -2257,15 +2499,7 @@ const handleAction = async (type) => {
         await checkDomainVerification(currentDomain.value)
         return
     }
-    const messages = {
-        delete: '该模块删除缺少明确生产对象，暂不执行',
-        send: '真实发信需要可编辑收件人、主题和正文表单，当前展示表单不写生产',
-        preview: '安全渲染策略尚未接入统一预览',
-        'test-webhook': 'Webhook 测试会向外部地址发请求，需先完成可编辑配置确认表单',
-        migration: '数据库迁移属于高风险结构写入，仍需专用确认流程',
-        'purge-cache': '缓存/清理类操作需要精确目标和影响范围，暂不一键执行',
-    }
-    showToast(messages[type] || '该操作缺少可验证的生产写入合同')
+    showToast('该操作缺少可验证的生产写入合同')
 }
 
 const handleDomainRowAction = async (row, type) => {
@@ -2283,10 +2517,13 @@ const toolbarActions = computed(() => {
         { label: '批量删除', icon: 'check', action: 'delete', danger: true },
     ]
     if (view === 'identity') return [
+        { label: '新增地址', icon: 'plus', modal: 'new-address', primary: true },
         { label: '复制当前地址', icon: 'copy', action: 'copy' },
+        { label: '显示凭证', icon: 'lock', action: 'show-credential' },
         { label: '轮换凭证', icon: 'refresh', action: 'rotate' },
         { label: '撤销访问包', icon: 'lock', action: 'revoke' },
         { label: '清空收件', icon: 'check', action: 'clear-inbox', danger: true },
+        { label: '删除地址', icon: 'check', action: 'delete-address', danger: true },
     ]
     if (view === 'routing') return [
         { label: '新增域名', icon: 'plus', action: 'new-domain' },
@@ -2303,127 +2540,22 @@ const toolbarActions = computed(() => {
 
 const modalTitle = computed(() => {
     const titles = {
-        'quick-create': '新建入口',
         'new-address': '新增地址身份',
         'share-package': '生成访问包',
-        'new-domain': '新增接收域',
-        'route-policy': '接收策略',
-        'compose-mail': '地址级发送',
-        webhook: '通知通道',
-        'mail-policy': '安全渲染策略',
-        'risk-policy': '风险策略',
-        'db-migration': '数据库迁移',
-        'roadmap-note': '记录路线事项',
     }
-    return titles[actionModal.value] || '操作'
+    return actionModal.value === 'one-time-result' ? oneTimeResult.title : titles[actionModal.value] || '操作'
 })
 
-const modalNotice = computed(() => {
-    const notices = {
-        'new-address': {
-            title: '需要真实创建表单',
-            text: '后端已有新增地址接口，但当前字段是迁移示例值；接入前必须改成可编辑地址、域名、密码和备注表单。',
-        },
-        'quick-create': {
-            title: '需要真实创建表单',
-            text: '快捷入口暂不写生产，避免用示例地址创建真实收件身份。',
-        },
-        'share-package': {
-            title: '需要显示一次性 token',
-            text: '后端已有访问包创建接口；接入前需要可编辑标签、权限、过期时间，并提供一次性 token 的复制/隐藏流程。',
-        },
-        'new-domain': {
-            title: '需要域名配置表单',
-            text: '域名创建会改变生产接收注册表；接入前需要真实域名、接收模式、collector、Cloudflare zone 和配置版本校验。',
-        },
-        'route-policy': {
-            title: '策略写入暂未接入',
-            text: '路由策略会影响收件入口，当前只允许从详情按钮执行检查和影响预览。',
-        },
-        'compose-mail': {
-            title: '真实发信暂未接入',
-            text: '发信会对外发送邮件；接入前需要可编辑 To、主题、正文、HTML/文本模式和发送前预览确认。',
-        },
-        webhook: {
-            title: '通知配置暂未接入',
-            text: 'Webhook 保存和测试会写 KV 或对外发请求；接入前需要可编辑 endpoint、method、headers 和测试确认。',
-        },
-        'mail-policy': {
-            title: '只读策略说明',
-            text: '安全渲染已由邮件详情的隔离渲染组件执行；这里暂不写生产配置。',
-        },
-        'risk-policy': {
-            title: '风险策略暂未接入',
-            text: '风险策略需要先统一黑名单、访问包和发送权限模型，当前不写生产。',
-        },
-        'db-migration': {
-            title: '高风险维护动作',
-            text: '数据库迁移/初始化不会从新版控制台一键执行；仍需使用专用发布流程和备份校验。',
-        },
-        'roadmap-note': {
-            title: '本地路线记录入口',
-            text: '路线事项不会写生产数据；实际计划仍记录在 harness 中。',
-        },
-    }
-    return notices[actionModal.value] || {
-        title: '暂未接入生产写入',
-        text: '此入口缺少完整生产写入合同，当前不会修改 Worker/D1/KV 数据。',
-    }
-})
+const modalPrimaryLabel = computed(() => actionModal.value === 'share-package' ? '创建访问包' : '创建地址')
 
-const modalFields = computed(() => {
-    const type = actionModal.value
-    if (type === 'new-address' || type === 'quick-create') return [
-        { label: '地址', value: `new-entry@${domainRows.value[0]?.domain || '20030405.xyz'}` },
-        { label: '归属域名', value: domainRows.value[0]?.domain || '20030405.xyz' },
-        { label: '地址用途', value: '临时协作入口' },
-        { label: '访问模式', value: '管理员创建，允许分享包' },
-        { label: '备注', value: '用于短期外部协作，默认启用地址密码与凭证轮换记录。', wide: true },
-    ]
-    if (type === 'new-domain') return [
-        { label: '域名', value: 'new-domain.example' },
-        { label: '接收方式', value: 'Cloudflare Email Routing / ImprovMX free forwarding' },
-        { label: 'Collector 地址', value: 'mx-new-domain-example@20030405.xyz' },
-        { label: '地址创建策略', value: '仅管理员' },
-        { label: '配置备注', value: '非 Cloudflare 域默认走 ImprovMX 免费转发到 collector。', wide: true },
-    ]
-    if (type === 'share-package') return [
-        { label: '地址', value: currentAddress.value?.address || addressRows.value[0]?.address || '-' },
-        { label: '标签', value: '临时只读协作' },
-        { label: '过期时间', value: '2026-07-02 18:00' },
-        { label: '权限', value: '只读正文，可下载附件' },
-    ]
-    if (type === 'compose-mail') return [
-        { label: 'From', value: currentAddress.value?.address || 'ops@20030405.xyz' },
-        { label: 'To', value: 'recipient@example.net' },
-        { label: '内容类型', value: '纯文本 / HTML 安全预览' },
-        { label: '主题', value: '关于域名迁移的回复', wide: true },
-        { label: '正文', value: '这里使用与用户发送页共享的验证和预览逻辑；发送提供商确定前保持为受控能力。', wide: true },
-    ]
-    if (type === 'webhook') return [
-        { label: '通道', value: '邮件 Webhook / Telegram Bot' },
-        { label: '触发时机', value: '待后端完成保存成功门禁后启用' },
-        { label: 'Endpoint', value: live.mailWebhook?.url || 'https://hooks.example.net/email-transfer-station', wide: true },
-        { label: '事件范围', value: 'mail.saved, mail.unknown_recipient, attachment.indexed, share_token.read', wide: true },
-    ]
-    if (type === 'db-migration') return [
-        { label: '代码版本', value: live.dbVersion?.code_db_version || 'v0.0.11' },
-        { label: '当前版本', value: live.dbVersion?.current_db_version || '-' },
-        { label: '涉及表', value: 'address_share_tokens, audit_events, access_events, managed_domains, address_credentials', wide: true },
-    ]
-    if (type === 'mail-policy' || type === 'risk-policy') return [
-        { label: '策略模块', value: 'HTML 隔离渲染' },
-        { label: '默认模式', value: '隔离渲染，附件链接重写' },
-        { label: '强制入口', value: 'MailContentRenderer, ShadowHtmlComponent, SendMail HTML preview, TokenInbox message body', wide: true },
-    ]
-    return [
-        { label: '路线事项', value: '保留为后续开发入口，不作为当前已完成能力展示。', wide: true },
-    ]
-})
-
-const saveModal = () => {
-    closeActionModal()
-    showToast(`${modalNotice.value.title}，未写入生产`)
+const submitActionModal = async () => {
+    if (actionModal.value === 'share-package') {
+        await createSharePackage()
+        return
+    }
+    if (actionModal.value === 'new-address' || actionModal.value === 'quick-create') {
+        await createAddressIdentity()
+    }
 }
 
 const currentRail = computed(() => {
@@ -2450,8 +2582,6 @@ const currentRail = computed(() => {
             body: mail.body,
             mail,
             actions: [
-                { label: '回复', action: 'send' },
-                { label: '转发', action: 'send' },
                 { label: '删除', action: 'delete-current', danger: true },
             ],
         }
@@ -2479,7 +2609,6 @@ const currentRail = computed(() => {
             actions: [
                 { label: '创建地址', modal: 'new-address', primary: true },
                 { label: '保留观察', action: 'refresh' },
-                { label: '删除', action: 'delete', danger: true },
             ],
         }
     }
@@ -2496,10 +2625,12 @@ const currentRail = computed(() => {
                 ['凭证', currentAddress.value.credential, 'status'],
             ],
             actions: [
-                { label: '轮换凭证', action: 'rotate', primary: true },
+                { label: '显示凭证', action: 'show-credential', primary: true },
+                { label: '轮换凭证', action: 'rotate' },
                 { label: '创建访问包', modal: 'share-package' },
                 { label: '撤销访问包', action: 'revoke' },
                 { label: '清空收件', action: 'clear-inbox', danger: true },
+                { label: '删除地址', action: 'delete-address', danger: true },
             ],
         }
     }
@@ -2520,6 +2651,7 @@ const currentRail = computed(() => {
                 { label: '检查验证', action: 'verify-check' },
                 { label: '检查路由', action: 'verify' },
                 { label: '停用影响', action: 'domain-impact', danger: true },
+                { label: '停用域名', action: 'domain-disable', danger: true },
             ],
         }
     }
@@ -2532,10 +2664,6 @@ const currentRail = computed(() => {
                 ['入口', currentNotification.value.target],
                 ['状态', currentNotification.value.status, 'status'],
                 ['说明', currentNotification.value.detail],
-            ],
-            actions: [
-                { label: '测试', action: 'test-webhook', primary: true },
-                { label: '编辑', modal: 'webhook' },
             ],
         }
     }
@@ -3153,7 +3281,7 @@ onBeforeUnmount(() => {
                                                     <span v-if="panel.kind === 'identity' && column.main === 'address'" class="cell-actions">
                                                         <button type="button" @click.stop="openMailFromAddress(row.address)">查看收件</button>
                                                         <button type="button" @click.stop="copyText(row.address)">复制</button>
-                                                        <button type="button" @click.stop="openActionModal('share-package')">分享</button>
+                                                        <button type="button" @click.stop="openSharePackage(row)">分享</button>
                                                     </span>
                                                 </div>
                                             </template>
@@ -3178,6 +3306,11 @@ onBeforeUnmount(() => {
                                                 <button type="button" :disabled="!row.sourceId || !!actionBusy"
                                                     @click.stop="handleDomainRowAction(row, 'verify')">
                                                     检查路由
+                                                </button>
+                                                <button v-if="row.enabled === '启用'" type="button"
+                                                    :disabled="!row.sourceId || !!actionBusy"
+                                                    @click.stop="handleDomainRowAction(row, 'domain-disable')">
+                                                    停用
                                                 </button>
                                             </span>
                                             <strong v-else-if="column.type === 'strong'">{{ cellText(row, column.key) }}</strong>
@@ -3389,7 +3522,7 @@ onBeforeUnmount(() => {
 
         <div v-if="actionModal" class="modal-backdrop is-open" role="dialog" aria-modal="true"
             aria-labelledby="action-modal-title" @click.self="closeActionModal">
-            <div class="modal">
+            <form class="modal" @submit.prevent="submitActionModal">
                 <div class="modal-head">
                     <h2 id="action-modal-title">{{ modalTitle }}</h2>
                     <button class="icon-btn" type="button" aria-label="关闭" @click="closeActionModal">
@@ -3397,24 +3530,87 @@ onBeforeUnmount(() => {
                     </button>
                 </div>
                 <div class="modal-body">
-                    <div class="notice modal-notice">
-                        <strong>{{ modalNotice.title }}</strong>
-                        <span>{{ modalNotice.text }}</span>
-                    </div>
-                    <div class="form-grid">
-                        <label v-for="field in modalFields" :key="field.label" class="form-field"
-                            :class="{ full: field.wide }">
-                            <span>{{ field.label }}</span>
-                            <textarea v-if="field.wide" :value="field.value" readonly />
-                            <input v-else class="field" :value="field.value" readonly />
+                    <template v-if="actionModal === 'one-time-result'">
+                        <div class="notice modal-notice">
+                            <strong>仅显示本次</strong>
+                            <span>{{ oneTimeResult.note }}</span>
+                        </div>
+                        <label class="form-field full">
+                            <span>一次性结果</span>
+                            <textarea data-testid="one-time-result" :value="oneTimeResult.value" rows="6" readonly />
                         </label>
-                    </div>
+                    </template>
+                    <template v-else-if="actionModal === 'new-address' || actionModal === 'quick-create'">
+                        <div class="notice modal-notice">
+                            <strong>生产地址</strong>
+                            <span>创建后会立即写入 D1；JWT 和地址密码只在成功后显示一次。</span>
+                        </div>
+                        <div class="form-grid">
+                            <label class="form-field">
+                                <span>地址名</span>
+                                <input v-model="addressCreateForm.name" data-testid="address-name" class="field"
+                                    placeholder="team-inbox" autocomplete="off" required />
+                            </label>
+                            <label class="form-field">
+                                <span>域名</span>
+                                <select v-model="addressCreateForm.domain" data-testid="address-domain" class="select" required>
+                                    <option v-for="domain in addressDomainOptions" :key="domain.id" :value="domain.domain">
+                                        {{ domain.domain }}
+                                    </option>
+                                </select>
+                            </label>
+                        </div>
+                        <label v-if="openSettings.prefix" class="check-row">
+                            <input v-model="addressCreateForm.enablePrefix" data-testid="address-prefix" type="checkbox" />
+                            <span>使用系统前缀 {{ openSettings.prefix }}</span>
+                        </label>
+                        <label v-if="selectedAddressDomain?.allowRandomSubdomain" class="check-row">
+                            <input v-model="addressCreateForm.enableRandomSubdomain" data-testid="address-random-subdomain" type="checkbox" />
+                            <span>在该域名下生成随机子域</span>
+                        </label>
+                        <div v-if="addressDomainOptions.length === 0" class="notice warn">
+                            <strong>没有可用域名</strong>
+                            <span>请先在域名管理中新增并启用接收域。</span>
+                        </div>
+                    </template>
+                    <template v-else-if="actionModal === 'share-package'">
+                        <div class="notice modal-notice">
+                            <strong>只读访问</strong>
+                            <span>访问链接只显示一次，持有者可查看该地址的邮件。</span>
+                        </div>
+                        <div class="form-grid">
+                            <label class="form-field full">
+                                <span>地址</span>
+                                <input data-testid="share-address" class="field" :value="currentAddress?.address || '-'" readonly />
+                            </label>
+                            <label class="form-field">
+                                <span>标签</span>
+                                <input v-model="shareCreateForm.label" data-testid="share-label" class="field"
+                                    placeholder="例如：临时协作" autocomplete="off" />
+                            </label>
+                            <label class="form-field">
+                                <span>过期时间</span>
+                                <input v-model="shareCreateForm.expiresAt" data-testid="share-expiry" class="field"
+                                    type="datetime-local" />
+                            </label>
+                        </div>
+                    </template>
                 </div>
                 <div class="modal-actions">
-                    <button class="btn" type="button" @click="closeActionModal">取消</button>
-                    <button class="btn primary" type="button" @click="saveModal">记录</button>
+                    <template v-if="actionModal === 'one-time-result'">
+                        <button class="btn primary" type="button" :disabled="!oneTimeResult.value"
+                            @click="copyText(oneTimeResult.value)">复制结果</button>
+                        <button class="btn" type="button" @click="closeActionModal">已安全保存</button>
+                    </template>
+                    <template v-else>
+                        <button class="btn" type="button" :disabled="!!actionBusy" @click="closeActionModal">取消</button>
+                        <button class="btn primary" data-testid="action-submit" type="submit"
+                            :disabled="!!actionBusy || (actionModal === 'new-address' && addressDomainOptions.length === 0)">
+                            {{ actionBusy ? '执行中' : modalPrimaryLabel }}
+                        </button>
+                    </template>
                 </div>
-            </div>
+            </form>
         </div>
 
         <div class="toast" :class="{ 'is-visible': toastState.visible }" role="status" aria-live="polite">

@@ -76,15 +76,15 @@ const fixtureResponse = async (path, options = {}) => {
         return { totals: {}, domains: [] }
     }
     if (path === '/api/admin/statistics') return {}
-    if (path === '/api/admin/domains') return { results: [] }
+    if (path === '/api/admin/domains') return { results: runtime.domains }
     if (path === '/api/admin/mail_domains') return { results: [] }
     if (path === '/api/admin/mail_addresses') return { results: [] }
     if (path.startsWith('/api/admin/mails?')) {
         return { results: runtime.mails, count: runtime.mails.length, unread_count: 0 }
     }
     if (path === '/api/admin/mails_unknow?limit=100&offset=0') return { results: [] }
-    if (path === '/api/admin/address?limit=50&offset=0') return { results: [] }
-    if (path === '/api/admin/access_packages?limit=50&offset=0') return { results: [] }
+    if (path === '/api/admin/address?limit=50&offset=0') return { results: runtime.addresses }
+    if (path === '/api/admin/access_packages?limit=50&offset=0') return { results: runtime.accessPackages }
     if (path === '/api/admin/audit_events?limit=20&offset=0') return { results: [] }
     if (path === '/api/admin/access_events?limit=20&offset=0') return { results: [] }
     if (path === '/api/admin/users?limit=20&offset=0') return { results: [] }
@@ -96,6 +96,34 @@ const fixtureResponse = async (path, options = {}) => {
     if (path === '/api/admin/ai_extract/settings') return { enabled: false }
     if (path === '/api/admin/address_sender?limit=20&offset=0') return { results: [] }
     if (path === '/api/admin/sendbox?limit=10&offset=0') return { results: [] }
+    if (path === '/api/admin/new_address' && options.method === 'POST') {
+        runtime.lastAddressCreate = JSON.parse(options.body)
+        const address = `${runtime.lastAddressCreate.name}@${runtime.lastAddressCreate.domain}`
+        runtime.addresses.push({ id: 9, name: address, credential_version: 1 })
+        return { address_id: 9, address, jwt: 'fixture-address-jwt', password: 'fixture-address-password' }
+    }
+    if (path === '/api/admin/address/3/share_tokens' && options.method === 'POST') {
+        runtime.lastShareCreate = JSON.parse(options.body)
+        runtime.accessPackages.push({ id: 11, address_id: 3, address: 'ops@example.test', scopes: 'read' })
+        return { id: 11, address: 'ops@example.test', token: 'fixture-share-token' }
+    }
+    if (path === '/api/admin/show_password/3') {
+        return { jwt: 'fixture-current-jwt' }
+    }
+    if (path === '/api/admin/delete_address/3' && options.method === 'DELETE') {
+        runtime.addresses = runtime.addresses.filter((row) => row.id !== 3)
+        return { success: true }
+    }
+    if (path === '/api/admin/domains/1/impact') {
+        return { success: true, address_count: 2, mail_count: 4 }
+    }
+    if (path === '/api/admin/domains/1' && options.method === 'DELETE') {
+        runtime.lastDomainDisable = JSON.parse(options.body)
+        runtime.domains = runtime.domains.map((row) => row.id === 1
+            ? { ...row, enabled: false, setup_status: 'disabled', config_version: row.config_version + 1 }
+            : row)
+        return { success: true, address_count: 2, mail_count: 4, config_version: 8 }
+    }
     if (path === '/api/admin/mails/7' && options.method === 'DELETE') {
         if (runtime.deleteError) throw runtime.deleteError
         runtime.mails = []
@@ -147,11 +175,17 @@ beforeEach(() => {
     sessionStorage.clear()
     runtime = {
         mails: [mail()],
+        addresses: [],
+        accessPackages: [],
+        domains: [],
         loginError: null,
         failPath: null,
         failMessage: '',
         overviewPromise: null,
         deleteError: null,
+        lastAddressCreate: null,
+        lastShareCreate: null,
+        lastDomainDisable: null,
     }
     mocks.fetch.mockReset()
     mocks.fetch.mockImplementation(fixtureResponse)
@@ -306,5 +340,128 @@ describe('AdminNext behavior baseline', () => {
         expect(wrapper.find('.mail-row').exists()).toBe(false)
         expect(wrapper.text()).toContain('没有匹配结果')
         wrapper.unmount()
+    })
+
+    it('creates a production address and exposes its credentials exactly once', async () => {
+        vi.spyOn(window, 'confirm').mockReturnValue(true)
+        runtime.domains = [{
+            id: 1,
+            domain: 'example.test',
+            enabled: true,
+            receive_mode: 'cloudflare_email',
+            setup_status: 'active',
+            allow_address_creation: true,
+            allow_random_subdomain: true,
+            config_version: 7,
+        }]
+        const { wrapper } = await mountAdmin({ path: '/admin?view=identity' })
+
+        const createButton = wrapper.findAll('.toolbar button').find((button) => button.text().includes('新增地址'))
+        expect(createButton).toBeTruthy()
+        await createButton.trigger('click')
+        await wrapper.get('[data-testid="address-name"]').setValue('team')
+        await wrapper.get('[data-testid="address-random-subdomain"]').setValue(true)
+        await wrapper.get('[data-testid="action-submit"]').trigger('click')
+        await settle()
+
+        expect(runtime.lastAddressCreate).toEqual({
+            name: 'team',
+            domain: 'example.test',
+            enablePrefix: false,
+            enableRandomSubdomain: true,
+        })
+        const oneTimeResult = wrapper.get('[data-testid="one-time-result"]').element.value
+        expect(oneTimeResult).toContain('team@example.test')
+        expect(oneTimeResult).toContain('fixture-address-jwt')
+        expect(oneTimeResult).toContain('fixture-address-password')
+        expect(oneTimeResult).toContain('/?jwt=fixture-address-jwt')
+        expect(wrapper.text()).toContain('仅显示本次')
+        wrapper.unmount()
+    })
+
+    it('reveals the selected address credential behind an explicit confirmation', async () => {
+        vi.spyOn(window, 'confirm').mockReturnValue(true)
+        runtime.addresses = [{ id: 3, name: 'ops@example.test', credential_version: 2 }]
+        const { wrapper } = await mountAdmin({ path: '/admin?view=identity' })
+
+        const revealButton = wrapper.findAll('.toolbar button')
+            .find((button) => button.text().includes('显示凭证'))
+        expect(revealButton).toBeTruthy()
+        await revealButton.trigger('click')
+        await settle()
+
+        expect(mocks.fetch).toHaveBeenCalledWith('/api/admin/show_password/3')
+        const oneTimeResult = wrapper.get('[data-testid="one-time-result"]').element.value
+        expect(oneTimeResult).toContain('fixture-current-jwt')
+        expect(oneTimeResult).toContain('/?jwt=fixture-current-jwt')
+        wrapper.unmount()
+    })
+
+    it('creates a read-only access package for the selected address', async () => {
+        vi.spyOn(window, 'confirm').mockReturnValue(true)
+        runtime.addresses = [{ id: 3, name: 'ops@example.test', credential_version: 1 }]
+        const { wrapper } = await mountAdmin({ path: '/admin?view=identity' })
+
+        const shareButton = wrapper.findAll('.cell-actions button').find((button) => button.text() === '分享')
+        expect(shareButton).toBeTruthy()
+        await shareButton.trigger('click')
+        await wrapper.get('[data-testid="share-label"]').setValue('外部审阅')
+        await wrapper.get('[data-testid="share-expiry"]').setValue('2026-07-16T18:30')
+        await wrapper.get('[data-testid="action-submit"]').trigger('click')
+        await settle()
+
+        expect(runtime.lastShareCreate).toEqual({
+            label: '外部审阅',
+            scopes: ['read'],
+            expires_at: '2026-07-16 18:30:00',
+        })
+        expect(wrapper.get('[data-testid="one-time-result"]').element.value).toContain('/i/fixture-share-token')
+        wrapper.unmount()
+    })
+
+    it('deletes the selected address and disables a domain with impact confirmation', async () => {
+        const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+        runtime.addresses = [{
+            id: 3,
+            name: 'ops@example.test',
+            credential_version: 1,
+            mail_count: 2,
+            send_count: 1,
+            active_share_token_count: 1,
+        }]
+        let mounted = await mountAdmin({ path: '/admin?view=identity' })
+
+        const deleteAddressButton = mounted.wrapper.findAll('.toolbar button')
+            .find((button) => button.text().includes('删除地址'))
+        expect(deleteAddressButton).toBeTruthy()
+        await deleteAddressButton.trigger('click')
+        await settle()
+        expect(mocks.fetch).toHaveBeenCalledWith('/api/admin/delete_address/3', { method: 'DELETE' })
+        mounted.wrapper.unmount()
+
+        runtime.domains = [{
+            id: 1,
+            domain: 'example.test',
+            enabled: true,
+            receive_mode: 'cloudflare_email',
+            setup_status: 'active',
+            allow_address_creation: true,
+            config_version: 7,
+        }]
+        mounted = await mountAdmin({ path: '/admin?view=routing' })
+        const disableButton = mounted.wrapper.findAll('.domain-actions button')
+            .find((button) => button.text() === '停用')
+        expect(disableButton).toBeTruthy()
+        await disableButton.trigger('click')
+        await settle()
+
+        expect(mocks.fetch).toHaveBeenCalledWith('/api/admin/domains/1/impact')
+        expect(mocks.fetch).toHaveBeenCalledWith('/api/admin/domains/1', {
+            method: 'DELETE',
+            body: JSON.stringify({ config_version: 7, confirm: true }),
+        })
+        expect(runtime.lastDomainDisable).toEqual({ config_version: 7, confirm: true })
+        expect(confirm).toHaveBeenCalled()
+        mounted.wrapper.unmount()
     })
 })
