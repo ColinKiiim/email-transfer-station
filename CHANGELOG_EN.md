@@ -52,6 +52,9 @@
   request IDs, outcome auditing, explicit dangerous-operation confirmation, and
   version/count conflict protection for address deletion, clearing, and credential
   operations.
+- Updated security-relevant Worker, frontend, build, and E2E dependencies, removing
+  advisory-affected transitive versions from the older AWS and Resend dependency
+  chains.
 - Fixed mail-flow filtering, unread state, whole-page scrolling, transfer decoding,
   and selected HTML body rendering.
 - Explicitly prohibited leaking Agent mailbox Address JWTs through URLs, command
