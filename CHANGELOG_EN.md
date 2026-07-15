@@ -31,7 +31,7 @@
 - Reworked branding, address-connection details, shared-inbox shell, admin mail flow,
   and responsive layouts around this product.
 - Added read-only GitHub Actions CI for Worker/Frontend/Pages validation and manual
-  E2E, matching local commands.
+  E2E, matching local commands, and removed inherited upstream deployment workflows.
 - Rewrote the Chinese and English release surface, removed the inherited docs site,
   and added verified provenance NOTICE and test-version security support boundaries.
 

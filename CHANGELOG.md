@@ -23,7 +23,8 @@
 - 管理 API 迁移到 `/api/admin/*`；内部调用方完成迁移后，旧 API 前缀、旧后台和
   `/console` 兼容入口已经删除。
 - 前端品牌、地址凭据连接弹窗、分享邮箱壳、后台收件流和多断点布局改为本项目语义。
-- 新增只读 GitHub Actions CI，覆盖 Worker/Frontend/Pages 本地等价验证与手动 E2E。
+- 新增只读 GitHub Actions CI，覆盖 Worker/Frontend/Pages 本地等价验证与手动 E2E，
+  并移除继承的上游部署工作流。
 - 重写中英文发布说明，删除继承文档站，补充真实来源 NOTICE 与测试版安全支持范围。
 
 ### 修复与安全

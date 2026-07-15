@@ -168,10 +168,10 @@ cd ../pages
 corepack pnpm run deploy
 ```
 
-Active CI has read-only validation permissions and does not deploy.
-`.github/workflows-disabled/` is a non-executable historical workflow archive, not
-a supported release path. There is currently no staging environment isolated from
-production resources.
+Active CI has read-only validation permissions and does not deploy. Inherited
+upstream deployment workflows have been removed; the explicit Worker + Pages
+commands above are the only supported release path. There is currently no staging
+environment isolated from production resources.
 
 ## Security and privacy
 

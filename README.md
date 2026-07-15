@@ -148,8 +148,9 @@ cd ../pages
 corepack pnpm run deploy
 ```
 
-仓库中的活动 CI 只有只读验证权限，不会部署。`.github/workflows-disabled/` 是不能执行
-的历史工作流存档，不是受支持的发布方式。当前也没有与生产资源隔离的 staging 环境。
+仓库中的活动 CI 只有只读验证权限，不会部署。继承的上游部署工作流已移除；唯一受
+支持的发布方式是上面的显式 Worker + Pages 命令。当前也没有与生产资源隔离的 staging
+环境。
 
 ## 安全与隐私
 
