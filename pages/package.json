@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "dev": "wrangler pages dev",
-    "deploy": "wrangler pages deploy --branch production"
+    "build": "corepack pnpm --dir ../frontend run build:pages",
+    "check": "node --check functions/_middleware.js",
+    "deploy": "corepack pnpm run build && wrangler pages deploy --branch production"
   },
   "keywords": [],
   "author": "",
