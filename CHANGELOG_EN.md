@@ -26,8 +26,8 @@
   ordinary-user deletion disabled.
 - Made Pages the only frontend release surface; its Function proxies Worker APIs
   through the same-origin `BACKEND` service binding.
-- Moved admin APIs to `/api/admin/*`; old prefixes and admin routes remain only as
-  compatibility implementations pending removal.
+- Moved admin APIs to `/api/admin/*` and removed the old API prefixes, legacy admin,
+  and `/console` compatibility entry after migrating internal callers.
 - Reworked branding, address-connection details, shared-inbox shell, admin mail flow,
   and responsive layouts around this product.
 - Added read-only GitHub Actions CI for Worker/Frontend/Pages validation and manual
@@ -47,6 +47,13 @@
   short-lived sessions after revocation.
 - Stopped exposing internal Worker exceptions and kept E2E helper endpoints behind
   test-mode and optional-secret gates.
+- Moved security-sensitive random values to Web Crypto. OAuth state is now a 256-bit,
+  tab-bound, ten-minute, one-time value.
+- Added a default-off, versioned PBKDF2 address-password migration with legacy reads
+  and compare-and-swap upgrade after successful login; production enablement requires
+  compatibility verification and a restorable backup.
+- Restricted browser CORS to same-origin, `FRONTEND_URL`, and an explicit origin
+  allowlist. Agent/SMTP requests without `Origin` still require normal authentication.
 - Stopped accepting configured deployment passwords as admin API credentials and
   moved admin access to one-hour, tab-scoped signed sessions. Admin writes now have
   request IDs, outcome auditing, explicit dangerous-operation confirmation, and
@@ -55,6 +62,9 @@
 - Updated security-relevant Worker, frontend, build, and E2E dependencies, removing
   advisory-affected transitive versions from the older AWS and Resend dependency
   chains.
+- Stopped Webhook failure logs from recording destination URLs, headers, request
+  bodies, or mail content, with synthetic secret-canary coverage for HTTP and
+  transport failures.
 - Fixed mail-flow filtering, unread state, whole-page scrolling, transfer decoding,
   and selected HTML body rendering.
 - Explicitly prohibited leaking Agent mailbox Address JWTs through URLs, command
