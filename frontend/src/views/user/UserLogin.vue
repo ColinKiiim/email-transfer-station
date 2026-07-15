@@ -7,13 +7,13 @@ import { KeyFilled } from '@vicons/material'
 import { api } from '../../api';
 import { useGlobalState } from '../../store'
 import { hashPassword } from '../../utils';
+import { createOAuthAttempt } from '../../security/oauth-state';
 import { startAuthentication } from '@simplewebauthn/browser';
 
 import Turnstile from '../../components/Turnstile.vue';
 
 const {
-    userJwt, userOpenSettings, openSettings,
-    userOauth2SessionState, userOauth2SessionClientID
+    userJwt, userOpenSettings, openSettings
 } = useGlobalState()
 const message = useMessage();
 
@@ -163,9 +163,9 @@ const passkeyLogin = async () => {
 
 const oauth2Login = async (clientID) => {
     try {
-        userOauth2SessionClientID.value = clientID;
-        userOauth2SessionState.value = Math.random().toString(36).substring(2);
-        const res = await api.fetch(`/user_api/oauth2/login_url?clientID=${clientID}&state=${userOauth2SessionState.value}`);
+        const attempt = createOAuthAttempt({ clientID });
+        const query = new URLSearchParams(attempt).toString();
+        const res = await api.fetch(`/user_api/oauth2/login_url?${query}`);
         // redirect to oauth2 login page
         location.href = res.url;
     } catch (error) {

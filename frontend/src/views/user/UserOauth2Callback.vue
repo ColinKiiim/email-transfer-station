@@ -5,10 +5,9 @@ import { useRoute, useRouter } from 'vue-router';
 
 import { useGlobalState } from '../../store'
 import { api } from '../../api';
+import { consumeOAuthAttempt } from '../../security/oauth-state';
 
-const {
-    userJwt, userOauth2SessionState, userOauth2SessionClientID
-} = useGlobalState()
+const { userJwt } = useGlobalState()
 
 const message = useMessage();
 const route = useRoute()
@@ -19,8 +18,10 @@ const { t } = useScopedI18n('views.user.UserOauth2Callback')
 onMounted(async () => {
     try {
         const state = route.query.state;
-        if (state != userOauth2SessionState.value) {
-            console.error('state not match');
+        let attempt;
+        try {
+            attempt = consumeOAuthAttempt(state);
+        } catch {
             message.error(t('stateNotMatch'));
             return;
         }
@@ -34,7 +35,7 @@ onMounted(async () => {
             method: 'POST',
             body: JSON.stringify({
                 code: code,
-                clientID: userOauth2SessionClientID.value
+                clientID: attempt.clientID
             })
         });
         userJwt.value = res.jwt;
@@ -42,9 +43,6 @@ onMounted(async () => {
     } catch (error) {
         console.error(error);
         message.error(error.message || 'error');
-    } finally {
-        userOauth2SessionState.value = '';
-        userOauth2SessionClientID.value = '';
     }
 });
 </script>
