@@ -43,6 +43,7 @@
 
 ### Improvements
 
+- improve: |Build| 为 Worker、Frontend 与 Pages 增加只读 GitHub Actions CI 和手动 Docker E2E 门禁，补齐 Pages 独立 lockfile，并将 Pages 构建/部署收敛到 `pages/` 的唯一命令入口
 - improve: |Agent Skill| 将公开邮箱 Skill 收敛为 `email-transfer-station-agent-mail`，默认不持久化 Address JWT、不在未知工作目录安装依赖，并明确发送/删除操作与远端发布均需本次任务授权；同步修正公开 Agent 指南的 `/api/admin/*` 与 Pages 部署边界
 - improve: |AdminNext| 后台未登录状态改为独立账号+密码登录页，登录前不渲染后台壳、不加载域名/收件流业务数据，登录成功后使用短期管理员会话访问 `/api/admin/*`
 - improve: |AdminNext| 域名与路由页通过单一“新增域名”入口接入激活闭环：可新增 Cloudflare Email Routing 域名并自动配置 Email Routing DNS/catch-all 到 Worker，也可新增 ImprovMX free forwarding 域名并生成 collector 与验证地址

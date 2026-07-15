@@ -42,6 +42,7 @@
 
 ### Improvements
 
+- improve: |Build| Add read-only GitHub Actions CI for Worker, Frontend, and Pages plus a manual Docker E2E gate, track an independent Pages lockfile, and consolidate Pages build/deploy commands under the `pages/` package
 - improve: |Agent Skill| Consolidate the public mailbox Skill as `email-transfer-station-agent-mail`, stop persisting Address JWTs or installing dependencies in unknown working directories by default, require current-task authorization for send/delete and remote release actions, and align the public Agent guide with `/api/admin/*` and the Pages deployment boundary
 - improve: |AdminNext| Replace the unauthenticated admin surface with a standalone account-and-password login page; the console shell and domain/mail-flow business data are not rendered before login, and successful login now uses a short-lived admin session for `/api/admin/*`
 - improve: |AdminNext| Add the domain activation loop behind a single "Add domain" entry in the Domain & Routing page: admins can add Cloudflare Email Routing domains and automatically configure Email Routing DNS/catch-all to the Worker, or add ImprovMX free-forwarding domains with generated collector and verification addresses
