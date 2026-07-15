@@ -53,3 +53,16 @@ but the compatibility reader must remain deployed. Once a PBKDF2 row exists, rol
 back to an older Worker requires restoring the pre-enable database backup or applying
 a forward fix; the older Worker cannot read the new record. The repository does not
 enable this flag or migrate production data automatically.
+
+## Browser-origin policy
+
+Worker browser requests allow only the request's own origin, the origin of
+`FRONTEND_URL`, or an exact HTTP(S) origin in `CORS_ALLOWED_ORIGINS`. The policy
+uses a fixed method/header set and rejects unknown preflight inputs. The canonical
+Pages service-binding path is same-origin and needs no exception; do not add a
+wildcard merely to make a separated frontend work.
+
+Requests without `Origin`, including Agent and SMTP/IMAP clients, retain their
+normal authentication behavior and receive no CORS headers. CORS is not an
+authorization control: bearer credentials, admin sessions, endpoint permissions,
+and write confirmations remain required for every caller.

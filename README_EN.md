@@ -140,6 +140,12 @@ until old and new callers have been verified and a restorable D1 backup exists,
 then enable it explicitly. After enablement, retain the new reader; a full rollback
 to the old Worker requires restoring the pre-enable backup.
 
+The canonical Pages deployment calls the Worker same-origin through the `BACKEND`
+binding and needs no CORS exception. Only a separate browser origin that calls the
+Worker directly belongs in `CORS_ALLOWED_ORIGINS`; list its exact scheme, host, and
+port and do not use a wildcard. Agent, SMTP/IMAP, and other no-`Origin` clients keep
+their existing authentication contract.
+
 ```bash
 cd worker
 corepack pnpm run deploy

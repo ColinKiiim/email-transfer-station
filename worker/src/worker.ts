@@ -1,5 +1,4 @@
 import { Context, Hono } from 'hono'
-import { cors } from 'hono/cors';
 import { jwt } from 'hono/jwt'
 import { Jwt } from 'hono/utils/jwt'
 
@@ -19,6 +18,7 @@ import { getPasswords, getBooleanValue, getStringArray, checkIsAdmin } from './u
 import { checkAccessControl } from './ip_blacklist';
 import { queueAccessEvent } from './audit';
 import { getAddressCreationDomainNames } from './domains';
+import { corsPolicy } from './cors_policy';
 
 const API_PATHS = [
 	"/api/",
@@ -29,8 +29,7 @@ const API_PATHS = [
 ];
 
 const app = new Hono<HonoCustomType>()
-//cors
-app.use('/*', cors());
+app.use('/*', corsPolicy);
 // error handler
 app.onError((err, c) => {
 	console.error(err)

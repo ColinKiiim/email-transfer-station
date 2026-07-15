@@ -9,6 +9,7 @@ PREFIX = "tmp"
 DEFAULT_DOMAINS = ["test.example.com"]
 DOMAINS = ["test.example.com"]
 JWT_SECRET = "e2e-test-secret-key"
+CORS_ALLOWED_ORIGINS = ["https://frontend:5173"]
 BLACK_LIST = ""
 ENABLE_USER_CREATE_EMAIL = true
 ENABLE_USER_DELETE_EMAIL = true

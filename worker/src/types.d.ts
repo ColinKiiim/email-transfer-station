@@ -114,6 +114,7 @@ type Bindings = {
 
     // webhook config
     FRONTEND_URL: string | undefined
+    CORS_ALLOWED_ORIGINS: string | string[] | undefined
 
     // AI extraction config
     ENABLE_AI_EMAIL_EXTRACT: string | boolean | undefined

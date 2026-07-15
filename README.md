@@ -125,6 +125,11 @@ npm run test:down
 `ENABLE_ADDRESS_PASSWORD_V2=false`；确认新旧调用方均兼容并取得可恢复的 D1 备份后，
 才可显式启用。启用后必须保留新版读取逻辑，完整回滚旧 Worker 需要恢复启用前备份。
 
+规范 Pages 部署通过 `BACKEND` binding 同源调用 Worker，不需要放宽 CORS。只有另一个
+浏览器 origin 直接调用 Worker 时，才在 `CORS_ALLOWED_ORIGINS` 中列出精确的
+scheme/host/port；不要使用通配符。Agent、SMTP/IMAP 和其他无 `Origin` 的非浏览器客户端
+仍按原认证契约访问。
+
 ```bash
 cd worker
 corepack pnpm run deploy

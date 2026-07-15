@@ -147,6 +147,9 @@ ENABLE_AUTO_REPLY = false
 # """
 # Frontend URL
 # FRONTEND_URL = "https://xxxx.xxx"
+# Additional browser origins allowed to call the Worker directly. Same-origin, FRONTEND_URL,
+# and no-Origin non-browser clients do not need an entry. Use exact scheme/host/port values.
+# CORS_ALLOWED_ORIGINS = ["https://app.example.com"]
 # Enable check junk mail
 # ENABLE_CHECK_JUNK_MAIL = false
 # junk mail check list, if status exists and status is not pass, will be marked as junk mail
