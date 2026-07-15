@@ -839,27 +839,37 @@ export const getAllowDomains = async (c: Context<HonoCustomType>): Promise<strin
 export async function sendWebhook(
     settings: WebhookSettings, formatMap: WebhookMail
 ): Promise<{ success: boolean, message?: string }> {
-    // send webhook
-    let body = settings.body;
-    for (const key of Object.keys(formatMap)) {
-        body = body.replace(
-            new RegExp(`\\$\\{${key}\\}`, "g"),
-            JSON.stringify(
-                formatMap[key as keyof WebhookMail]
-            ).replace(/^"(.*)"$/, '$1')
-        );
+    try {
+        let body = settings.body;
+        for (const key of Object.keys(formatMap)) {
+            body = body.replace(
+                new RegExp(`\\$\\{${key}\\}`, "g"),
+                JSON.stringify(
+                    formatMap[key as keyof WebhookMail]
+                ).replace(/^"(.*)"$/, '$1')
+            );
+        }
+        const response = await fetch(settings.url, {
+            method: settings.method,
+            headers: JSON.parse(settings.headers),
+            body: body
+        });
+        if (!response.ok) {
+            console.warn("send webhook failed", {
+                method: settings.method,
+                status: response.status,
+                statusText: response.statusText,
+            });
+            return { success: false, message: `send webhook error: ${response.status} ${response.statusText}` };
+        }
+        return { success: true }
+    } catch (error) {
+        console.warn("send webhook failed", {
+            method: settings.method,
+            error: error instanceof Error ? error.name : "unknown_error",
+        });
+        return { success: false, message: "send webhook error" };
     }
-    const response = await fetch(settings.url, {
-        method: settings.method,
-        headers: JSON.parse(settings.headers),
-        body: body
-    });
-    if (!response.ok) {
-        console.log("send webhook error", settings.url, settings.method, settings.headers, body);
-        console.log("send webhook error", response.status, response.statusText);
-        return { success: false, message: `send webhook error: ${response.status} ${response.statusText}` };
-    }
-    return { success: true }
 }
 
 export async function triggerWebhook(
