@@ -13,24 +13,42 @@ import MailContentRenderer from '../components/MailContentRenderer.vue'
 import { adminApi, loadAdminSnapshot } from '../admin/admin-api'
 import { buildAdminMailHierarchy, buildAdminMailRail, useAdminMailFlow } from '../admin/admin-mail-flow'
 import {
+    buildAdminAddressRail,
+    buildAdminAddressRows,
+    buildAdminAuditRows,
+    buildAdminExceptionRail,
+    buildAdminProcessingRows,
+    buildAdminShareRows,
+    buildAdminUserRows,
+} from '../admin/admin-identity-access'
+import {
+    buildAdminNotificationRail,
+    buildAdminNotificationRows,
+    buildAdminOpsBoundaryItems,
+    buildAdminOpsRail,
+    buildAdminOpsRows,
+    buildAdminSendBoxRows,
+    buildAdminSenderAccessRows,
+    buildAdminStateCards,
+} from '../admin/admin-operations-delivery'
+import {
     createInitialAdminRouteState,
     useAdminRouteState,
 } from '../admin/admin-route-state'
+import {
+    buildAdminDomainRail,
+    buildAdminDomainRows,
+    buildAdminRouteRows,
+    buildRoutingActivationRows,
+} from '../admin/admin-routing-domain'
 import { useAdminSession } from '../admin/admin-session'
 import {
     cellText,
     clampNumber,
-    compactRaw,
-    compactText,
-    extractHeader,
     formatAddressCredential,
     formatBadgeCount,
-    formatDate,
     formatNumber,
-    formatShortDate,
     getDomain,
-    modeLabel,
-    setupLabel,
     statusClass,
     toD1DateTime,
 } from '../admin/admin-formatters'
@@ -344,86 +362,12 @@ const {
 const overviewTotals = computed(() => live.overview?.totals || {})
 const overviewDomains = computed(() => live.overview?.domains || [])
 
-const domainRows = computed(() => {
-    const overviewByDomain = new Map(overviewDomains.value.map((row) => [row.domain, row]))
-    const mailByDomain = new Map(live.mailDomains.map((row) => [row.domain, row]))
-    if (live.domains.length > 0) {
-        return live.domains.map((row) => {
-            const overviewRow = overviewByDomain.get(row.domain) || {}
-            const mailRow = mailByDomain.get(row.domain) || {}
-            return {
-                id: `domain-${row.id || row.domain}`,
-                sourceId: row.id,
-                source: row.source,
-                domain: row.domain,
-                label: row.display_label || row.domain,
-                receiveMode: row.receive_mode,
-                setupStatus: row.setup_status,
-                mode: modeLabel(row.receive_mode),
-                setup: setupLabel(row.setup_status),
-                enabled: row.enabled ? '启用' : '关闭',
-                allowRandomSubdomain: !!row.allow_random_subdomain,
-                configVersion: row.config_version,
-                verificationAddress: row.verification_address,
-                verificationExpiresAt: row.verification_expires_at,
-                lastError: row.last_error,
-                canAutoSetupCloudflare: !!row.can_auto_setup_cloudflare,
-                missingRequirements: row.missing_requirements || [],
-                creation: row.allow_address_creation ? '允许创建' : '仅管理员',
-                default: row.is_default ? '默认' : '否',
-                collector: row.collector_address || (row.receive_mode === 'cloudflare_email' ? 'catch-all -> Worker' : '-'),
-                verification: row.verification_address || row.setup_status || '-',
-                auth: row.source === 'env' ? 'env fallback' : row.cloudflare_zone_id ? 'Cloudflare token ready' : 'managed domain',
-                addresses: overviewRow.address_count ?? mailRow.address_count ?? 0,
-                mails: overviewRow.mail_count ?? mailRow.mail_count ?? 0,
-                updated: row.last_verified_at || row.updated_at || '-',
-            }
-        })
-    }
-    if (Array.isArray(openSettings.value.domainRegistry) && openSettings.value.domainRegistry.length > 0) {
-        return openSettings.value.domainRegistry.map((row, index) => ({
-            id: `registry-${row.domain || index}`,
-            domain: row.domain,
-            source: row.source,
-            receiveMode: row.receive_mode,
-            setupStatus: row.setup_status,
-            label: row.display_label || row.label || row.domain,
-            mode: modeLabel(row.receive_mode),
-            setup: setupLabel(row.setup_status),
-            enabled: row.enabled === false ? '关闭' : '启用',
-            allowRandomSubdomain: !!row.allow_random_subdomain,
-            creation: row.allow_address_creation ? '允许创建' : '仅管理员',
-            default: row.is_default ? '默认' : '否',
-            collector: row.collector_address || '-',
-            verification: row.verification_address || '-',
-            verificationAddress: row.verification_address,
-            auth: row.source || 'open settings',
-            addresses: 0,
-            mails: 0,
-            updated: row.last_verified_at || '-',
-        }))
-    }
-    if (Array.isArray(openSettings.value.domains) && openSettings.value.domains.length > 0) {
-        return openSettings.value.domains.map((row) => ({
-            id: `open-${row.value}`,
-            domain: row.value,
-            label: row.label || row.value,
-            mode: 'Worker env registry',
-            setup: '需复核',
-            enabled: '启用',
-            allowRandomSubdomain: false,
-            creation: openSettings.value.defaultDomains?.includes(row.value) ? '允许创建' : '仅管理员',
-            default: openSettings.value.defaultDomains?.[0] === row.value ? '默认' : '否',
-            collector: '-',
-            verification: '-',
-            auth: 'open settings',
-            addresses: 0,
-            mails: 0,
-            updated: '-',
-        }))
-    }
-    return []
-})
+const domainRows = computed(() => buildAdminDomainRows({
+    domains: live.domains,
+    overviewDomains: overviewDomains.value,
+    mailDomains: live.mailDomains,
+    openSettings: openSettings.value,
+}))
 
 const addressDomainOptions = computed(() => domainRows.value.filter((row) => row.enabled === '启用'))
 const selectedAddressDomain = computed(() => addressDomainOptions.value.find((row) => row.domain === addressCreateForm.domain))
@@ -434,33 +378,10 @@ watch(() => addressCreateForm.domain, () => {
     }
 })
 
-const addressRows = computed(() => {
-    if (live.addresses.length > 0) {
-        return live.addresses.map((row) => {
-            const tags = Array.isArray(row.labels)
-                ? row.labels.map((item) => typeof item === 'string' ? item : item?.name).filter(Boolean)
-                : (row.display_label ? [row.display_label] : [])
-            return {
-                id: `addr-${row.id}`,
-                sourceId: row.id,
-                address: row.name,
-                label: row.display_label || row.name,
-                domain: getDomain(row.name),
-                owner: row.user_id ? `user:${row.user_id}` : 'admin',
-                tags,
-                source: row.source || '管理员创建',
-                mails: row.mail_count || 0,
-                sent: row.send_count || 0,
-                packages: row.active_share_token_count || 0,
-                credential: row.credential_version ? `v${row.credential_version}` : '正常',
-                password: openSettings.value.enableAddressPassword ? '启用' : '关闭',
-                note: row.owner_note || row.source_meta || '地址身份记录',
-                updated: row.updated_at || '-',
-            }
-        })
-    }
-    return []
-})
+const addressRows = computed(() => buildAdminAddressRows(
+    live.addresses,
+    openSettings.value.enableAddressPassword,
+))
 
 const {
     canGoNextMail,
@@ -498,235 +419,30 @@ const {
     onParseError: (error) => console.error(error),
 })
 
-const routeRows = computed(() => {
-    const routes = domainRows.value.map((row) => ({
-        id: `route-${row.domain}`,
-        destination: row.collector || 'Worker Email Handler',
-        domain: row.domain,
-        type: row.mode,
-        inUse: row.addresses,
-        status: row.enabled,
-        next: row.mode.includes('ImprovMX') ? '复核 collector 与 DMARC' : '保持 catch-all 到 Worker',
-    }))
-    routes.push({
-        id: 'route-hook',
-        destination: '/api/admin/mail_webhook/settings',
-        domain: '全部域名',
-        type: 'Webhook',
-        inUse: live.mailWebhook?.enabled ? 1 : 0,
-        status: live.mailWebhook?.enabled ? '启用' : '需更新',
-        next: '保存成功门禁未接入前仅显示配置状态',
-    })
-    return routes
-})
+const routeRows = computed(() => buildAdminRouteRows(domainRows.value, live.mailWebhook))
+const routingActivationRows = computed(() => buildRoutingActivationRows(
+    domainRows.value,
+    live.domainAutomation,
+))
 
-const routingActivationRows = computed(() => {
-    const domains = domainRows.value
-    const cloudflareDomains = domains.filter((row) => row.receiveMode === 'cloudflare_email' || String(row.mode || '').includes('Cloudflare'))
-    const improvmxDomains = domains.filter((row) => row.receiveMode === 'improvmx_forward' || String(row.mode || '').includes('ImprovMX'))
-    const cloudflareReady = cloudflareDomains.some((row) => row.setup === '已验证' || row.setupStatus === 'active')
-    const improvmxReady = improvmxDomains.some((row) => row.collector && row.collector !== '-')
-    const hasPendingVerification = domains.some((row) => row.verificationAddress)
-    const hasCloudflareToken = !!live.domainAutomation?.has_token || domains.some((row) => row.canAutoSetupCloudflare)
-    return [
-        { code: '01', title: 'Cloudflare 自动配置', state: hasCloudflareToken ? '可用' : '缺 token', tone: hasCloudflareToken ? 'ok' : 'warn' },
-        { code: '02', title: 'catch-all 到 Worker', state: cloudflareReady ? '已验证' : '待配置', tone: cloudflareReady ? 'ok' : 'warn' },
-        { code: '03', title: 'ImprovMX collector 激活', state: improvmxReady ? '可用' : '待生成', tone: improvmxReady ? 'ok' : 'warn' },
-        { code: '04', title: '验证邮件闭环', state: hasPendingVerification ? '待检查' : '按需生成', tone: hasPendingVerification ? 'warn' : 'ok' },
-    ]
-})
-
-const shareRows = computed(() => {
-    if (live.accessPackages.length > 0) {
-        return live.accessPackages.map((row) => ({
-            id: `pkg-${row.id}`,
-            sourceId: row.id,
-            label: row.label || `访问包 #${row.id}`,
-            address: row.address,
-            scopes: row.scopes || 'read',
-            status: row.status || 'active',
-            expires: formatDate(row.expires_at),
-            last: formatDate(row.last_used_at),
-            path: '/i/:token',
-        }))
-    }
-    return []
-})
-
-const senderAccessRows = computed(() => {
-    if (live.senderAccess.length > 0) {
-        return live.senderAccess.map((row) => ({
-            id: `sender-${row.id}`,
-            sourceId: row.id,
-            address: row.address || '-',
-            balance: Number.isFinite(Number(row.balance)) ? Number(row.balance) : 0,
-            status: row.enabled === 0 || row.enabled === false ? '关闭' : '启用',
-            created: formatDate(row.created_at),
-            note: row.enabled === 0 || row.enabled === false
-                ? '发送权限已关闭'
-                : '地址级发送权限记录',
-        }))
-    }
-    return []
-})
-
-const sendBoxRows = computed(() => {
-    if (live.sendBox.length > 0) {
-        return live.sendBox.map((row) => {
-            const raw = String(row.raw || '')
-            const subject = compactText(extractHeader(raw, 'Subject') || `Sendbox #${row.id}`)
-            const sender = compactText(extractHeader(raw, 'From') || row.address || '-')
-            const to = compactText(extractHeader(raw, 'To') || '-')
-            return {
-                id: `sendbox-${row.id}`,
-                sourceId: row.id,
-                time: formatShortDate(row.created_at),
-                fullTime: formatDate(row.created_at),
-                sender,
-                to,
-                domain: getDomain(row.address),
-                subject,
-                result: '已发送',
-                risk: '发送箱记录',
-                auth: 'sendbox',
-                ip: row.address || '-',
-                body: compactRaw(raw),
-                raw,
-                attachmentCount: 0,
-            }
-        })
-    }
-    return []
-})
-
-const userRows = computed(() => {
-    if (live.users.length > 0) {
-        return live.users.map((row) => ({
-            id: `user-${row.id}`,
-            user: row.display_name || row.username || row.email || `user:${row.id}`,
-            role: row.role || '-',
-            addresses: `${row.address_count || 0} 个地址`,
-            auth: row.oauth_provider || '本地账号',
-            status: row.enabled === false ? '停用' : '启用',
-            last: formatDate(row.updated_at || row.created_at),
-        }))
-    }
-    return []
-})
-
-const notificationRows = computed(() => [
-    {
-        id: 'notify-mailhook',
-        channel: '邮件 Webhook',
-        target: '/api/admin/mail_webhook/settings',
-        type: '入站通知',
-        status: live.mailWebhook?.enabled ? '可用' : '需更新',
-        detail: live.mailWebhook?.url ? `Endpoint: ${live.mailWebhook.url}` : '未配置 endpoint',
-    },
-    {
-        id: 'notify-telegram',
-        channel: 'Telegram Bot',
-        target: 'Telegram WebApp',
-        type: '移动通知',
-        status: live.telegram?.enabled || live.telegram?.ok ? '可用' : '待配置',
-        detail: live.telegram?.enabled || live.telegram?.ok ? '已配置' : '需要 TELEGRAM_BOT_TOKEN',
-    },
-    {
-        id: 'notify-send',
-        channel: '地址级发送',
-        target: '/api/admin/send_mail',
-        type: '出站邮件',
-        status: openSettings.value.enableSendMail ? '可用' : '待产品化',
-        detail: openSettings.value.enableSendMail ? '已启用' : '未启用',
-    },
-    {
-        id: 'notify-ai',
-        channel: 'AI 提取',
-        target: 'AiExtractInfo',
-        type: '内容处理',
-        status: live.aiSettings?.enabled ? '可用' : '灰度中',
-        detail: live.aiSettings?.enabled ? '已启用' : '未启用',
-    },
-])
-
-const auditRows = computed(() => {
-    const audit = live.auditEvents.map((row) => ({
-        id: `audit-${row.id}`,
-        time: formatDate(row.created_at),
-        actor: row.actor_label || row.actor_type || '-',
-        action: row.action,
-        resource: row.resource_label || row.resource_type || '-',
-        status: row.status,
-        ip: row.ip || '-',
-    }))
-    const access = live.accessEvents.map((row) => ({
-        id: `access-${row.id}`,
-        time: formatDate(row.created_at),
-        actor: row.actor_label || row.actor_type || '-',
-        action: row.event_type,
-        resource: row.resource_label || row.resource_type || '-',
-        status: row.status,
-        ip: row.ip || '-',
-    }))
-    if (audit.length || access.length) return [...audit, ...access]
-    return []
-})
-
-const processingRows = computed(() => {
-    const events = auditRows.value.slice(0, 8).map((row) => ({
-        id: `log-${row.id}`,
-        time: row.time,
-        event: row.action,
-        detail: row.resource,
-        domain: '-',
-        inbox: row.actor,
-        duration: row.status,
-    }))
-    if (events.length) return events
-    return []
-})
-
-const opsRows = computed(() => {
-    const diagnostics = live.workerConfig?.DIAGNOSTICS || {}
-    const database = diagnostics.database || {}
-    return [
-        {
-            id: 'worker',
-            name: 'Worker 运行配置',
-            status: !showAdminPage.value ? '需登录' : diagnostics.bindings ? '可用' : '需巡检',
-            detail: `API: /api/admin/* · bindings: ${Object.keys(diagnostics.bindings || {}).join(', ') || '-'}`,
-            action: '打开配置',
-        },
-        {
-            id: 'database',
-            name: 'D1 数据库',
-            status: !showAdminPage.value ? '需登录' : database.need_migration || live.dbVersion?.need_migration ? '需巡检' : '可用',
-            detail: `current ${database.current_version || live.dbVersion?.current_db_version || '-'} / code ${database.code_version || live.dbVersion?.code_db_version || '-'}`,
-            action: '检查迁移',
-        },
-        {
-            id: 'kv',
-            name: 'KV / 附件索引',
-            status: !showAdminPage.value ? '需登录' : diagnostics.bindings?.KV ? '可用' : '待确认',
-            detail: '附件、Webhook 配置、运行缓存需要在详情页暴露恢复动作',
-            action: '查看空间',
-        },
-        {
-            id: 'blacklist',
-            name: '阻止与限流',
-            status: '待整理',
-            detail: 'IP 黑名单、地址创建权限、发送权限合并到策略中心',
-            action: '打开策略',
-        },
-    ]
-})
-
-const opsBoundaryItems = computed(() => [
-    { label: 'Worker', value: opsRows.value[0]?.status || '-' },
-    { label: 'D1', value: opsRows.value[1]?.status || '-' },
-    { label: 'KV', value: opsRows.value[2]?.status || '-' },
-    { label: 'Pages', value: 'admin-next preview' },
-])
+const shareRows = computed(() => buildAdminShareRows(live.accessPackages))
+const senderAccessRows = computed(() => buildAdminSenderAccessRows(live.senderAccess))
+const sendBoxRows = computed(() => buildAdminSendBoxRows(live.sendBox))
+const userRows = computed(() => buildAdminUserRows(live.users))
+const notificationRows = computed(() => buildAdminNotificationRows({
+    mailWebhook: live.mailWebhook,
+    telegram: live.telegram,
+    aiSettings: live.aiSettings,
+    enableSendMail: openSettings.value.enableSendMail,
+}))
+const auditRows = computed(() => buildAdminAuditRows(live.auditEvents, live.accessEvents))
+const processingRows = computed(() => buildAdminProcessingRows(auditRows.value))
+const opsRows = computed(() => buildAdminOpsRows({
+    workerConfig: live.workerConfig,
+    dbVersion: live.dbVersion,
+    showAdminPage: showAdminPage.value,
+}))
+const opsBoundaryItems = computed(() => buildAdminOpsBoundaryItems(opsRows.value))
 
 const explicitUnreadMailCount = computed(() => {
     if (Number.isFinite(Number(live.mailUnreadCount))) return Number(live.mailUnreadCount)
@@ -852,16 +568,14 @@ const toggleMailDomain = (domain) => {
     persistCollapsedMailDomains()
 }
 
-const stateCards = computed(() => {
-    const db = live.workerConfig?.DIAGNOSTICS?.database || {}
-    const webhookStatus = live.mailWebhook?.enabled ? '入站通知已启用' : '通知通道需复核'
-    const mailTotal = Number.isFinite(Number(live.mailTotalCount)) ? Number(live.mailTotalCount) : mailRows.value.length
-    return [
-        { value: workerStatusLabel.value, label: 'Worker / D1', tone: db.ok === false || !showAdminPage.value ? 'warn' : 'ok' },
-        { value: `${mailTotal}`, label: '邮件总数', tone: 'ok' },
-        { value: webhookStatus, label: '通知通道', tone: live.mailWebhook?.enabled ? 'ok' : 'warn' },
-    ]
-})
+const stateCards = computed(() => buildAdminStateCards({
+    workerConfig: live.workerConfig,
+    workerStatusLabel: workerStatusLabel.value,
+    showAdminPage: showAdminPage.value,
+    mailTotalCount: live.mailTotalCount,
+    mailRowCount: mailRows.value.length,
+    mailWebhook: live.mailWebhook,
+}))
 
 const activePanels = computed(() => {
     const view = activeView.value
@@ -1730,92 +1444,11 @@ const submitActionModal = async () => {
 const currentRail = computed(() => {
     const context = detailContext.value
     if (context === 'flow') return buildAdminMailRail(currentDisplayMail.value || currentMail.value)
-    if (context === 'exception' && currentException.value) {
-        return {
-            title: '异常邮件',
-            subtitle: currentException.value.title,
-            tags: [currentException.value.level, currentException.value.status, '未知收件人'],
-            kv: [
-                ['收件对象', currentException.value.owner],
-                ['域名', currentException.value.domain || '-'],
-                ['级别', currentException.value.level],
-                ['状态', currentException.value.status, 'status'],
-            ],
-            body: currentException.value.detail,
-            actions: [
-                { label: '创建地址', modal: 'new-address', primary: true },
-                { label: '保留观察', action: 'refresh' },
-            ],
-        }
-    }
-    if (context === 'identity' && currentAddress.value) {
-        return {
-            title: '地址详情',
-            subtitle: currentAddress.value.address,
-            tags: currentAddress.value.tags,
-            kv: [
-                ['备注', currentAddress.value.note],
-                ['收件 / 发送', `${currentAddress.value.mails} / ${currentAddress.value.sent}`],
-                ['分享包', `${currentAddress.value.packages} 个`],
-                ['地址密码', currentAddress.value.password],
-                ['凭证', currentAddress.value.credential, 'status'],
-            ],
-            actions: [
-                { label: '显示凭证', action: 'show-credential', primary: true },
-                { label: '轮换凭证', action: 'rotate' },
-                { label: '创建访问包', modal: 'share-package' },
-                { label: '撤销访问包', action: 'revoke' },
-                { label: '清空收件', action: 'clear-inbox', danger: true },
-                { label: '删除地址', action: 'delete-address', danger: true },
-            ],
-        }
-    }
-    if (context === 'routing' && currentDomain.value) {
-        return {
-            title: '域名详情',
-            subtitle: currentDomain.value.domain,
-            tags: [currentDomain.value.mode, currentDomain.value.enabled],
-            kv: [
-                ['配置', currentDomain.value.setup, 'status'],
-                ['Collector', currentDomain.value.collector],
-                ['认证', currentDomain.value.auth],
-                ['验证', currentDomain.value.updated],
-            ],
-            actions: [
-                { label: currentDomain.value.receiveMode === 'improvmx_forward' ? 'ImprovMX 指引' : '自动配置 CF', action: currentDomain.value.receiveMode === 'improvmx_forward' ? 'verify-start' : 'cloudflare-setup', primary: true },
-                { label: '开始验证', action: 'verify-start' },
-                { label: '检查验证', action: 'verify-check' },
-                { label: '检查路由', action: 'verify' },
-                { label: '停用影响', action: 'domain-impact', danger: true },
-                { label: '停用域名', action: 'domain-disable', danger: true },
-            ],
-        }
-    }
-    if (context === 'delivery' && currentNotification.value) {
-        return {
-            title: '通道详情',
-            subtitle: currentNotification.value.channel,
-            tags: [currentNotification.value.type, currentNotification.value.status],
-            kv: [
-                ['入口', currentNotification.value.target],
-                ['状态', currentNotification.value.status, 'status'],
-                ['说明', currentNotification.value.detail],
-            ],
-        }
-    }
-    if (context === 'ops') {
-        return {
-            title: '运行边界',
-            subtitle: '维护入口',
-            tags: ['Worker', 'D1', 'KV', 'Pages'],
-            kv: [
-                ['Worker', opsRows.value[0]?.status || '-'],
-                ['D1', opsRows.value[1]?.status || '-'],
-                ['KV', opsRows.value[2]?.status || '-'],
-                ['Pages', 'admin-next preview'],
-            ],
-        }
-    }
+    if (context === 'exception') return buildAdminExceptionRail(currentException.value)
+    if (context === 'identity') return buildAdminAddressRail(currentAddress.value)
+    if (context === 'routing') return buildAdminDomainRail(currentDomain.value)
+    if (context === 'delivery') return buildAdminNotificationRail(currentNotification.value)
+    if (context === 'ops') return buildAdminOpsRail(opsRows.value)
     if (context === 'roadmap') {
         return {
             title: '移动端兼容准备',
