@@ -78,15 +78,17 @@ test.describe('Admin console', () => {
       const addressRow = page.locator('.panel-addresses tbody tr', { hasText: address.address });
       await expect(addressRow).toBeVisible();
       await addressRow.click();
+      const addressDetails = page.getByRole('dialog', { name: '地址详情' });
+      await expect(addressDetails).toBeVisible();
       page.once('dialog', (dialog) => dialog.accept());
-      await page.locator('.toolbar button', { hasText: '显示凭证' }).click();
+      await addressDetails.getByRole('button', { name: '显示凭证', exact: true }).click();
       const oneTimeResult = page.getByTestId('one-time-result');
       await expect(oneTimeResult).toBeVisible();
       await expect(oneTimeResult).not.toHaveValue('');
       await page.keyboard.press('Escape');
       await expect(oneTimeResult).toBeHidden();
     } finally {
-      await deleteAddress(request, address.jwt);
+      if (!page.isClosed()) await deleteAddress(request, address.jwt);
     }
   });
 });
