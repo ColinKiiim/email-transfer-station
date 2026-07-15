@@ -1,0 +1,59 @@
+Email Transfer Station
+Source and third-party notices
+
+1. Upstream source
+
+This repository is derived from:
+
+  cloudflare_temp_email
+  https://github.com/dreamhunter2333/cloudflare_temp_email
+  pinned source commit: 72bbfe8fd6d329237fa2e70b17cb95031597b345
+
+The root LICENSE is an exact copy of the MIT license at that source commit and
+preserves this notice:
+
+  Copyright (c) 2023 Dream Hunter
+
+Email Transfer Station modifications after the pinned commit are recorded in this
+repository's Git history. No additional copyright ownership is asserted by this
+NOTICE.
+
+The comparison repositories used during design review are not included in this
+source tree and contributed no copied code to this release surface.
+
+2. Telegraf patch
+
+worker/patches/telegraf@4.16.3.patch contains modified portions of Telegraf 4.16.3:
+
+  https://github.com/telegraf/telegraf/tree/v4.16.3
+
+The Telegraf license at that tag is:
+
+The MIT License (MIT)
+
+Copyright (c) 2016-2019 Vitaly Domnikov
+Copyright (c) 2020-2023 The Telegraf Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+3. Package dependencies
+
+Package dependencies installed through pnpm, npm, Cargo, or Python tooling retain
+their own licenses. Lockfiles identify resolved packages but do not replace those
+license terms.

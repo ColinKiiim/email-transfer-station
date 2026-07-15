@@ -1,10 +1,10 @@
 {
   "name": "mail-parser-wasm-worker",
-  "description": "Mail parser worker package used by Email Transfer Station",
-  "homepage": "https://github.com/",
+  "description": "A simple mail parser for worker",
+  "homepage": "https://github.com/dreamhunter2333/cloudflare_temp_email/tree/72bbfe8fd6d329237fa2e70b17cb95031597b345/mail-parser-wasm",
   "repository": {
     "type": "git",
-    "url": "https://github.com/",
+    "url": "https://github.com/dreamhunter2333/cloudflare_temp_email",
     "directory": "mail-parser-wasm"
   },
   "version": "0.2.2",

@@ -1,16 +1,14 @@
 {
   "name": "email-transfer-station-pages",
   "version": "0.0.0-test",
-  "description": "",
-  "main": "index.js",
+  "description": "Cloudflare Pages frontend and same-origin Worker proxy for Email Transfer Station",
+  "private": true,
   "scripts": {
     "dev": "wrangler pages dev",
     "build": "corepack pnpm --dir ../frontend run build:pages",
     "check": "node --check functions/_middleware.js",
     "deploy": "corepack pnpm run build && wrangler pages deploy --branch production"
   },
-  "keywords": [],
-  "author": "",
   "license": "MIT",
   "devDependencies": {
     "wrangler": "^4.86.0"

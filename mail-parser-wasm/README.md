@@ -1,45 +1,21 @@
-# mail-parser-wasm web and cf worker
+# Mail parser compatibility source
 
-## [mail-parser-wasm](https://www.npmjs.com/package/mail-parser-wasm)
+This directory preserves the Rust/WASM parser source inherited with the project.
+The production frontend currently consumes the published `mail-parser-wasm` package;
+the Worker package source is retained for compatibility and provenance review.
 
-### mail-parser-wasm usage
+It is not an Email Transfer Station release surface. Do not publish either package
+from this repository without a separate version, source, license, and compatibility
+review.
 
-```bash
-pnpm add mail-parser-wasm
-```
-
-```js
-import { parse_message } from 'mail-parser-wasm'
-
-const parsedEmail = parse_message(rawEmail);
-```
-
-### mail-parser-wasm build
+For local parser development with an installed Rust and `wasm-pack` toolchain:
 
 ```bash
 wasm-pack build --release
-wasm-pack publish
-```
-
-## [mail-parser-wasm-worker](https://www.npmjs.com/package/mail-parser-wasm-worker)
-
-### mail-parser-wasm-worker usage
-
-```bash
-pnpm add mail-parser-wasm-worker
-```
-
-```js
-import { parse_message_wrapper } from 'mail-parser-wasm-worker'
-
-const parsedEmail = parse_message_wrapper(rawEmail);
-```
-
-### mail-parser-wasm-worker build
-
-```bash
 wasm-pack build --out-dir web --target web --release
-find web/ -type f ! -name '*.json' ! -name '.gitignore' -exec cp {} worker/ \;
-# modify worker/package.json version or whatever
-pnpm publish worker --no-git-checks
 ```
+
+The upstream package identities remain
+[`mail-parser-wasm`](https://www.npmjs.com/package/mail-parser-wasm) and
+[`mail-parser-wasm-worker`](https://www.npmjs.com/package/mail-parser-wasm-worker).
+See the repository [NOTICE](../NOTICE) and [LICENSE](../LICENSE) for provenance.

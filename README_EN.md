@@ -1,56 +1,177 @@
 # Email Transfer Station
 
-Email Transfer Station is a self-hosted mailbox transfer station for temporary or delegated inboxes. It is built on Cloudflare Workers, D1, KV, Email Routing, and a Vue frontend.
+[中文](README.md)
 
-Current development label: `v0.0.0(test)`.
+Email Transfer Station is a self-hosted mail-receiving and delegated-access system
+for Cloudflare. Mail delivered by Cloudflare Email Routing or an external
+forwarder reaches a Worker, mailbox and message data is stored in D1, and a
+same-origin Pages frontend provides inbox, sharing, and administration surfaces.
 
-## Current MVP Scope
+> The current version is `0.0.0-test` (development label `v0.0.0(test)`). It is
+> not a stable release and provides no production SLA, zero-downtime upgrade
+> guarantee, or managed service. Operators are responsible for data protection,
+> domains, cost, and Cloudflare configuration.
 
-- Receive email through Cloudflare Email Routing.
-- Receive forwarded mail from external providers such as ImprovMX by using collector addresses.
-- Store mailbox metadata and raw mail in Cloudflare D1.
-- Create administrator-managed mailbox addresses.
-- Share a single mailbox through token links without exposing the administrator console.
-- Generate fixed credential auto-login links for a mailbox address.
-- Rotate address credentials so old fixed links stop working.
-- Revoke existing share tokens for an address.
-- View administrator mail activity grouped by domain and address.
-- Optionally keep Webhook, Telegram, SMTP/IMAP proxy, and forwarding features from the inherited codebase.
+## Current product contract
 
-## Repository Layout
+| Surface | Path or location | Authentication boundary |
+| --- | --- | --- |
+| Public site and address inbox | `/`, `/api/*` | Address bearer credential or instance-level site authentication |
+| Admin console | `/admin` | Short-lived session obtained with the admin account/password; API uses `x-admin-auth` |
+| Admin API | `/api/admin/*` | Admin session |
+| User center | `/user`, `/user_api/*` | User session; availability is instance-configured |
+| Address sharing | `/i/:token` | Short-lived, read-only address session exchanged from a share token |
+| Public settings and login | `/open_api/*` | Only settings and authentication endpoints intentionally designed as public |
+
+`/admin` and `/api/admin/*` are the only promised admin interfaces. `/console`,
+`/old-admin`, and the legacy `/admin/*` Worker prefix remain transitional
+compatibility implementations pending behavior-protected removal. New integrations
+must not depend on them.
+
+## Core capabilities
+
+- Receive mail through Cloudflare Email Routing, store raw MIME and ingress
+  metadata, and expose parsed views on demand.
+- Receive non-Cloudflare-domain mail forwarded by services such as ImprovMX through
+  collector addresses and recover the original recipient.
+- Let administrators manage domains, addresses, mail flow, access packages, and
+  runtime status.
+- Create expiring and revocable read-only share links for one address.
+- Rotate address credentials so old fixed auto-login links stop working.
+- Track read state separately for admin, address credential, share-link, and user
+  sessions.
+- Let an Agent read a mailbox under holder authorization through
+  `skills/email-transfer-station-agent-mail/`; sending and deleting still require
+  explicit caller authorization.
+
+Inherited Webhook, Telegram, SMTP/IMAP proxy, OAuth, outbound mail, S3 attachment,
+and AI extraction capabilities remain optional compatibility surfaces. They are not
+part of the minimum deployment gate and require separate review of bindings,
+secrets, cost, and data flow before use.
+
+## Architecture
 
 ```text
-worker/          Cloudflare Worker API and mail ingestion logic
-frontend/        Vue frontend
-pages/           Cloudflare Pages Functions bridge
-db/              D1 schema and migration SQL
-smtp_proxy_server/
-vitepress-docs/  inherited docs area, not yet release-ready
+Cloudflare Email Routing ─┐
+External forwarder ───────┴─> Worker (mail handler + Hono API)
+                              ├─> D1: address, message, session, and audit data
+                              ├─> KV: optional Webhook/code/Telegram state
+                              └─> optional S3, AI, outbound-mail, and notification integrations
+
+Browser ─> Cloudflare Pages (Vue SPA)
+             └─> Pages Function ─BACKEND service binding─> Worker
 ```
 
-GitHub Actions from the inherited codebase are intentionally disabled under `.github/workflows-disabled/`. Do not enable them before reviewing project names, deployment targets, secrets, and release behavior.
+The Pages Function proxies only `/api/`, `/open_api/`, `/user_api/`, `/telegram/`,
+and `/external/`. The production frontend must be built and deployed from `pages/`
+so Functions are included; publishing directly from `frontend/` bypasses that
+contract.
 
-## Deployment Notes
+## Repository layout
 
-Use `worker/wrangler.toml.template` as the public configuration template. Local real deployment files such as `worker/wrangler.toml` must stay untracked because they contain deployment IDs, domains, and secrets.
+```text
+worker/                         Worker, email handler, API, and Cloudflare bindings
+frontend/                       Vue 3 SPA
+pages/                          Pages build entry and same-origin Worker proxy
+db/                             D1 schema and migration SQL
+e2e/                            Docker + Playwright + Mailpit integration tests
+mail-parser-wasm/               inherited Rust/WASM parser compatibility source
+smtp_proxy_server/              optional SMTP/IMAP proxy
+skills/email-transfer-station-agent-mail/
+                                Agent mailbox-access contract
+```
 
-The basic Cloudflare deployment needs:
+## Secret-free local validation
 
-- Worker route or worker.dev hostname.
-- D1 database binding named `DB`.
-- KV namespace binding named `KV` if Webhook or KV-backed features are enabled.
-- Cloudflare Email Routing for domains hosted on Cloudflare.
-- Collector addresses if external domains forward through ImprovMX or similar providers.
-
-## Development
+Use Node.js 22, Corepack, and pnpm 10.10.0. These commands only install, test,
+and build; they do not require Cloudflare credentials:
 
 ```bash
-cd worker && pnpm run lint && pnpm run build
-cd ../frontend && pnpm run build
+cd worker
+corepack pnpm install --frozen-lockfile
+corepack pnpm run lint
+corepack pnpm run test
+corepack pnpm run build
+
+cd ../frontend
+corepack pnpm install --frozen-lockfile
+corepack pnpm run test
+corepack pnpm run build
+corepack pnpm run build:pages
+
+cd ../pages
+corepack pnpm install --frozen-lockfile
+corepack pnpm run check
+corepack pnpm run build
+
+cd ..
+git diff --check
 ```
 
-Run `git diff --check` before publishing changes.
+Full E2E requires Docker:
 
-## License
+```bash
+cd e2e
+npm ci
+npm test
+npm run test:down
+```
 
-This project currently preserves the inherited MIT license and copyright notice. A separate NOTICE or attribution pass should be completed before the first public release.
+## Self-hosting boundary
+
+Deployment writes remote Cloudflare resources; review every command and target
+account first. A minimum deployment needs:
+
+1. A Cloudflare-managed domain with Email Routing enabled.
+2. A D1 database plus only the KV, R2/S3, AI, send-email, or service bindings needed
+   by enabled features.
+3. An untracked `worker/wrangler.toml` created from
+   `worker/wrangler.toml.template`, with every placeholder domain, database ID, and
+   resource name replaced.
+4. Admin credentials, JWT signing material, and third-party tokens stored with
+   `wrangler secret put`; never put real values in TOML, README files, issues, or
+   Git history.
+5. D1 initialized from the schema/migrations under `db/` after a backup, followed by
+   Worker deployment from `worker/`.
+6. The Pages project name and `BACKEND` service binding checked in
+   `pages/wrangler.toml`, followed by the canonical build/deploy command from
+   `pages/` only.
+
+```bash
+cd worker
+corepack pnpm run deploy
+
+cd ../pages
+corepack pnpm run deploy
+```
+
+Active CI has read-only validation permissions and does not deploy.
+`.github/workflows-disabled/` is a non-executable historical workflow archive, not
+a supported release path. There is currently no staging environment isolated from
+production resources.
+
+## Security and privacy
+
+Message bodies, attachments, address credentials, share tokens, and admin sessions
+are sensitive data. At minimum, a production operator should:
+
+- use separate, least-privilege Cloudflare resources and API tokens;
+- keep admin authentication enabled and rotate admin/address credentials;
+- restrict public creation, deletion, sending, and Webhook features;
+- back up D1 before migrations and define retention for message and audit data; and
+- keep real mailbox contents, browser storage state, and Wrangler configuration out
+  of Git.
+
+See [SECURITY.md](SECURITY.md) for support and reporting. There is no private
+vulnerability intake at present; do not paste exploit details, credentials, or
+personal mail into a public issue.
+
+## Provenance and license
+
+This project continues from a pinned source snapshot of
+`dreamhunter2333/cloudflare_temp_email`. See [NOTICE](NOTICE) for the source commit,
+preserved copyright, and the third-party license for the Telegraf patch. The root
+[LICENSE](LICENSE) preserves the upstream MIT license; dependencies remain subject
+to their own licenses.
+
+Project home: <https://github.com/ColinKiiim/email-transfer-station>

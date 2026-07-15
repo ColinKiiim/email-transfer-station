@@ -1,56 +1,155 @@
 # Email Transfer Station
 
-Email Transfer Station is a self-hosted mailbox transfer station for temporary or delegated inboxes. It is built on Cloudflare Workers, D1, KV, Email Routing, and a Vue frontend.
+[English](README_EN.md)
 
-Current development label: `v0.0.0(test)`.
+Email Transfer Station 是一个运行在 Cloudflare 上的自托管邮件接收与委托访问系统。
+它把 Cloudflare Email Routing 或外部转发服务送达的邮件交给 Worker，使用 D1 保存
+邮箱与邮件数据，并通过同源 Pages 前端提供邮箱、分享链接和管理控制台。
 
-## Current MVP Scope
+> 当前版本为 `0.0.0-test`（开发标签 `v0.0.0(test)`）。它不是稳定发行版，不提供
+> 生产 SLA、无中断升级保证或托管服务。部署者必须自行评估数据保护、域名、成本和
+> Cloudflare 配置。
 
-- Receive email through Cloudflare Email Routing.
-- Receive forwarded mail from external providers such as ImprovMX by using collector addresses.
-- Store mailbox metadata and raw mail in Cloudflare D1.
-- Create administrator-managed mailbox addresses.
-- Share a single mailbox through token links without exposing the administrator console.
-- Generate fixed credential auto-login links for a mailbox address.
-- Rotate address credentials so old fixed links stop working.
-- Revoke existing share tokens for an address.
-- View administrator mail activity grouped by domain and address.
-- Optionally keep Webhook, Telegram, SMTP/IMAP proxy, and forwarding features from the inherited codebase.
+## 当前产品契约
 
-## Repository Layout
+| 表面 | 路径或位置 | 认证边界 |
+| --- | --- | --- |
+| 公共站点与地址邮箱 | `/`、`/api/*` | Address bearer credential 或实例配置的站点认证 |
+| 管理控制台 | `/admin` | 管理员账号/密码换取的短期会话；API 使用 `x-admin-auth` |
+| 管理 API | `/api/admin/*` | 管理员会话 |
+| 用户中心 | `/user`、`/user_api/*` | 用户会话；是否开放由实例配置决定 |
+| 地址分享 | `/i/:token` | 分享 token 换取的短期、只读地址会话 |
+| 公共配置与登录 | `/open_api/*` | 只暴露明确设计为公开的设置和认证入口 |
+
+`/admin` 与 `/api/admin/*` 是唯一对外承诺的后台入口。`/console`、`/old-admin` 和旧
+`/admin/*` Worker 前缀仍是待行为测试保护后删除的兼容实现，不应被新集成依赖。
+
+## 核心能力
+
+- 通过 Cloudflare Email Routing 接收邮件，保存原始 MIME 与入站元数据，并按需提供
+  解析视图。
+- 通过 collector 地址接收 ImprovMX 等外部服务转发的非 Cloudflare 域邮件，并恢复
+  原始收件人。
+- 由管理员管理域名、地址、邮件流、访问包和运行状态。
+- 为单个地址创建可过期、可撤销的只读分享链接。
+- 轮换地址凭据，使旧的固定自动登录链接失效。
+- 按管理员、地址凭据、分享链接和用户会话分别记录已读状态。
+- 使用仓库内的 `skills/email-transfer-station-agent-mail/` 让 Agent 在持有者授权下读取
+  邮箱；发送和删除仍需调用者明确授权。
+
+Webhook、Telegram、SMTP/IMAP proxy、OAuth、出站邮件、S3 附件和 AI 提取等继承能力
+仍保留为可选兼容表面，但不属于最小部署门禁。启用前应单独验证对应绑定、秘密、成本
+和数据流。
+
+## 架构
 
 ```text
-worker/          Cloudflare Worker API and mail ingestion logic
-frontend/        Vue frontend
-pages/           Cloudflare Pages Functions bridge
-db/              D1 schema and migration SQL
-smtp_proxy_server/
-vitepress-docs/  inherited docs area, not yet release-ready
+Cloudflare Email Routing ─┐
+外部转发 / collector ─────┴─> Worker (mail handler + Hono API)
+                                ├─> D1: 地址、邮件、会话与审计数据
+                                ├─> KV: 可选 Webhook/验证码/Telegram 状态
+                                └─> 可选 S3、AI、发信与通知集成
+
+Browser ─> Cloudflare Pages (Vue SPA)
+             └─> Pages Function ─BACKEND service binding─> Worker
 ```
 
-GitHub Actions from the inherited codebase are intentionally disabled under `.github/workflows-disabled/`. Do not enable them before reviewing project names, deployment targets, secrets, and release behavior.
+Pages Function 只代理 `/api/`、`/open_api/`、`/user_api/`、`/telegram/` 和
+`/external/`。生产前端必须从 `pages/` 构建和部署，不能绕过 Functions 直接从
+`frontend/` 发布。
 
-## Deployment Notes
+## 仓库结构
 
-Use `worker/wrangler.toml.template` as the public configuration template. Local real deployment files such as `worker/wrangler.toml` must stay untracked because they contain deployment IDs, domains, and secrets.
+```text
+worker/                         Worker、邮件入口、API 与 Cloudflare 绑定
+frontend/                       Vue 3 SPA
+pages/                          Pages 构建入口和同源 Worker 代理
+db/                             D1 schema 与迁移 SQL
+e2e/                            Docker + Playwright + Mailpit 集成测试
+mail-parser-wasm/               继承的 Rust/WASM 邮件解析兼容源码
+smtp_proxy_server/              可选 SMTP/IMAP proxy
+skills/email-transfer-station-agent-mail/
+                                Agent 邮箱访问契约
+```
 
-The basic Cloudflare deployment needs:
+## 无秘密本地验证
 
-- Worker route or worker.dev hostname.
-- D1 database binding named `DB`.
-- KV namespace binding named `KV` if Webhook or KV-backed features are enabled.
-- Cloudflare Email Routing for domains hosted on Cloudflare.
-- Collector addresses if external domains forward through ImprovMX or similar providers.
-
-## Development
+需要 Node.js 22、Corepack 和 pnpm 10.10.0。以下命令只做安装、测试和构建，不需要
+Cloudflare 凭据：
 
 ```bash
-cd worker && pnpm run lint && pnpm run build
-cd ../frontend && pnpm run build
+cd worker
+corepack pnpm install --frozen-lockfile
+corepack pnpm run lint
+corepack pnpm run test
+corepack pnpm run build
+
+cd ../frontend
+corepack pnpm install --frozen-lockfile
+corepack pnpm run test
+corepack pnpm run build
+corepack pnpm run build:pages
+
+cd ../pages
+corepack pnpm install --frozen-lockfile
+corepack pnpm run check
+corepack pnpm run build
+
+cd ..
+git diff --check
 ```
 
-Run `git diff --check` before publishing changes.
+完整 E2E 需要 Docker：
 
-## License
+```bash
+cd e2e
+npm ci
+npm test
+npm run test:down
+```
 
-This project currently preserves the inherited MIT license and copyright notice. A separate NOTICE or attribution pass should be completed before the first public release.
+## 自托管部署边界
+
+部署会写入远端 Cloudflare 资源；请先审阅命令和目标账号。最小部署需要：
+
+1. 一个已接入 Cloudflare 的域名，并为该域启用 Email Routing。
+2. 一个 D1 数据库，以及按实际功能选择的 KV、R2/S3、AI、发送邮件或服务绑定。
+3. 从 `worker/wrangler.toml.template` 创建不纳入 Git 的 `worker/wrangler.toml`，替换
+   所有占位域名、数据库 ID 和资源名。
+4. 通过 `wrangler secret put` 写入管理员口令、JWT 签名值和第三方令牌；不要把真实值
+   写入 TOML、README、issue 或提交历史。
+5. 在备份后按 `db/` 中的 schema/迁移初始化 D1，再从 `worker/` 部署 Worker。
+6. 核对 `pages/wrangler.toml` 的 Pages 项目名及 `BACKEND` service binding，然后只从
+   `pages/` 运行规范构建/部署命令。
+
+```bash
+cd worker
+corepack pnpm run deploy
+
+cd ../pages
+corepack pnpm run deploy
+```
+
+仓库中的活动 CI 只有只读验证权限，不会部署。`.github/workflows-disabled/` 是不能执行
+的历史工作流存档，不是受支持的发布方式。当前也没有与生产资源隔离的 staging 环境。
+
+## 安全与隐私
+
+邮件正文、附件、地址凭据、分享 token 和管理员会话都属于敏感数据。生产部署至少应：
+
+- 使用独立、最小权限的 Cloudflare 资源和 API token；
+- 保持管理员认证开启并定期轮换管理员及地址凭据；
+- 限制公开创建、删除、发信和 Webhook 能力；
+- 在迁移前备份 D1，并为邮件及审计数据设置明确保留期；
+- 不把真实邮箱内容、浏览器存储状态或 Wrangler 配置提交到 Git。
+
+支持范围和报告方式见 [SECURITY.md](SECURITY.md)。当前没有私密漏洞接收入口，请勿在
+公开 issue 中粘贴利用细节、凭据或个人邮件内容。
+
+## 来源与许可证
+
+本项目基于 `dreamhunter2333/cloudflare_temp_email` 的固定源码快照继续开发。来源
+commit、保留的版权声明以及 Telegraf patch 的第三方许可见 [NOTICE](NOTICE)。仓库根
+[LICENSE](LICENSE) 保留上游 MIT 许可证全文；依赖包仍分别受其自身许可证约束。
+
+项目主页：<https://github.com/ColinKiiim/email-transfer-station>
