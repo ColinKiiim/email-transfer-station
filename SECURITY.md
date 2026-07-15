@@ -120,3 +120,25 @@ and styling mechanism, not a security boundary by itself. Raster `data:` images 
 same-document `blob:` images may render, while network image URLs are removed rather
 than fetched automatically. Operators should treat attachments and links as
 potentially hostile and should not weaken these policies to preserve sender styling.
+
+## Optional integration egress
+
+Webhook, Telegram, OAuth, outbound-mail, S3, AI and another-Worker features move
+mail data or credentials across an additional trust boundary. Keep each feature
+disabled unless it is required, scope its credential to the smallest practical
+resource set, and treat every configured endpoint and recipient as a data processor.
+Cloudflare bindings and transport encryption do not make a third-party destination
+trusted.
+
+An enabled Webhook can send raw and parsed message content to its configured URL.
+Address-level Webhooks should therefore remain allowlisted to trusted mailbox users;
+the global mail Webhook should target only an operator-controlled endpoint. Webhook
+URLs and headers may themselves contain bearer material and must not be placed in
+issues, diagnostics or logs. Worker failure logs intentionally contain only method,
+HTTP outcome and error class—not the URL, headers, request body or mail content.
+
+OAuth endpoints and S3 endpoints are operator-controlled server egress. Do not point
+them at untrusted or private administrative services. Presigned S3 URLs grant
+temporary object access and must be handled as secrets until they expire. Enabling AI,
+Telegram, forwarding or another-Worker processing can disclose message content to
+that configured service even when the browser HTML boundary is intact.
