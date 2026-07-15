@@ -21,8 +21,7 @@ Email Transfer Station 是一个运行在 Cloudflare 上的自托管邮件接收
 | 地址分享 | `/i/:token` | 分享 token 换取的短期、只读地址会话 |
 | 公共配置与登录 | `/open_api/*` | 只暴露明确设计为公开的设置和认证入口 |
 
-`/admin` 与 `/api/admin/*` 是唯一对外承诺的后台入口。`/console`、`/old-admin` 和旧
-`/admin/*` Worker 前缀仍是待行为测试保护后删除的兼容实现，不应被新集成依赖。
+`/admin` 与 `/api/admin/*` 是唯一对外承诺的后台入口。
 
 ## 核心能力
 

@@ -8,7 +8,7 @@ test.describe('Admin Address Query (#956)', () => {
     const created = await createTestAddress(request, 'q956short');
     const fragment = created.address.split('@')[0].slice(0, 8);
 
-    const res = await request.get(`${WORKER_URL}/admin/address`, {
+    const res = await request.get(`${WORKER_URL}/api/admin/address`, {
       params: { limit: '20', offset: '0', query: fragment },
     });
     expect(res.ok()).toBe(true);
@@ -22,7 +22,7 @@ test.describe('Admin Address Query (#956)', () => {
     const longQuery = 'a48r893s@5hx7zb.nationalgeographic.algomindtrade.com';
     expect(new TextEncoder().encode(`%${longQuery}%`).length).toBeGreaterThan(50);
 
-    const res = await request.get(`${WORKER_URL}/admin/address`, {
+    const res = await request.get(`${WORKER_URL}/api/admin/address`, {
       params: { limit: '20', offset: '0', query: longQuery },
     });
     expect(res.status()).toBe(200);
@@ -32,11 +32,11 @@ test.describe('Admin Address Query (#956)', () => {
     expect(body.count).toBe(0);
   });
 
-  test('long query also works for /admin/users', async ({ request }) => {
+  test('long query also works for /api/admin/users', async ({ request }) => {
     const longQuery = 'no-such-user-' + 'x'.repeat(40) + `@${TEST_DOMAIN}`;
     expect(new TextEncoder().encode(`%${longQuery}%`).length).toBeGreaterThan(50);
 
-    const res = await request.get(`${WORKER_URL}/admin/users`, {
+    const res = await request.get(`${WORKER_URL}/api/admin/users`, {
       params: { limit: '20', offset: '0', query: longQuery },
     });
     expect(res.status()).toBe(200);

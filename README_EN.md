@@ -23,10 +23,7 @@ same-origin Pages frontend provides inbox, sharing, and administration surfaces.
 | Address sharing | `/i/:token` | Short-lived, read-only address session exchanged from a share token |
 | Public settings and login | `/open_api/*` | Only settings and authentication endpoints intentionally designed as public |
 
-`/admin` and `/api/admin/*` are the only promised admin interfaces. `/console`,
-`/old-admin`, and the legacy `/admin/*` Worker prefix remain transitional
-compatibility implementations pending behavior-protected removal. New integrations
-must not depend on them.
+`/admin` and `/api/admin/*` are the only promised admin interfaces.
 
 ## Core capabilities
 

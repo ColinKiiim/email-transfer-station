@@ -85,13 +85,6 @@ export const useGlobalState = createGlobalState(
         const adminAuth = useStorage('adminAuth', '');
         const jwt = useStorage('jwt', '', undefined, { writeDefaults: false });
         const addressPassword = useSessionStorage('addressPassword', '');
-        const adminTab = useSessionStorage('adminTab', "account");
-        const adminAccountTab = useSessionStorage('adminAccountTab', "account");
-        const adminUserTab = useSessionStorage('adminUserTab', "user_management");
-        const adminMailsTab = useSessionStorage('adminMailsTab', "mails");
-        const adminMaintenanceTab = useSessionStorage('adminMaintenanceTab', "domains");
-        const adminMailTabAddress = ref("");
-        const adminSendBoxTabAddress = ref("");
         const mailboxSplitSize = useStorage('mailboxSplitSize', 0.25);
         const useIframeShowMail = useStorage('useIframeShowMail', false);
         const preferShowTextMail = useStorage('preferShowTextMail', false);
@@ -173,13 +166,6 @@ export const useGlobalState = createGlobalState(
             jwt,
             adminAuth,
             showAdminAuth,
-            adminTab,
-            adminAccountTab,
-            adminUserTab,
-            adminMailsTab,
-            adminMaintenanceTab,
-            adminMailTabAddress,
-            adminSendBoxTabAddress,
             mailboxSplitSize,
             useIframeShowMail,
             preferShowTextMail,

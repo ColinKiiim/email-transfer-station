@@ -10,7 +10,7 @@ const TEST_USER_PASSWORD = 'test-password-123';
  */
 async function createTestUser(request: APIRequestContext): Promise<string> {
   // Enable user registration (KV setting)
-  const enableRes = await request.post(`${WORKER_URL}/admin/user_settings`, {
+  const enableRes = await request.post(`${WORKER_URL}/api/admin/user_settings`, {
     data: {
       enable: true,
       enableMailVerify: false,

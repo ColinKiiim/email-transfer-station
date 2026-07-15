@@ -75,7 +75,7 @@ export async function seedTestMail(
     `--${boundary}--`,
   ].join('\r\n');
 
-  const res = await ctx.post(`${WORKER_URL}/admin/test/receive_mail`, {
+  const res = await ctx.post(`${WORKER_URL}/api/admin/test/receive_mail`, {
     data: { from, to: address, raw },
   });
   if (!res.ok()) {
@@ -95,7 +95,7 @@ export async function sendTestMail(
   fromAddress: string,
   opts: { to_mail: string; subject?: string; content?: string; is_html?: boolean }
 ): Promise<void> {
-  const res = await ctx.post(`${WORKER_URL}/admin/send_mail`, {
+  const res = await ctx.post(`${WORKER_URL}/api/admin/send_mail`, {
     data: {
       from_name: '',
       from_mail: fromAddress,
@@ -216,7 +216,7 @@ export async function getAddressSender(
   workerUrl: string = WORKER_URL
 ): Promise<any> {
   const res = await ctx.get(
-    `${workerUrl}/admin/address_sender?limit=1&offset=0&address=${encodeURIComponent(address)}`,
+    `${workerUrl}/api/admin/address_sender?limit=1&offset=0&address=${encodeURIComponent(address)}`,
   );
   if (!res.ok()) {
     throw new Error(`Failed to get address sender: ${res.status()} ${await res.text()}`);
@@ -241,7 +241,7 @@ export async function updateAddressSender(
   },
   workerUrl: string = WORKER_URL
 ): Promise<void> {
-  const res = await ctx.post(`${workerUrl}/admin/address_sender`, {
+  const res = await ctx.post(`${workerUrl}/api/admin/address_sender`, {
     data: opts,
   });
   if (!res.ok()) {
@@ -257,7 +257,7 @@ export async function deleteAddressSender(
   id: number,
   workerUrl: string = WORKER_URL
 ): Promise<void> {
-  const res = await ctx.delete(`${workerUrl}/admin/address_sender/${id}`);
+  const res = await ctx.delete(`${workerUrl}/api/admin/address_sender/${id}`);
   if (!res.ok()) {
     throw new Error(`Failed to delete address sender: ${res.status()} ${await res.text()}`);
   }

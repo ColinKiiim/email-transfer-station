@@ -17,7 +17,7 @@ test.describe('Passkey Browser Flow', () => {
     const api = await apiRequest.newContext();
     try {
       // Enable user registration
-      await api.post(`${WORKER_URL}/admin/user_settings`, {
+      await api.post(`${WORKER_URL}/api/admin/user_settings`, {
         data: { enable: true, enableMailVerify: false },
       });
       // Register user with hashed password (matching frontend behavior)

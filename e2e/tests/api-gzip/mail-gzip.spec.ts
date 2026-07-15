@@ -48,7 +48,7 @@ async function receiveGzipMail(
     `--${boundary}--`,
   ].join('\r\n');
 
-  const res = await ctx.post(`${WORKER_GZIP_URL}/admin/test/receive_mail`, {
+  const res = await ctx.post(`${WORKER_GZIP_URL}/api/admin/test/receive_mail`, {
     data: { from, to: address, raw },
   });
   if (!res.ok()) throw new Error(`Failed to receive mail: ${res.status()} ${await res.text()}`);
@@ -74,7 +74,7 @@ async function seedPlaintextMail(
     opts.text || 'Hello plaintext from E2E',
   ].join('\r\n');
 
-  const res = await ctx.post(`${WORKER_GZIP_URL}/admin/test/seed_mail`, {
+  const res = await ctx.post(`${WORKER_GZIP_URL}/api/admin/test/seed_mail`, {
     data: { address, source: from, raw, message_id: messageId },
   });
   if (!res.ok()) throw new Error(`Failed to seed mail: ${res.status()} ${await res.text()}`);
@@ -184,7 +184,7 @@ test.describe('Mail Gzip Storage', () => {
 
       // 2. Get address_sender id
       const senderListRes = await request.get(
-        `${WORKER_GZIP_URL}/admin/address_sender?limit=10&offset=0&address=${encodeURIComponent(address)}`,
+        `${WORKER_GZIP_URL}/api/admin/address_sender?limit=10&offset=0&address=${encodeURIComponent(address)}`,
       );
       expect(senderListRes.ok()).toBe(true);
       const senderList = await senderListRes.json();
@@ -192,7 +192,7 @@ test.describe('Mail Gzip Storage', () => {
       const senderId = senderList.results[0].id;
 
       // 3. Update send access via admin API → triggers sendAdminInternalMail
-      const updateRes = await request.post(`${WORKER_GZIP_URL}/admin/address_sender`, {
+      const updateRes = await request.post(`${WORKER_GZIP_URL}/api/admin/address_sender`, {
         data: { address, address_id: senderId, balance: 99, enabled: true },
       });
       expect(updateRes.ok()).toBe(true);

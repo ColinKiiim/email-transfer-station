@@ -8,6 +8,7 @@ import miniapp from './miniapp'
 import i18n from '../i18n'
 
 export const api = new Hono<HonoCustomType>();
+export const adminApi = new Hono<HonoCustomType>();
 export { sendMailToTelegram }
 
 api.use("/telegram/*", async (c, next) => {
@@ -21,7 +22,7 @@ api.use("/telegram/*", async (c, next) => {
     return await next();
 });
 
-api.use("/admin/telegram/*", async (c, next) => {
+adminApi.use("/admin/telegram/*", async (c, next) => {
     if (c.req.path === "/admin/telegram/status") {
         return await next();
     }
@@ -50,7 +51,7 @@ api.post("/telegram/webhook", async (c) => {
     return c.body(body);
 });
 
-api.post("/admin/telegram/init", async (c) => {
+adminApi.post("/admin/telegram/init", async (c) => {
     const domain = new URL(c.req.url).host;
     const token = c.env.TELEGRAM_BOT_TOKEN;
     const webhookUrl = `https://${domain}/telegram/webhook`;
@@ -63,7 +64,7 @@ api.post("/admin/telegram/init", async (c) => {
     });
 });
 
-api.get("/admin/telegram/status", async (c) => {
+adminApi.get("/admin/telegram/status", async (c) => {
     if (!c.env.TELEGRAM_BOT_TOKEN || !c.env.KV) {
         return c.json({
             ok: false,
@@ -88,8 +89,8 @@ api.get("/admin/telegram/status", async (c) => {
     }
 });
 
-api.get("/admin/telegram/settings", settings.getTelegramSettings);
-api.post("/admin/telegram/settings", settings.saveTelegramSettings);
+adminApi.get("/admin/telegram/settings", settings.getTelegramSettings);
+adminApi.post("/admin/telegram/settings", settings.saveTelegramSettings);
 api.post("/telegram/get_bind_address", miniapp.getTelegramBindAddress);
 api.post("/telegram/new_address", miniapp.newTelegramAddress);
 api.post("/telegram/bind_address", miniapp.bindAddress);

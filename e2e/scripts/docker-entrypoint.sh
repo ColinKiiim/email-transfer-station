@@ -85,28 +85,28 @@ for i in $(seq 1 30); do
 done
 
 echo "==> Initializing database"
-curl -sf -X POST "$WORKER_URL/admin/db_initialize" > /dev/null
-curl -sf -X POST "$WORKER_URL/admin/db_migration" > /dev/null
+curl -sf -X POST "$WORKER_URL/api/admin/db_initialize" > /dev/null
+curl -sf -X POST "$WORKER_URL/api/admin/db_migration" > /dev/null
 echo "    Database initialized"
 
 if [ -n "${WORKER_URL_SUBDOMAIN:-}" ]; then
   echo "==> Initializing subdomain worker database"
-  curl -sf -X POST "$WORKER_URL_SUBDOMAIN/admin/db_initialize" > /dev/null
-  curl -sf -X POST "$WORKER_URL_SUBDOMAIN/admin/db_migration" > /dev/null
+  curl -sf -X POST "$WORKER_URL_SUBDOMAIN/api/admin/db_initialize" > /dev/null
+  curl -sf -X POST "$WORKER_URL_SUBDOMAIN/api/admin/db_migration" > /dev/null
   echo "    Subdomain worker database initialized"
 fi
 
 if [ -n "${WORKER_URL_ENV_OFF:-}" ]; then
   echo "==> Initializing env-off worker database"
-  curl -sf -X POST "$WORKER_URL_ENV_OFF/admin/db_initialize" > /dev/null
-  curl -sf -X POST "$WORKER_URL_ENV_OFF/admin/db_migration" > /dev/null
+  curl -sf -X POST "$WORKER_URL_ENV_OFF/api/admin/db_initialize" > /dev/null
+  curl -sf -X POST "$WORKER_URL_ENV_OFF/api/admin/db_migration" > /dev/null
   echo "    Env-off database initialized"
 fi
 
 if [ -n "${WORKER_GZIP_URL:-}" ]; then
   echo "==> Initializing gzip worker database"
-  curl -sf -X POST "$WORKER_GZIP_URL/admin/db_initialize" > /dev/null
-  curl -sf -X POST "$WORKER_GZIP_URL/admin/db_migration" > /dev/null
+  curl -sf -X POST "$WORKER_GZIP_URL/api/admin/db_initialize" > /dev/null
+  curl -sf -X POST "$WORKER_GZIP_URL/api/admin/db_migration" > /dev/null
   echo "    Gzip worker database initialized"
 fi
 

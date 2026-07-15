@@ -10,7 +10,7 @@ import { api as mailsApi } from './mails_api'
 import { api as userApi } from './user_api';
 import { api as adminApi } from './admin_api';
 import { api as apiSendMail } from './mails_api/send_mail_api'
-import { api as telegramApi } from './telegram_api'
+import { api as telegramApi, adminApi as telegramAdminApi } from './telegram_api'
 
 import i18n from './i18n';
 import { email } from './email';
@@ -24,7 +24,6 @@ const API_PATHS = [
 	"/api/",
 	"/open_api/",
 	"/user_api/",
-	"/admin/",
 	"/telegram/",
 	"/external/",
 ];
@@ -89,8 +88,6 @@ app.use('/*', async (c, next) => {
 	// webhook check
 	if (
 		c.req.path.startsWith("/api/webhook")
-		|| c.req.path.startsWith("/admin/webhook")
-		|| c.req.path.startsWith("/admin/mail_webhook")
 		|| c.req.path.startsWith("/api/admin/webhook")
 		|| c.req.path.startsWith("/api/admin/mail_webhook")
 	) {
@@ -459,7 +456,6 @@ const adminAuthMiddleware = async (c: Context<HonoCustomType>, next: () => Promi
 	return c.text(msgs.NeedAdminPasswordMsg, 401)
 };
 
-app.use('/admin/*', adminAuthMiddleware);
 app.use('/api/admin/*', adminAuthMiddleware);
 
 
@@ -468,11 +464,10 @@ app.route('/', openAuthApi)
 app.route('/', openShareApi)
 app.route('/', mailsApi)
 app.route('/', userApi)
-app.route('/', adminApi)
 app.route('/api', adminApi)
 app.route('/', apiSendMail)
 app.route('/', telegramApi)
-app.route('/api', telegramApi)
+app.route('/api', telegramAdminApi)
 
 const health_check = async (c: Context<HonoCustomType>) => {
 	const lang = c.req.raw.headers.get("x-lang") || c.env.DEFAULT_LANG;

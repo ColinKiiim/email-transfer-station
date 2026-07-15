@@ -33,7 +33,7 @@ async function saveLimitConfig(
   request: APIRequestContext,
   sendMailLimitConfig: Record<string, unknown>
 ) {
-  return request.post(`${WORKER_URL}/admin/account_settings`, {
+  return request.post(`${WORKER_URL}/api/admin/account_settings`, {
     headers: ADMIN_HEADERS,
     data: { ...DEFAULT_ACCOUNT_SETTINGS, sendMailLimitConfig },
   });
@@ -156,7 +156,7 @@ test.describe('Send Mail Limit', () => {
     const save = await saveLimitConfig(request, config);
     expect(save.ok()).toBe(true);
 
-    const read = await request.get(`${WORKER_URL}/admin/account_settings`, {
+    const read = await request.get(`${WORKER_URL}/api/admin/account_settings`, {
       headers: ADMIN_HEADERS,
     });
     expect(read.ok()).toBe(true);
@@ -173,7 +173,7 @@ test.describe('Send Mail Limit', () => {
     });
     expect(save.ok()).toBe(true);
 
-    const read = await request.get(`${WORKER_URL}/admin/account_settings`, {
+    const read = await request.get(`${WORKER_URL}/api/admin/account_settings`, {
       headers: ADMIN_HEADERS,
     });
     const body = await read.json();
@@ -190,7 +190,7 @@ test.describe('Send Mail Limit', () => {
     const save = await saveLimitConfig(request, config);
     expect(save.ok()).toBe(true);
 
-    const read = await request.get(`${WORKER_URL}/admin/account_settings`, {
+    const read = await request.get(`${WORKER_URL}/api/admin/account_settings`, {
       headers: ADMIN_HEADERS,
     });
     const body = await read.json();
@@ -412,8 +412,8 @@ test.describe('Send Mail Limit', () => {
     await deleteAddress(request, jwt);
   });
 
-  test('/admin/send_mail_by_binding returns 400 when SEND_MAIL binding is missing', async ({ request }) => {
-    const res = await request.post(`${WORKER_URL}/admin/send_mail_by_binding`, {
+  test('/api/admin/send_mail_by_binding returns 400 when SEND_MAIL binding is missing', async ({ request }) => {
+    const res = await request.post(`${WORKER_URL}/api/admin/send_mail_by_binding`, {
       headers: ADMIN_HEADERS,
       data: {
         from: 'admin@test.example.com',
@@ -425,8 +425,8 @@ test.describe('Send Mail Limit', () => {
     expect(res.status()).toBe(400);
   });
 
-  test('/admin/send_mail_by_binding returns 200 when domain is allowed', async ({ request }) => {
-    const res = await request.post(`${WORKER_URL_SEND_MAIL_DOMAIN}/admin/send_mail_by_binding`, {
+  test('/api/admin/send_mail_by_binding returns 200 when domain is allowed', async ({ request }) => {
+    const res = await request.post(`${WORKER_URL_SEND_MAIL_DOMAIN}/api/admin/send_mail_by_binding`, {
       headers: ADMIN_HEADERS,
       data: {
         from: 'admin@test.example.com',
@@ -439,8 +439,8 @@ test.describe('Send Mail Limit', () => {
     expect(await res.json()).toEqual({ status: 'ok' });
   });
 
-  test('/admin/send_mail_by_binding returns 400 when domain is not allowed', async ({ request }) => {
-    const res = await request.post(`${WORKER_URL_SEND_MAIL_DOMAIN}/admin/send_mail_by_binding`, {
+  test('/api/admin/send_mail_by_binding returns 400 when domain is not allowed', async ({ request }) => {
+    const res = await request.post(`${WORKER_URL_SEND_MAIL_DOMAIN}/api/admin/send_mail_by_binding`, {
       headers: ADMIN_HEADERS,
       data: {
         from: 'admin@blocked.example.com',
@@ -482,7 +482,7 @@ test.describe('Send Mail Limit', () => {
     await deleteAddress(request, jwt);
   });
 
-  test('admin /admin/send_mail also respects daily limit', async ({ request }) => {
+  test('admin /api/admin/send_mail also respects daily limit', async ({ request }) => {
     const { jwt, address } = await createTestAddress(request, 'limit-admin');
     await requestSendAccess(request, jwt);
 
@@ -496,7 +496,7 @@ test.describe('Send Mail Limit', () => {
     });
     expect(save.ok()).toBe(true);
 
-    const res = await request.post(`${WORKER_URL}/admin/send_mail`, {
+    const res = await request.post(`${WORKER_URL}/api/admin/send_mail`, {
       headers: ADMIN_HEADERS,
       data: {
         from_name: '',

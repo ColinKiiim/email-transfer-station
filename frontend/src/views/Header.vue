@@ -26,7 +26,7 @@ const notification = useNotification()
 
 const {
     toggleDark, isDark, isTelegram, showAdminPage,
-    showAuth, auth, loading, openSettings, preferredLocale, userSettings, adminTab
+    showAuth, auth, loading, openSettings, preferredLocale, userSettings
 } = useGlobalState()
 const route = useRoute()
 const router = useRouter()
@@ -76,7 +76,6 @@ const homeLabel = computed(() => isAdminRoute.value ? t('adminHome') : t('home')
 
 const goHome = async () => {
     if (isAdminRoute.value) {
-        adminTab.value = 'stationOverview';
         await router.push(getRouterPathWithLang('/admin', locale.value));
     } else {
         await router.push(getRouterPathWithLang('/', locale.value));

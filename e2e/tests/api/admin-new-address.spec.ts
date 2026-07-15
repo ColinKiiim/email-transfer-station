@@ -4,7 +4,7 @@ import { WORKER_URL, TEST_DOMAIN } from '../../fixtures/test-helpers';
 test.describe('Admin New Address', () => {
   test('should return address_id in response', async ({ request }) => {
     const uniqueName = `admin-test${Date.now()}`;
-    const res = await request.post(`${WORKER_URL}/admin/new_address`, {
+    const res = await request.post(`${WORKER_URL}/api/admin/new_address`, {
       data: { name: uniqueName, domain: TEST_DOMAIN },
     });
 

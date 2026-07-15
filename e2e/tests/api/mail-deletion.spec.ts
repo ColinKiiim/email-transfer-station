@@ -10,7 +10,7 @@ test.describe('Mail Deletion', () => {
     const testUserPassword = 'test-password-123';
     const testUserPasswordHash = createHash('sha256').update(testUserPassword).digest('hex');
 
-    const enableRes = await request.post(`${WORKER_URL_ENV_OFF}/admin/user_settings`, {
+    const enableRes = await request.post(`${WORKER_URL_ENV_OFF}/api/admin/user_settings`, {
       data: {
         enable: true,
         enableMailVerify: false,
@@ -70,7 +70,7 @@ test.describe('Mail Deletion', () => {
         `--${boundary}--`,
       ].join('\r\n');
 
-      const seedRes = await request.post(`${WORKER_URL_ENV_OFF}/admin/test/receive_mail`, {
+      const seedRes = await request.post(`${WORKER_URL_ENV_OFF}/api/admin/test/receive_mail`, {
         data: { from, to: address, raw },
       });
       expect(seedRes.ok()).toBe(true);
@@ -98,7 +98,7 @@ test.describe('Mail Deletion', () => {
       expect(after.results).toHaveLength(1);
       expect(after.results[0].id).toBe(targetId);
     } finally {
-      const deleteRes = await request.delete(`${WORKER_URL_ENV_OFF}/admin/delete_address/${address_id}`);
+      const deleteRes = await request.delete(`${WORKER_URL_ENV_OFF}/api/admin/delete_address/${address_id}`);
       expect(deleteRes.ok()).toBe(true);
     }
   });

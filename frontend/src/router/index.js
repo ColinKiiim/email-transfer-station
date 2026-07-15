@@ -21,7 +21,7 @@ function getRouteSection(path) {
 }
 
 function isAdminSurfacePath(path) {
-    return ['admin', 'console', 'old-admin'].includes(getRouteSection(path))
+    return getRouteSection(path) === 'admin'
 }
 
 const router = createRouter({
@@ -46,17 +46,6 @@ const router = createRouter({
         {
             path: '/admin',
             alias: '/:lang/admin',
-            meta: { fullScreen: true },
-            component: () => import('../views/AdminNext.vue')
-        },
-        {
-            path: '/old-admin',
-            alias: '/:lang/old-admin',
-            component: () => import('../views/Admin.vue')
-        },
-        {
-            path: '/console',
-            alias: '/:lang/console',
             meta: { fullScreen: true },
             component: () => import('../views/AdminNext.vue')
         },

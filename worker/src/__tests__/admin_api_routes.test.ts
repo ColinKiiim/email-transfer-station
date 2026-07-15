@@ -127,7 +127,7 @@ describe("admin API route behavior baseline", () => {
         await Promise.allSettled(harness.pending);
     });
 
-    it("characterizes the legacy /admin prefix before its planned removal", async () => {
+    it("does not expose the retired root /admin API prefix", async () => {
         const response = await worker.fetch(
             request("/admin/mails?limit=10&offset=0", {
                 headers: { "x-admin-auth": "fixture-admin-password" },
@@ -136,8 +136,7 @@ describe("admin API route behavior baseline", () => {
             harness.executionContext,
         );
 
-        expect(response.status).toBe(200);
-        expect(await response.json()).toMatchObject({ results: [], count: 0 });
+        expect(response.status).toBe(404);
         await Promise.allSettled(harness.pending);
     });
 });

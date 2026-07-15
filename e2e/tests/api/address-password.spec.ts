@@ -65,7 +65,7 @@ test.describe('Address Password Login', () => {
     const passwordHash = hashPassword(plainPassword);
 
     try {
-      const resetRes = await request.post(`${WORKER_URL}/admin/address/${address_id}/reset_password`, {
+      const resetRes = await request.post(`${WORKER_URL}/api/admin/address/${address_id}/reset_password`, {
         data: { password: passwordHash },
       });
       expect(resetRes.ok()).toBe(true);
@@ -100,7 +100,7 @@ test.describe('Address Password Login', () => {
       expect(changePwdRes.ok()).toBe(true);
 
       const listRes = await request.get(
-        `${WORKER_URL}/admin/address?limit=10&offset=0&query=${encodeURIComponent(address)}`
+        `${WORKER_URL}/api/admin/address?limit=10&offset=0&query=${encodeURIComponent(address)}`
       );
       expect(listRes.ok()).toBe(true);
       const listBody = await listRes.json();
@@ -119,7 +119,7 @@ test.describe('Address Password Login', () => {
     const addressPasswordHash = hashPassword('bind-hidden-address-password');
 
     try {
-      const enableRes = await request.post(`${WORKER_URL}/admin/user_settings`, {
+      const enableRes = await request.post(`${WORKER_URL}/api/admin/user_settings`, {
         data: {
           enable: true,
           enableMailVerify: false,

@@ -125,7 +125,7 @@ const staticRisks = [
 const roadmapRows = [
     { id: 'road-renderer', capability: '统一安全渲染层', status: '必须保留', maps: 'MailContentRenderer / ShadowHtmlComponent / SendMail HTML 预览', next: '收敛邮件正文入口，所有 HTML sink 强制走隔离渲染策略' },
     { id: 'road-gate', capability: '入站副作用门禁', status: '必须保留', maps: 'email/index.ts / forward.ts / mail webhook', next: '保存成功后再触发转发、Webhook、自动回复' },
-    { id: 'road-mobile', capability: '移动端后台壳', status: '预留', maps: 'Admin.vue 顶层导航 / MailBox mobile drawer', next: '桌面信息架构稳定后拆成底部导航 + 抽屉详情' },
+    { id: 'road-mobile', capability: '移动端后台壳', status: '预留', maps: '现有响应式导航 / MailBox mobile drawer', next: '桌面信息架构稳定后拆成底部导航 + 抽屉详情' },
     { id: 'road-rbac', capability: '访问评审与 JIT 操作', status: '规划中', maps: 'AccessPackages / AuditLogs / RoleAddressConfig', next: '高风险操作先请求授权，再写审计事件' },
     { id: 'road-send', capability: '出站提供商决策', status: '待决策', maps: 'SendMail / SendBox / SenderAccess', next: '确定 Resend、SMTP 或 Cloudflare Send Email 后再固化表单' },
     { id: 'road-loading', capability: '局部请求状态', status: '必须保留', maps: 'api/index.js global loading / MailBox refresh', next: '每个模块维护自己的 pending key，刷新保留选中邮件' },
@@ -2903,6 +2903,7 @@ onBeforeUnmount(() => {
                     <div class="nav-group-title">{{ group.label }}</div>
                     <button v-for="item in group.items" :key="item.id" class="nav-link"
                         :class="{ 'is-active': activeView === item.id }" type="button" :title="sidebarCollapsed ? item.title : ''"
+                        :aria-current="activeView === item.id ? 'page' : undefined"
                         :aria-label="item.title" @click="setView(item.id)">
                         <svg viewBox="0 0 24 24" aria-hidden="true">
                             <component :is="shape.tag" v-for="(shape, index) in shapeList(item.icon)" :key="index"
@@ -3923,10 +3924,16 @@ svg {
     text-align: left;
 }
 
-.nav-link:hover,
 .nav-link.is-active {
     background: var(--accent-soft);
     color: color-mix(in oklch, var(--accent) 80%, black);
+}
+
+@media (hover: hover) {
+    .nav-link:hover:not(.is-active) {
+        background: var(--surface-soft);
+        color: var(--fg);
+    }
 }
 
 .nav-text {
@@ -5106,7 +5113,7 @@ textarea {
 }
 
 .table-wrap {
-    overflow-x: hidden;
+    overflow-x: auto;
     overflow-y: auto;
 }
 
@@ -5171,6 +5178,11 @@ tr.is-selected {
 
 .table-wrap .time-text {
     white-space: normal;
+}
+
+.panel-addresses th:first-child,
+.panel-addresses td:first-child {
+    width: 190px;
 }
 
 .panel-domains th:nth-child(1),
@@ -5805,6 +5817,10 @@ tr.is-selected {
     .toolbar .select {
         flex: 0 0 154px;
         width: auto;
+    }
+
+    .table-wrap table {
+        min-width: 840px;
     }
 
     .ops-boundary-item {
