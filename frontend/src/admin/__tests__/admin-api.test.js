@@ -4,10 +4,18 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { createAdminApi, loadAdminSnapshot, normalizeAdminSnapshot } from '../admin-api'
 
+const REQUEST_ID = '12345678-1234-4123-8123-123456789abc'
+const requestIdOptions = { requestIdFactory: () => REQUEST_ID }
+const write = (method, body) => ({
+    method,
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    headers: { 'x-admin-request-id': REQUEST_ID },
+})
+
 describe('admin API adapter', () => {
     it('owns login and canonical read request construction', async () => {
         const fetcher = vi.fn().mockResolvedValue({ ok: true })
-        const client = createAdminApi(fetcher)
+        const client = createAdminApi(fetcher, requestIdOptions)
 
         await client.getLoginSettings()
         await client.login({ username: 'admin', passwordHash: 'fixture-hash', cfToken: 'fixture-turnstile' })
@@ -31,19 +39,19 @@ describe('admin API adapter', () => {
 
     it('owns every supported write path and payload DTO', async () => {
         const fetcher = vi.fn().mockResolvedValue({ success: true })
-        const client = createAdminApi(fetcher)
+        const client = createAdminApi(fetcher, requestIdOptions)
 
         await client.markMailRead('mail/7')
         await client.deleteMail(7)
         await client.createAddress({ name: 'qa', domain: 'example.test', enablePrefix: true, enableRandomSubdomain: false })
         await client.createShareToken(8, { label: 'readonly', expiresAt: '2026-07-16 10:00:00' })
-        await client.deleteAddress(8)
+        await client.deleteAddress(8, { credentialVersion: 2, mailCount: 3, sentCount: 4, shareCount: 1 })
         await client.getDomainImpact(9)
         await client.disableDomain(9, { configVersion: 3 })
-        await client.showAddressCredential(8)
-        await client.rotateAddressCredential(8)
+        await client.showAddressCredential(8, 2)
+        await client.rotateAddressCredential(8, 2)
         await client.revokeShareTokens(8)
-        await client.clearAddressInbox(8)
+        await client.clearAddressInbox(8, 3)
         await client.checkCloudflareDomain(9)
         await client.startDomainVerification(9, 3)
         await client.checkDomainVerification(9, 3)
@@ -58,22 +66,35 @@ describe('admin API adapter', () => {
         })
 
         expect(fetcher.mock.calls).toEqual([
-            ['/api/admin/mails/mail%2F7/read_state', { method: 'PATCH', body: '{"read":true}' }],
-            ['/api/admin/mails/7', { method: 'DELETE' }],
-            ['/api/admin/new_address', { method: 'POST', body: '{"name":"qa","domain":"example.test","enablePrefix":true,"enableRandomSubdomain":false}' }],
-            ['/api/admin/address/8/share_tokens', { method: 'POST', body: '{"label":"readonly","scopes":["read"],"expires_at":"2026-07-16 10:00:00"}' }],
-            ['/api/admin/delete_address/8', { method: 'DELETE' }],
+            ['/api/admin/mails/mail%2F7/read_state', write('PATCH', { read: true })],
+            ['/api/admin/mails/7', write('DELETE', { confirm: true })],
+            ['/api/admin/new_address', write('POST', { name: 'qa', domain: 'example.test', enablePrefix: true, enableRandomSubdomain: false })],
+            ['/api/admin/address/8/share_tokens', write('POST', { label: 'readonly', scopes: ['read'], expires_at: '2026-07-16 10:00:00' })],
+            ['/api/admin/delete_address/8', write('DELETE', {
+                confirm: true,
+                expected_credential_version: 2,
+                expected_mail_count: 3,
+                expected_sent_count: 4,
+                expected_share_count: 1,
+            })],
             ['/api/admin/domains/9/impact'],
-            ['/api/admin/domains/9', { method: 'DELETE', body: '{"config_version":3,"confirm":true}' }],
-            ['/api/admin/show_password/8'],
-            ['/api/admin/address/8/rotate_credential', { method: 'POST' }],
-            ['/api/admin/address/8/share_tokens', { method: 'DELETE' }],
-            ['/api/admin/clear_inbox/8', { method: 'DELETE' }],
-            ['/api/admin/domains/9/cloudflare/check', { method: 'POST' }],
-            ['/api/admin/domains/9/verify/start', { method: 'POST', body: '{"config_version":3}' }],
-            ['/api/admin/domains/9/verify/check', { method: 'POST', body: '{"config_version":3}' }],
-            ['/api/admin/domains/9/cloudflare/setup', { method: 'POST', body: '{"config_version":3,"confirm_replace_catch_all":true}' }],
-            ['/api/admin/domains', { method: 'POST', body: '{"domain":"example.test","display_label":"Example","receive_mode":"cloudflare_email","collector_address":"","cloudflare_zone_id":"zone-fixture","allow_random_subdomain":true}' }],
+            ['/api/admin/domains/9', write('DELETE', { config_version: 3, confirm: true })],
+            ['/api/admin/address/8/credential', write('POST', { confirm: true, expected_credential_version: 2 })],
+            ['/api/admin/address/8/rotate_credential', write('POST', { confirm: true, expected_credential_version: 2 })],
+            ['/api/admin/address/8/share_tokens', write('DELETE', { confirm: true })],
+            ['/api/admin/clear_inbox/8', write('DELETE', { confirm: true, expected_mail_count: 3 })],
+            ['/api/admin/domains/9/cloudflare/check', write('POST')],
+            ['/api/admin/domains/9/verify/start', write('POST', { confirm: true, config_version: 3 })],
+            ['/api/admin/domains/9/verify/check', write('POST', { config_version: 3 })],
+            ['/api/admin/domains/9/cloudflare/setup', write('POST', { confirm: true, config_version: 3, confirm_replace_catch_all: true })],
+            ['/api/admin/domains', write('POST', {
+                domain: 'example.test',
+                display_label: 'Example',
+                receive_mode: 'cloudflare_email',
+                collector_address: '',
+                cloudflare_zone_id: 'zone-fixture',
+                allow_random_subdomain: true,
+            })],
         ])
     })
 })

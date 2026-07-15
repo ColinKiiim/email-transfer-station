@@ -18,6 +18,25 @@ export function hashPassword(password: string): string {
   return createHash('sha256').update(password).digest('hex');
 }
 
+export async function getAdminSessionHeaders(
+  ctx: APIRequestContext,
+  workerUrl: string = WORKER_URL
+): Promise<Record<string, string>> {
+  const response = await ctx.post(`${workerUrl}/open_api/admin_login`, {
+    data: {
+      username: 'admin',
+      password: hashPassword('e2e-admin-pass'),
+      cf_token: '',
+    },
+  });
+  if (!response.ok()) {
+    throw new Error(`Failed to establish admin session: ${response.status()} ${await response.text()}`);
+  }
+  const body = await response.json();
+  if (!body.token) throw new Error('Admin login did not return a session token');
+  return { 'x-admin-auth': body.token };
+}
+
 /**
  * Create a new email address via the worker API.
  * Appends a timestamp suffix to avoid UNIQUE constraint collisions
@@ -257,7 +276,9 @@ export async function deleteAddressSender(
   id: number,
   workerUrl: string = WORKER_URL
 ): Promise<void> {
-  const res = await ctx.delete(`${workerUrl}/api/admin/address_sender/${id}`);
+  const res = await ctx.delete(`${workerUrl}/api/admin/address_sender/${id}`, {
+    data: { confirm: true },
+  });
   if (!res.ok()) {
     throw new Error(`Failed to delete address sender: ${res.status()} ${await res.text()}`);
   }
@@ -268,9 +289,10 @@ export async function deleteAddressSender(
  */
 export async function deleteAddress(
   ctx: APIRequestContext,
-  jwt: string
+  jwt: string,
+  workerUrl: string = WORKER_URL
 ): Promise<void> {
-  const res = await ctx.delete(`${WORKER_URL}/api/delete_address`, {
+  const res = await ctx.delete(`${workerUrl}/api/delete_address`, {
     headers: { Authorization: `Bearer ${jwt}` },
   });
   if (!res.ok()) {

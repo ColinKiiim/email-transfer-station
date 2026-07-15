@@ -237,13 +237,6 @@ export const getAdminPasswords = (c: Context<HonoCustomType>): string[] => {
     return c.env.ADMIN_PASSWORDS.filter((item) => item.length > 0);
 }
 
-export const checkIsAdmin = (c: Context<HonoCustomType>): boolean => {
-    const adminPasswords = getAdminPasswords(c);
-    if (!adminPasswords.length) return false;
-    const adminAuth = c.req.raw.headers.get("x-admin-auth");
-    return !!adminAuth && adminPasswords.includes(adminAuth);
-}
-
 export const getEnvStringList = (value: string | string[] | undefined): string[] => {
     if (!value) {
         return [];
@@ -436,7 +429,6 @@ export default {
     getAnotherWorkerList,
     getPasswords,
     getAdminPasswords,
-    checkIsAdmin,
     getEnvStringList,
     sendAdminInternalMail,
     isGlobalTurnstileEnabled,

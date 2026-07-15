@@ -47,6 +47,11 @@
   short-lived sessions after revocation.
 - Stopped exposing internal Worker exceptions and kept E2E helper endpoints behind
   test-mode and optional-secret gates.
+- Stopped accepting configured deployment passwords as admin API credentials and
+  moved admin access to one-hour, tab-scoped signed sessions. Admin writes now have
+  request IDs, outcome auditing, explicit dangerous-operation confirmation, and
+  version/count conflict protection for address deletion, clearing, and credential
+  operations.
 - Fixed mail-flow filtering, unread state, whole-page scrolling, transfer decoding,
   and selected HTML body rendering.
 - Explicitly prohibited leaking Agent mailbox Address JWTs through URLs, command

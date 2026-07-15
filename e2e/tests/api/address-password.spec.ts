@@ -66,7 +66,7 @@ test.describe('Address Password Login', () => {
 
     try {
       const resetRes = await request.post(`${WORKER_URL}/api/admin/address/${address_id}/reset_password`, {
-        data: { password: passwordHash, password_format: 'sha256' },
+        data: { password: passwordHash, password_format: 'sha256', confirm: true },
       });
       expect(resetRes.ok()).toBe(true);
       await expect(resetRes.json()).resolves.toMatchObject({ success: true });

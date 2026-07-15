@@ -5,6 +5,7 @@ export const CORS_ALLOWED_HEADERS = [
     "Authorization",
     "Content-Type",
     "x-admin-auth",
+    "x-admin-request-id",
     "x-custom-auth",
     "x-fingerprint",
     "x-lang",

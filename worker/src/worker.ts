@@ -14,11 +14,12 @@ import { api as telegramApi, adminApi as telegramAdminApi } from './telegram_api
 import i18n from './i18n';
 import { email } from './email';
 import { scheduled } from './scheduled';
-import { getPasswords, getBooleanValue, getStringArray, checkIsAdmin } from './utils';
+import { getPasswords, getBooleanValue } from './utils';
 import { checkAccessControl } from './ip_blacklist';
 import { queueAccessEvent } from './audit';
 import { getAddressCreationDomainNames } from './domains';
 import { corsPolicy } from './cors_policy';
+import { adminAuthMiddleware } from './admin_security';
 
 const API_PATHS = [
 	"/api/",
@@ -327,134 +328,6 @@ app.use('/user_api/*', async (c, next) => {
 	}
 	await next();
 });
-// admin auth
-const adminAuthMiddleware = async (c: Context<HonoCustomType>, next: () => Promise<void>) => {
-
-	// check header x-admin-auth
-	if (checkIsAdmin(c)) {
-		queueAccessEvent(c, {
-			event_type: "admin.access.granted",
-			actor_type: "admin",
-			actor_label: "x-admin-auth",
-			resource_type: "admin_api",
-			resource_label: c.req.path,
-			status: "success",
-		});
-		await next();
-		return;
-	}
-	const adminSession = c.req.raw.headers.get("x-admin-auth");
-	if (adminSession) {
-		try {
-			const payload = await Jwt.verify(adminSession, c.env.JWT_SECRET, "HS256");
-			if (
-				payload.scope === "admin_session"
-				&& payload.exp
-				&& payload.exp >= Math.floor(Date.now() / 1000)
-			) {
-				queueAccessEvent(c, {
-					event_type: "admin.access.granted",
-					actor_type: "admin",
-					actor_label: typeof payload.username === "string" ? payload.username : "admin_session",
-					resource_type: "admin_api",
-					resource_label: c.req.path,
-					status: "success",
-				});
-				await next();
-				return;
-			}
-		} catch (e) {
-			console.error(e);
-		}
-	}
-	const lang = c.req.raw.headers.get("x-lang") || c.env.DEFAULT_LANG;
-	const msgs = i18n.getMessages(lang);
-	// check if user is admin
-	const access_token = c.req.raw.headers.get("x-user-access-token");
-	if (c.env.ADMIN_USER_ROLE && access_token) {
-		try {
-			const payload = await Jwt.verify(access_token, c.env.JWT_SECRET, "HS256");
-			// check expired
-			if (!payload.exp) {
-				queueAccessEvent(c, {
-					event_type: "admin.access.denied",
-					actor_type: "user",
-					resource_type: "admin_api",
-					resource_label: c.req.path,
-					status: "denied",
-					failure_reason: "user_access_token_expired",
-				});
-				return c.text(msgs.UserAcceesTokenExpiredMsg, 401);
-			}
-			// exp is in seconds
-			if (payload.exp < Math.floor(Date.now() / 1000)) {
-				queueAccessEvent(c, {
-					event_type: "admin.access.denied",
-					actor_type: "user",
-					actor_id: payload.user_id as number | undefined,
-					actor_label: payload.user_email as string | undefined,
-					resource_type: "admin_api",
-					resource_label: c.req.path,
-					status: "denied",
-					failure_reason: "user_access_token_expired",
-				});
-				return c.text(msgs.UserAcceesTokenExpiredMsg, 401)
-			}
-			if (payload.user_role !== c.env.ADMIN_USER_ROLE) {
-				queueAccessEvent(c, {
-					event_type: "admin.access.denied",
-					actor_type: "user",
-					actor_id: payload.user_id as number | undefined,
-					actor_label: payload.user_email as string | undefined,
-					resource_type: "admin_api",
-					resource_label: c.req.path,
-					status: "denied",
-					failure_reason: "user_role_not_admin",
-				});
-				return c.text(msgs.UserRoleIsNotAdminMsg, 401)
-			}
-			queueAccessEvent(c, {
-				event_type: "admin.access.granted",
-				actor_type: "user",
-				actor_id: payload.user_id as number | undefined,
-				actor_label: payload.user_email as string | undefined,
-				resource_type: "admin_api",
-				resource_label: c.req.path,
-				status: "success",
-				metadata: { user_role: payload.user_role },
-			});
-			await next();
-			return;
-		} catch (e) {
-			console.error(e);
-		}
-	}
-
-	// disable admin api check
-	if (getBooleanValue(c.env.DISABLE_ADMIN_PASSWORD_CHECK)) {
-		queueAccessEvent(c, {
-			event_type: "admin.access.granted",
-			actor_type: "admin",
-			actor_label: "admin_check_disabled",
-			resource_type: "admin_api",
-			resource_label: c.req.path,
-			status: "success",
-		});
-		await next();
-		return;
-	}
-
-	queueAccessEvent(c, {
-		event_type: "admin.access.denied",
-		actor_type: "admin",
-		resource_type: "admin_api",
-		resource_label: c.req.path,
-		status: "denied",
-		failure_reason: "missing_admin_auth",
-	});
-	return c.text(msgs.NeedAdminPasswordMsg, 401)
-};
-
 app.use('/api/admin/*', adminAuthMiddleware);
 
 

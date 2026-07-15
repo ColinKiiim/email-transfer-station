@@ -37,7 +37,7 @@ test.describe('Mail Deletion', () => {
       },
     });
     expect(createRes.ok()).toBe(true);
-    const { jwt, address, address_id } = await createRes.json();
+    const { jwt, address } = await createRes.json();
 
     try {
       const bindRes = await request.post(`${WORKER_URL_ENV_OFF}/user_api/bind_address`, {
@@ -98,8 +98,7 @@ test.describe('Mail Deletion', () => {
       expect(after.results).toHaveLength(1);
       expect(after.results[0].id).toBe(targetId);
     } finally {
-      const deleteRes = await request.delete(`${WORKER_URL_ENV_OFF}/api/admin/delete_address/${address_id}`);
-      expect(deleteRes.ok()).toBe(true);
+      await deleteAddress(request, jwt, WORKER_URL_ENV_OFF);
     }
   });
 

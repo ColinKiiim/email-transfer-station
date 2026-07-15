@@ -84,29 +84,33 @@ for i in $(seq 1 30); do
   sleep 1
 done
 
+admin_post_confirm() {
+  curl -sf -X POST -H 'Content-Type: application/json' --data '{"confirm":true}' "$1" > /dev/null
+}
+
 echo "==> Initializing database"
-curl -sf -X POST "$WORKER_URL/api/admin/db_initialize" > /dev/null
-curl -sf -X POST "$WORKER_URL/api/admin/db_migration" > /dev/null
+admin_post_confirm "$WORKER_URL/api/admin/db_initialize"
+admin_post_confirm "$WORKER_URL/api/admin/db_migration"
 echo "    Database initialized"
 
 if [ -n "${WORKER_URL_SUBDOMAIN:-}" ]; then
   echo "==> Initializing subdomain worker database"
-  curl -sf -X POST "$WORKER_URL_SUBDOMAIN/api/admin/db_initialize" > /dev/null
-  curl -sf -X POST "$WORKER_URL_SUBDOMAIN/api/admin/db_migration" > /dev/null
+  admin_post_confirm "$WORKER_URL_SUBDOMAIN/api/admin/db_initialize"
+  admin_post_confirm "$WORKER_URL_SUBDOMAIN/api/admin/db_migration"
   echo "    Subdomain worker database initialized"
 fi
 
 if [ -n "${WORKER_URL_ENV_OFF:-}" ]; then
   echo "==> Initializing env-off worker database"
-  curl -sf -X POST "$WORKER_URL_ENV_OFF/api/admin/db_initialize" > /dev/null
-  curl -sf -X POST "$WORKER_URL_ENV_OFF/api/admin/db_migration" > /dev/null
+  admin_post_confirm "$WORKER_URL_ENV_OFF/api/admin/db_initialize"
+  admin_post_confirm "$WORKER_URL_ENV_OFF/api/admin/db_migration"
   echo "    Env-off database initialized"
 fi
 
 if [ -n "${WORKER_GZIP_URL:-}" ]; then
   echo "==> Initializing gzip worker database"
-  curl -sf -X POST "$WORKER_GZIP_URL/api/admin/db_initialize" > /dev/null
-  curl -sf -X POST "$WORKER_GZIP_URL/api/admin/db_migration" > /dev/null
+  admin_post_confirm "$WORKER_GZIP_URL/api/admin/db_initialize"
+  admin_post_confirm "$WORKER_GZIP_URL/api/admin/db_migration"
   echo "    Gzip worker database initialized"
 fi
 

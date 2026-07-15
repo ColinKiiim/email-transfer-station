@@ -16,6 +16,7 @@ export const buildAdminAddressRows = (rows = [], enableAddressPassword = false) 
         mails: row.mail_count || 0,
         sent: row.send_count || 0,
         packages: row.active_share_token_count || 0,
+        credentialVersion: Number(row.credential_version || 1),
         credential: row.credential_version ? `v${row.credential_version}` : '正常',
         password: enableAddressPassword ? '启用' : '关闭',
         note: row.owner_note || row.source_meta || '地址身份记录',

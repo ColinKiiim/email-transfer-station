@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 
 import utils from './utils';
+import { isE2eAdminBypassEnabled } from './admin_security';
 import { CONSTANTS } from './constants';
 import { isS3Enabled } from './mails_api/s3_attachment';
 import { isAnySendMailEnabled } from './common';
@@ -51,7 +52,7 @@ api.get('/open_api/settings', async (c) => {
         "enableSendMail": await isAnySendMailEnabled(c),
         "version": CONSTANTS.VERSION,
         "showGithub": !utils.getBooleanValue(c.env.DISABLE_SHOW_GITHUB),
-        "disableAdminPasswordCheck": utils.getBooleanValue(c.env.DISABLE_ADMIN_PASSWORD_CHECK),
+        "disableAdminPasswordCheck": isE2eAdminBypassEnabled(c.env),
         "enableAddressPassword": utils.getBooleanValue(c.env.ENABLE_ADDRESS_PASSWORD),
         "enableAgentEmailInfo": utils.getBooleanValue(c.env.ENABLE_AGENT_EMAIL_INFO),
         "smtpImapProxyConfig": {

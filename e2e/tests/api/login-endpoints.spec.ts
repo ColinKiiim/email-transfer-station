@@ -26,18 +26,23 @@ test.describe('Turnstile Login Endpoints (ENABLE_GLOBAL_TURNSTILE_CHECK disabled
     test('correct hashed password succeeds', async ({ request }) => {
       const res = await request.post(`${WORKER_URL}/open_api/admin_login`, {
         data: {
+          username: 'admin',
           password: hashPassword('e2e-admin-pass'),
           cf_token: ''
         }
       });
       expect(res.ok()).toBe(true);
+      expect(res.headers()['cache-control']).toBe('no-store');
       const body = await res.json();
       expect(body.success).toBe(true);
+      expect(body.username).toBe('admin');
+      expect(body.token).toMatch(/^[^.]+\.[^.]+\.[^.]+$/);
     });
 
     test('wrong password returns 401', async ({ request }) => {
       const res = await request.post(`${WORKER_URL}/open_api/admin_login`, {
         data: {
+          username: 'admin',
           password: hashPassword('wrong-admin'),
           cf_token: ''
         }
@@ -48,6 +53,7 @@ test.describe('Turnstile Login Endpoints (ENABLE_GLOBAL_TURNSTILE_CHECK disabled
     test('empty password returns 401', async ({ request }) => {
       const res = await request.post(`${WORKER_URL}/open_api/admin_login`, {
         data: {
+          username: 'admin',
           password: '',
           cf_token: ''
         }

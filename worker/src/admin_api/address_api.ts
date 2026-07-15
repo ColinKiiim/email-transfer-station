@@ -306,86 +306,136 @@ const createNewAddress = async (c: Context<HonoCustomType>) => {
 const deleteAddress = async (c: Context<HonoCustomType>) => {
     const msgs = i18n.getMessagesbyContext(c);
     const { id } = c.req.param();
-    const address = await c.env.DB.prepare(
-        `SELECT name FROM address WHERE id = ?`
-    ).bind(id).first<string>("name");
-    if (!address) {
+    const body = await c.req.json().catch(() => null) as Record<string, unknown> | null;
+    const expected = {
+        credentialVersion: Number(body?.expected_credential_version),
+        mailCount: Number(body?.expected_mail_count),
+        sentCount: Number(body?.expected_sent_count),
+        shareCount: Number(body?.expected_share_count),
+    };
+    if (Object.values(expected).some((value) => !Number.isInteger(value) || value < 0)) {
+        return c.text(msgs.InvalidInputMsg, 400);
+    }
+    const snapshot = await c.env.DB.prepare(
+        `SELECT a.name, COALESCE(a.credential_version, 1) AS credential_version,`
+        + ` (SELECT COUNT(*) FROM raw_mails WHERE address = a.name) AS mail_count,`
+        + ` (SELECT COUNT(*) FROM sendbox WHERE address = a.name) AS sent_count,`
+        + ` (SELECT COUNT(*) FROM address_share_tokens`
+        + ` WHERE address_id = a.id AND revoked_at IS NULL`
+        + ` AND (expires_at IS NULL OR expires_at > datetime('now'))) AS active_share_count`
+        + ` FROM address a WHERE a.id = ?`
+    ).bind(id).first<{
+        name: string,
+        credential_version: number,
+        mail_count: number,
+        sent_count: number,
+        active_share_count: number,
+    }>();
+    if (!snapshot) {
         return c.text(msgs.AddressNotFoundMsg, 404);
     }
-    const { success: readStateSuccess } = await c.env.DB.prepare(
-        `DELETE FROM mail_read_states WHERE mail_id IN (SELECT id FROM raw_mails WHERE address = ?)`
-    ).bind(address).run();
-    const { success: mailSuccess } = await c.env.DB.prepare(
-        `DELETE FROM raw_mails WHERE address = ?`
-    ).bind(address).run();
-    if (!mailSuccess) {
-        return c.text(msgs.OperationFailedMsg, 500)
+    const current = {
+        credentialVersion: Number(snapshot.credential_version),
+        mailCount: Number(snapshot.mail_count),
+        sentCount: Number(snapshot.sent_count),
+        shareCount: Number(snapshot.active_share_count),
+    };
+    if (Object.keys(current).some((key) => (
+        current[key as keyof typeof current] !== expected[key as keyof typeof expected]
+    ))) {
+        return c.json({
+            error: "address_state_conflict",
+            current: {
+                credential_version: current.credentialVersion,
+                mail_count: current.mailCount,
+                sent_count: current.sentCount,
+                active_share_count: current.shareCount,
+            },
+        }, 409);
     }
-    const { success: sendboxSuccess } = await c.env.DB.prepare(
-        `DELETE FROM sendbox WHERE address = ?`
-    ).bind(address).run();
-    const { success: sendAccess } = await c.env.DB.prepare(
-        `DELETE FROM address_sender WHERE address = ?`
-    ).bind(address).run();
-    const { success: usersAddressSuccess } = await c.env.DB.prepare(
-        `DELETE FROM users_address WHERE address_id = ?`
-    ).bind(id).run();
-    const { success: shareTokensSuccess } = await c.env.DB.prepare(
-        `DELETE FROM address_share_tokens WHERE address_id = ?`
-    ).bind(id).run();
-    const { success: addressLabelsSuccess } = await c.env.DB.prepare(
-        `DELETE FROM address_labels WHERE address_id = ?`
-    ).bind(id).run();
-    const { success } = await c.env.DB.prepare(
-        `DELETE FROM address WHERE id = ? `
-    ).bind(id).run();
-    if (!success) {
-        return c.text(msgs.OperationFailedMsg, 500)
+
+    let results: D1Result[];
+    try {
+        results = await c.env.DB.batch([
+            c.env.DB.prepare(
+                `DELETE FROM mail_read_states WHERE mail_id IN (SELECT id FROM raw_mails WHERE address = ?)`
+            ).bind(snapshot.name),
+            c.env.DB.prepare(`DELETE FROM raw_mails WHERE address = ?`).bind(snapshot.name),
+            c.env.DB.prepare(`DELETE FROM sendbox WHERE address = ?`).bind(snapshot.name),
+            c.env.DB.prepare(`DELETE FROM address_sender WHERE address = ?`).bind(snapshot.name),
+            c.env.DB.prepare(`DELETE FROM users_address WHERE address_id = ?`).bind(id),
+            c.env.DB.prepare(`DELETE FROM address_share_tokens WHERE address_id = ?`).bind(id),
+            c.env.DB.prepare(`DELETE FROM address_labels WHERE address_id = ?`).bind(id),
+            c.env.DB.prepare(`DELETE FROM address WHERE id = ?`).bind(id),
+        ]);
+    } catch {
+        return c.text(msgs.OperationFailedMsg, 500);
     }
-    const finalSuccess = success
-        && readStateSuccess
-        && mailSuccess
-        && sendboxSuccess
-        && sendAccess
-        && usersAddressSuccess
-        && shareTokensSuccess
-        && addressLabelsSuccess;
+    const finalSuccess = results.every((result) => result.success);
     await recordAuditEvent(c, {
         action: "address.delete",
         actor_type: "admin",
         actor_label: "admin",
         resource_type: "address",
         resource_id: id,
-        resource_label: address,
+        resource_label: snapshot.name,
         status: finalSuccess ? "success" : "failed",
+        metadata: {
+            mail_count: current.mailCount,
+            sent_count: current.sentCount,
+            active_share_count: current.shareCount,
+            credential_version: current.credentialVersion,
+        },
     });
-    return c.json({ success: finalSuccess })
+    return finalSuccess
+        ? c.json({ success: true })
+        : c.text(msgs.OperationFailedMsg, 500);
 };
 
 const clearInbox = async (c: Context<HonoCustomType>) => {
     const msgs = i18n.getMessagesbyContext(c);
     const { id } = c.req.param();
-    const { success: readStateSuccess } = await c.env.DB.prepare(
-        `DELETE FROM mail_read_states`
-        + ` WHERE mail_id IN (SELECT id FROM raw_mails WHERE address IN`
-        + ` (select name from address where id = ?))`
-    ).bind(id).run();
-    const { success: mailSuccess } = await c.env.DB.prepare(
-        `DELETE FROM raw_mails WHERE address IN`
-        + ` (select name from address where id = ?) `
-    ).bind(id).run();
-    if (!mailSuccess || !readStateSuccess) {
-        return c.text(msgs.OperationFailedMsg, 500)
+    const body = await c.req.json().catch(() => null) as Record<string, unknown> | null;
+    const expectedMailCount = Number(body?.expected_mail_count);
+    if (!Number.isInteger(expectedMailCount) || expectedMailCount < 0) {
+        return c.text(msgs.InvalidInputMsg, 400);
     }
+    const snapshot = await c.env.DB.prepare(
+        `SELECT a.name, (SELECT COUNT(*) FROM raw_mails WHERE address = a.name) AS mail_count`
+        + ` FROM address a WHERE a.id = ?`
+    ).bind(id).first<{ name: string, mail_count: number }>();
+    if (!snapshot) return c.text(msgs.AddressNotFoundMsg, 404);
+    if (Number(snapshot.mail_count) !== expectedMailCount) {
+        return c.json({
+            error: "address_inbox_state_conflict",
+            current: { mail_count: Number(snapshot.mail_count) },
+        }, 409);
+    }
+    let results: D1Result[];
+    try {
+        results = await c.env.DB.batch([
+            c.env.DB.prepare(
+                `DELETE FROM mail_read_states`
+                + ` WHERE mail_id IN (SELECT id FROM raw_mails WHERE address = ?)`
+            ).bind(snapshot.name),
+            c.env.DB.prepare(`DELETE FROM raw_mails WHERE address = ?`).bind(snapshot.name),
+        ]);
+    } catch {
+        return c.text(msgs.OperationFailedMsg, 500);
+    }
+    const success = results.every((result) => result.success);
+    if (!success) return c.text(msgs.OperationFailedMsg, 500);
     await recordAuditEvent(c, {
         action: "address.inbox.clear",
         actor_type: "admin",
         actor_label: "admin",
         resource_type: "address",
         resource_id: id,
+        resource_label: snapshot.name,
         status: "success",
+        metadata: { mail_count: expectedMailCount },
     });
-    return c.json({ success: mailSuccess && readStateSuccess });
+    return c.json({ success: true });
 };
 
 const clearSentItems = async (c: Context<HonoCustomType>) => {
@@ -409,13 +459,24 @@ const clearSentItems = async (c: Context<HonoCustomType>) => {
     return c.json({ success: sendboxSuccess });
 };
 
-const showPassword = async (c: Context<HonoCustomType>) => {
+const showCredential = async (c: Context<HonoCustomType>) => {
     const { id } = c.req.param();
+    const body = await c.req.json().catch(() => null) as Record<string, unknown> | null;
+    const expectedCredentialVersion = Number(body?.expected_credential_version);
+    if (!Number.isInteger(expectedCredentialVersion) || expectedCredentialVersion < 1) {
+        return c.text(i18n.getMessagesbyContext(c).InvalidInputMsg, 400);
+    }
     const address = await c.env.DB.prepare(
         `SELECT name, COALESCE(credential_version, 1) AS credential_version FROM address WHERE id = ? `
     ).bind(id).first<{ name: string, credential_version: number }>();
     if (!address) {
         return c.text(i18n.getMessagesbyContext(c).AddressNotFoundMsg, 404);
+    }
+    if (Number(address.credential_version) !== expectedCredentialVersion) {
+        return c.json({
+            error: "credential_version_conflict",
+            current: { credential_version: Number(address.credential_version) },
+        }, 409);
     }
     const jwt = await issueAddressJwt(c, address.name, id, address.credential_version);
     await recordAuditEvent(c, {
@@ -433,24 +494,37 @@ const showPassword = async (c: Context<HonoCustomType>) => {
 const rotateCredential = async (c: Context<HonoCustomType>) => {
     const { id } = c.req.param();
     const msgs = i18n.getMessagesbyContext(c);
+    const body = await c.req.json().catch(() => null) as Record<string, unknown> | null;
+    const expectedCredentialVersion = Number(body?.expected_credential_version);
+    if (!Number.isInteger(expectedCredentialVersion) || expectedCredentialVersion < 1) {
+        return c.text(msgs.InvalidInputMsg, 400);
+    }
     const address = await c.env.DB.prepare(
-        `SELECT id, name FROM address WHERE id = ? `
-    ).bind(id).first<{ id: number, name: string }>();
+        `SELECT id, name, COALESCE(credential_version, 1) AS credential_version`
+        + ` FROM address WHERE id = ? `
+    ).bind(id).first<{ id: number, name: string, credential_version: number }>();
     if (!address) {
         return c.text(msgs.AddressNotFoundMsg, 404);
     }
-    const { success } = await c.env.DB.prepare(
+    if (Number(address.credential_version) !== expectedCredentialVersion) {
+        return c.json({
+            error: "credential_version_conflict",
+            current: { credential_version: Number(address.credential_version) },
+        }, 409);
+    }
+    const result = await c.env.DB.prepare(
         `UPDATE address`
         + ` SET credential_version = COALESCE(credential_version, 1) + 1,`
         + ` updated_at = datetime('now')`
-        + ` WHERE id = ?`
-    ).bind(id).run();
-    if (!success) {
+        + ` WHERE id = ? AND COALESCE(credential_version, 1) = ?`
+    ).bind(id, expectedCredentialVersion).run();
+    if (!result.success) {
         return c.text(msgs.OperationFailedMsg, 500);
     }
-    const credentialVersion = await c.env.DB.prepare(
-        `SELECT COALESCE(credential_version, 1) AS credential_version FROM address WHERE id = ?`
-    ).bind(id).first<number>("credential_version");
+    if (Number(result.meta?.changes || 0) !== 1) {
+        return c.json({ error: "credential_version_conflict" }, 409);
+    }
+    const credentialVersion = expectedCredentialVersion + 1;
     const jwt = await issueAddressJwt(c, address.name, address.id, credentialVersion);
     await recordAuditEvent(c, {
         action: "address.credential.rotate",
@@ -505,5 +579,5 @@ const resetPassword = async (c: Context<HonoCustomType>) => {
 
 export default {
     listAddressLabels, listAddresses, createNewAddress, deleteAddress, clearInbox, clearSentItems,
-    showPassword, resetPassword, rotateCredential, updateAddress, deleteAddressLabel
+    showCredential, resetPassword, rotateCredential, updateAddress, deleteAddressLabel
 };

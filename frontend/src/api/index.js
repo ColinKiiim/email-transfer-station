@@ -43,6 +43,10 @@ const apiFetch = async (path, options = {}) => {
         if (customAuthHeader) headers['x-custom-auth'] = customAuthHeader;
         const adminAuthHeader = safeHeaderValue(adminAuth.value);
         if (adminAuthHeader) headers['x-admin-auth'] = adminAuthHeader;
+        const adminRequestId = path.startsWith('/api/admin/')
+            ? safeHeaderValue(options.headers?.['x-admin-request-id'])
+            : undefined;
+        if (adminRequestId) headers['x-admin-request-id'] = adminRequestId;
         const authorizationHeader = safeBearerHeader(options.jwt || jwt.value);
         if (authorizationHeader) headers['Authorization'] = authorizationHeader;
 
@@ -52,6 +56,7 @@ const apiFetch = async (path, options = {}) => {
             headers,
         });
         if (response.status === 401 && (path.startsWith("/api/admin") || path.startsWith("/admin"))) {
+            adminAuth.value = '';
             showAdminAuth.value = true;
         }
         if (response.status === 401 && openSettings.value.needAuth) {
@@ -193,25 +198,6 @@ const getUserSettings = async (message) => {
     }
 }
 
-const adminShowAddressCredential = async (id) => {
-    try {
-        const { jwt: addressCredential } = await apiFetch(`/api/admin/show_password/${id}`);
-        return addressCredential;
-    } catch (error) {
-        throw error;
-    }
-}
-
-const adminDeleteAddress = async (id) => {
-    try {
-        await apiFetch(`/api/admin/delete_address/${id}`, {
-            method: 'DELETE'
-        });
-    } catch (error) {
-        throw error;
-    }
-}
-
 const bindUserAddress = async () => {
     if (!userJwt.value) return;
     try {
@@ -229,7 +215,5 @@ export const api = {
     getOpenSettings,
     getUserOpenSettings,
     getUserSettings,
-    adminShowAddressCredential,
-    adminDeleteAddress,
     bindUserAddress,
 }

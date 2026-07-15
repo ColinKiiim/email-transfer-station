@@ -15,7 +15,11 @@ Email Transfer Station is a multi-package Cloudflare mail application. Keep chan
 
 - Mailbox API: `/api/*` with an Address bearer credential.
 - Admin SPA: `/admin`.
-- Canonical admin API: `/api/admin/*` with `x-admin-auth`.
+- Canonical admin API: `/api/admin/*` with the short-lived session token returned
+  by `/open_api/admin_login` in `x-admin-auth`; never send a configured
+  `ADMIN_PASSWORDS` value as an API credential.
+- Admin writes carry `x-admin-request-id`. Every `DELETE` and designated
+  high-impact `POST` also requires `{"confirm":true}`.
 - Public API: `/open_api/*`; user API: `/user_api/*`.
 - Build the frontend in Pages mode, then deploy from `pages/` so Pages Functions and the `BACKEND` binding are included.
 

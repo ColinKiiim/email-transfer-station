@@ -82,7 +82,8 @@ export const useGlobalState = createGlobalState(
         const showAddressCredential = ref(false);
         const showAdminAuth = ref(false);
         const auth = useStorage('auth', '');
-        const adminAuth = useStorage('adminAuth', '');
+        if (typeof localStorage !== 'undefined') localStorage.removeItem('adminAuth');
+        const adminAuth = useSessionStorage('adminAuth', '');
         const jwt = useStorage('jwt', '', undefined, { writeDefaults: false });
         const addressPassword = useSessionStorage('addressPassword', '');
         const mailboxSplitSize = useStorage('mailboxSplitSize', 0.25);

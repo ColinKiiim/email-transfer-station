@@ -85,9 +85,25 @@ describe('admin session state', () => {
         await session.authFunc()
 
         expect(dependencies.adminAuth.value).toBe('')
-        expect(session.tmpAdminAuth.value).toBe('wrong')
+        expect(session.tmpAdminAuth.value).toBe('')
         expect(refreshTurnstile).toHaveBeenCalledTimes(1)
         expect(dependencies.notify).toHaveBeenCalledWith(error.message, 'error')
+    })
+
+    it('rejects a legacy login response that does not contain a session token', async () => {
+        const client = {
+            getLoginSettings: vi.fn(),
+            login: vi.fn().mockResolvedValue({ success: true }),
+        }
+        const { dependencies, session } = createSession({ client })
+        session.tmpAdminAuth.value = 'secret'
+
+        await session.authFunc()
+
+        expect(dependencies.adminAuth.value).toBe('')
+        expect(session.tmpAdminAuth.value).toBe('')
+        expect(dependencies.refreshAdminData).not.toHaveBeenCalled()
+        expect(dependencies.notify).toHaveBeenCalledWith('管理员登录未返回有效会话', 'error')
     })
 
     it('clears data on logout or a renewed challenge and refreshes on authorization', async () => {

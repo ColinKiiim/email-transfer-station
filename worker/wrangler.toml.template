@@ -45,8 +45,10 @@ PREFIX = "tmp"
 #   printf '%s' '["admin"]' | pnpm exec wrangler secret put ADMIN_USERNAMES
 #   printf '%s' '["strong-password"]' | pnpm exec wrangler secret put ADMIN_PASSWORDS
 # If ADMIN_USERNAMES is omitted, the admin login account defaults to "admin".
-# warning: disabling this removes account/password checks for admin portal
+# Test-only bypass: ignored unless E2E_TEST_MODE is also true. Never enable either
+# flag in a production or shared environment.
 # DISABLE_ADMIN_PASSWORD_CHECK = false
+# E2E_TEST_MODE = false
 # ADMIN CONTACT, CAN BE ANY STRING
 # ADMIN_CONTACT = "xx@xx.xxx"
 # Create new address with default domain first, if set true, will use first domain from DEFAULT_DOMAINS when no domain specified

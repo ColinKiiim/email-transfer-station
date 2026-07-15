@@ -25,6 +25,19 @@ same-origin Pages frontend provides inbox, sharing, and administration surfaces.
 
 `/admin` and `/api/admin/*` are the only promised admin interfaces.
 
+A successful admin login returns a signed session valid for at most one hour; the
+frontend keeps it only in the current tab's `sessionStorage`. Values configured in
+`ADMIN_PASSWORDS` are login verifiers, not `x-admin-auth` API credentials, and
+the Worker rejects a raw configured password as admin authentication. Admin
+responses use `Cache-Control: no-store`; writes carry `x-admin-request-id`, and
+every `DELETE` plus designated high-impact `POST` requests must also send
+`{"confirm":true}`. Address deletion, inbox clearing, and credential operations
+compare the version or counts observed by the caller and return `409` when state
+has changed, requiring a refresh and renewed confirmation.
+
+`DISABLE_ADMIN_PASSWORD_CHECK` is effective only when `E2E_TEST_MODE=true` too.
+Both flags are for disposable local E2E environments, not production.
+
 ## Core capabilities
 
 - Receive mail through Cloudflare Email Routing, store raw MIME and ingress
@@ -167,6 +180,9 @@ are sensitive data. At minimum, a production operator should:
 
 - use separate, least-privilege Cloudflare resources and API tokens;
 - keep admin authentication enabled and rotate admin/address credentials;
+- put Cloudflare Access or equivalent MFA/network access control in front of the
+  production admin surface; the built-in admin session currently has no MFA,
+  session denylist, or fine-grained admin roles;
 - restrict public creation, deletion, sending, and Webhook features;
 - back up D1 before migrations and define retention for message and audit data;
 - keep mail HTML sanitization and automatic remote-media blocking enabled; and

@@ -46,14 +46,16 @@ export const useAdminSession = ({
                 passwordHash: await hashPassword(tmpAdminAuth.value),
                 cfToken: cfToken.value,
             })
-            adminAuth.value = result.token || tmpAdminAuth.value
+            if (!result?.token) throw new Error('管理员登录未返回有效会话')
+            adminAuth.value = result.token
             showAdminAuth.value = false
-            tmpAdminAuth.value = ''
             await refreshAdminData()
             notify('管理员会话已建立', 'success')
         } catch (error) {
             notify(error?.message || '管理员登录失败', 'error')
             turnstileRef.value?.refresh?.()
+        } finally {
+            tmpAdminAuth.value = ''
         }
     }
 

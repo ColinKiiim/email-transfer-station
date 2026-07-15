@@ -243,12 +243,11 @@ export default {
     },
     deleteMail: async (c: Context<HonoCustomType>) => {
         const { id } = c.req.param();
-        await c.env.DB.prepare(
-            `DELETE FROM mail_read_states WHERE mail_id = ?`
-        ).bind(id).run();
-        const { success } = await c.env.DB.prepare(
-            `DELETE FROM raw_mails WHERE id = ? `
-        ).bind(id).run();
+        const results = await c.env.DB.batch([
+            c.env.DB.prepare(`DELETE FROM mail_read_states WHERE mail_id = ?`).bind(id),
+            c.env.DB.prepare(`DELETE FROM raw_mails WHERE id = ?`).bind(id),
+        ]);
+        const success = results.every((result) => result.success);
         return c.json({
             success: success
         })

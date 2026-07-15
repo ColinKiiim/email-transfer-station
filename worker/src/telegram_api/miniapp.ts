@@ -2,7 +2,7 @@ import { Context } from "hono";
 import { Jwt } from 'hono/utils/jwt'
 import { CONSTANTS } from "../constants";
 import { bindTelegramAddress, jwtListToAddressData, tgUserNewAddress, unbindTelegramAddress } from "./common";
-import { checkCfTurnstile, checkIsAdmin, getBooleanValue } from "../utils";
+import { checkCfTurnstile, getBooleanValue } from "../utils";
 import { resolveRawEmailRow } from "../gzip";
 import { TelegramSettings } from "./settings";
 import i18n from "../i18n";
@@ -138,15 +138,6 @@ async function getMail(c: Context<HonoCustomType>): Promise<Response> {
     const { initData, mailId } = await c.req.json();
     const msgs = i18n.getMessagesbyContext(c);
     try {
-        if (checkIsAdmin(c)) {
-            const result = await c.env.DB.prepare(
-                `SELECT * FROM raw_mails where id = ?`
-            ).bind(mailId).first();
-            if (!result) {
-                return c.text("Mail not found", 404);
-            }
-            return c.json(await resolveRawEmailRow(result));
-        }
         const userId = await checkTelegramAuth(c, initData);
         const jwtList = await c.env.KV.get<string[]>(`${CONSTANTS.TG_KV_PREFIX}:${userId}`, 'json') || [];
         const { addressList, addressIdMap } = await jwtListToAddressData(c, jwtList, msgs);

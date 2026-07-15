@@ -7,10 +7,14 @@ import {
   deleteAllMailpitMessages,
   requestSendAccess,
   onMailpitMessage,
+  getAdminSessionHeaders,
 } from '../../fixtures/test-helpers';
 
-const ADMIN_PASSWORD = 'e2e-admin-pass';
-const ADMIN_HEADERS = { 'x-admin-auth': ADMIN_PASSWORD };
+let ADMIN_HEADERS: Record<string, string>;
+
+test.beforeEach(async ({ request }) => {
+  ADMIN_HEADERS = await getAdminSessionHeaders(request);
+});
 
 const DEFAULT_ACCOUNT_SETTINGS = {
   blockList: [],

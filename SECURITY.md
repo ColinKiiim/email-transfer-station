@@ -67,6 +67,28 @@ normal authentication behavior and receive no CORS headers. CORS is not an
 authorization control: bearer credentials, admin sessions, endpoint permissions,
 and write confirmations remain required for every caller.
 
+## Admin operation controls
+
+`ADMIN_PASSWORDS` values are accepted only by `/open_api/admin_login`. A successful
+login returns an issuer-, audience-, and scope-bound signed session with a maximum
+one-hour lifetime. The browser keeps that token in tab-scoped `sessionStorage`; the
+Worker rejects a raw configured password sent as `x-admin-auth`. All admin responses
+are marked `Cache-Control: no-store`.
+
+State-changing admin requests receive a CSPRNG request ID and record a sanitized
+success or failure outcome. All `DELETE` requests and designated high-impact `POST`
+requests require an explicit JSON `confirm: true`. Address deletion, inbox clearing,
+credential display, and credential rotation also compare caller-observed versions
+or counts; a mismatch fails with `409` rather than applying an action to changed
+state. Related multi-table deletes are submitted as D1 batches.
+
+`DISABLE_ADMIN_PASSWORD_CHECK` is ignored unless `E2E_TEST_MODE` is also true. Never
+set either flag in production or a shared environment. The built-in admin surface
+still has a single broad privilege boundary and no MFA or session denylist. Put
+Cloudflare Access or an equivalent identity-aware MFA/network policy in front of a
+production admin surface, keep its exposure narrow, and rotate `JWT_SECRET` plus
+admin passwords when a session or login verifier may be compromised.
+
 ## Agent bearer credentials
 
 Treat an Address JWT as a mailbox bearer secret. The canonical

@@ -116,6 +116,19 @@ const toDbString = (value: string | number | null | undefined): string | null =>
     return String(value);
 }
 
+const withAdminRequestId = (
+    metadata: MetadataValue,
+    requestId: string | undefined,
+): MetadataValue => {
+    if (!requestId) return metadata;
+    if (metadata && typeof metadata === "object" && !Array.isArray(metadata)) {
+        return { ...(metadata as Record<string, unknown>), request_id: requestId };
+    }
+    return metadata === undefined || metadata === null
+        ? { request_id: requestId }
+        : { detail: metadata, request_id: requestId };
+}
+
 export const getClientIp = (c: Context<HonoCustomType>): string | null => {
     const cfConnectingIp = c.req.raw.headers.get("cf-connecting-ip");
     if (cfConnectingIp) return cfConnectingIp;
@@ -134,15 +147,23 @@ export const recordAuditEvent = async (
     event: AuditEventInput
 ): Promise<void> => {
     try {
+        const contextActor = c.get("adminActor");
+        const useContextActor = !!contextActor
+            && (event.actor_type === undefined || event.actor_type === "admin")
+            && (event.actor_label === undefined || event.actor_label === null || event.actor_label === "admin");
+        const actorType = useContextActor ? contextActor.actor_type : event.actor_type;
+        const actorId = useContextActor ? contextActor.actor_id : event.actor_id;
+        const actorLabel = useContextActor ? contextActor.actor_label : event.actor_label;
+        const metadata = withAdminRequestId(event.metadata, c.get("adminRequestId"));
         await c.env.DB.prepare(
             `INSERT INTO audit_events`
             + ` (actor_type, actor_id, actor_label, action, resource_type, resource_id, resource_label,`
             + ` status, ip, user_agent, method, path, source, metadata)`
             + ` VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
-            event.actor_type || null,
-            toDbString(event.actor_id),
-            event.actor_label || null,
+            actorType || null,
+            toDbString(actorId),
+            actorLabel || null,
             event.action,
             event.resource_type || null,
             toDbString(event.resource_id),
@@ -153,7 +174,7 @@ export const recordAuditEvent = async (
             c.req.method,
             c.req.path,
             event.source || "admin_api",
-            stringifyMetadata(event.metadata),
+            stringifyMetadata(metadata),
         ).run();
     } catch (error) {
         console.warn("[audit] failed to record audit event", error);

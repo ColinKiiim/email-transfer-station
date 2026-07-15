@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test';
 
-import { TEST_DOMAIN, WORKER_URL } from '../../fixtures/test-helpers';
+import { deleteAddress, TEST_DOMAIN, WORKER_URL } from '../../fixtures/test-helpers';
 
 test.describe('Admin console', () => {
-  test('preserves route state and completes an isolated mail deletion', async ({ page, request }) => {
+  test('preserves route state and confirms sensitive admin actions', async ({ page, request }) => {
     const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const subject = `Admin console fixture ${suffix}`;
     const created = await request.post(`${WORKER_URL}/api/admin/new_address`, {
@@ -60,8 +60,20 @@ test.describe('Admin console', () => {
       await page.locator('.mail-reader-actions .danger').click();
       await expect(page.locator('.toast')).toContainText('已删除 1 封生产邮件');
       await expect(page.locator('.mail-row', { hasText: subject })).toHaveCount(0);
+
+      await page.goto('/admin?view=identity');
+      const addressRow = page.locator('.panel-addresses tbody tr', { hasText: address.address });
+      await expect(addressRow).toBeVisible();
+      await addressRow.click();
+      page.once('dialog', (dialog) => dialog.accept());
+      await page.locator('.toolbar button', { hasText: '显示凭证' }).click();
+      const oneTimeResult = page.getByTestId('one-time-result');
+      await expect(oneTimeResult).toBeVisible();
+      await expect(oneTimeResult).not.toHaveValue('');
+      await page.keyboard.press('Escape');
+      await expect(oneTimeResult).toBeHidden();
     } finally {
-      await request.delete(`${WORKER_URL}/api/admin/delete_address/${address.address_id}`);
+      await deleteAddress(request, address.jwt);
     }
   });
 });

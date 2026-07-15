@@ -107,7 +107,7 @@ const fixtureResponse = async (path, options = {}) => {
         runtime.accessPackages.push({ id: 11, address_id: 3, address: 'ops@example.test', scopes: 'read' })
         return { id: 11, address: 'ops@example.test', token: 'fixture-share-token' }
     }
-    if (path === '/api/admin/show_password/3') {
+    if (path === '/api/admin/address/3/credential' && options.method === 'POST') {
         return { jwt: 'fixture-current-jwt' }
     }
     if (path === '/api/admin/delete_address/3' && options.method === 'DELETE') {
@@ -373,7 +373,11 @@ describe('AdminNext behavior baseline', () => {
         await wrapper.get('.mail-reader-actions .danger').trigger('click')
         await settle()
 
-        expect(mocks.fetch).toHaveBeenCalledWith('/api/admin/mails/7', { method: 'DELETE' })
+        expect(mocks.fetch).toHaveBeenCalledWith('/api/admin/mails/7', expect.objectContaining({
+            method: 'DELETE',
+            body: JSON.stringify({ confirm: true }),
+            headers: expect.objectContaining({ 'x-admin-request-id': expect.any(String) }),
+        }))
         expect(wrapper.get('.toast').text()).toContain('已删除 1 封生产邮件')
         expect(wrapper.get('.toast').attributes('role')).toBe('status')
         expect(wrapper.find('.mail-row').exists()).toBe(false)
@@ -463,7 +467,11 @@ describe('AdminNext behavior baseline', () => {
         await revealButton.trigger('click')
         await settle()
 
-        expect(mocks.fetch).toHaveBeenCalledWith('/api/admin/show_password/3')
+        expect(mocks.fetch).toHaveBeenCalledWith('/api/admin/address/3/credential', expect.objectContaining({
+            method: 'POST',
+            body: JSON.stringify({ confirm: true, expected_credential_version: 2 }),
+            headers: expect.objectContaining({ 'x-admin-request-id': expect.any(String) }),
+        }))
         const oneTimeResult = wrapper.get('[data-testid="one-time-result"]').element.value
         expect(oneTimeResult).toContain('fixture-current-jwt')
         expect(oneTimeResult).toContain('/?jwt=fixture-current-jwt')
@@ -509,7 +517,17 @@ describe('AdminNext behavior baseline', () => {
         expect(deleteAddressButton).toBeTruthy()
         await deleteAddressButton.trigger('click')
         await settle()
-        expect(mocks.fetch).toHaveBeenCalledWith('/api/admin/delete_address/3', { method: 'DELETE' })
+        expect(mocks.fetch).toHaveBeenCalledWith('/api/admin/delete_address/3', expect.objectContaining({
+            method: 'DELETE',
+            body: JSON.stringify({
+                confirm: true,
+                expected_credential_version: 1,
+                expected_mail_count: 2,
+                expected_sent_count: 1,
+                expected_share_count: 1,
+            }),
+            headers: expect.objectContaining({ 'x-admin-request-id': expect.any(String) }),
+        }))
         mounted.wrapper.unmount()
 
         runtime.domains = [{
@@ -532,6 +550,7 @@ describe('AdminNext behavior baseline', () => {
         expect(mocks.fetch).toHaveBeenCalledWith('/api/admin/domains/1', {
             method: 'DELETE',
             body: JSON.stringify({ config_version: 7, confirm: true }),
+            headers: expect.objectContaining({ 'x-admin-request-id': expect.any(String) }),
         })
         expect(runtime.lastDomainDisable).toEqual({ config_version: 7, confirm: true })
         expect(confirm).toHaveBeenCalled()

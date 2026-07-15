@@ -299,7 +299,12 @@ export const useAdminConsoleActions = ({
             '删除地址',
             `确认删除 ${row.address}？该地址的 ${row.mails} 封收件、${row.sent} 封发送记录和访问包会一起删除，无法撤销。`,
             async () => {
-                const result = await adminApi.deleteAddress(row.sourceId)
+                const result = await adminApi.deleteAddress(row.sourceId, {
+                    credentialVersion: row.credentialVersion,
+                    mailCount: row.mails,
+                    sentCount: row.sent,
+                    shareCount: row.packages,
+                })
                 if (result?.success === false) throw new Error('删除地址失败')
                 await refreshAll()
                 ui.selected.identity = addressRows.value[0]?.id || ''
@@ -350,7 +355,7 @@ export const useAdminConsoleActions = ({
             '显示地址凭证',
             `确认显示 ${row.address} 的当前 JWT 和固定登录链接？请确保屏幕不会被无关人员看到。`,
             async () => {
-                const result = await adminApi.showAddressCredential(row.sourceId)
+                const result = await adminApi.showAddressCredential(row.sourceId, row.credentialVersion)
                 showOneTimeResult(
                     `地址凭证：${row.address}`,
                     formatAddressCredential(row.address, result?.jwt, '', window.location.origin),
@@ -371,7 +376,7 @@ export const useAdminConsoleActions = ({
             '凭证轮换',
             `确认轮换 ${row.address} 的地址凭证？旧地址 JWT 会失效，新的凭证只会显示一次，请在安全位置复制保存。`,
             async () => {
-                const result = await adminApi.rotateAddressCredential(row.sourceId)
+                const result = await adminApi.rotateAddressCredential(row.sourceId, row.credentialVersion)
                 await refreshAll()
                 if (result?.jwt) {
                     showOneTimeResult(
@@ -416,7 +421,7 @@ export const useAdminConsoleActions = ({
             '清空地址收件',
             `确认清空 ${row.address} 的生产收件箱？此操作会删除该地址 raw_mails 和已读状态，无法在后台撤销。`,
             async () => {
-                const result = await adminApi.clearAddressInbox(row.sourceId)
+                const result = await adminApi.clearAddressInbox(row.sourceId, row.mails)
                 if (result?.success === false) throw new Error('清空地址收件失败')
                 await refreshAll()
                 showSuccess(`已清空 ${row.address} 的收件箱`)

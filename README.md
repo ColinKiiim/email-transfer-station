@@ -23,6 +23,16 @@ Email Transfer Station 是一个运行在 Cloudflare 上的自托管邮件接收
 
 `/admin` 与 `/api/admin/*` 是唯一对外承诺的后台入口。
 
+管理员登录成功后返回最长一小时的签名会话；前端只在当前标签页的
+`sessionStorage` 中保存它。配置在 `ADMIN_PASSWORDS` 中的口令只用于登录，不是
+`x-admin-auth` API 凭据，Worker 会拒绝把原始口令直接作为管理认证。管理响应使用
+`Cache-Control: no-store`；写请求带 `x-admin-request-id`，所有 `DELETE` 和指定的
+高影响 `POST` 还必须提交 `{"confirm":true}`。地址删除、清空收件箱和凭据操作会
+校验调用方看到的版本或计数，状态已变化时返回 `409`，要求刷新后重新确认。
+
+`DISABLE_ADMIN_PASSWORD_CHECK` 只有与 `E2E_TEST_MODE=true` 同时设置时才生效；
+它们只用于一次性本地 E2E 环境，不是生产配置。
+
 ## 核心能力
 
 - 通过 Cloudflare Email Routing 接收邮件，保存原始 MIME 与入站元数据，并按需提供
@@ -147,6 +157,8 @@ corepack pnpm run deploy
 
 - 使用独立、最小权限的 Cloudflare 资源和 API token；
 - 保持管理员认证开启并定期轮换管理员及地址凭据；
+- 在生产入口前增加 Cloudflare Access 或等效的 MFA/网络访问控制；内置管理员会话
+  当前不提供 MFA、会话撤销列表或细粒度管理员角色；
 - 限制公开创建、删除、发信和 Webhook 能力；
 - 在迁移前备份 D1，并为邮件及审计数据设置明确保留期；
 - 保持邮件 HTML 清洗和远程媒体默认阻止策略，不要为了保留发件人样式而放宽；

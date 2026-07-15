@@ -1,9 +1,8 @@
 import { Context, Hono } from 'hono'
-import { Jwt } from 'hono/utils/jwt'
-
 import utils, { checkCfTurnstile, getPasswords, getAdminPasswords, hashPassword, getStringArray } from '../utils';
 import i18n from '../i18n';
 import { recordAccessEvent } from '../audit';
+import { issueAdminSession } from '../admin_security';
 
 const api = new Hono<HonoCustomType>()
 
@@ -60,6 +59,7 @@ api.get('/open_api/admin_login_settings', async (c) => {
 })
 
 api.post('/open_api/admin_login', async (c) => {
+    c.header("Cache-Control", "no-store");
     const { username, password, cf_token } = await c.req.json();
     const msgs = i18n.getMessagesbyContext(c);
     const normalizedUsername = normalizeAdminUsername(username);
@@ -102,11 +102,7 @@ api.post('/open_api/admin_login', async (c) => {
         actor_label: normalizedUsername,
         status: "success",
     });
-    const token = await Jwt.sign({
-        scope: "admin_session",
-        username: normalizedUsername,
-        exp: Math.floor(Date.now() / 1000) + 8 * 60 * 60,
-    }, c.env.JWT_SECRET, "HS256");
+    const token = await issueAdminSession(normalizedUsername, c.env.JWT_SECRET);
     return c.json({ success: true, token, username: normalizedUsername })
 })
 

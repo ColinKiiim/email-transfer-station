@@ -149,11 +149,21 @@ type UserPayload = {
     iat: number
 }
 
+type AdminActor = {
+    actor_type: "admin" | "user"
+    actor_id?: string | number | null
+    actor_label: string
+    auth_method: "admin_session" | "admin_user_role" | "e2e_test_bypass"
+    session_id?: string
+}
+
 type Variables = {
     userPayload: UserPayload,
     userRolePayload: string | undefined | null,
     jwtPayload: JwtPayload,
     lang: string | undefined | null
+    adminActor?: AdminActor
+    adminRequestId?: string
 }
 
 type HonoCustomType = {

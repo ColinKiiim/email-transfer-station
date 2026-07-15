@@ -57,6 +57,8 @@ describe("explicit CORS policy", () => {
             .toBe("GET, HEAD, POST, PATCH, DELETE");
         expect(response.headers.get("Access-Control-Allow-Headers"))
             .toContain("x-admin-auth");
+        expect(response.headers.get("Access-Control-Allow-Headers"))
+            .toContain("x-admin-request-id");
         expect(response.headers.get("Access-Control-Allow-Credentials")).toBeNull();
         expect(response.headers.get("Vary"))
             .toBe("Origin, Access-Control-Request-Method, Access-Control-Request-Headers");

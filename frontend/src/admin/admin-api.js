@@ -1,17 +1,23 @@
 import { api } from '../api'
+import { createAdminRequestId } from '../security/admin-request'
 
 const ADMIN_MAIL_PAGE_LIMIT = 100
 const ADMIN_MAIL_FETCH_MAX = 500
 
 const pathId = (value) => encodeURIComponent(String(value))
-const writeOptions = (method, body) => ({
+const jsonOptions = (method, body) => ({
     method,
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
 })
 
-export const createAdminApi = (fetcher) => ({
+export const createAdminApi = (fetcher, { requestIdFactory = createAdminRequestId } = {}) => {
+    const writeOptions = (method, body) => ({
+        ...jsonOptions(method, body),
+        headers: { 'x-admin-request-id': requestIdFactory() },
+    })
+    return {
     getLoginSettings: () => fetcher('/open_api/admin_login_settings'),
-    login: ({ username, passwordHash, cfToken }) => fetcher('/open_api/admin_login', writeOptions('POST', {
+    login: ({ username, passwordHash, cfToken }) => fetcher('/open_api/admin_login', jsonOptions('POST', {
         username,
         password: passwordHash,
         cf_token: cfToken,
@@ -39,7 +45,7 @@ export const createAdminApi = (fetcher) => ({
     listSendBox: () => fetcher('/api/admin/sendbox?limit=10&offset=0'),
 
     markMailRead: (id) => fetcher(`/api/admin/mails/${pathId(id)}/read_state`, writeOptions('PATCH', { read: true })),
-    deleteMail: (id) => fetcher(`/api/admin/mails/${pathId(id)}`, writeOptions('DELETE')),
+    deleteMail: (id) => fetcher(`/api/admin/mails/${pathId(id)}`, writeOptions('DELETE', { confirm: true })),
     createAddress: ({ name, domain, enablePrefix, enableRandomSubdomain }) => fetcher('/api/admin/new_address', writeOptions('POST', {
         name,
         domain,
@@ -51,24 +57,41 @@ export const createAdminApi = (fetcher) => ({
         scopes: ['read'],
         expires_at: expiresAt,
     })),
-    deleteAddress: (id) => fetcher(`/api/admin/delete_address/${pathId(id)}`, writeOptions('DELETE')),
+    deleteAddress: (id, { credentialVersion, mailCount, sentCount, shareCount }) => fetcher(`/api/admin/delete_address/${pathId(id)}`, writeOptions('DELETE', {
+        confirm: true,
+        expected_credential_version: credentialVersion,
+        expected_mail_count: mailCount,
+        expected_sent_count: sentCount,
+        expected_share_count: shareCount,
+    })),
     getDomainImpact: (id) => fetcher(`/api/admin/domains/${pathId(id)}/impact`),
     disableDomain: (id, { configVersion, confirm = true }) => fetcher(`/api/admin/domains/${pathId(id)}`, writeOptions('DELETE', {
         config_version: configVersion,
         confirm,
     })),
-    showAddressCredential: (id) => fetcher(`/api/admin/show_password/${pathId(id)}`),
-    rotateAddressCredential: (id) => fetcher(`/api/admin/address/${pathId(id)}/rotate_credential`, writeOptions('POST')),
-    revokeShareTokens: (id) => fetcher(`/api/admin/address/${pathId(id)}/share_tokens`, writeOptions('DELETE')),
-    clearAddressInbox: (id) => fetcher(`/api/admin/clear_inbox/${pathId(id)}`, writeOptions('DELETE')),
+    showAddressCredential: (id, credentialVersion) => fetcher(`/api/admin/address/${pathId(id)}/credential`, writeOptions('POST', {
+        confirm: true,
+        expected_credential_version: credentialVersion,
+    })),
+    rotateAddressCredential: (id, credentialVersion) => fetcher(`/api/admin/address/${pathId(id)}/rotate_credential`, writeOptions('POST', {
+        confirm: true,
+        expected_credential_version: credentialVersion,
+    })),
+    revokeShareTokens: (id) => fetcher(`/api/admin/address/${pathId(id)}/share_tokens`, writeOptions('DELETE', { confirm: true })),
+    clearAddressInbox: (id, mailCount) => fetcher(`/api/admin/clear_inbox/${pathId(id)}`, writeOptions('DELETE', {
+        confirm: true,
+        expected_mail_count: mailCount,
+    })),
     checkCloudflareDomain: (id) => fetcher(`/api/admin/domains/${pathId(id)}/cloudflare/check`, writeOptions('POST')),
     startDomainVerification: (id, configVersion) => fetcher(`/api/admin/domains/${pathId(id)}/verify/start`, writeOptions('POST', {
+        confirm: true,
         config_version: configVersion,
     })),
     checkDomainVerification: (id, configVersion) => fetcher(`/api/admin/domains/${pathId(id)}/verify/check`, writeOptions('POST', {
         config_version: configVersion,
     })),
     setupCloudflareDomain: (id, { configVersion, confirmReplaceCatchAll }) => fetcher(`/api/admin/domains/${pathId(id)}/cloudflare/setup`, writeOptions('POST', {
+        confirm: true,
         config_version: configVersion,
         confirm_replace_catch_all: confirmReplaceCatchAll,
     })),
@@ -80,7 +103,8 @@ export const createAdminApi = (fetcher) => ({
         cloudflare_zone_id: cloudflareZoneId,
         allow_random_subdomain: allowRandomSubdomain,
     })),
-})
+    }
+}
 
 export const adminApi = createAdminApi((path, options) =>
     options === undefined ? api.fetch(path) : api.fetch(path, options),
