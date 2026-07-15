@@ -11,32 +11,27 @@ import Turnstile from '../components/Turnstile.vue'
 import ShadowHtmlComponent from '../components/ShadowHtmlComponent.vue'
 import MailContentRenderer from '../components/MailContentRenderer.vue'
 import { adminApi, loadAdminSnapshot } from '../admin/admin-api'
+import { buildAdminMailHierarchy, buildAdminMailRail, useAdminMailFlow } from '../admin/admin-mail-flow'
 import {
     createInitialAdminRouteState,
-    statusOptionsForView,
     useAdminRouteState,
 } from '../admin/admin-route-state'
 import { useAdminSession } from '../admin/admin-session'
 import {
-    adminMailCacheKey,
     cellText,
     clampNumber,
     compactRaw,
     compactText,
     extractHeader,
     formatAddressCredential,
-    formatAttachmentCount,
     formatBadgeCount,
     formatDate,
     formatNumber,
     formatShortDate,
     getDomain,
-    mailRenderLabel,
     modeLabel,
-    normalizedAttachments,
     setupLabel,
     statusClass,
-    stripHtml,
     toD1DateTime,
 } from '../admin/admin-formatters'
 import {
@@ -95,8 +90,6 @@ const ui = reactive({
 const mailListRef = ref(null)
 const collapsedMailDomains = ref(new Set())
 const actionBusy = ref('')
-const parsedAdminMailCache = reactive({})
-const parsedAdminMailPending = ref('')
 
 if (typeof localStorage !== 'undefined') {
     try {
@@ -469,82 +462,40 @@ const addressRows = computed(() => {
     return []
 })
 
-const mailRows = computed(() => {
-    const rows = live.mails.length > 0 ? live.mails : []
-    if (rows.length > 0) {
-        return rows.map((row) => {
-            const subject = compactText(row.subject, extractHeader(row.raw, 'Subject') || row.message_id || `Mail #${row.id}`)
-            const sender = compactText(row.sender, extractHeader(row.raw, 'From') || row.source || '-')
-            const address = row.address || row.original_recipient || '-'
-            const effectiveDomain = getDomain(address)
-            const text = compactText(row.text)
-            const html = String(row.html || row.message || '')
-            const body = text || compactText(stripHtml(html), compactRaw(row.raw))
-            const attachments = normalizedAttachments(row.attachments)
-            const attachmentCount = Number.isFinite(Number(row.attachment_count))
-                ? Number(row.attachment_count)
-                : attachments.length
-            const hasReadState = row.read_at !== undefined || row.is_read !== undefined || row.unread !== undefined
-            const hasReadAt = typeof row.read_at === 'string' && row.read_at.length > 0
-            const isRead = hasReadState
-                ? row.is_read === true || row.is_read === 1 || row.is_read === '1' || hasReadAt
-                : undefined
-            const unread = hasReadState
-                ? row.unread === true || row.unread === 1 || row.unread === '1' || !isRead
-                : undefined
-            return {
-                id: `mail-${row.id}`,
-                sourceId: row.id,
-                read_at: row.read_at,
-                is_read: isRead,
-                unread,
-                time: formatShortDate(row.created_at),
-                fullTime: formatDate(row.created_at),
-                created_at: row.created_at,
-                sender,
-                to: address,
-                domain: effectiveDomain,
-                originalDomain: row.original_domain || effectiveDomain,
-                subject,
-                size: row.raw ? `${(String(row.raw).length / 1024).toFixed(1)} KB` : '-',
-                result: address === '-' ? '未知地址' : '已保存',
-                auth: row.recipient_confidence || row.ingress_source || '-',
-                ip: row.source || '-',
-                risk: row.ingress_source === 'collector-unresolved' ? '进入异常队列' : mailRenderLabel({ html, text, parseStatus: row.parse_status }),
-                body,
-                text,
-                html,
-                message: html || text,
-                raw: row.raw || '',
-                attachments,
-                attachmentCount,
-                attachmentLabel: formatAttachmentCount(attachmentCount),
-                parseStatus: row.parse_status || 'unknown',
-            }
-        })
-    }
-    return []
-})
-
-const unknownRows = computed(() => {
-    const rows = live.unknownMails.length > 0 ? live.unknownMails : []
-    if (rows.length > 0) {
-        return rows.map((row) => {
-            const title = compactText(row.subject, extractHeader(row.raw, 'Subject') || `未知收件人 #${row.id}`)
-            const detail = compactText(row.text, compactText(stripHtml(row.html || row.message), compactRaw(row.raw)))
-            return {
-                id: `unknown-${row.id}`,
-                level: 'P2',
-                title,
-                owner: row.address || row.original_recipient || '收件流',
-                status: '未知地址',
-                detail,
-                domain: getDomain(row.address || row.original_recipient),
-                originalDomain: row.original_domain || '',
-            }
-        })
-    }
-    return []
+const {
+    canGoNextMail,
+    canGoPrevMail,
+    closeMailDetail,
+    currentDisplayMail,
+    currentMail,
+    currentRendererMail,
+    filterRows,
+    filteredMailRows,
+    filteredUnknownRows,
+    mailRows,
+    openMailFromAddress,
+    openMailFromDomain,
+    selectAdjacentMail,
+    setMailAddress,
+    setMailDomain,
+    setMailStatus,
+    unknownRows,
+    updateMailSearch,
+} = useAdminMailFlow({
+    getMails: () => live.mails,
+    getUnknownMails: () => live.unknownMails,
+    ui,
+    activeView,
+    parseItem: processItem,
+    resetListScroll: resetMailListScroll,
+    syncRoute: syncMailQueryToRoute,
+    replaceRouteQuery,
+    persistView,
+    selectMail: (id) => selectRow('flow', id),
+    onSelectionMissing: () => {
+        if (activeView.value === 'flow') replaceRouteQuery({ mailId: undefined, mode: undefined }, ['item'])
+    },
+    onParseError: (error) => console.error(error),
 })
 
 const routeRows = computed(() => {
@@ -871,113 +822,14 @@ const toggleSidebar = () => {
     }
 }
 
-const queryTokens = (value) => String(value || '')
-    .trim()
-    .match(/(?:[^\s"]+|"[^"]*")+/g)
-    ?.map((token) => token.replace(/^"|"$/g, '').toLowerCase())
-    .filter(Boolean) || []
-
-const matchesMailOperator = (row, token) => {
-    const [rawKey, ...rest] = token.split(':')
-    if (!rest.length) return null
-    const key = rawKey.trim()
-    const value = rest.join(':').trim()
-    if (key === 'from') return String(row.sender || '').toLowerCase().includes(value)
-    if (key === 'to') return String(row.to || row.address || '').toLowerCase().includes(value)
-    if (key === 'subject') return String(row.subject || '').toLowerCase().includes(value)
-    if (key === 'has' && value === 'attachment') return Number(row.attachmentCount || 0) > 0
-    if (key === 'is' && value === 'unread') return row.unread === true
-    if (key === 'is' && value === 'read') return row.is_read === true || row.unread === false
-    if (key === 'after') return String(row.fullTime || row.time || '').slice(0, 10) >= value
-    if (key === 'before') return String(row.fullTime || row.time || '').slice(0, 10) <= value
-    return null
-}
-
-const matchesQuery = (row) => {
-    const tokens = queryTokens(ui.query)
-    if (!tokens.length) return true
-    const text = [
-        row.subject,
-        row.sender,
-        row.to,
-        row.address,
-        row.domain,
-        row.originalDomain,
-        row.body,
-        row.text,
-        row.risk,
-        row.result,
-        row.auth,
-    ].filter(Boolean).join(' ').toLowerCase()
-    return tokens.every((token) => {
-        const operatorResult = matchesMailOperator(row, token)
-        if (operatorResult !== null) return operatorResult
-        return text.includes(token)
-    })
-}
-
-const matches = (row) => {
-    const inQuery = matchesQuery(row)
-    const inDomain = ui.domain === 'all'
-        || row.domain === ui.domain
-        || row.address?.endsWith(`@${ui.domain}`)
-        || row.to?.endsWith(`@${ui.domain}`)
-    const inAddress = ui.address === 'all'
-        || row.address === ui.address
-        || row.to === ui.address
-        || row.owner === ui.address
-    const statusText = [
-        row.status,
-        row.result,
-        row.risk,
-        row.auth,
-        row.is_read ? '已读 read' : '',
-        row.unread ? '未读 unread' : '',
-        Number(row.attachmentCount || 0) > 0 ? 'attachment 有附件' : '',
-    ].filter(Boolean).join(' ').toLowerCase()
-    const statusOptions = statusOptionsForView(activeView.value)
-    const activeStatus = statusOptions.includes(ui.status) ? ui.status : 'all'
-    const inStatus = activeStatus === 'all' || statusText.includes(activeStatus.toLowerCase())
-    return inQuery && inDomain && inAddress && inStatus
-}
-
-const filterRows = (rows) => rows.filter(matches)
-
-const filteredMailRows = computed(() => filterRows(mailRows.value))
-const filteredUnknownRows = computed(() => filterRows(unknownRows.value))
-
-const mailHierarchy = computed(() => {
-    const allCount = Number.isFinite(Number(live.mailTotalCount)) ? Number(live.mailTotalCount) : mailRows.value.length
-    const unreadCount = explicitUnreadMailCount.value
-    const attachmentCount = mailRows.value.filter((row) => Number(row.attachmentCount || 0) > 0).length
-    const unknownCount = unknownRows.value.length
-    const domainMailCount = (domain) => {
-        const scoped = mailRows.value.filter((row) => row.domain === domain || getDomain(row.to) === domain)
-        if (scoped.length > 0) return scoped.length
-        return Number.isFinite(Number(domainRows.value.find((row) => row.domain === domain)?.mails))
-            ? Number(domainRows.value.find((row) => row.domain === domain).mails)
-            : 0
-    }
-    return {
-        queues: [
-            { id: 'queue-all', label: '全部邮件', count: allCount, status: 'all' },
-            { id: 'queue-unread', label: '未读', count: unreadCount, status: '未读' },
-            { id: 'queue-saved', label: '已保存', count: mailRows.value.filter((row) => row.result === '已保存').length, status: '已保存' },
-            { id: 'queue-attachment', label: '有附件', count: attachmentCount, status: 'attachment' },
-            { id: 'queue-unknown', label: '未知收件人', count: unknownCount, status: '未知地址' },
-        ],
-        domains: domainRows.value.map((domain) => ({
-            ...domain,
-            mails: domainMailCount(domain.domain),
-            addresses: addressOptions.value
-                .filter((address) => address !== 'all' && address.endsWith(`@${domain.domain}`))
-                .map((address) => ({
-                    address,
-                    count: mailRows.value.filter((row) => row.to === address || row.address === address).length,
-                })),
-        })),
-    }
-})
+const mailHierarchy = computed(() => buildAdminMailHierarchy({
+    mails: mailRows.value,
+    unknownMails: unknownRows.value,
+    domains: domainRows.value,
+    addresses: addressOptions.value,
+    totalCount: live.mailTotalCount,
+    unreadCount: explicitUnreadMailCount.value,
+}))
 
 const selectedMailDomain = computed(() => (ui.address !== 'all' ? getDomain(ui.address) : ui.domain))
 
@@ -1000,77 +852,6 @@ const toggleMailDomain = (domain) => {
     persistCollapsedMailDomains()
 }
 
-const setMailStatus = (status) => {
-    ui.status = status
-    ui.flowMode = 'list'
-    resetMailListScroll()
-    syncMailQueryToRoute({ status: status === 'all' ? undefined : status, mode: undefined })
-}
-
-const setMailDomain = (domain) => {
-    ui.domain = domain || 'all'
-    ui.address = 'all'
-    ui.flowMode = 'list'
-    resetMailListScroll()
-    syncMailQueryToRoute({ domain: ui.domain === 'all' ? undefined : ui.domain, address: undefined, mode: undefined })
-}
-
-const setMailAddress = (address) => {
-    ui.address = address || 'all'
-    ui.domain = address && address !== 'all' ? getDomain(address) || ui.domain : ui.domain
-    ui.flowMode = 'list'
-    resetMailListScroll()
-    syncMailQueryToRoute({
-        address: ui.address === 'all' ? undefined : ui.address,
-        domain: ui.domain === 'all' ? undefined : ui.domain,
-        mode: undefined,
-    })
-}
-
-const updateMailSearch = () => {
-    resetMailListScroll()
-    syncMailQueryToRoute({ q: ui.query || undefined })
-}
-
-const currentMailIndex = computed(() => filteredMailRows.value.findIndex((row) => row.id === ui.selected.flow))
-const canGoPrevMail = computed(() => currentMailIndex.value > 0)
-const canGoNextMail = computed(() => currentMailIndex.value >= 0 && currentMailIndex.value < filteredMailRows.value.length - 1)
-
-const selectAdjacentMail = (step) => {
-    const index = currentMailIndex.value
-    if (index < 0) return
-    const next = filteredMailRows.value[index + step]
-    if (next) selectRow('flow', next.id)
-}
-
-const closeMailDetail = () => {
-    ui.flowMode = 'list'
-    ui.detailKind = ''
-    ui.selected.flow = ''
-    replaceRouteQuery({ mode: undefined, mailId: undefined }, ['item'])
-}
-
-const openMailFromAddress = (address) => {
-    if (!address) return
-    ui.view = 'flow'
-    ui.domain = getDomain(address) || 'all'
-    ui.address = address
-    ui.status = 'all'
-    ui.flowMode = 'list'
-    persistView('flow')
-    syncMailQueryToRoute({ address, domain: ui.domain === 'all' ? undefined : ui.domain, status: undefined, mode: undefined })
-}
-
-const openMailFromDomain = (domain) => {
-    if (!domain) return
-    ui.view = 'flow'
-    ui.domain = domain
-    ui.address = 'all'
-    ui.status = 'all'
-    ui.flowMode = 'list'
-    persistView('flow')
-    syncMailQueryToRoute({ domain, address: undefined, status: undefined, mode: undefined })
-}
 const stateCards = computed(() => {
     const db = live.workerConfig?.DIAGNOSTICS?.database || {}
     const webhookStatus = live.mailWebhook?.enabled ? '入站通知已启用' : '通知通道需复核'
@@ -1207,68 +988,6 @@ const markAdminMailRead = async (row) => {
     }
 }
 
-const currentMail = computed(() => mailRows.value.find((row) => row.id === ui.selected.flow) || null)
-const parseAdminMailDetail = async (row) => {
-    const key = adminMailCacheKey(row)
-    if (!key || !row?.raw || parsedAdminMailCache[key] || parsedAdminMailPending.value === key) return
-    parsedAdminMailPending.value = key
-    try {
-        parsedAdminMailCache[key] = await processItem({
-            id: row.sourceId || row.id,
-            raw: row.raw,
-            source: row.sender,
-            address: row.to,
-            subject: row.subject,
-            created_at: row.created_at || row.fullTime || row.time,
-            attachments: row.attachments || [],
-            metadata: row.metadata || {},
-        })
-    } catch (error) {
-        console.error(error)
-    } finally {
-        if (parsedAdminMailPending.value === key) parsedAdminMailPending.value = ''
-    }
-}
-const currentParsedMail = computed(() => parsedAdminMailCache[adminMailCacheKey(currentMail.value)] || null)
-const currentDisplayMail = computed(() => {
-    const row = currentMail.value
-    if (!row) return null
-    const parsed = currentParsedMail.value
-    const html = parsed?.html || (parsed?.messageIsHtml ? parsed?.message : '') || row.html || ''
-    const text = parsed?.text || row.text || (!html ? row.body : '')
-    const attachments = parsed?.attachments || row.attachments || []
-    return {
-        ...row,
-        subject: parsed?.subject || row.subject,
-        sender: parsed?.source || row.sender,
-        html,
-        text,
-        message: parsed?.message || html || text || row.body || '',
-        messageIsHtml: !!(parsed?.messageIsHtml || html),
-        attachments,
-        attachmentCount: attachments.length || row.attachmentCount,
-        attachmentLabel: formatAttachmentCount(attachments.length || row.attachmentCount),
-        parseFailed: !!parsed?.parseFailed || row.parseStatus === 'failed',
-    }
-})
-const currentRendererMail = computed(() => {
-    const row = currentDisplayMail.value
-    if (!row) return null
-    return {
-        id: row.sourceId || row.id,
-        subject: row.subject,
-        source: row.sender,
-        address: row.to,
-        created_at: row.created_at || row.fullTime || row.time,
-        message: row.message || row.html || row.text || row.body || '',
-        messageIsHtml: !!row.messageIsHtml,
-        text: ui.mailRenderMode === 'html' ? '' : (row.text || (!row.html ? row.body : '')),
-        raw: row.raw || '',
-        attachments: row.attachments || [],
-        metadata: row.metadata || {},
-        parseFailed: row.parseFailed || row.parseStatus === 'failed',
-    }
-})
 const currentException = computed(() => unknownRows.value.find((row) => row.id === ui.selected.exception) || unknownRows.value[0])
 const currentAddress = computed(() => addressRows.value.find((row) => row.id === ui.selected.identity) || addressRows.value[0])
 const currentDomain = computed(() => domainRows.value.find((row) => row.id === ui.selected.routing) || domainRows.value[0])
@@ -2010,40 +1729,7 @@ const submitActionModal = async () => {
 
 const currentRail = computed(() => {
     const context = detailContext.value
-    if (context === 'flow' && currentMail.value) {
-        const mail = currentDisplayMail.value || currentMail.value
-        return {
-            title: '邮件详情',
-            subtitle: mail.subject,
-            tags: [
-                mail.unread ? '未读' : '已读',
-                mail.messageIsHtml ? 'HTML 已隔离渲染' : mail.risk,
-                mail.attachmentLabel,
-            ].filter(Boolean),
-            kv: [
-                ['发件人', mail.sender],
-                ['收件地址', mail.to],
-                ['接收时间', mail.fullTime || mail.time],
-                ['认证', mail.auth],
-                ['来源', mail.ip],
-                ['附件', mail.attachmentLabel],
-                ['渲染', mail.messageIsHtml ? 'HTML 已隔离渲染' : mail.risk, 'status'],
-            ],
-            body: mail.body,
-            mail,
-            actions: [
-                { label: '删除', action: 'delete-current', danger: true },
-            ],
-        }
-    }
-    if (context === 'flow') {
-        return {
-            title: '选择一封邮件',
-            subtitle: '',
-            tags: [],
-            empty: true,
-        }
-    }
+    if (context === 'flow') return buildAdminMailRail(currentDisplayMail.value || currentMail.value)
     if (context === 'exception' && currentException.value) {
         return {
             title: '异常邮件',
@@ -2149,26 +1835,6 @@ const currentRail = computed(() => {
         tags: ['P1', 'P2', '路线'],
         alerts: staticRisks,
     }
-})
-
-watch(mailRows, (rows) => {
-    if (!rows.length) {
-        ui.selected.flow = ''
-        return
-    }
-    if (ui.selected.flow && !rows.some((row) => row.id === ui.selected.flow)) {
-        ui.selected.flow = ''
-        ui.detailKind = ''
-        if (activeView.value === 'flow') replaceRouteQuery({ mailId: undefined, mode: undefined }, ['item'])
-    }
-}, { immediate: true })
-
-watch(currentMail, (row) => {
-    if (row) parseAdminMailDetail(row)
-}, { immediate: true })
-
-watch(currentParsedMail, (mail) => {
-    if (mail?.messageIsHtml && ui.mailRenderMode !== 'raw') ui.mailRenderMode = 'html'
 })
 
 watch(pageTitle, (title) => {
