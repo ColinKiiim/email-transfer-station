@@ -15,9 +15,11 @@ import {
     getDomainRegistry,
     normalizeDomain as normalizeManagedDomain,
 } from './domains';
+import { secureRandomInt, secureRandomString } from './security_random';
 
 const DEFAULT_NAME_REGEX = /[^a-z0-9]/g;
 const DEFAULT_RANDOM_SUBDOMAIN_LENGTH = 8;
+const LOWERCASE_ALPHANUMERIC = "abcdefghijklmnopqrstuvwxyz0123456789";
 const MAX_RANDOM_SUBDOMAIN_ATTEMPTS = 5;
 const MAX_DOMAIN_LENGTH = 253;
 const DOMAIN_LABEL_RE = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
@@ -117,30 +119,16 @@ export const generateRandomName = (c: Context<HonoCustomType>): string => {
         1
     );
 
-    // Build full name recursively until minimum length is reached
-    const buildName = (currentName: string = ""): string => {
-        return currentName.length >= minLength
-            ? currentName
-            : buildName(currentName + Math.random().toString(36).substring(2, 15));
-    };
-
-    const fullName = buildName();
-
-    // Return truncated to max length
-    return fullName.substring(0, Math.min(fullName.length, maxLength));
+    const generatedLength = Math.min(maxLength, Math.ceil(minLength / 13) * 13);
+    return secureRandomString(generatedLength, LOWERCASE_ALPHANUMERIC);
 };
 
 const generateRandomSubdomain = (c: Context<HonoCustomType>): string => {
-    const charset = "abcdefghijklmnopqrstuvwxyz0123456789";
     const length = Math.min(
         Math.max(getIntValue(c.env.RANDOM_SUBDOMAIN_LENGTH, DEFAULT_RANDOM_SUBDOMAIN_LENGTH), 1),
         63
     );
-    let subdomain = "";
-    for (let i = 0; i < length; i++) {
-        subdomain += charset.charAt(Math.floor(Math.random() * charset.length));
-    }
-    return subdomain;
+    return secureRandomString(length, LOWERCASE_ALPHANUMERIC);
 }
 
 const allowRandomSubdomainForDomain = async (
@@ -296,12 +284,7 @@ export function updateAddressUpdatedAt(
 }
 
 export const generateRandomPassword = (): string => {
-    const charset = "abcdefghijklmnopqrstuvwxyz0123456789";
-    let password = "";
-    for (let i = 0; i < 8; i++) {
-        password += charset.charAt(Math.floor(Math.random() * charset.length));
-    }
-    return password;
+    return secureRandomString(8, LOWERCASE_ALPHANUMERIC);
 }
 
 const generatePasswordForAddress = async (
@@ -421,7 +404,7 @@ export const newAddress = async (
             const createAddressDefaultDomainFirst = getBooleanValue(c.env.CREATE_ADDRESS_DEFAULT_DOMAIN_FIRST);
             domain = createAddressDefaultDomainFirst
                 ? normalizeDomainValue(allowDomains[0])
-                : normalizeDomainValue(allowDomains[Math.floor(Math.random() * allowDomains.length)]);
+                : normalizeDomainValue(allowDomains[secureRandomInt(allowDomains.length)]);
         }
     } else if (typeof domain === "string") {
         domain = normalizeDomainValue(domain);

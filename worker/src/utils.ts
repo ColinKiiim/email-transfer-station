@@ -3,6 +3,9 @@ import { createMimeMessage } from "mimetext";
 import { UserSettings, RoleAddressConfig } from "./models";
 import { CONSTANTS } from "./constants";
 import { compressText } from "./gzip";
+import { secureRandomString } from "./security_random";
+
+const LOWERCASE_ALPHANUMERIC = "abcdefghijklmnopqrstuvwxyz0123456789";
 
 export const getJsonObjectValue = <T = any>(
     value: string | any
@@ -274,7 +277,7 @@ export const sendAdminInternalMail = async (
             contentType: 'text/plain',
             data: text
         });
-        const message_id = Math.random().toString(36).substring(2, 15);
+        const message_id = secureRandomString(20, LOWERCASE_ALPHANUMERIC);
         const rawText = msg.asRaw();
         let success = false;
         if (getBooleanValue(c.env.ENABLE_MAIL_GZIP)) {

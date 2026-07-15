@@ -7,6 +7,7 @@ import { CONSTANTS } from "../constants";
 import { GeoData, UserInfo, UserSettings } from "../models";
 import { sendMail } from "../mails_api/send_mail_api";
 import { recordAccessEvent, recordAuditEvent } from "../audit";
+import { secureRandomInt } from "../security_random";
 
 export default {
     verifyCode: async (c: Context<HonoCustomType>) => {
@@ -48,7 +49,7 @@ export default {
             return c.text(msgs.CodeAlreadySentMsg, 400)
         }
         // generate code 6 digits and convert to string
-        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        const code = (100000 + secureRandomInt(900000)).toString();
         // send code to email
         try {
             await sendMail(c, settings.verifyMailSender, {
