@@ -4,6 +4,29 @@ import { CONSTANTS } from "../constants";
 import { getBooleanValue, getIntValue, getJsonSetting } from "../utils";
 import { deleteAddressWithData, newAddress, generateRandomName } from "../common";
 import { LocaleMessages } from "../i18n/type";
+import { validateAddressJwtPayload, validateShareJwtPayload } from "../address_authority";
+
+export type TelegramCredential = {
+    address: string;
+    addressId: number;
+    readOnly: boolean;
+};
+
+export const validateTelegramCredential = async (
+    c: Context<HonoCustomType>,
+    token: string
+): Promise<TelegramCredential | null> => {
+    const payload = await Jwt.verify(token, c.env.JWT_SECRET, "HS256") as JwtPayload;
+    const valid = payload.share_token_id
+        ? await validateShareJwtPayload(c, payload)
+        : await validateAddressJwtPayload(c, payload);
+    if (!valid) return null;
+    return {
+        address: payload.address,
+        addressId: Number(payload.address_id),
+        readOnly: !!payload.share_token_id,
+    };
+};
 
 export const tgUserNewAddress = async (
     c: Context<HonoCustomType>, userId: string, address: string,
@@ -56,45 +79,45 @@ export const jwtListToAddressData = async (
     msgs: LocaleMessages
 ): Promise<{
     addressList: string[], addressIdMap: Record<string, number>,
-    invalidJwtList: string[]
+    invalidJwtList: string[], readOnlyAddresses: Set<string>
 }> => {
     const addressList = [] as string[];
     const addressIdMap = {} as Record<string, number>;
     const invalidJwtList = [] as string[];
+    const readOnlyAddresses = new Set<string>();
     for (const jwt of jwtList) {
         try {
-            const { address, address_id } = await Jwt.verify(jwt, c.env.JWT_SECRET, "HS256");
-            const name = await c.env.DB.prepare(
-                `SELECT name FROM address WHERE id = ? `
-            ).bind(address_id).first("name");
-            if (!name) {
+            const credential = await validateTelegramCredential(c, jwt);
+            if (!credential) {
                 addressList.push(msgs.TgInvalidAddressMsg);
                 invalidJwtList.push(jwt);
                 continue;
             }
-            addressList.push(address as string);
-            addressIdMap[address as string] = address_id as number;
+            addressList.push(credential.address);
+            addressIdMap[credential.address] = credential.addressId;
+            if (credential.readOnly) readOnlyAddresses.add(credential.address);
         } catch (e) {
             addressList.push(msgs.TgInvalidCredentialMsg);
             invalidJwtList.push(jwt);
             console.log(`Failed to get address list: ${(e as Error).message}`);
         }
     }
-    return { addressList, addressIdMap, invalidJwtList };
+    return { addressList, addressIdMap, invalidJwtList, readOnlyAddresses };
 }
 
 export const bindTelegramAddress = async (
     c: Context<HonoCustomType>, userId: string, jwt: string,
     msgs: LocaleMessages
 ): Promise<string> => {
-    const { address } = await Jwt.verify(jwt, c.env.JWT_SECRET, "HS256");
-    if (!address) {
+    const credential = await validateTelegramCredential(c, jwt);
+    if (!credential) {
         throw Error(msgs.TgInvalidCredentialMsg);
     }
+    const { address } = credential;
     const jwtList = await c.env.KV.get<string[]>(`${CONSTANTS.TG_KV_PREFIX}:${userId}`, 'json') || [];
     const { addressIdMap } = await jwtListToAddressData(c, jwtList, msgs);
-    if (address as string in addressIdMap) {
-        return address as string;
+    if (address in addressIdMap) {
+        return address;
     }
     if (jwtList.length >= getIntValue(c.env.TG_MAX_ADDRESS, 5)) {
         throw Error(msgs.TgMaxAddressReachedCleanMsg);
@@ -102,7 +125,7 @@ export const bindTelegramAddress = async (
     await c.env.KV.put(`${CONSTANTS.TG_KV_PREFIX}:${userId}`, JSON.stringify([...jwtList, jwt]));
     // for mail push to telegram
     await c.env.KV.put(`${CONSTANTS.TG_KV_PREFIX}:${address}`, userId.toString());
-    return address as string;
+    return address;
 }
 
 export const unbindTelegramAddress = async (
@@ -143,9 +166,12 @@ export const deleteTelegramAddress = async (
     msgs: LocaleMessages
 ): Promise<boolean> => {
     const jwtList = await c.env.KV.get<string[]>(`${CONSTANTS.TG_KV_PREFIX}:${userId}`, 'json') || [];
-    const { addressIdMap } = await jwtListToAddressData(c, jwtList, msgs);
+    const { addressIdMap, readOnlyAddresses } = await jwtListToAddressData(c, jwtList, msgs);
     if (!(address in addressIdMap)) {
         throw Error(msgs.TgAddressNotYoursMsg);
+    }
+    if (readOnlyAddresses.has(address)) {
+        throw Error("Share token is read-only");
     }
     await deleteAddressWithData(c, null, addressIdMap[address])
     return true;

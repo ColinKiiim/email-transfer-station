@@ -12,6 +12,7 @@ import type { PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/serv
 import { isoBase64URL } from '@simplewebauthn/server/helpers';
 import i18n from '../i18n';
 import { recordAccessEvent, recordAuditEvent } from '../audit';
+import { issueUserJwt } from '../user_identity';
 
 export default {
     getPassKeys: async (c: Context<HonoCustomType>) => {
@@ -258,13 +259,7 @@ export default {
             return c.text(msgs.UserNotFoundMsg, 404);
         }
         // create jwt
-        const jwt = await Jwt.sign({
-            user_email: user_email,
-            user_id: user_id,
-            // 90 days expire in seconds
-            exp: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
-            iat: Math.floor(Date.now() / 1000),
-        }, c.env.JWT_SECRET, "HS256")
+        const jwt = await issueUserJwt(c, user_id, user_email);
         await recordAccessEvent(c, {
             event_type: "user.passkey_login.success",
             actor_type: "user",

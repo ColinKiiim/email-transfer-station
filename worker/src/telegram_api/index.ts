@@ -6,6 +6,7 @@ import { newTelegramBot, initTelegramBotCommands, sendMailToTelegram } from './t
 import settings from './settings'
 import miniapp from './miniapp'
 import i18n from '../i18n'
+import { deriveTelegramWebhookSecret, verifyTelegramWebhookSecret } from './security'
 
 export const api = new Hono<HonoCustomType>();
 export const adminApi = new Hono<HonoCustomType>();
@@ -38,6 +39,10 @@ adminApi.use("/admin/telegram/*", async (c, next) => {
 
 api.post("/telegram/webhook", async (c) => {
     const token = c.env.TELEGRAM_BOT_TOKEN;
+    const suppliedSecret = c.req.header("X-Telegram-Bot-Api-Secret-Token");
+    if (!await verifyTelegramWebhookSecret(token, suppliedSecret)) {
+        return c.text("Unauthorized", 401);
+    }
     const bot = newTelegramBot(c, token);
     let body = null;
     const res = new Writable();
@@ -57,7 +62,9 @@ adminApi.post("/admin/telegram/init", async (c) => {
     const webhookUrl = `https://${domain}/telegram/webhook`;
     console.log(`setting webhook to ${webhookUrl}`);
     const bot = newTelegramBot(c, token);
-    await bot.telegram.setWebhook(webhookUrl)
+    await bot.telegram.setWebhook(webhookUrl, {
+        secret_token: await deriveTelegramWebhookSecret(token),
+    })
     await initTelegramBotCommands(c, bot);
     return c.json({
         message: "webhook set successfully",

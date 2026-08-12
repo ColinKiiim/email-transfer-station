@@ -8,6 +8,7 @@ import UserBindAddressModule from '../user_api/bind_address';
 import i18n from '../i18n';
 import { recordAuditEvent } from '../audit';
 import { getActiveDomainNames } from '../domains';
+import { rotateUserAuthGeneration } from '../user_identity';
 
 export default {
     getSetting: async (c: Context<HonoCustomType>) => {
@@ -144,13 +145,18 @@ export default {
         const userEmail = await c.env.DB.prepare(
             `SELECT user_email FROM users WHERE id = ?`
         ).bind(user_id).first<string>("user_email");
-        const { success } = await c.env.DB.prepare(
-            `DELETE FROM users WHERE id = ?`
-        ).bind(user_id).run();
-        const { success: addressSuccess } = await c.env.DB.prepare(
-            `DELETE FROM users_address WHERE user_id = ?`
-        ).bind(user_id).run();
-        if (!success || !addressSuccess) {
+        let results: D1Result[];
+        try {
+            results = await c.env.DB.batch([
+                c.env.DB.prepare(`DELETE FROM user_passkeys WHERE user_id = ?`).bind(user_id),
+                c.env.DB.prepare(`DELETE FROM user_roles WHERE user_id = ?`).bind(user_id),
+                c.env.DB.prepare(`DELETE FROM users_address WHERE user_id = ?`).bind(user_id),
+                c.env.DB.prepare(`DELETE FROM users WHERE id = ?`).bind(user_id),
+            ]);
+        } catch {
+            return c.text(msgs.FailedDeleteUserMsg, 500)
+        }
+        if (!results.every((result) => result.success)) {
             return c.text(msgs.FailedDeleteUserMsg, 500)
         }
         await recordAuditEvent(c, {
@@ -171,9 +177,12 @@ export default {
         if (!user_id) return c.text(msgs.UserNotFoundMsg, 400);
         try {
             checkUserPassword(password);
+            const userInfo = await c.env.DB.prepare(
+                `SELECT user_info FROM users WHERE id = ?`
+            ).bind(user_id).first<string | null>("user_info");
             const { success } = await c.env.DB.prepare(
-                `UPDATE users SET password = ? WHERE id = ?`
-            ).bind(password, user_id).run();
+                `UPDATE users SET password = ?, user_info = ?, updated_at = datetime('now') WHERE id = ?`
+            ).bind(password, rotateUserAuthGeneration(userInfo), user_id).run();
             if (!success) {
                 return c.text(msgs.FailedUpdatePasswordMsg, 500)
             }

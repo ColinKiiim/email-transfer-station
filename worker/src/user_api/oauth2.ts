@@ -1,11 +1,11 @@
 import { Context } from 'hono';
-import { Jwt } from 'hono/utils/jwt'
 
 import i18n from '../i18n';
 import { getJsonSetting, getStringValue, getUserRoles } from '../utils';
 import { UserOauth2Settings } from '../models';
 import { CONSTANTS } from '../constants';
 import { recordAccessEvent } from '../audit';
+import { issueUserJwt } from '../user_identity';
 
 
 export default {
@@ -192,13 +192,7 @@ export default {
             }
         }
         // create jwt
-        const jwt = await Jwt.sign({
-            user_email: email,
-            user_id: user_id,
-            // 90 days expire in seconds
-            exp: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
-            iat: Math.floor(Date.now() / 1000),
-        }, c.env.JWT_SECRET, "HS256")
+        const jwt = await issueUserJwt(c, user_id as number, email);
         await recordAccessEvent(c, {
             event_type: "user.oauth_login.success",
             actor_type: "user",

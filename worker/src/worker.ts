@@ -21,6 +21,7 @@ import { getAddressCreationDomainNames } from './domains';
 import { corsPolicy } from './cors_policy';
 import { adminAuthMiddleware } from './admin_security';
 import { validateAddressJwtPayload, validateShareJwtPayload } from './address_authority';
+import { validateUserJwtPayload } from './user_identity';
 
 const API_PATHS = [
 	"/api/",
@@ -127,6 +128,7 @@ const checkUserPayload = async (
 		if (payload.exp < Math.floor(Date.now() / 1000)) {
 			return;
 		}
+		if (!await validateUserJwtPayload(c, payload as UserPayload)) return;
 		c.set("userPayload", payload as UserPayload);
 	} catch (e) {
 		console.error(e);
@@ -146,6 +148,7 @@ const checkoutUserRolePayload = async (
 		if (payload.exp < Math.floor(Date.now() / 1000)) {
 			return;
 		}
+		if (!await validateUserJwtPayload(c, payload as UserPayload)) return;
 		if (typeof payload?.user_role !== "string") return;
 		c.set("userRolePayload", payload.user_role);
 	} catch (e) {
@@ -280,6 +283,9 @@ app.use('/user_api/*', async (c, next) => {
 		if (!payload.exp) return c.text(msgs.UserTokenExpiredMsg, 401);
 		// exp is in seconds
 		if (payload.exp < Math.floor(Date.now() / 1000)) {
+			return c.text(msgs.UserTokenExpiredMsg, 401)
+		}
+		if (!await validateUserJwtPayload(c, payload as UserPayload)) {
 			return c.text(msgs.UserTokenExpiredMsg, 401)
 		}
 		c.set("userPayload", payload as UserPayload);

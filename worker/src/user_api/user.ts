@@ -1,5 +1,4 @@
 import { Context } from 'hono';
-import { Jwt } from 'hono/utils/jwt'
 
 import i18n from '../i18n';
 import utils, { checkCfTurnstile, getJsonSetting, checkUserPassword, getUserRoles, getStringValue } from "../utils"
@@ -8,6 +7,7 @@ import { GeoData, UserInfo, UserSettings } from "../models";
 import { sendMail } from "../mails_api/send_mail_api";
 import { recordAccessEvent, recordAuditEvent } from "../audit";
 import { secureRandomInt } from "../security_random";
+import { issueUserJwt } from "../user_identity";
 
 export default {
     verifyCode: async (c: Context<HonoCustomType>) => {
@@ -281,13 +281,7 @@ export default {
             return c.text(msgs.InvalidEmailOrPasswordMsg, 400)
         }
         // create jwt
-        const jwt = await Jwt.sign({
-            user_email: email,
-            user_id: user_id,
-            // 90 days expire in seconds
-            exp: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
-            iat: Math.floor(Date.now() / 1000),
-        }, c.env.JWT_SECRET, "HS256")
+        const jwt = await issueUserJwt(c, user_id as number, email);
         await recordAccessEvent(c, {
             event_type: "user.login.success",
             actor_type: "user",

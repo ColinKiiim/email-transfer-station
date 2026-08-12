@@ -145,6 +145,7 @@ type JwtPayload = {
 type UserPayload = {
     user_email: string
     user_id: number
+    user_generation?: string
     exp: number
     iat: number
 }

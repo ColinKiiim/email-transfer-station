@@ -15,6 +15,7 @@ import { UserFromGetMe } from "telegraf/types";
 import i18n from "../i18n";
 import { LocaleMessages } from "../i18n/type";
 import { getAddressCreationDomainNames } from "../domains";
+import { isPrivateTelegramIdentity } from "./security";
 
 
 // Helper to get messages by userId
@@ -90,15 +91,9 @@ export function newTelegramBot(c: Context<HonoCustomType>, token: string): Teleg
     }
 
     bot.use(async (ctx, next) => {
-        // check if in private chat
-        if (ctx.chat?.type !== "private") {
+        const userId = ctx.from?.id;
+        if (!isPrivateTelegramIdentity(ctx.chat?.type, userId, ctx.chat?.id)) {
             return;
-        }
-
-        const userId = ctx?.message?.from?.id || ctx.callbackQuery?.message?.chat?.id;
-        if (!userId) {
-            const msgs = await getTgMessages(c, ctx);
-            return await ctx.reply(msgs.TgUnableGetUserInfoMsg);
         }
 
         const settings = await c.env.KV.get<TelegramSettings>(CONSTANTS.TG_KV_SETTINGS_KEY, "json");
@@ -285,7 +280,7 @@ export function newTelegramBot(c: Context<HonoCustomType>, token: string): Teleg
 
     const queryMail = async (ctx: TgContext, queryAddress: string, mailIndex: number, edit: boolean) => {
         const msgs = await getTgMessages(c, ctx);
-        const userId = ctx?.message?.from?.id || ctx.callbackQuery?.message?.chat?.id;
+        const userId = ctx.from?.id;
         if (!userId) {
             return await ctx.reply(msgs.TgUnableGetUserInfoMsg);
         }
@@ -418,9 +413,18 @@ export async function sendMailToTelegram(
     if (!c.env.TELEGRAM_BOT_TOKEN || !c.env.KV) {
         return;
     }
-    const userId = await c.env.KV.get(`${CONSTANTS.TG_KV_PREFIX}:${address}`);
+    let userId = await c.env.KV.get(`${CONSTANTS.TG_KV_PREFIX}:${address}`);
     const settings = await c.env.KV.get<TelegramSettings>(CONSTANTS.TG_KV_SETTINGS_KEY, "json");
     const globalPush = settings?.enableGlobalMailPush && settings?.globalMailPushList;
+    if (userId) {
+        const jwtList = await c.env.KV.get<string[]>(`${CONSTANTS.TG_KV_PREFIX}:${userId}`, "json") || [];
+        const msgs = i18n.getMessages(c.env.DEFAULT_LANG || "zh");
+        const { addressIdMap } = await jwtListToAddressData(c, jwtList, msgs);
+        if (!(address in addressIdMap)) {
+            await c.env.KV.delete(`${CONSTANTS.TG_KV_PREFIX}:${address}`);
+            userId = null;
+        }
+    }
     if (!userId && !globalPush) {
         return;
     }
