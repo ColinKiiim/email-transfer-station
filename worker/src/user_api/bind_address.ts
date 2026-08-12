@@ -1,9 +1,8 @@
 import { Context } from 'hono';
 
 import { isAddressCountLimitReached } from "../utils"
-import { unbindTelegramByAddress } from '../telegram_api/common';
 import i18n from '../i18n';
-import { updateAddressUpdatedAt, commonGetUserRole, hideObjectFields, issueAddressJwt } from '../common';
+import { deleteAddressLifecycle, commonGetUserRole, hideObjectFields, issueAddressJwt } from '../common';
 import { recordAuditEvent } from '../audit';
 
 const canManageAssignedAddress = async (
@@ -237,51 +236,17 @@ const UserBindAddressModule = {
             `SELECT user_id FROM users_address where user_id = ? and address_id = ?`
         ).bind(user_id, address_id).first("user_id");
         if (!db_user_address_id) return c.text(msgs.AddressNotBindedMsg, 400)
-        // unbind telegram address
-        await unbindTelegramByAddress(c, address);
-        // unbind user address
         try {
-            const { success } = await c.env.DB.prepare(
-                `DELETE FROM users_address where user_id = ? and address_id = ?`
-            ).bind(user_id, address_id).run();
-            if (!success) {
-                return c.text(msgs.OperationFailedMsg, 500)
-            }
-        } catch (e) {
-            return c.text(msgs.OperationFailedMsg, 500)
-        }
-        // delete address
-        await c.env.DB.prepare(
-            `DELETE FROM address WHERE id = ? `
-        ).bind(address_id).run();
-        // new address
-        const { success: newAddressSuccess } = await c.env.DB.prepare(
-            `INSERT INTO address(name) VALUES(?)`
-        ).bind(address).run();
-        if (!newAddressSuccess) {
-            throw new Error(msgs.FailedCreateAddressMsg)
-        }
-        await updateAddressUpdatedAt(c, address);
-        // find new address id
-        const new_address_id = await c.env.DB.prepare(
-            `SELECT id FROM address WHERE name = ?`
-        ).bind(address).first<number | null | undefined>("id");
-        if (!new_address_id) {
-            throw new Error(msgs.OperationFailedMsg)
-        }
-        // bind
-        try {
-            const { success } = await c.env.DB.prepare(
-                `INSERT INTO users_address (user_id, address_id) VALUES (?, ?)`
-            ).bind(target_user_id, new_address_id).run();
-            if (!success) {
-                return c.text(msgs.OperationFailedMsg, 500)
-            }
-        } catch (e) {
-            const error = e as Error;
-            if (error.message && error.message.includes("UNIQUE")) {
-                return c.text(msgs.AddressAlreadyBindedMsg, 400)
-            }
+            await deleteAddressLifecycle(c, address, Number(address_id));
+            const recreated = await c.env.DB.batch([
+                c.env.DB.prepare(`INSERT INTO address(name) VALUES(?)`).bind(address),
+                c.env.DB.prepare(
+                    `INSERT INTO users_address (user_id, address_id)`
+                    + ` SELECT ?, id FROM address WHERE name = ?`
+                ).bind(target_user_id, address),
+            ]);
+            if (!recreated.every((result) => result.success)) throw new Error("recreate failed");
+        } catch {
             return c.text(msgs.OperationFailedMsg, 500)
         }
         return c.json({ success: true })

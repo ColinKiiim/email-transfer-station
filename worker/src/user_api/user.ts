@@ -8,6 +8,7 @@ import { sendMail } from "../mails_api/send_mail_api";
 import { recordAccessEvent, recordAuditEvent } from "../audit";
 import { secureRandomInt } from "../security_random";
 import { issueUserJwt } from "../user_identity";
+import { createUserPasswordRecord, verifyUserPasswordRecord } from "../user_password";
 
 export default {
     verifyCode: async (c: Context<HonoCustomType>) => {
@@ -122,6 +123,7 @@ export default {
                 return c.text(msgs.InvalidVerifyCodeMsg, 400)
             }
         }
+        const passwordRecord = await createUserPasswordRecord(password);
         // geo data
         const reqIp = c.req.raw.headers.get("cf-connecting-ip")
         const geoData = new GeoData(reqIp, c.req.raw.cf as any);
@@ -133,7 +135,7 @@ export default {
                     `INSERT INTO users (user_email, password, user_info)`
                     + ` VALUES (?, ?, ?)`
                 ).bind(
-                    email, password, JSON.stringify(userInfo)
+                    email, passwordRecord, JSON.stringify(userInfo)
                 ).run();
                 if (!success) {
                     return c.text(msgs.FailedToRegisterMsg, 500)
@@ -166,8 +168,8 @@ export default {
             + ` VALUES (?, ?, ?)`
             + ` ON CONFLICT(user_email) DO UPDATE SET password = ?, user_info = ?, updated_at = datetime('now')`
         ).bind(
-            email, password, JSON.stringify(userInfo),
-            password, JSON.stringify(userInfo)
+            email, passwordRecord, JSON.stringify(userInfo),
+            passwordRecord, JSON.stringify(userInfo)
         ).run();
         if (!success) {
             return c.text(msgs.FailedToRegisterMsg, 400);
@@ -263,10 +265,10 @@ export default {
                 status: "failed",
                 failure_reason: "user_not_found",
             });
-            return c.text(msgs.UserNotFoundMsg, 400)
+            return c.text(msgs.InvalidEmailOrPasswordMsg, 400)
         }
-        // TODO: need check password use random salt
-        if (dbPassword != password) {
+        const passwordResult = await verifyUserPasswordRecord(dbPassword, password);
+        if (!passwordResult.valid) {
             await recordAccessEvent(c, {
                 event_type: "user.login.failed",
                 actor_type: "user",
@@ -279,6 +281,14 @@ export default {
                 failure_reason: "invalid_password",
             });
             return c.text(msgs.InvalidEmailOrPasswordMsg, 400)
+        }
+        if (passwordResult.upgradedRecord) {
+            const upgrade = await c.env.DB.prepare(
+                `UPDATE users SET password = ?, updated_at = datetime('now') WHERE id = ? AND password = ?`
+            ).bind(passwordResult.upgradedRecord, user_id, dbPassword).run();
+            if (!upgrade.success || Number(upgrade.meta?.changes || 0) !== 1) {
+                return c.text(msgs.InvalidEmailOrPasswordMsg, 400)
+            }
         }
         // create jwt
         const jwt = await issueUserJwt(c, user_id as number, email);

@@ -14,8 +14,7 @@ from imap_http_client import BackendClient
 from imap_mailbox import SimpleMailbox
 
 _logger = logging.getLogger(__name__)
-_logger.setLevel(logging.DEBUG)
-logging.basicConfig(level=logging.DEBUG)
+_logger.setLevel(logging.INFO)
 
 
 class SimpleIMAPServer(imap4.IMAP4Server):
@@ -27,26 +26,13 @@ class SimpleIMAPServer(imap4.IMAP4Server):
         imap4.IMAP4Server.__init__(
             self, chal=chal, contextFactory=context_factory
         )
+        self._ets_tls_required = context_factory is not None
 
-    def lineReceived(self, line):
-        _logger.debug("C: %s", line)
-        return imap4.IMAP4Server.lineReceived(self, line)
-
-    def sendLine(self, line):
-        _logger.debug("S: %s", line)
-        return imap4.IMAP4Server.sendLine(self, line)
-
-    def connectionMade(self):
-        """Wrap transport to log raw data sent to client."""
-        imap4.IMAP4Server.connectionMade(self)
-        real_write_seq = self.transport.writeSequence
-        def logging_write_seq(data):
-            joined = b''.join(data)
-            for line in joined.split(b'\r\n'):
-                if line:
-                    _logger.debug("S-RAW: %s", line[:300])
-            return real_write_seq(data)
-        self.transport.writeSequence = logging_write_seq
+    def do_AUTHENTICATE(self, tag, args):
+        if self._ets_tls_required and not self.startedTLS:
+            self.sendBadResponse(tag, b"AUTHENTICATE is disabled before STARTTLS")
+            return
+        return super().do_AUTHENTICATE(tag, args)
 
     def _cbSelectWork(self, mbox, cmdName, tag):
         """Override to add UIDNEXT in SELECT response (RFC 3501)."""
@@ -189,13 +175,8 @@ def start_imap_server():
     _logger.info("Starting IMAP server on port %s", settings.imap_port)
 
     context_factory = None
-    has_cert = bool(settings.imap_tls_cert)
-    has_key = bool(settings.imap_tls_key)
-    if has_cert != has_key:
-        raise ValueError(
-            "Both imap_tls_cert and imap_tls_key must be set together"
-        )
-    if has_cert and has_key:
+    has_tls = settings.validate_transport("imap")
+    if has_tls:
         _logger.info("TLS enabled for IMAP (STARTTLS)")
         context_factory = ssl.DefaultOpenSSLContextFactory(
             settings.imap_tls_key,
@@ -204,7 +185,7 @@ def start_imap_server():
 
     portal = Portal(SimpleRealm(), [CustomChecker()])
     factory = IMAPFactory(portal, context_factory=context_factory)
-    reactor.listenTCP(settings.imap_port, factory)
+    reactor.listenTCP(settings.imap_port, factory, interface=settings.bind_host)
     reactor.run()
 
 

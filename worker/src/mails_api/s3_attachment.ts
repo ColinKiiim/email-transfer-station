@@ -4,7 +4,8 @@ import {
     ListObjectsV2Command,
     GetObjectCommand,
     PutObjectCommand,
-    DeleteObjectCommand
+    DeleteObjectCommand,
+    DeleteObjectsCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
@@ -33,6 +34,33 @@ const getS3Client = (c: Context<HonoCustomType>) => {
         },
     });
 }
+
+export const deleteAddressS3Objects = async (
+    c: Context<HonoCustomType>,
+    address: string,
+): Promise<void> => {
+    if (!isS3Enabled(c)) return;
+    const client = getS3Client(c);
+    let continuationToken: string | undefined;
+    do {
+        const page = await client.send(new ListObjectsV2Command({
+            Bucket: c.env.S3_BUCKET,
+            Prefix: `${address}/`,
+            ContinuationToken: continuationToken,
+        }));
+        const objects = (page.Contents || [])
+            .map(({ Key }) => Key ? { Key } : null)
+            .filter((object): object is { Key: string } => !!object);
+        if (objects.length > 0) {
+            const deleted = await client.send(new DeleteObjectsCommand({
+                Bucket: c.env.S3_BUCKET,
+                Delete: { Objects: objects, Quiet: true },
+            }));
+            if (deleted.Errors?.length) throw new Error("Failed to delete address S3 objects");
+        }
+        continuationToken = page.IsTruncated ? page.NextContinuationToken : undefined;
+    } while (continuationToken);
+};
 
 export default {
     getSignedGetUrl: async (c: Context<HonoCustomType>) => {

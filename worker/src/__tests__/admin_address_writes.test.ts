@@ -112,7 +112,10 @@ describe("admin address write concurrency", () => {
         }, env);
         expect(response.status).toBe(200);
         expect(batchCalls).toBe(1);
-        expect(statements).toHaveLength(8);
+        expect(statements).toHaveLength(9);
+        expect(statements.some((sql) => /DELETE FROM auto_reply_mails/i.test(sql))).toBe(true);
+        expect(statements.some((sql) => /DELETE FROM address_share_tokens/i.test(sql))).toBe(true);
+        expect(statements.some((sql) => /DELETE FROM address_labels/i.test(sql))).toBe(true);
         expect(statements.at(-1)).toMatch(/DELETE FROM address WHERE id/i);
 
         const stale = await app.request("/address/7", {

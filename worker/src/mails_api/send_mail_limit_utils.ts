@@ -2,7 +2,7 @@ import { Context } from "hono";
 import i18n from "../i18n";
 import { SendMailLimitConfig } from "../models";
 import { CONSTANTS } from "../constants";
-import { getJsonObjectValue, getSetting } from "../utils";
+import { getJsonObjectValue } from "../utils";
 
 export class SendMailLimitError extends Error {
     constructor(message: string) {
@@ -73,8 +73,11 @@ export const getSendMailLimitConfigToSave = (
 export const getSendMailLimitConfig = async (
     c: Context<HonoCustomType>
 ): Promise<SendMailLimitConfig | null> => {
+    const value = await c.env.DB.prepare(
+        `SELECT value FROM settings WHERE key = ?`
+    ).bind(CONSTANTS.SEND_MAIL_LIMIT_CONFIG_KEY).first<string>("value");
     return getSendMailLimitConfigToSave(getJsonObjectValue<SendMailLimitConfig>(
-        await getSetting(c, CONSTANTS.SEND_MAIL_LIMIT_CONFIG_KEY)
+        value
     ));
 }
 
@@ -89,21 +92,6 @@ const getMonthlyCountKey = (date: Date = new Date()): string => {
     const yyyy = date.getUTCFullYear();
     const mm = String(date.getUTCMonth() + 1).padStart(2, "0");
     return `${CONSTANTS.SEND_MAIL_LIMIT_COUNT_KEY_PREFIX}monthly:${yyyy}-${mm}`;
-}
-
-const getCount = async (
-    c: Context<HonoCustomType>,
-    key: string
-): Promise<number> => {
-    const value = await getSetting(c, key);
-    if (!value) {
-        return 0;
-    }
-    const parsed = Number.parseInt(value, 10);
-    if (!Number.isInteger(parsed) || parsed < 0) {
-        return 0;
-    }
-    return parsed;
 }
 
 const cleanupSendMailLimitCount = async (
@@ -125,69 +113,71 @@ const cleanupSendMailLimitCount = async (
     ]);
 }
 
-export const ensureSendMailLimit = async (
-    c: Context<HonoCustomType>
-): Promise<void> => {
-    try {
-        const msgs = i18n.getMessagesbyContext(c);
-        const config = await getSendMailLimitConfig(c);
-        if (!config || (!config.dailyEnabled && !config.monthlyEnabled)) {
-            return;
-        }
-        if (config.dailyEnabled && config.dailyLimit !== null && config.dailyLimit !== -1) {
-            const current = await getCount(c, getDailyCountKey());
-            if (current >= config.dailyLimit) {
-                throw new SendMailLimitError(msgs.ServerSendMailDailyLimitMsg);
-            }
-        }
-        if (config.monthlyEnabled && config.monthlyLimit !== null && config.monthlyLimit !== -1) {
-            const current = await getCount(c, getMonthlyCountKey());
-            if (current >= config.monthlyLimit) {
-                throw new SendMailLimitError(msgs.ServerSendMailMonthlyLimitMsg);
-            }
-        }
-    } catch (error) {
-        if (error instanceof SendMailLimitError) {
-            throw error;
-        }
-        console.warn("Failed to ensure send mail limit", error);
-    }
-}
-
-const increaseCount = async (
+const reserveCount = async (
     c: Context<HonoCustomType>,
     key: string,
-): Promise<void> => {
-    await c.env.DB.prepare(
-        `INSERT INTO settings (key, value)
-        VALUES (?, '1')
-        ON CONFLICT(key) DO UPDATE SET
-            value = CAST(COALESCE(value, '0') AS INTEGER) + 1,
-            updated_at = datetime('now')`
+    limit: number,
+): Promise<boolean> => {
+    const initialized = await c.env.DB.prepare(
+        `INSERT INTO settings (key, value) VALUES (?, '0') ON CONFLICT(key) DO NOTHING`
     ).bind(key).run();
-}
+    if (!initialized.success) throw new Error("Failed to initialize send limit counter");
+    const reserved = await c.env.DB.prepare(
+        `UPDATE settings SET value = CAST(COALESCE(value, '0') AS INTEGER) + 1,`
+        + ` updated_at = datetime('now')`
+        + ` WHERE key = ? AND CAST(COALESCE(value, '0') AS INTEGER) < ?`
+    ).bind(key, limit).run();
+    if (!reserved.success) throw new Error("Failed to reserve send limit");
+    return Number(reserved.meta?.changes || 0) === 1;
+};
 
-export const increaseSendMailLimitCount = async (
-    c: Context<HonoCustomType>
+export type SendMailLimitReservation = { keys: string[] };
+
+export const releaseSendMailLimit = async (
+    c: Context<HonoCustomType>,
+    reservation: SendMailLimitReservation,
 ): Promise<void> => {
+    for (const key of [...reservation.keys].reverse()) {
+        const released = await c.env.DB.prepare(
+            `UPDATE settings SET value = MAX(CAST(COALESCE(value, '0') AS INTEGER) - 1, 0),`
+            + ` updated_at = datetime('now') WHERE key = ?`
+        ).bind(key).run();
+        if (!released.success || Number(released.meta?.changes || 0) !== 1) {
+            throw new Error("Failed to release send limit reservation");
+        }
+    }
+};
+
+export const reserveSendMailLimit = async (
+    c: Context<HonoCustomType>
+): Promise<SendMailLimitReservation> => {
+    const config = await getSendMailLimitConfig(c);
+    if (!config || (!config.dailyEnabled && !config.monthlyEnabled)) return { keys: [] };
+    const msgs = i18n.getMessagesbyContext(c);
+    const dailyKey = getDailyCountKey();
+    const monthlyKey = getMonthlyCountKey();
+    const reservation: SendMailLimitReservation = { keys: [] };
     try {
-        const config = await getSendMailLimitConfig(c);
-        if (!config || (!config.dailyEnabled && !config.monthlyEnabled)) {
-            return;
+        if (config.dailyEnabled && config.dailyLimit !== null && config.dailyLimit !== -1) {
+            if (!await reserveCount(c, dailyKey, config.dailyLimit)) {
+                throw new SendMailLimitError(msgs.ServerSendMailDailyLimitMsg);
+            }
+            reservation.keys.push(dailyKey);
         }
-        const dailyKey = getDailyCountKey();
-        const monthlyKey = getMonthlyCountKey();
-        if (config.dailyEnabled) {
-            await increaseCount(c, dailyKey);
+        if (config.monthlyEnabled && config.monthlyLimit !== null && config.monthlyLimit !== -1) {
+            if (!await reserveCount(c, monthlyKey, config.monthlyLimit)) {
+                throw new SendMailLimitError(msgs.ServerSendMailMonthlyLimitMsg);
+            }
+            reservation.keys.push(monthlyKey);
         }
-        if (config.monthlyEnabled) {
-            await increaseCount(c, monthlyKey);
-        }
+    } catch (error) {
+        if (reservation.keys.length) await releaseSendMailLimit(c, reservation);
+        throw error;
+    }
+    try {
         await cleanupSendMailLimitCount(c, dailyKey, monthlyKey);
     } catch (error) {
-        if (error instanceof SendMailLimitError) {
-            throw error;
-        }
-        console.warn(`Failed to increment send_mail_limit_count`, error);
+        console.warn("Failed to clean old send limit counters", error);
     }
-}
+    return reservation;
+};

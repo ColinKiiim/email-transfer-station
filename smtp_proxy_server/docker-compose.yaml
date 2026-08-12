@@ -5,9 +5,11 @@ services:
       dockerfile: dockerfile
     container_name: "smtp_proxy_server"
     ports:
-      - "8025:8025"
-      - "11143:11143"
+      - "127.0.0.1:8025:8025"
+      - "127.0.0.1:11143:11143"
     environment:
       - proxy_url=https://mail-api.example.com
+      - bind_host=0.0.0.0
+      - allow_insecure_auth=true
       - port=8025
       - imap_port=11143

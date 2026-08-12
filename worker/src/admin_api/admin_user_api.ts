@@ -9,6 +9,7 @@ import i18n from '../i18n';
 import { recordAuditEvent } from '../audit';
 import { getActiveDomainNames } from '../domains';
 import { rotateUserAuthGeneration } from '../user_identity';
+import { createUserPasswordRecord } from '../user_password';
 
 export default {
     getSetting: async (c: Context<HonoCustomType>) => {
@@ -104,11 +105,12 @@ export default {
         const userInfo = new UserInfo(geoData, email);
         try {
             checkUserPassword(password);
+            const passwordRecord = await createUserPasswordRecord(password);
             const { success } = await c.env.DB.prepare(
                 `INSERT INTO users (user_email, username, display_name, password, user_info)`
                 + ` VALUES (?, ?, ?, ?, ?)`
             ).bind(
-                email, normalizedUsername, normalizedDisplayName, password, JSON.stringify(userInfo)
+                email, normalizedUsername, normalizedDisplayName, passwordRecord, JSON.stringify(userInfo)
             ).run();
             if (!success) {
                 return c.text(msgs.FailedToRegisterMsg, 500)
@@ -177,12 +179,13 @@ export default {
         if (!user_id) return c.text(msgs.UserNotFoundMsg, 400);
         try {
             checkUserPassword(password);
+            const passwordRecord = await createUserPasswordRecord(password);
             const userInfo = await c.env.DB.prepare(
                 `SELECT user_info FROM users WHERE id = ?`
             ).bind(user_id).first<string | null>("user_info");
             const { success } = await c.env.DB.prepare(
                 `UPDATE users SET password = ?, user_info = ?, updated_at = datetime('now') WHERE id = ?`
-            ).bind(password, rotateUserAuthGeneration(userInfo), user_id).run();
+            ).bind(passwordRecord, rotateUserAuthGeneration(userInfo), user_id).run();
             if (!success) {
                 return c.text(msgs.FailedUpdatePasswordMsg, 500)
             }

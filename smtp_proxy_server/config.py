@@ -1,6 +1,7 @@
 import logging
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from transport_security import validate_transport
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -12,6 +13,7 @@ _logger.setLevel(logging.INFO)
 
 class Settings(BaseSettings):
     proxy_url: str = "http://localhost:8787"
+    bind_host: str = "127.0.0.1"
     port: int = 8025
     imap_port: int = 11143
     basic_password: str = ""
@@ -21,6 +23,7 @@ class Settings(BaseSettings):
     imap_tls_key: str = ""
     imap_cache_size: int = 500
     imap_http_timeout: float = 30.0
+    allow_insecure_auth: bool = False
 
     model_config = SettingsConfigDict(env_file=".env")
 
@@ -37,6 +40,11 @@ class Settings(BaseSettings):
         if v <= 0:
             raise ValueError("imap_http_timeout must be > 0")
         return v
+
+    def validate_transport(self, protocol: str) -> bool:
+        cert = getattr(self, f"{protocol}_tls_cert")
+        key = getattr(self, f"{protocol}_tls_key")
+        return validate_transport(protocol, cert, key, self.allow_insecure_auth)
 
 
 settings = Settings()

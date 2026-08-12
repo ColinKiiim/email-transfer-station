@@ -2,7 +2,7 @@ import { Context } from 'hono'
 
 import i18n from '../i18n'
 import { getBooleanValue } from '../utils'
-import { newAddress, issueAddressJwt, hideObjectFields } from '../common'
+import { deleteAddressLifecycle, newAddress, issueAddressJwt, hideObjectFields } from '../common'
 import { recordAuditEvent } from '../audit'
 import {
     createAddressPasswordRecord,
@@ -354,24 +354,11 @@ const deleteAddress = async (c: Context<HonoCustomType>) => {
         }, 409);
     }
 
-    let results: D1Result[];
     try {
-        results = await c.env.DB.batch([
-            c.env.DB.prepare(
-                `DELETE FROM mail_read_states WHERE mail_id IN (SELECT id FROM raw_mails WHERE address = ?)`
-            ).bind(snapshot.name),
-            c.env.DB.prepare(`DELETE FROM raw_mails WHERE address = ?`).bind(snapshot.name),
-            c.env.DB.prepare(`DELETE FROM sendbox WHERE address = ?`).bind(snapshot.name),
-            c.env.DB.prepare(`DELETE FROM address_sender WHERE address = ?`).bind(snapshot.name),
-            c.env.DB.prepare(`DELETE FROM users_address WHERE address_id = ?`).bind(id),
-            c.env.DB.prepare(`DELETE FROM address_share_tokens WHERE address_id = ?`).bind(id),
-            c.env.DB.prepare(`DELETE FROM address_labels WHERE address_id = ?`).bind(id),
-            c.env.DB.prepare(`DELETE FROM address WHERE id = ?`).bind(id),
-        ]);
+        await deleteAddressLifecycle(c, snapshot.name, Number(id));
     } catch {
         return c.text(msgs.OperationFailedMsg, 500);
     }
-    const finalSuccess = results.every((result) => result.success);
     await recordAuditEvent(c, {
         action: "address.delete",
         actor_type: "admin",
@@ -379,7 +366,7 @@ const deleteAddress = async (c: Context<HonoCustomType>) => {
         resource_type: "address",
         resource_id: id,
         resource_label: snapshot.name,
-        status: finalSuccess ? "success" : "failed",
+        status: "success",
         metadata: {
             mail_count: current.mailCount,
             sent_count: current.sentCount,
@@ -387,9 +374,7 @@ const deleteAddress = async (c: Context<HonoCustomType>) => {
             credential_version: current.credentialVersion,
         },
     });
-    return finalSuccess
-        ? c.json({ success: true })
-        : c.text(msgs.OperationFailedMsg, 500);
+    return c.json({ success: true });
 };
 
 const clearInbox = async (c: Context<HonoCustomType>) => {

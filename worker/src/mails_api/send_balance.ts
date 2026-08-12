@@ -32,6 +32,29 @@ export const getEnabledSendBalance = async (
     return typeof balance === "number" ? balance : null;
 }
 
+export const reserveSendBalance = async (
+    c: Context<HonoCustomType>,
+    address: string,
+): Promise<boolean> => {
+    const result = await c.env.DB.prepare(
+        `UPDATE address_sender SET balance = balance - 1`
+        + ` WHERE address = ? AND enabled = 1 AND balance > 0`
+    ).bind(address).run();
+    return result.success && Number(result.meta?.changes || 0) === 1;
+};
+
+export const releaseSendBalance = async (
+    c: Context<HonoCustomType>,
+    address: string,
+): Promise<void> => {
+    const result = await c.env.DB.prepare(
+        `UPDATE address_sender SET balance = balance + 1 WHERE address = ? AND enabled = 1`
+    ).bind(address).run();
+    if (!result.success || Number(result.meta?.changes || 0) !== 1) {
+        throw new Error("Failed to release send balance");
+    }
+};
+
 export const getSendBalanceState = async (
     c: Context<HonoCustomType>,
     address: string,

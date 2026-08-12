@@ -9,8 +9,8 @@ import { CONSTANTS } from '../constants'
 import { getJsonSetting, getBooleanValue, getJsonObjectValue } from '../utils';
 import { GeoData } from '../models'
 import { handleListQuery, isSendMailBindingEnabled, updateAddressUpdatedAt } from '../common'
-import { getSendBalanceState, requestSendMailAccess } from './send_balance';
-import { ensureSendMailLimit, increaseSendMailLimitCount, SendMailLimitError } from './send_mail_limit_utils';
+import { getSendBalanceState, releaseSendBalance, requestSendMailAccess, reserveSendBalance } from './send_balance';
+import { releaseSendMailLimit, reserveSendMailLimit, SendMailLimitError } from './send_mail_limit_utils';
 import { getActiveDomainNames } from '../domains';
 import { recordAccessEvent } from '../audit';
 import { authorizeAddressSend } from '../address_authority';
@@ -155,11 +155,6 @@ export const sendMail = async (
     const sendBalanceState = await getSendBalanceState(c, address, {
         isAdmin: options?.isAdmin,
     });
-    if (sendBalanceState.needCheckBalance) {
-        if (!sendBalanceState.balance || sendBalanceState.balance <= 0) {
-            throw new Error(msgs.NoBalanceMsg)
-        }
-    }
     const {
         from_name, to_mail, to_name,
         subject, content, is_html
@@ -178,9 +173,7 @@ export const sendMail = async (
     if (!content) {
         throw new Error(msgs.ContentEmptyMsg)
     }
-    await ensureSendMailLimit(c);
-
-    // send to verified address list, do not update balance
+    // send to verified address list, do not reserve balance
     const resendEnabled = c.env.RESEND_TOKEN || c.env[
         `RESEND_TOKEN_${mailDomain.replace(/\./g, "_").toUpperCase()}`
     ];
@@ -192,46 +185,46 @@ export const sendMail = async (
     if (c.env.SEND_MAIL) {
         const verifiedAddressList = await getJsonSetting(c, CONSTANTS.VERIFIED_ADDRESS_LIST_KEY) || [];
         if (verifiedAddressList.includes(to_mail)) {
-            await sendMailToVerifyAddress(c, address, reqJson);
             sendByVerifiedAddressList = true;
         }
     }
     const sendMailBindingEnabled = isSendMailBindingEnabled(c, mailDomain);
-
-    // send mail workflow
-    if (sendByVerifiedAddressList) {
-        // do not update balance
-    }
-    // send by resend
-    else if (resendEnabled) {
-        await sendMailByResend(c, address, reqJson);
-    }
-    else if (smtpConfig) {
-        await sendMailBySmtp(c, address, reqJson, smtpConfig);
-    }
-    else if (sendMailBindingEnabled) {
-        await sendMailByBinding(c, address, reqJson);
-    }
-    else {
-        throw new Error(`${msgs.EnableResendOrSmtpOrSendMailMsg} (${mailDomain})`);
-    }
-    await increaseSendMailLimitCount(c);
-
-    // update balance
+    const limitReservation = await reserveSendMailLimit(c);
+    let balanceReserved = false;
     if (!sendByVerifiedAddressList && sendBalanceState.needCheckBalance) {
-        try {
-            const { success } = await c.env.DB.prepare(
-                `UPDATE address_sender SET balance = balance - 1 where address = ?`
-            ).bind(address).run();
-            if (!success) {
-                console.warn(`Failed to update balance for ${address}`);
-            }
-        } catch (e) {
-            console.warn(`Failed to update balance for ${address}`);
+        balanceReserved = await reserveSendBalance(c, address);
+        if (!balanceReserved) {
+            await releaseSendMailLimit(c, limitReservation);
+            throw new Error(msgs.NoBalanceMsg);
         }
     }
+
+    try {
+        if (sendByVerifiedAddressList) await sendMailToVerifyAddress(c, address, reqJson);
+        else if (resendEnabled) await sendMailByResend(c, address, reqJson);
+        else if (smtpConfig) await sendMailBySmtp(c, address, reqJson, smtpConfig);
+        else if (sendMailBindingEnabled) await sendMailByBinding(c, address, reqJson);
+        else throw new Error(`${msgs.EnableResendOrSmtpOrSendMailMsg} (${mailDomain})`);
+    } catch (error) {
+        let releaseError: unknown;
+        if (balanceReserved) {
+            try {
+                await releaseSendBalance(c, address);
+            } catch (caught) {
+                releaseError = caught;
+            }
+        }
+        try {
+            await releaseSendMailLimit(c, limitReservation);
+        } catch (caught) {
+            releaseError ||= caught;
+        }
+        if (releaseError) throw releaseError;
+        throw error;
+    }
+    // Successful reservations are the send's durable debit; no post-send write can fail open.
     // update address updated_at
-    updateAddressUpdatedAt(c, address);
+    await updateAddressUpdatedAt(c, address);
     // save to sendbox
     try {
         const reqIp = c.req.raw.headers.get("cf-connecting-ip")

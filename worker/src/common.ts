@@ -21,6 +21,7 @@ import {
     isAddressPasswordV2Enabled,
     normalizeAddressPasswordInput,
 } from './address_password';
+import { deleteAddressS3Objects } from './mails_api/s3_attachment';
 
 const DEFAULT_NAME_REGEX = /[^a-z0-9]/g;
 const DEFAULT_RANDOM_SUBDOMAIN_LENGTH = 8;
@@ -569,37 +570,40 @@ const batchDeleteAddressWithData = async (
     c: Context<HonoCustomType>,
     addressQueryCondition: string,
 ): Promise<boolean> => {
-    await c.env.DB.prepare(
-        `DELETE FROM mail_read_states WHERE mail_id IN ( ` +
-        `SELECT id FROM raw_mails WHERE address IN ( ` +
-        `SELECT name FROM address WHERE ${addressQueryCondition}))`
-    ).run();
-    await c.env.DB.prepare(
-        `DELETE FROM raw_mails WHERE address IN ( ` +
-        `SELECT name FROM address WHERE ${addressQueryCondition})`
-    ).run();
-    await c.env.DB.prepare(
-        `DELETE FROM sendbox WHERE address IN ( ` +
-        `SELECT name FROM address WHERE ${addressQueryCondition})`
-    ).run();
-    await c.env.DB.prepare(
-        `DELETE FROM auto_reply_mails WHERE address IN ( ` +
-        `SELECT name FROM address WHERE ${addressQueryCondition})`
-    ).run();
-    await c.env.DB.prepare(
-        `DELETE FROM address_sender WHERE address IN ( ` +
-        `SELECT name FROM address WHERE ${addressQueryCondition})`
-    ).run();
-    await c.env.DB.prepare(
-        `DELETE FROM users_address WHERE address_id IN ( ` +
-        `SELECT id FROM address WHERE ${addressQueryCondition})`
-    ).run();
-    // delete address
-    await c.env.DB.prepare(`
-        DELETE FROM address WHERE ${addressQueryCondition}`
-    ).run();
+    const { results } = await c.env.DB.prepare(
+        `SELECT id, name FROM address WHERE ${addressQueryCondition}`
+    ).all<{ id: number, name: string }>();
+    // ponytail: per-address cleanup keeps every deletion path on one contract;
+    // batch external cleanup only if scheduled deletion throughput becomes material.
+    for (const row of results || []) await deleteAddressLifecycle(c, row.name, row.id);
     return true;
 }
+
+export const deleteAddressLifecycle = async (
+    c: Context<HonoCustomType>,
+    address: string,
+    addressId: number,
+): Promise<void> => {
+    await unbindTelegramByAddress(c, address);
+    if (c.env.KV) {
+        await c.env.KV.delete(`${CONSTANTS.WEBHOOK_KV_USER_SETTINGS_KEY}:${address}`);
+    }
+    await deleteAddressS3Objects(c, address);
+    const results = await c.env.DB.batch([
+        c.env.DB.prepare(
+            `DELETE FROM mail_read_states WHERE mail_id IN (SELECT id FROM raw_mails WHERE address = ?)`
+        ).bind(address),
+        c.env.DB.prepare(`DELETE FROM raw_mails WHERE address = ?`).bind(address),
+        c.env.DB.prepare(`DELETE FROM sendbox WHERE address = ?`).bind(address),
+        c.env.DB.prepare(`DELETE FROM auto_reply_mails WHERE address = ?`).bind(address),
+        c.env.DB.prepare(`DELETE FROM address_sender WHERE address = ?`).bind(address),
+        c.env.DB.prepare(`DELETE FROM users_address WHERE address_id = ?`).bind(addressId),
+        c.env.DB.prepare(`DELETE FROM address_share_tokens WHERE address_id = ?`).bind(addressId),
+        c.env.DB.prepare(`DELETE FROM address_labels WHERE address_id = ?`).bind(addressId),
+        c.env.DB.prepare(`DELETE FROM address WHERE id = ?`).bind(addressId),
+    ]);
+    if (!results.every((result) => result.success)) throw new Error("Address lifecycle cleanup failed");
+};
 
 
 export const deleteAddressWithData = async (
@@ -628,31 +632,9 @@ export const deleteAddressWithData = async (
     if (!address || !address_id) {
         throw new Error(msgs.AddressNotFoundMsg);
     }
-    // unbind telegram
-    await unbindTelegramByAddress(c, address);
-    // delete address and related data
-    const { success: readStateSuccess } = await c.env.DB.prepare(
-        `DELETE FROM mail_read_states WHERE mail_id IN (SELECT id FROM raw_mails WHERE address = ?)`
-    ).bind(address).run();
-    const { success: mailSuccess } = await c.env.DB.prepare(
-        `DELETE FROM raw_mails WHERE address = ? `
-    ).bind(address).run();
-    const { success: sendAccess } = await c.env.DB.prepare(
-        `DELETE FROM address_sender WHERE address = ? `
-    ).bind(address).run();
-    const { success: sendboxSuccess } = await c.env.DB.prepare(
-        `DELETE FROM sendbox WHERE address = ? `
-    ).bind(address).run();
-    const { success: addressSuccess } = await c.env.DB.prepare(
-        `DELETE FROM users_address WHERE address_id = ? `
-    ).bind(address_id).run();
-    const { success: autoReplySuccess } = await c.env.DB.prepare(
-        `DELETE FROM auto_reply_mails WHERE address = ? `
-    ).bind(address).run();
-    const { success } = await c.env.DB.prepare(
-        `DELETE FROM address WHERE name = ? `
-    ).bind(address).run();
-    if (!success || !mailSuccess || !readStateSuccess || !sendboxSuccess || !addressSuccess || !sendAccess || !autoReplySuccess) {
+    try {
+        await deleteAddressLifecycle(c, address, address_id);
+    } catch {
         throw new Error(msgs.OperationFailedMsg)
     }
     return true;

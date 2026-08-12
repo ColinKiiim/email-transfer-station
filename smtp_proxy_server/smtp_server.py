@@ -136,13 +136,8 @@ def start_smtp_server():
     handler = CustomSMTPHandler()
 
     tls_context = None
-    has_cert = bool(settings.smtp_tls_cert)
-    has_key = bool(settings.smtp_tls_key)
-    if has_cert != has_key:
-        raise ValueError(
-            "Both smtp_tls_cert and smtp_tls_key must be set together"
-        )
-    if has_cert and has_key:
+    has_tls = settings.validate_transport("smtp")
+    if has_tls:
         _logger.info("TLS enabled for SMTP (STARTTLS)")
         tls_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         tls_context.options |= ssl.OP_NO_SSLv2 | ssl.OP_NO_SSLv3
@@ -150,9 +145,9 @@ def start_smtp_server():
 
     server = Controller(
         handler,
-        hostname="",
+        hostname=settings.bind_host,
         port=settings.port,
-        auth_require_tls=bool(tls_context),
+        auth_require_tls=has_tls,
         decode_data=True,
         authenticator=handler.authenticator,
         auth_exclude_mechanism=["DONT"],
@@ -161,7 +156,7 @@ def start_smtp_server():
 
     _logger.info(
         "Starting SMTP server on port %s tls=%s",
-        settings.port, bool(tls_context),
+        settings.port, has_tls,
     )
     server.start()
 
