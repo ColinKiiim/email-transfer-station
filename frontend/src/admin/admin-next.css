@@ -165,6 +165,7 @@ body:has(.admin-next) .n-message-container {
 
     display: grid;
     grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
     justify-content: start;
     height: 100dvh;
     min-height: 0;
@@ -181,6 +182,17 @@ body:has(.admin-next) .n-message-container {
 
 .admin-next-host .app.is-flow-view.is-sidebar-collapsed {
     grid-template-columns: 72px minmax(0, 1fr);
+}
+
+.admin-next-host .app-chrome {
+    z-index: 2;
+    display: grid;
+    grid-row: 1;
+    grid-column: 1 / -1;
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+    min-width: 0;
+    background: var(--surface);
+    box-shadow: 0 1px 0 var(--border);
 }
 
 .admin-next-host button,
@@ -229,11 +241,13 @@ body:has(.admin-next) .n-message-container {
 
 .admin-next-host .sidebar {
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-row: 2;
+    grid-column: 1;
+    grid-template-rows: minmax(0, 1fr) auto;
     gap: 18px;
     min-height: 0;
     overflow: hidden;
-    padding: 18px 12px;
+    padding: 12px 12px 18px;
     background: var(--surface);
     color: var(--fg);
     box-shadow: 1px 0 0 var(--border);
@@ -246,6 +260,7 @@ body:has(.admin-next) .n-message-container {
     align-items: center;
     width: 220px;
     min-height: 44px;
+    margin: 18px 12px 6px;
     will-change: auto;
 }
 
@@ -380,14 +395,8 @@ body:has(.admin-next) .n-message-container {
 
 .admin-next-host .is-sidebar-collapsed .sidebar {
     gap: 14px;
-    padding: 18px 8px;
+    padding: 12px 8px 18px;
     overflow: visible;
-}
-
-.admin-next-host .is-sidebar-collapsed .brand {
-    transform: translateX(4px);
-    pointer-events: auto;
-    z-index: 2;
 }
 
 .admin-next-host .is-sidebar-collapsed .nav-group-title,
@@ -448,12 +457,6 @@ body:has(.admin-next) .n-message-container {
     font-size: 10px;
 }
 
-@media (min-width: 901px) {
-    .admin-next-host .is-sidebar-collapsed .topbar {
-        padding-left: calc(var(--sidebar-width) - 72px + 18px);
-    }
-}
-
 .admin-next-host .health-dot {
     display: inline-flex;
     gap: 6px;
@@ -470,12 +473,14 @@ body:has(.admin-next) .n-message-container {
 }
 
 .admin-next-host .workspace {
+    grid-row: 2;
+    grid-column: 2;
     min-width: 0;
     min-height: 0;
-    height: 100dvh;
+    height: auto;
     overflow: hidden;
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
 }
 
 .admin-next-host .topbar {
@@ -485,7 +490,6 @@ body:has(.admin-next) .n-message-container {
     align-items: center;
     padding: 14px 18px;
     background: color-mix(in oklch, var(--surface) 90%, transparent);
-    box-shadow: 0 1px 0 var(--border);
 }
 
 .admin-next-host .topbar-controls {
@@ -2075,7 +2079,7 @@ body:has(.admin-next) .n-message-container {
 
     .admin-next-host .app {
         display: grid;
-        grid-template-rows: auto minmax(0, 1fr);
+        grid-template-rows: auto auto auto minmax(0, 1fr);
         grid-template-columns: minmax(0, 1fr) !important;
         width: 100%;
         max-width: 100vw;
@@ -2092,6 +2096,8 @@ body:has(.admin-next) .n-message-container {
     }
 
     .admin-next-host .workspace {
+        grid-row: 4;
+        grid-column: 1;
         display: grid;
         height: auto;
         min-height: 0;
@@ -2099,15 +2105,23 @@ body:has(.admin-next) .n-message-container {
     }
 
     .admin-next-host .sidebar {
-        position: sticky;
-        top: 0;
+        grid-row: 2;
+        grid-column: 1;
         z-index: 10;
         display: block;
-        padding: 12px;
+        padding: 0 12px 12px;
+    }
+
+    .admin-next-host .app-chrome {
+        display: contents;
     }
 
     .admin-next-host .brand {
-        margin-bottom: 10px;
+        z-index: 11;
+        grid-row: 1;
+        grid-column: 1;
+        width: 220px;
+        margin: 12px 12px 10px;
     }
 
     .admin-next-host .nav-scroll {
@@ -2155,8 +2169,7 @@ body:has(.admin-next) .n-message-container {
     }
 
     .admin-next-host .is-sidebar-collapsed .brand {
-        margin-bottom: 10px;
-        transform: none;
+        margin: 12px 12px 10px;
     }
 
     .admin-next-host .is-sidebar-collapsed .nav-scroll {
@@ -2188,6 +2201,9 @@ body:has(.admin-next) .n-message-container {
     }
 
     .admin-next-host .topbar {
+        z-index: 10;
+        grid-row: 3;
+        grid-column: 1;
         grid-template-columns: 1fr;
         padding: 12px;
     }

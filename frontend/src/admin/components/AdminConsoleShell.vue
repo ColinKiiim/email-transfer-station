@@ -31,7 +31,7 @@ defineExpose({
         'is-flow-view': model.activeView === 'flow',
         'is-sidebar-collapsed': model.sidebarCollapsed,
     }">
-        <aside class="sidebar" :aria-label="t('mainNav')">
+        <div class="app-chrome">
             <div class="brand">
                 <button class="sidebar-toggle" type="button"
                     :aria-label="model.sidebarCollapsed ? t('expandSidebar') : t('collapseSidebar')"
@@ -50,36 +50,6 @@ defineExpose({
                 <div class="brand-title">Email Transfer<span>station admin</span></div>
             </div>
 
-            <nav class="nav-scroll">
-                <section v-for="group in navGroups" :key="group.label" class="nav-group">
-                    <div class="nav-group-title">{{ tNav(group.labelKey) }}</div>
-                    <button v-for="item in group.items" :key="item.id" class="nav-link"
-                        :class="{ 'is-active': model.activeView === item.id }" type="button"
-                        :title="model.sidebarCollapsed ? tNav(item.id) : ''"
-                        :aria-current="model.activeView === item.id ? 'page' : undefined"
-                        :aria-label="tNav(item.id)" @click="actions.setView(item.id)">
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <component :is="shape.tag" v-for="(shape, index) in shapeList(item.icon)" :key="index"
-                                v-bind="shape.attrs" />
-                        </svg>
-                        <span class="nav-text">{{ tNav(item.id) }}</span>
-                        <span v-if="model.navBadges[item.badgeKey]?.value" class="nav-badge"
-                            :aria-label="model.navBadges[item.badgeKey].label">
-                            {{ formatBadgeCount(model.navBadges[item.badgeKey].value) }}
-                        </span>
-                        <span v-else-if="model.navBadges[item.badgeKey]?.dot" class="nav-dot"
-                            :aria-label="model.navBadges[item.badgeKey].label"></span>
-                    </button>
-                </section>
-            </nav>
-
-            <div class="sidebar-foot">
-                <span class="health-dot">Worker / D1 {{ model.workerStatusLabel }}</span>
-                <span class="mono">DB_VERSION {{ model.dbVersionLabel }}</span>
-            </div>
-        </aside>
-
-        <main class="workspace">
             <header class="topbar">
                 <div class="page-title">
                     <h1>{{ tNav(model.activeView) }}</h1>
@@ -120,7 +90,39 @@ defineExpose({
                     </div>
                 </div>
             </header>
+        </div>
 
+        <aside class="sidebar" :aria-label="t('mainNav')">
+            <nav class="nav-scroll">
+                <section v-for="group in navGroups" :key="group.label" class="nav-group">
+                    <div class="nav-group-title">{{ tNav(group.labelKey) }}</div>
+                    <button v-for="item in group.items" :key="item.id" class="nav-link"
+                        :class="{ 'is-active': model.activeView === item.id }" type="button"
+                        :title="model.sidebarCollapsed ? tNav(item.id) : ''"
+                        :aria-current="model.activeView === item.id ? 'page' : undefined"
+                        :aria-label="tNav(item.id)" @click="actions.setView(item.id)">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <component :is="shape.tag" v-for="(shape, index) in shapeList(item.icon)" :key="index"
+                                v-bind="shape.attrs" />
+                        </svg>
+                        <span class="nav-text">{{ tNav(item.id) }}</span>
+                        <span v-if="model.navBadges[item.badgeKey]?.value" class="nav-badge"
+                            :aria-label="model.navBadges[item.badgeKey].label">
+                            {{ formatBadgeCount(model.navBadges[item.badgeKey].value) }}
+                        </span>
+                        <span v-else-if="model.navBadges[item.badgeKey]?.dot" class="nav-dot"
+                            :aria-label="model.navBadges[item.badgeKey].label"></span>
+                    </button>
+                </section>
+            </nav>
+
+            <div class="sidebar-foot">
+                <span class="health-dot">Worker / D1 {{ model.workerStatusLabel }}</span>
+                <span class="mono">DB_VERSION {{ model.dbVersionLabel }}</span>
+            </div>
+        </aside>
+
+        <main class="workspace">
             <slot />
         </main>
 
