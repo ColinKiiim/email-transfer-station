@@ -414,6 +414,10 @@ export const MESSAGE_REGISTRY = {
     }
   },
   "views.TokenInbox": {
+    "surfaceLinksLabel": {
+      "en": "Product areas",
+      "zh": "产品区域"
+    },
     "brandContext": {
       "en": "Shared access",
       "zh": "共享访问"

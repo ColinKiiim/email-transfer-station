@@ -21,6 +21,7 @@ const {
   userSettings,
   userOpenSettings,
   openSettings,
+  showAdminPage,
 } = useGlobalState()
 
 const { t, locale } = useScopedI18n('views.User')
@@ -51,7 +52,7 @@ const shellTitle = computed(() => isSignedIn.value ? t('shellTitleSignedIn') : t
 const shellKicker = computed(() => isSignedIn.value ? t('shellKickerSignedIn') : t('shellKickerGuest'))
 const surfaceItems = computed(() => [
   { id: 'home', label: t('home'), to: getRouterPathWithLang('/', locale.value) },
-  ...(userSettings.value.is_admin
+  ...(showAdminPage.value
     ? [{ id: 'admin', label: t('adminConsole'), to: getRouterPathWithLang('/admin', locale.value) }]
     : []),
 ])

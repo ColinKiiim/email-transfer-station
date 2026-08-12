@@ -91,7 +91,7 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
       </div>
     </aside>
 
-    <main class="access-main">
+    <main class="access-main" :class="{ 'has-toolbar': hasToolbar }">
       <header class="access-topbar">
         <div class="topbar-lead" :class="{ 'has-brand': !railItems.length }">
           <ProductBrand v-if="!railItems.length" :context-label="brandContext" />
@@ -254,9 +254,13 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
 
 .access-main {
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   min-width: 0;
   min-height: 0;
+}
+
+.access-main.has-toolbar {
+  grid-template-rows: auto auto minmax(0, 1fr);
 }
 
 .access-topbar {
@@ -377,6 +381,10 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
 @media (max-width: 900px) {
   .access-shell {
     grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .access-shell.has-rail {
     grid-template-rows: auto minmax(0, 1fr);
   }
 

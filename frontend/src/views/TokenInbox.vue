@@ -6,12 +6,18 @@ import { useScopedI18n } from '@/i18n/app'
 import { api } from '../api'
 import AccessShell from '../components/AccessShell.vue'
 import AccessMailWorkbench from '../components/AccessMailWorkbench.vue'
+import ProductSurfaceLinks from '../components/ProductSurfaceLinks.vue'
+import { getRouterPathWithLang } from '../utils'
 
 const route = useRoute()
-const homePath = computed(() => '/')
-const userPath = computed(() => '/user')
 const message = useMessage()
-const { t } = useScopedI18n('views.TokenInbox')
+const { t, locale } = useScopedI18n('views.TokenInbox')
+const homePath = computed(() => getRouterPathWithLang('/', locale.value))
+const userPath = computed(() => getRouterPathWithLang('/user', locale.value))
+const surfaceItems = computed(() => [
+  { id: 'home', label: t('backToHome'), to: homePath.value },
+  { id: 'user', label: t('goToUserPortal'), to: userPath.value },
+])
 
 const shareJwt = ref('')
 const address = ref('')
@@ -91,6 +97,10 @@ onMounted(resolveToken)
     :status-label="statusLabel"
     :status-tone="statusTone"
   >
+    <template #actions>
+      <ProductSurfaceLinks :items="surfaceItems" :aria-label="t('surfaceLinksLabel')" />
+    </template>
+
     <template #rail-footer>
       <div class="share-summary">
         <span>{{ t('accessMode') }}</span>
