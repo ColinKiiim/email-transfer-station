@@ -5,10 +5,10 @@ import type { MessageKey, MessageNamespace } from './message-registry'
 
 import type { SupportedLocale } from './locale-registry'
 
-type LocaleTree = Record<string, unknown>
+type LocaleTree = { [key: string]: string | LocaleTree }
 type SourceLocale = SupportedLocale
 
-const setNestedValue = (target: LocaleTree, path: string, value: unknown) => {
+const setNestedValue = (target: LocaleTree, path: string, value: string) => {
   const segments = path.split('.')
   let current: LocaleTree = target
 

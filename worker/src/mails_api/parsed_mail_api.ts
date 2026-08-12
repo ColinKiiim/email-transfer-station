@@ -3,8 +3,9 @@ import { Context } from 'hono'
 import { commonParseMail, updateAddressUpdatedAt } from '../common'
 import { resolveRawEmailRow } from '../gzip'
 import { getAddressMailReadActor, listRawMailsWithReadState } from '../mail_read_state';
+import { RawMailRow } from '../models';
 
-const toParsedMailRow = async (row: Record<string, unknown>): Promise<Record<string, unknown>> => {
+const toParsedMailRow = async (row: RawMailRow): Promise<Record<string, unknown>> => {
     const raw = typeof row.raw === 'string' ? row.raw : '';
     const parsed = raw ? await commonParseMail({ rawEmail: raw }) : undefined;
     const { raw: _raw, ...rest } = row;
@@ -39,7 +40,7 @@ const listParsedMails = async (c: Context<HonoCustomType>) => {
     );
     if (listRes.status !== 200) return listRes;
     const { results, count, unread_count } = await listRes.json() as {
-        results: Record<string, unknown>[],
+        results: RawMailRow[],
         count: number,
         unread_count: number,
     };
@@ -63,10 +64,10 @@ const getParsedMail = async (c: Context<HonoCustomType>) => {
         + ` AND mrs.actor_type = ?`
         + ` AND mrs.actor_id = ?`
         + ` WHERE r.id = ? and r.address = ?`
-    ).bind(actor.actorType, actor.actorId, mail_id, address).first();
+    ).bind(actor.actorType, actor.actorId, mail_id, address).first<RawMailRow>();
     if (!row) return c.json(null);
     const resolved = await resolveRawEmailRow(row);
-    return c.json(await toParsedMailRow(resolved as Record<string, unknown>));
+    return c.json(await toParsedMailRow(resolved));
 };
 
 export default { listParsedMails, getParsedMail };

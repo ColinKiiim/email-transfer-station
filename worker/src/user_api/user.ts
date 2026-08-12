@@ -260,7 +260,7 @@ export default {
         }
         const { id: user_id, password: dbPassword } = await c.env.DB.prepare(
             `SELECT id, password FROM users where user_email = ?`
-        ).bind(email).first() || {};
+        ).bind(email).first<{ id: number, password: string }>() || {};
         if (!dbPassword) {
             await recordAccessEvent(c, {
                 event_type: "user.login.failed",

@@ -22,6 +22,7 @@ import { corsPolicy } from './cors_policy';
 import { adminAuthMiddleware } from './admin_security';
 import { validateAddressJwtPayload, validateShareJwtPayload } from './address_authority';
 import { validateUserJwtPayload } from './user_identity';
+import { enforceAuthRateLimit } from './auth_rate_limit';
 
 const API_PATHS = [
 	"/api/",
@@ -112,6 +113,8 @@ app.use('/*', async (c, next) => {
 	if (!c.env.JWT_SECRET) {
 		return c.text(msgs.JWTSecretNotSetMsg, 400);
 	}
+	const authRateLimitResponse = await enforceAuthRateLimit(c);
+	if (authRateLimitResponse) return authRateLimitResponse;
 	await next()
 });
 

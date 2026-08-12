@@ -68,24 +68,25 @@ const makeMessage = () => ({
 /** DB whose durable mail INSERT behaviour the test controls. */
 const makeEnv = (
     run: () => Promise<{ success: boolean }>,
-    reserveChanges = 1,
+    duplicate = false,
 ) => ({
     DB: {
         prepare: (sql: string) => ({
-            bind: () => ({
-                run: () => {
-                    if (sql.includes("INSERT OR IGNORE INTO inbound_mail_receipts")) {
-                        return Promise.resolve({ success: true, meta: { changes: reserveChanges } });
-                    }
-                    if (sql.includes("DELETE FROM inbound_mail_receipts")) {
-                        return Promise.resolve({ success: true, meta: { changes: 1 } });
-                    }
-                    return run();
-                },
-                first: async () => null,
-            }),
+            bind: () => ({ sql }),
             first: async () => null,
         }),
+        batch: async () => {
+            if (duplicate) {
+                throw new Error(
+                    "UNIQUE constraint failed: inbound_mail_receipts.address, inbound_mail_receipts.dedup_key"
+                );
+            }
+            const saved = await run();
+            return [
+                { success: true, meta: { changes: 1 } },
+                { ...saved, meta: { last_row_id: 7 } },
+            ];
+        },
     },
 } as unknown as Bindings);
 
@@ -138,7 +139,7 @@ describe("inbound mail is never silently dropped", () => {
         const message = makeMessage();
         const insert = vi.fn(async () => ({ success: true }));
 
-        await email(message as never, makeEnv(insert, 0), {} as ExecutionContext);
+        await email(message as never, makeEnv(insert, true), {} as ExecutionContext);
 
         expect(message.setReject).not.toHaveBeenCalled();
         expect(insert).not.toHaveBeenCalled();

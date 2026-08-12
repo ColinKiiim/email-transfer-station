@@ -245,6 +245,15 @@ CREATE TABLE IF NOT EXISTS inbound_mail_receipts (
 
 CREATE INDEX IF NOT EXISTS idx_inbound_mail_receipts_created_at ON inbound_mail_receipts(created_at);
 
+CREATE TABLE IF NOT EXISTS auth_rate_limits (
+    key TEXT PRIMARY KEY,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    window_started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_auth_rate_limits_updated_at ON auth_rate_limits(updated_at);
+
 CREATE TABLE IF NOT EXISTS audit_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     actor_type TEXT,
@@ -708,6 +717,14 @@ export default {
                 );
                 CREATE INDEX IF NOT EXISTS idx_inbound_mail_receipts_created_at
                     ON inbound_mail_receipts(created_at);
+                CREATE TABLE IF NOT EXISTS auth_rate_limits (
+                    key TEXT PRIMARY KEY,
+                    attempts INTEGER NOT NULL DEFAULT 0,
+                    window_started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE INDEX IF NOT EXISTS idx_auth_rate_limits_updated_at
+                    ON auth_rate_limits(updated_at);
             `;
             const query = deliveryAuthorityQueries.replace(/[\r\n]/g, " ")
                 .split(";")

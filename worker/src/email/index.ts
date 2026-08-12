@@ -20,8 +20,7 @@ import {
 } from "../domains";
 import {
     buildInboundDedupKey,
-    releaseInboundDelivery,
-    reserveInboundDelivery,
+    saveInboundDelivery,
 } from "./idempotency";
 
 
@@ -82,19 +81,9 @@ async function email(message: ForwardableEmailMessage, env: Bindings, ctx: Execu
 
     const message_id = message.headers.get("Message-ID");
     const dedupKey = await buildInboundDedupKey(inboundRecipient.address, message_id, rawEmail);
-    try {
-        if (!await reserveInboundDelivery(env.DB, inboundRecipient.address, dedupKey)) {
-            console.log(`Duplicate inbound delivery skipped for ${inboundRecipient.address}`);
-            return;
-        }
-    } catch (error) {
-        message.setReject(`Failed reserve message to ${inboundRecipient.address}`);
-        console.error("reserve inbound delivery error", error);
-        return;
-    }
-    const savePlaintext = async (): Promise<{ success: boolean }> => {
+    const savePlaintext = async (): Promise<{ success: boolean, duplicate: boolean, mailId: number | null }> => {
         try {
-            return await env.DB.prepare(
+            return await saveInboundDelivery(env.DB, inboundRecipient.address, dedupKey, env.DB.prepare(
                 `INSERT INTO raw_mails`
                 + ` (source, address, original_recipient, collector_address, original_domain, ingress_source, recipient_confidence, raw, message_id)`
                 + ` VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
@@ -108,7 +97,7 @@ async function email(message: ForwardableEmailMessage, env: Bindings, ctx: Execu
                 inboundRecipient.recipientConfidence,
                 parsedEmailContext.rawEmail,
                 message_id
-            ).run();
+            ));
         } catch (dbError) {
             const errMsg = String(dbError);
             if (
@@ -120,18 +109,18 @@ async function email(message: ForwardableEmailMessage, env: Bindings, ctx: Execu
                 || errMsg.includes('no such column')
             ) {
                 console.error("ingress metadata columns missing, falling back to legacy raw_mails insert", dbError);
-                return await env.DB.prepare(
+                return await saveInboundDelivery(env.DB, inboundRecipient.address, dedupKey, env.DB.prepare(
                     `INSERT INTO raw_mails (source, address, raw, message_id) VALUES (?, ?, ?, ?)`
                 ).bind(
                     message.from, inboundRecipient.address, parsedEmailContext.rawEmail, message_id
-                ).run();
+                ));
             }
             throw dbError;
         }
     };
-    const saveCompressed = async (compressed: ArrayBuffer): Promise<{ success: boolean }> => {
+    const saveCompressed = async (compressed: ArrayBuffer): Promise<{ success: boolean, duplicate: boolean, mailId: number | null }> => {
         try {
-            return await env.DB.prepare(
+            return await saveInboundDelivery(env.DB, inboundRecipient.address, dedupKey, env.DB.prepare(
                 `INSERT INTO raw_mails`
                 + ` (source, address, original_recipient, collector_address, original_domain, ingress_source, recipient_confidence, raw_blob, message_id)`
                 + ` VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
@@ -145,7 +134,7 @@ async function email(message: ForwardableEmailMessage, env: Bindings, ctx: Execu
                 inboundRecipient.recipientConfidence,
                 compressed,
                 message_id
-            ).run();
+            ));
         } catch (dbError) {
             const errMsg = String(dbError);
             if (errMsg.includes('raw_blob') || errMsg.includes('no such column')) {
@@ -165,6 +154,8 @@ async function email(message: ForwardableEmailMessage, env: Bindings, ctx: Execu
     // falsy `success` and a thrown error (D1 unavailable, row/statement size
     // limit, constraint violation, missing table) must take that path.
     let saved = false;
+    let duplicate = false;
+    let rawMailId: number | null = null;
     try {
         if (getBooleanValue(env.ENABLE_MAIL_GZIP)) {
             let compressed: ArrayBuffer | null = null;
@@ -174,24 +165,23 @@ async function email(message: ForwardableEmailMessage, env: Bindings, ctx: Execu
                 console.error("gzip compression failed, falling back to plaintext", gzipError);
             }
             if (compressed) {
-                ({ success: saved } = await saveCompressed(compressed));
+                ({ success: saved, duplicate, mailId: rawMailId } = await saveCompressed(compressed));
             } else {
-                ({ success: saved } = await savePlaintext());
+                ({ success: saved, duplicate, mailId: rawMailId } = await savePlaintext());
             }
         } else {
-            ({ success: saved } = await savePlaintext());
+            ({ success: saved, duplicate, mailId: rawMailId } = await savePlaintext());
         }
     }
     catch (error) {
         saved = false;
         console.error("save email error", error);
     }
+    if (duplicate) {
+        console.log(`Duplicate inbound delivery skipped for ${inboundRecipient.address}`);
+        return;
+    }
     if (!saved) {
-        try {
-            await releaseInboundDelivery(env.DB, inboundRecipient.address, dedupKey);
-        } catch (error) {
-            console.error("release inbound delivery reservation error", error);
-        }
         message.setReject(`Failed save message to ${inboundRecipient.address}`);
         console.error(`Failed save message from ${message.from} to ${inboundRecipient.address}`);
         return;
@@ -240,7 +230,7 @@ async function email(message: ForwardableEmailMessage, env: Bindings, ctx: Execu
     await auto_reply(message, env, inboundRecipient.address);
 
     // AI email content extraction
-    await extractEmailInfo(parsedEmailContext, env, message_id, inboundRecipient.address);
+    await extractEmailInfo(parsedEmailContext, env, rawMailId, inboundRecipient.address);
 }
 
 export { email }

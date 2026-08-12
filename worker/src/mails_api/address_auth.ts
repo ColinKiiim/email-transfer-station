@@ -150,7 +150,7 @@ export default {
                 status: "failed",
                 failure_reason: "address_not_found",
             });
-            return c.text(msgs.AddressNotFoundMsg, 404);
+            return c.text(msgs.InvalidEmailOrPasswordMsg, 401);
         }
 
         const verification = await verifyAddressPassword(

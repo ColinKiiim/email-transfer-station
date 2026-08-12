@@ -31,7 +31,7 @@ const MAIL_ATTRIBUTES = [
     'src', 'srcset', 'style', 'target', 'title', 'type', 'valign', 'width',
 ]
 
-const ALLOWED_URI = /^(?:(?:https?|mailto|tel|blob):|data:image\/|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i
+const ALLOWED_URI = /^(?:(?:https?|mailto|tel|blob):|data:image\/|[^a-z]|[a-z+.-]+(?:[^a-z+.:-]|$))/i
 const SAFE_LINK = /^(?:https?:\/\/|mailto:|tel:)/i
 const SAFE_EMBEDDED_MEDIA = /^(?:blob:https?:\/\/|data:image\/(?:avif|bmp|gif|jpe?g|png|webp);base64,)/i
 const HTTPS_UPGRADE_IMAGE_HOSTS = new Set(['cdn.mcauto-images-production.sendgrid.net'])

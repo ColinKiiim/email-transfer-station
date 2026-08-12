@@ -414,8 +414,9 @@ export const isDomainAllowedForAddressCreation = async (
 
 export const getDomainById = async (
     c: Context<HonoCustomType>,
-    id: string | number
+    id: string | number | undefined
 ): Promise<ManagedDomain | null> => {
+    if (id === undefined || id === "") return null;
     const row = await c.env.DB.prepare(
         `SELECT * FROM managed_domains WHERE id = ?`
     ).bind(id).first<DbManagedDomainRow>();

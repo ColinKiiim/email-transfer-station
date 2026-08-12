@@ -2,6 +2,7 @@ import { Context } from "hono";
 
 import i18n from "./i18n";
 import { resolveRawEmailList } from "./gzip";
+import { RawMailRow } from "./models";
 
 type MailReadParam = string | number | null;
 
@@ -81,7 +82,7 @@ export const listRawMailsWithReadState = async (
         + ` CASE WHEN mrs.read_at IS NULL THEN 1 ELSE 0 END AS unread`
         + ` FROM raw_mails r ${readJoin} ${whereSql}`
         + ` ORDER BY ${orderBy} LIMIT ? OFFSET ?`
-    ).bind(...actorParams, ...params, pagination.limit, pagination.offset).all();
+    ).bind(...actorParams, ...params, pagination.limit, pagination.offset).all<RawMailRow>();
     const resolvedResults = await resolveRawEmailList(results);
     const count = pagination.offset === 0
         ? await c.env.DB.prepare(

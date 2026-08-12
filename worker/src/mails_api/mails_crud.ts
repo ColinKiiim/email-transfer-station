@@ -5,6 +5,7 @@ import { getBooleanValue } from '../utils';
 import { deleteAddressWithData, updateAddressUpdatedAt } from '../common'
 import { resolveRawEmailRow } from '../gzip'
 import { getSendBalanceState } from './send_balance';
+import { RawMailRow } from '../models';
 import {
     getAddressMailReadActor,
     listRawMailsWithReadState,
@@ -46,7 +47,7 @@ const getMail = async (c: Context<HonoCustomType>) => {
         + ` AND mrs.actor_type = ?`
         + ` AND mrs.actor_id = ?`
         + ` WHERE r.id = ? AND r.address = ?`
-    ).bind(actor.actorType, actor.actorId, mail_id, address).first();
+    ).bind(actor.actorType, actor.actorId, mail_id, address).first<RawMailRow>();
     if (!result) return c.json(null);
     return c.json(await resolveRawEmailRow(result));
 };

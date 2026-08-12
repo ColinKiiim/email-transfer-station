@@ -12,23 +12,28 @@ export const buildInboundDedupKey = async (
     return `sha256:${Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
 };
 
-export const reserveInboundDelivery = async (
+export const saveInboundDelivery = async (
     db: D1Database,
     address: string,
     dedupKey: string,
-): Promise<boolean> => {
-    const result = await db.prepare(
-        `INSERT OR IGNORE INTO inbound_mail_receipts (address, dedup_key) VALUES (?, ?)`
-    ).bind(address, dedupKey).run();
-    return result.success && Number(result.meta?.changes || 0) === 1;
-};
-
-export const releaseInboundDelivery = async (
-    db: D1Database,
-    address: string,
-    dedupKey: string,
-): Promise<void> => {
-    await db.prepare(
-        `DELETE FROM inbound_mail_receipts WHERE address = ? AND dedup_key = ?`
-    ).bind(address, dedupKey).run();
+    mailInsert: D1PreparedStatement,
+): Promise<{ success: boolean, duplicate: boolean, mailId: number | null }> => {
+    try {
+        const [, saved] = await db.batch([
+            db.prepare(
+                `INSERT INTO inbound_mail_receipts (address, dedup_key) VALUES (?, ?)`
+            ).bind(address, dedupKey),
+            mailInsert,
+        ]);
+        return {
+            success: saved.success,
+            duplicate: false,
+            mailId: Number(saved.meta?.last_row_id) || null,
+        };
+    } catch (error) {
+        if (String(error).includes("inbound_mail_receipts.address, inbound_mail_receipts.dedup_key")) {
+            return { success: true, duplicate: true, mailId: null };
+        }
+        throw error;
+    }
 };

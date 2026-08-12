@@ -204,7 +204,7 @@ export type RawMailRow = {
     source?: string;
     address?: string;
     raw?: string;
-    raw_blob?: unknown;
+    raw_blob?: ArrayBuffer | ArrayLike<number>;
     metadata?: string;
     created_at?: string;
 }

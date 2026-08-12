@@ -13,6 +13,8 @@
     "build:telegram:pages": "VITE_IS_TELEGRAM=true vite build -m pages --emptyOutDir",
     "build:telegram:release": "VITE_IS_TELEGRAM=true vite build -m example --emptyOutDir",
     "preview": "vite preview",
+    "lint": "eslint src",
+    "typecheck": "vue-tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -36,17 +38,24 @@
     "vue-router": "^4.6.4"
   },
   "devDependencies": {
+    "@eslint/js": "9.39.1",
     "@vicons/fa": "^0.13.0",
     "@vicons/material": "^0.13.0",
     "@vitejs/plugin-vue": "^6.0.8",
     "@vue/test-utils": "^2.4.11",
+    "eslint": "9.39.1",
+    "eslint-plugin-vue": "^10.10.0",
+    "globals": "16.5.0",
     "jsdom": "^28.1.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "8.64.0",
     "unplugin-auto-import": "^20.3.0",
     "unplugin-vue-components": "^30.0.0",
     "vite": "^7.3.6",
     "vite-plugin-pwa": "^1.3.0",
     "vite-plugin-wasm": "^3.6.0",
     "vitest": "^3.2.7",
+    "vue-tsc": "^3.3.9",
     "workbox-build": "^7.4.1",
     "workbox-window": "^7.4.1",
     "wrangler": "^4.111.0"

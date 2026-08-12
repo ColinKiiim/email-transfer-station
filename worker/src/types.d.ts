@@ -119,6 +119,7 @@ type Bindings = {
     // AI extraction config
     ENABLE_AI_EMAIL_EXTRACT: string | boolean | undefined
     AI_EXTRACT_MODEL: string | undefined
+    ENABLE_GLOBAL_TURNSTILE_CHECK: string | boolean | undefined
 
     // gzip compression for raw_mails
     ENABLE_MAIL_GZIP: string | boolean | undefined
@@ -130,6 +131,7 @@ type Bindings = {
 
     // E2E testing
     E2E_TEST_MODE: string | boolean | undefined
+    E2E_TEST_SECRET: string | undefined
 }
 
 type JwtPayload = {

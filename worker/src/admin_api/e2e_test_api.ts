@@ -66,7 +66,11 @@ const receiveMail = async (c: Context<HonoCustomType>) => {
         reply: async () => { state.replyCalled = true; return { messageId: '' }; },
     };
     const { email: emailHandler } = await import('../email');
-    await emailHandler(mockMessage, c.env, { waitUntil: () => {}, passThroughOnException: () => {} });
+    await emailHandler(
+        mockMessage,
+        c.env,
+        { waitUntil: () => {}, passThroughOnException: () => {} } as unknown as ExecutionContext,
+    );
 
     return c.json({ success: !state.rejected, replyCalled: state.replyCalled, ...(state.rejected ? { rejected: state.rejected } : {}) });
 };

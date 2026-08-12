@@ -60,7 +60,7 @@ const makeHarness = (initialPassword: string) => {
     const executionContext = {
         waitUntil: (promise: Promise<unknown>) => pending.push(promise),
         passThroughOnException: () => undefined,
-    } as ExecutionContext;
+    } as unknown as ExecutionContext;
     return { state, queries, env, executionContext, pending };
 };
 

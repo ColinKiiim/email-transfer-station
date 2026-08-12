@@ -142,15 +142,15 @@ async function extractWithCloudflareAI(
  *
  * @param parsedEmailContext - The parsed email context
  * @param env - Cloudflare Workers environment bindings
- * @param message_id - The email message ID
+ * @param mailId - The stored raw mail row ID
  * @param address - The recipient email address
  * @returns Promise<void>
  */
 export async function extractEmailInfo(
     parsedEmailContext: ParsedEmailContext,
     env: Bindings,
-    message_id: string | null,
-    address: string
+    mailId: number | null,
+    address: string,
 ): Promise<void> {
     try {
         // Check if AI extraction is enabled via environment variable
@@ -163,6 +163,7 @@ export async function extractEmailInfo(
             console.error('AI binding not available');
             return;
         }
+        if (!mailId) return;
 
         // Check allowlist if enabled
         const aiSettings = await getJsonSetting<AiExtractSettings>(
@@ -215,10 +216,10 @@ export async function extractEmailInfo(
 
             // Update the raw_mails record with metadata
             await env.DB.prepare(
-                `UPDATE raw_mails SET metadata = ? WHERE address = ? AND message_id = ?`
-            ).bind(metadata, address, message_id).run();
+                `UPDATE raw_mails SET metadata = ? WHERE id = ?`
+            ).bind(metadata, mailId).run();
 
-            console.log(`AI extraction completed for ${message_id}: ${result.type}`);
+            console.log(`AI extraction completed for mail ${mailId}: ${result.type}`);
         }
     } catch (e) {
         console.error('AI email extraction error:', e);

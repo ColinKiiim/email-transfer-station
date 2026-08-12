@@ -4,7 +4,7 @@ import { secureRandomInt, secureRandomString } from "../security_random";
 
 describe("security random helpers", () => {
     it("uses Web Crypto and keeps integers inside the requested range", () => {
-        const randomSpy = vi.spyOn(globalThis.crypto, "getRandomValues");
+        const randomSpy = vi.spyOn(crypto, "getRandomValues");
         const values = Array.from({ length: 64 }, () => secureRandomInt(17));
 
         expect(randomSpy).toHaveBeenCalled();

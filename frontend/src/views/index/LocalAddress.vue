@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, h, computed } from 'vue';
+import { ref, h, computed, watch } from 'vue';
 import { useLocalStorage } from '@vueuse/core';
 import { useScopedI18n } from '@/i18n/app'
 import { NPopconfirm, NButton } from 'naive-ui'
@@ -16,13 +16,11 @@ const message = useMessage()
 const { t } = useScopedI18n('views.index.LocalAddress')
 
 const tabValue = ref('address')
-const localAddressCache = useLocalStorage("LocalAddressCache", []);
+const localAddressCache = useLocalStorage<string[]>("LocalAddressCache", []);
+watch(jwt, (value: string) => {
+    if (value && !localAddressCache.value.includes(value)) localAddressCache.value.push(value)
+}, { immediate: true })
 const data = computed(() => {
-    // @ts-ignore
-    if (!localAddressCache.value.includes(jwt.value)) {
-        // @ts-ignore
-        localAddressCache.value.push(jwt.value)
-    }
     return localAddressCache.value.map((curJwt: string) => {
         try {
             const payload = JSON.parse(

@@ -84,7 +84,7 @@ export default {
         const options = await generateRegistrationOptions({
             rpName: c.env.TITLE || "Temp Mail",
             rpID: domain,
-            userID: new TextEncoder().encode(user.user_id.toString()),
+            userID: Uint8Array.from(new TextEncoder().encode(user.user_id.toString())),
             userName: user.user_email,
             userDisplayName: user.user_email,
             attestationType: 'none',
@@ -118,11 +118,8 @@ export default {
             return c.text(msgs.RegistrationFailedMsg, 400);
         }
 
-        const {
-            id: credentialID, publicKey,
-            counter, deviceType, backedUp,
-            transports,
-        } = registrationInfo.credential;
+        const { id: credentialID, publicKey, counter, transports } = registrationInfo.credential;
+        const { credentialDeviceType: deviceType, credentialBackedUp: backedUp } = registrationInfo;
 
         // Base64URL encode ArrayBuffers.
         const base64PublicKey = isoBase64URL.fromBuffer(publicKey);
@@ -193,7 +190,10 @@ export default {
                 status: "failed",
                 failure_reason: "passkey_not_found",
             });
-            return c.text(msgs.PasskeyNotFoundMsg, 404);
+            return c.text(msgs.AuthenticationFailedMsg, 400);
+        }
+        if (typeof user_id !== "number") {
+            return c.text(msgs.AuthenticationFailedMsg, 400);
         }
         const passkeyData = JSON.parse(passkey) as Passkey;
         // Verify the registration response

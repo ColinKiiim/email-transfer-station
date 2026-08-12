@@ -5,7 +5,7 @@ import type { WorkerMailerOptions } from 'worker-mailer';
 import { getBooleanValue, getStringArray, getStringValue, getIntValue, getUserRoles, getJsonSetting, getAnotherWorkerList, getJsonObjectValue } from './utils';
 import { unbindTelegramByAddress } from './telegram_api/common';
 import { CONSTANTS } from './constants';
-import { AddressCreationSettings, AdminWebhookSettings, WebhookMail, WebhookSettings } from './models';
+import { AddressCreationSettings, AdminWebhookSettings, RawMailRow, WebhookMail, WebhookSettings } from './models';
 import i18n from './i18n';
 import {
     findMatchedAddressCreationDomain,
@@ -709,7 +709,7 @@ export const handleMailListQuery = async (
     const resultsQuery = `${query} order by ${orderClause} limit ? offset ?`;
     const { results } = await c.env.DB.prepare(resultsQuery).bind(
         ...params, limit, offset
-    ).all();
+    ).all<RawMailRow>();
     const resolvedResults = await resolveRawEmailList(results);
     const count = offset == 0 ? await c.env.DB.prepare(
         countQuery
@@ -770,7 +770,9 @@ export const commonParseMail = async (parsedEmailContext: ParsedEmailContext): P
             attachments: (parsedEmail.attachments || []).map(att => ({
                 filename: att.filename || "attachment",
                 mimeType: att.mimeType || "application/octet-stream",
-                content: new Uint8Array(att.content),
+                content: typeof att.content === "string"
+                    ? new TextEncoder().encode(att.content)
+                    : Uint8Array.from(new Uint8Array(att.content)),
                 disposition: att.disposition || "attachment",
             })),
         };
@@ -783,7 +785,7 @@ export const commonParseMail = async (parsedEmailContext: ParsedEmailContext): P
 }
 
 export const commonGetUserRole = async (
-    c: Context<HonoCustomType>, user_id: number
+    c: Context<HonoCustomType>, user_id: number | string
 ): Promise<UserRole | undefined | null> => {
     const user_roles = getUserRoles(c);
     const role_text = await c.env.DB.prepare(

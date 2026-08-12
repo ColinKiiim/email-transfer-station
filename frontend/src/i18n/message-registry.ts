@@ -3605,5 +3605,6 @@ export const getMessageSource = <N extends MessageNamespace>(
   key: MessageKey<N>,
   locale: 'en' | 'zh',
 ) => {
-  return MESSAGE_REGISTRY[namespace]?.[key]?.[locale]
+  const localized = MESSAGE_REGISTRY[namespace][key] as Record<'en' | 'zh', string>
+  return localized[locale]
 }
