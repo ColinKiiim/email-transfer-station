@@ -122,6 +122,19 @@ export const replaceLocaleInFullPath = (fullPath: string, locale: SupportedLocal
   return `${getPathWithLocale(path, locale)}${suffix}`
 }
 
+export const getLocaleRedirect = (
+  fullPath: string,
+  routeLocale: SupportedLocale | null,
+  resolvedLocale: SupportedLocale,
+): string | null => {
+  const target = routeLocale
+    ? replaceLocaleInFullPath(fullPath, routeLocale)
+    : resolvedLocale === DEFAULT_LOCALE
+      ? fullPath
+      : replaceLocaleInFullPath(fullPath, resolvedLocale)
+  return target === fullPath ? null : target
+}
+
 const getLocaleAliasPath = (path: string, locale: SupportedLocale): string => {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
   const basePath = stripLocaleFromPath(normalizedPath)

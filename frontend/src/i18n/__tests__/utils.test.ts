@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { getInitialLocale, PREFERRED_LOCALE_STORAGE_KEY } from '../utils'
+import { getInitialLocale, getLocaleRedirect, PREFERRED_LOCALE_STORAGE_KEY } from '../utils'
 
 describe('initial locale', () => {
   afterEach(() => vi.unstubAllGlobals())
@@ -11,5 +11,12 @@ describe('initial locale', () => {
     })
     vi.stubGlobal('navigator', { languages: ['zh-CN'] })
     expect(getInitialLocale()).toBe('en')
+  })
+})
+
+describe('locale navigation', () => {
+  it('does not redirect an already canonical non-default route to itself', () => {
+    expect(getLocaleRedirect('/en/', 'en', 'en')).toBeNull()
+    expect(getLocaleRedirect('/', null, 'en')).toBe('/en/')
   })
 })

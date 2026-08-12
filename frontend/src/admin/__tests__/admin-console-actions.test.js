@@ -14,6 +14,7 @@ vi.mock('../admin-api', () => ({
 }))
 
 import { useAdminConsoleActions } from '../admin-console-actions'
+import i18n from '../../i18n'
 
 const buildHarness = (overrides = {}) => {
     const mail = { id: 'mail-7', sourceId: 7, subject: 'Fixture mail', to: 'qa@example.test' }
@@ -84,6 +85,7 @@ const buildHarness = (overrides = {}) => {
 }
 
 beforeEach(() => {
+    i18n.global.locale.value = 'zh'
     vi.restoreAllMocks()
     Object.values(apiMocks).forEach((mock) => mock.mockReset())
 })

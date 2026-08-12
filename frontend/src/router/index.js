@@ -5,11 +5,10 @@ import UserOauth2Callback from '../views/user/UserOauth2Callback.vue'
 import i18n from '../i18n'
 import { useGlobalState } from '../store'
 import {
-    DEFAULT_LOCALE,
     getBrowserLocales,
+    getLocaleRedirect,
     getPreferredLocale,
     getStoredLocale,
-    replaceLocaleInFullPath,
     resolveSupportedLocale,
 } from '../i18n/utils'
 
@@ -102,22 +101,8 @@ router.beforeEach((to, from, next) => {
         return
     }
 
-    if (routeLocale) {
-        const canonicalRoutePath = replaceLocaleInFullPath(to.fullPath, routeLocale)
-        if (canonicalRoutePath !== to.fullPath) {
-            return next(canonicalRoutePath)
-        }
-    }
-
-    if (resolvedLocale !== DEFAULT_LOCALE) {
-        return next(replaceLocaleInFullPath(to.fullPath, resolvedLocale))
-    }
-
-    if (routeLocale === DEFAULT_LOCALE) {
-        return next(replaceLocaleInFullPath(to.fullPath, DEFAULT_LOCALE))
-    }
-
-    next()
+    const localeRedirect = getLocaleRedirect(to.fullPath, routeLocale, resolvedLocale)
+    return localeRedirect ? next(localeRedirect) : next()
 });
 
 export default router
