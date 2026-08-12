@@ -20,16 +20,15 @@ const MAIL_TAGS = [
     'a', 'abbr', 'address', 'article', 'aside', 'b', 'bdi', 'bdo', 'blockquote', 'br',
     'caption', 'center', 'cite', 'code', 'col', 'colgroup', 'dd', 'del', 'div', 'dl',
     'dt', 'em', 'figcaption', 'figure', 'font', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-    'hr', 'i', 'img', 'ins', 'kbd', 'li', 'main', 'mark', 'ol', 'p', 'pre', 'q', 's',
+    'hr', 'i', 'img', 'ins', 'kbd', 'li', 'main', 'mark', 'ol', 'p', 'picture', 'pre', 'q', 's',
     'samp', 'section', 'small', 'span', 'strong', 'sub', 'sup', 'table', 'tbody', 'td',
-    'tfoot', 'th', 'thead', 'tr', 'tt', 'u', 'ul', 'var',
+    'tfoot', 'th', 'thead', 'tr', 'tt', 'u', 'ul', 'var', 'source',
 ]
 const MAIL_ATTRIBUTES = [
     'align', 'alt', 'aria-label', 'border', 'cellpadding', 'cellspacing', 'colspan',
-    'data-remote-src', 'data-removed-remote-media', 'data-removed-unsafe-style', 'dir',
-    'height', 'href', 'lang', 'loading', 'referrerpolicy', 'rel', 'role', 'rowspan',
-    'src', 'style', 'target', 'title',
-    'valign', 'width',
+    'data-removed-remote-media', 'data-removed-unsafe-style', 'dir', 'height', 'href',
+    'lang', 'loading', 'media', 'referrerpolicy', 'rel', 'role', 'rowspan', 'sizes',
+    'src', 'srcset', 'style', 'target', 'title', 'type', 'valign', 'width',
 ]
 
 const ALLOWED_URI = /^(?:(?:https?|mailto|tel|blob):|data:image\/|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i
@@ -69,6 +68,17 @@ const normalizeRemoteImageUrl = (value) => {
         return ''
     }
 }
+
+const normalizeRemoteImageSrcset = (value) => String(value || '')
+    .split(',')
+    .map((candidate) => {
+        const [source, descriptor, ...rest] = candidate.trim().split(/\s+/)
+        const normalized = normalizeRemoteImageUrl(source)
+        if (!normalized || rest.length || (descriptor && !/^(?:\d+(?:\.\d+)?x|\d+w)$/.test(descriptor))) return ''
+        return descriptor ? `${normalized} ${descriptor}` : normalized
+    })
+    .filter(Boolean)
+    .join(', ')
 
 const hardenLinks = (template) => {
     template.content.querySelectorAll('a').forEach((link) => {
@@ -156,40 +166,56 @@ export const sanitizeMailHtml = (value) => {
     const template = toTemplate(sanitized)
     if (!template) return ''
 
-    template.content.querySelectorAll('img[src]').forEach((element) => {
-        const source = element.getAttribute('src')?.trim() || ''
-        if (!SAFE_EMBEDDED_MEDIA.test(source)) {
-            element.removeAttribute('src')
-            element.setAttribute('data-removed-remote-media', 'src')
-            const remoteSource = normalizeRemoteImageUrl(source)
-            if (remoteSource) element.setAttribute('data-remote-src', remoteSource)
-            else element.removeAttribute('data-remote-src')
+    template.content.querySelectorAll('img').forEach((image) => {
+        let hasRemoteSource = false
+        const source = image.getAttribute('src')?.trim() || ''
+        if (source && !SAFE_EMBEDDED_MEDIA.test(source)) {
+            const normalized = normalizeRemoteImageUrl(source)
+            if (normalized) {
+                image.setAttribute('src', normalized)
+                hasRemoteSource = true
+            } else {
+                image.removeAttribute('src')
+                image.setAttribute('data-removed-remote-media', 'src')
+            }
+        }
+        if (image.hasAttribute('srcset')) {
+            const srcset = normalizeRemoteImageSrcset(image.getAttribute('srcset'))
+            if (srcset) {
+                image.setAttribute('srcset', srcset)
+                hasRemoteSource = true
+            } else {
+                image.removeAttribute('srcset')
+                image.setAttribute('data-removed-remote-media', 'srcset')
+            }
+        }
+        if (hasRemoteSource) {
+            image.setAttribute('referrerpolicy', 'no-referrer')
+            image.setAttribute('loading', 'lazy')
         }
     })
-    template.content.querySelectorAll('img[data-remote-src]').forEach((element) => {
-        const remoteSource = normalizeRemoteImageUrl(element.getAttribute('data-remote-src'))
-        if (remoteSource) element.setAttribute('data-remote-src', remoteSource)
-        else element.removeAttribute('data-remote-src')
+    template.content.querySelectorAll('source').forEach((source) => {
+        const picture = source.closest('picture')
+        if (!picture) {
+            source.remove()
+            return
+        }
+        const srcset = normalizeRemoteImageSrcset(source.getAttribute('srcset'))
+        source.removeAttribute('src')
+        if (srcset) source.setAttribute('srcset', srcset)
+        else {
+            source.removeAttribute('srcset')
+            source.setAttribute('data-removed-remote-media', 'srcset')
+        }
+        const image = picture.querySelector('img')
+        if (srcset && image) {
+            image.setAttribute('referrerpolicy', 'no-referrer')
+            image.setAttribute('loading', 'lazy')
+        }
     })
     template.content.querySelectorAll('[style]').forEach((element) => {
         sanitizeInlineStyle(element)
     })
     hardenLinks(template)
-    return template.innerHTML
-}
-
-export const restoreRemoteMailImages = (value) => {
-    const template = toTemplate(sanitizeMailHtml(value))
-    if (!template) return ''
-
-    template.content.querySelectorAll('img[data-remote-src]').forEach((image) => {
-        const source = normalizeRemoteImageUrl(image.getAttribute('data-remote-src'))
-        if (!source) return
-        image.removeAttribute('referrerpolicy')
-        image.removeAttribute('loading')
-        image.setAttribute('src', source)
-        image.setAttribute('referrerpolicy', 'no-referrer')
-        image.setAttribute('loading', 'lazy')
-    })
     return template.innerHTML
 }

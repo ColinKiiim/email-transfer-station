@@ -5,7 +5,7 @@
 
 <script setup>
 import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue';
-import { restoreRemoteMailImages, sanitizeMailHtml } from '../security/safe-html';
+import { sanitizeMailHtml } from '../security/safe-html';
 
 const props = defineProps({
     htmlContent: {
@@ -16,19 +16,13 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
-    allowRemoteImages: {
-        type: Boolean,
-        default: false,
-    },
 });
 
 const shadowHost = ref(null);
 let shadowRoot = null;
 const useFallback = ref(false);
 
-const safeHtml = computed(() => props.allowRemoteImages
-    ? restoreRemoteMailImages(props.htmlContent)
-    : sanitizeMailHtml(props.htmlContent));
+const safeHtml = computed(() => sanitizeMailHtml(props.htmlContent));
 
 const mailRenderGuardStyle = `<style>
     :host {

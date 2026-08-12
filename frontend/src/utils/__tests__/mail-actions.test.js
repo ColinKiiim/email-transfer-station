@@ -23,9 +23,10 @@ describe('reply and forward mail HTML boundary', () => {
         expect(reply.toName).toBe('Attacker')
         expect(reply.toMail).toBe('attacker@example.test')
         expect(reply.content).toContain('<p>kept body</p>')
-        expect(reply.content).toContain('data-removed-remote-media="src"')
+        expect(reply.content).toContain('src="https://tracker.example/pixel"')
+        expect(reply.content).toContain('referrerpolicy="no-referrer"')
         expect(reply.content).toContain('rel="noopener noreferrer nofollow"')
-        expect(reply.content).not.toMatch(/<script|onerror|javascript:|\ssrc="https:\/\//i)
+        expect(reply.content).not.toMatch(/<script|onerror|javascript:/i)
     })
 
     it('copies only sanitized received HTML into a forward', () => {
@@ -33,7 +34,8 @@ describe('reply and forward mail HTML boundary', () => {
 
         expect(forward.contentType).toBe('html')
         expect(forward.content).toContain('<p>kept body</p>')
-        expect(forward.content).not.toMatch(/<script|onerror|javascript:|\ssrc="https:\/\//i)
+        expect(forward.content).toContain('src="https://tracker.example/pixel"')
+        expect(forward.content).not.toMatch(/<script|onerror|javascript:/i)
     })
 
     it('HTML-escapes received plain text before rich composition', () => {

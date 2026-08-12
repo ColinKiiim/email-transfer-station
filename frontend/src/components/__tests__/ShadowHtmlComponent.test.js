@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from 'vitest'
 import ShadowHtmlComponent from '../ShadowHtmlComponent.vue'
 
 describe('ShadowHtmlComponent mail safety boundary', () => {
-    it('sanitizes active content and strips insecure media before isolated rendering', () => {
+    it('sanitizes active content and loads safe HTTPS media in isolated rendering', () => {
         const wrapper = mount(ShadowHtmlComponent, {
             props: {
                 htmlContent: [
@@ -26,9 +26,9 @@ describe('ShadowHtmlComponent mail safety boundary', () => {
         expect(shadow.innerHTML).not.toContain('<script')
         expect(shadow.innerHTML).not.toContain('onerror')
         expect(shadow.innerHTML).not.toContain('src="http://')
-        const remoteImage = shadow.querySelector('img[data-remote-src]')
-        expect(remoteImage?.getAttribute('src')).toBeNull()
-        expect(remoteImage?.getAttribute('data-remote-src')).toBe('https://tracker.example/secure-pixel')
+        const remoteImage = shadow.querySelector('img[src="https://tracker.example/secure-pixel"]')
+        expect(remoteImage?.getAttribute('referrerpolicy')).toBe('no-referrer')
+        expect(remoteImage?.getAttribute('loading')).toBe('lazy')
         expect(shadow.innerHTML).not.toContain('url(http://')
         expect(shadow.innerHTML).toContain('data-removed-remote-media')
         expect(shadow.innerHTML).toContain('data-removed-unsafe-style')
@@ -39,16 +39,13 @@ describe('ShadowHtmlComponent mail safety boundary', () => {
         wrapper.unmount()
     })
 
-    it('restores remote images only when the current renderer opts in', async () => {
+    it('loads safe remote images by default', () => {
         const wrapper = mount(ShadowHtmlComponent, {
             props: {
                 htmlContent: '<img alt="logo" src="https://cdn.example.test/logo.png"><script>alert(1)</script>',
             },
         })
         const shadow = wrapper.get('div').element.shadowRoot
-        expect(shadow.querySelector('img')?.getAttribute('src')).toBeNull()
-
-        await wrapper.setProps({ allowRemoteImages: true })
         const image = shadow.querySelector('img')
         expect(image?.getAttribute('src')).toBe('https://cdn.example.test/logo.png')
         expect(image?.getAttribute('referrerpolicy')).toBe('no-referrer')
@@ -57,14 +54,13 @@ describe('ShadowHtmlComponent mail safety boundary', () => {
         wrapper.unmount()
     })
 
-    it('uses the same opt-in content in the fallback renderer', async () => {
+    it('uses the same safe remote content in the fallback renderer', async () => {
         const attachShadow = vi.spyOn(Element.prototype, 'attachShadow').mockImplementation(() => {
             throw new Error('unsupported')
         })
         const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
         const wrapper = mount(ShadowHtmlComponent, {
             props: {
-                allowRemoteImages: true,
                 htmlContent: '<img alt="logo" src="https://cdn.example.test/logo.png" onerror="alert(1)">',
             },
         })

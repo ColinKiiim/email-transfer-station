@@ -170,10 +170,6 @@ export const MESSAGE_REGISTRY = {
       "en": "Forward",
       "zh": "转发"
     },
-    "loadRemoteImages": {
-      "en": "Load external images",
-      "zh": "加载外部图片"
-    },
     "fullscreen": {
       "en": "Fullscreen",
       "zh": "全屏"
@@ -185,10 +181,6 @@ export const MESSAGE_REGISTRY = {
     "reply": {
       "en": "Reply",
       "zh": "回复"
-    },
-    "remoteImagesBlocked": {
-      "en": "External images are blocked to protect your privacy.",
-      "zh": "为保护隐私，外部图片已被阻止。"
     },
     "saveToS3": {
       "en": "Save to S3",
