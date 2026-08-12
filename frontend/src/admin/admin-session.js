@@ -1,5 +1,9 @@
 import { computed, ref, watch } from 'vue'
 
+import { adminT } from './admin-i18n'
+
+const t = adminT('admin.session')
+
 export const useAdminSession = ({
     client,
     adminAuth,
@@ -46,13 +50,13 @@ export const useAdminSession = ({
                 passwordHash: await hashPassword(tmpAdminAuth.value),
                 cfToken: cfToken.value,
             })
-            if (!result?.token) throw new Error('管理员登录未返回有效会话')
+            if (!result?.token) throw new Error(t('noToken'))
             adminAuth.value = result.token
             showAdminAuth.value = false
             await refreshAdminData()
-            notify('管理员会话已建立', 'success')
+            notify(t('established'), 'success')
         } catch (error) {
-            notify(error?.message || '管理员登录失败', 'error')
+            notify(error?.message || t('failed'), 'error')
             turnstileRef.value?.refresh?.()
         } finally {
             tmpAdminAuth.value = ''

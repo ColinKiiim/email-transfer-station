@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 
 import { api } from '../api'
+import { clearSessionStorageKeys } from '../utils/session'
 import { useGlobalState } from '../store'
 import AccessShell from '../components/AccessShell.vue'
 import AccessMailWorkbench from '../components/AccessMailWorkbench.vue'
@@ -27,7 +28,7 @@ const addressesLoaded = ref(false)
 const userOpenSettingsWarning = ref('')
 
 const isSignedIn = computed(() => !!userSettings.value.user_email)
-const roleLabel = computed(() => userSettings.value.user_role?.role || '无角色')
+const roleLabel = computed(() => userSettings.value.user_role?.role || t('noRole'))
 const canCreateOrBindAddress = computed(() =>
   userSettings.value.is_admin
   || userSettings.value.can_bind_address === true
@@ -44,19 +45,19 @@ const railItems = computed(() => {
   ]
 })
 
-const shellTitle = computed(() => isSignedIn.value ? '用户邮箱工作台' : '用户访问')
+const shellTitle = computed(() => isSignedIn.value ? t('shellTitleSignedIn') : t('shellTitleGuest'))
 const shellKicker = computed(() => isSignedIn.value ? 'mailbox access and address ownership' : 'secure sign in')
 const statusLabel = computed(() => {
-  if (!userOpenSettings.value.fetched || !userSettings.value.fetched) return '同步中'
-  return isSignedIn.value ? '已登录' : '需要登录'
+  if (!userOpenSettings.value.fetched || !userSettings.value.fetched) return t('statusSyncing')
+  return isSignedIn.value ? t('statusSignedIn') : t('statusNeedsSignIn')
 })
 const statusTone = computed(() => isSignedIn.value ? 'success' : 'warning')
 const identityLabel = computed(() => isSignedIn.value ? userSettings.value.user_email : 'Email Transfer Station')
 const identityMeta = computed(() => {
-  if (!isSignedIn.value) return '登录后访问你的地址、收件箱和账户设置'
-  if (userSettings.value.is_admin) return `${roleLabel.value} · 管理员分配`
-  if (userSettings.value.can_create_address) return `${roleLabel.value} · 可创建地址`
-  return `${roleLabel.value} · 已分配地址`
+  if (!isSignedIn.value) return t('identityMetaGuest')
+  if (userSettings.value.is_admin) return t('identityMetaAdmin', { role: roleLabel.value })
+  if (userSettings.value.can_create_address) return t('identityMetaCanCreate', { role: roleLabel.value })
+  return t('identityMetaAssigned', { role: roleLabel.value })
 })
 
 const fetchAddressOptions = async () => {
@@ -95,6 +96,10 @@ const updateMailReadState = async (curMailId, read = true) => {
 }
 
 const logout = () => {
+  // Clear every credential, not just this surface's. The address JWT lives in
+  // localStorage and used to survive a user-portal sign-out, leaving the next
+  // person on a shared browser able to open the previous user's mailbox.
+  clearSessionStorageKeys()
   userJwt.value = ''
   userSettings.value = {
     ...userSettings.value,
@@ -120,10 +125,22 @@ watch(isSignedIn, async (signedIn) => {
 }, { immediate: true })
 
 onMounted(async () => {
+  // UserLogin renders its Turnstile challenge from openSettings
+  // (cfTurnstileSiteKey / enableGlobalTurnstileCheck), which only
+  // `/open_api/settings` fills. This surface never fetched it, so on an instance
+  // with ENABLE_GLOBAL_TURNSTILE_CHECK on, the widget never rendered and the
+  // worker rejected every sign-in — the user portal was unusable.
+  if (!openSettings.value.fetched) {
+    try {
+      await api.getOpenSettings(message, { info: () => {} })
+    } catch (error) {
+      console.error(error)
+    }
+  }
   try {
     await api.getUserOpenSettings({ error: (text) => { userOpenSettingsWarning.value = text } })
   } catch (error) {
-    userOpenSettingsWarning.value = error.message || '用户公开设置暂不可用'
+    userOpenSettingsWarning.value = error.message || t('openSettingsUnavailable')
     userOpenSettings.value.fetched = true
   }
   if (userJwt.value && !userSettings.value.user_id) {
@@ -149,18 +166,18 @@ onMounted(async () => {
   >
     <template #actions>
       <n-button v-if="isSignedIn" tertiary @click="fetchAddressOptions">
-        刷新地址
+        {{ t('refreshAddresses') }}
       </n-button>
       <n-button v-if="isSignedIn" tertiary type="error" @click="logout">
-        退出
+        {{ t('signOut') }}
       </n-button>
     </template>
 
     <template #rail-footer>
       <div v-if="isSignedIn" class="user-rail-summary">
-        <span>访问范围</span>
-        <strong>{{ addressFilterOptions.length || 0 }} 个地址</strong>
-        <p>{{ openSettings.enableUserDeleteEmail ? '允许删除邮件' : '只读或受限删除' }}</p>
+        <span>{{ t('accessScope') }}</span>
+        <strong>{{ t('addressCount', { count: addressFilterOptions.length || 0 }) }}</strong>
+        <p>{{ openSettings.enableUserDeleteEmail ? t('deleteAllowed') : t('deleteRestricted') }}</p>
       </div>
     </template>
 
@@ -170,11 +187,11 @@ onMounted(async () => {
 
     <section v-else-if="!isSignedIn" class="login-layout">
       <div class="login-copy">
-        <span>用户入口</span>
-        <h2>登录后进入同一套新工作台</h2>
-        <p>收件箱、地址绑定和账户安全都在这里完成。这个页面不再使用旧站 Header 和卡片式导航。</p>
+        <span>{{ t('loginKicker') }}</span>
+        <h2>{{ t('loginHeading') }}</h2>
+        <p>{{ t('loginDescription') }}</p>
         <p v-if="userOpenSettingsWarning" class="inline-warning">
-          当前本地预览没有完整公开配置，登录表单仍可使用；线上环境会读取 Worker 设置。
+          {{ t('localPreviewWarning') }}
         </p>
       </div>
       <div class="login-panel">
@@ -185,8 +202,8 @@ onMounted(async () => {
     <AccessMailWorkbench
       v-else-if="userTab === 'user_mail_box_tab'"
       v-model:address-filter="addressFilter"
-      title="我的收件箱"
-      description="按地址过滤、搜索当前页邮件，并在右侧阅读正文。"
+      :title="t('myInbox')"
+      :description="t('inboxDescription')"
       :address-options="addressFilterOptions"
       :show-address-filter="true"
       :enable-user-delete-email="openSettings.enableUserDeleteEmail"
@@ -228,37 +245,34 @@ onMounted(async () => {
 .login-layout {
   min-width: 0;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow:
-    0 0 0 1px rgba(15, 23, 42, 0.06),
-    0 1px 2px -1px rgba(15, 23, 42, 0.08),
-    0 16px 48px -34px rgba(15, 23, 42, 0.48);
+  background: var(--ets-surface);
+  box-shadow: var(--ets-shadow-card);
 }
 
 .user-rail-summary {
   display: grid;
   gap: 3px;
   padding: 12px;
-  background: #f8fafc;
+  background: var(--ets-surface-alt);
 }
 
 .user-rail-summary span,
 .module-head span,
 .login-copy span {
-  color: #64748b;
+  color: var(--ets-text-muted);
   font-size: 12px;
   font-weight: 650;
 }
 
 .user-rail-summary strong {
-  color: #0f172a;
+  color: var(--ets-text);
   font-size: 14px;
   font-weight: 760;
 }
 
 .user-rail-summary p {
   margin: 0;
-  color: #64748b;
+  color: var(--ets-text-muted);
   font-size: 12px;
   line-height: 1.4;
   text-wrap: pretty;
@@ -275,7 +289,7 @@ onMounted(async () => {
 .module-head h2,
 .login-copy h2 {
   margin: 3px 0 0;
-  color: #020617;
+  color: var(--ets-text-strong);
   font-size: 20px;
   font-weight: 760;
   line-height: 1.2;
@@ -298,7 +312,7 @@ onMounted(async () => {
 .login-copy p {
   max-width: 520px;
   margin: 8px 0 0;
-  color: #64748b;
+  color: var(--ets-text-muted);
   font-size: 13px;
   line-height: 1.55;
   text-wrap: pretty;
@@ -307,8 +321,8 @@ onMounted(async () => {
 .inline-warning {
   border-radius: 8px;
   padding: 10px 12px;
-  background: #fff7ed;
-  color: #9a3412 !important;
+  background: var(--ets-warn-soft);
+  color: var(--ets-warn) !important;
   font-size: 13px !important;
 }
 
@@ -316,7 +330,7 @@ onMounted(async () => {
   min-width: 0;
   border-radius: 8px;
   padding: 16px;
-  background: #f8fafc;
+  background: var(--ets-surface-alt);
 }
 
 .login-panel :deep(.center) {

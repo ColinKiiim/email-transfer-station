@@ -13,7 +13,11 @@ import {
     normalizedAttachments,
     stripHtml,
 } from './admin-formatters'
+import { adminT } from './admin-i18n'
 import { statusOptionsForView } from './admin-route-state'
+
+const t = adminT('admin.mail')
+
 
 export const normalizeAdminMailRows = (rows = []) => (Array.isArray(rows) ? rows : []).map((row) => {
     const subject = compactText(row.subject, extractHeader(row.raw, 'Subject') || row.message_id || `Mail #${row.id}`)
@@ -50,11 +54,23 @@ export const normalizeAdminMailRows = (rows = []) => (Array.isArray(rows) ? rows
         originalDomain: row.original_domain || effectiveDomain,
         subject,
         size: row.raw ? `${(String(row.raw).length / 1024).toFixed(1)} KB` : '-',
-        result: address === '-' ? '未知地址' : '已保存',
+        result: address === '-' ? t('unknownAddress') : t('saved'),
+        // Semantic companions to `result`. Filtering, conditional rendering and
+        // badge colour must key off these, never off the display string, so
+        // translating the label cannot change behaviour.
+        resultKey: address === '-' ? 'unknown' : 'saved',
+        resultTone: address === '-' ? 'danger' : 'ok',
+        isSaved: address !== '-',
+        statusTokens: [
+            address === '-' ? 'unknown' : 'saved',
+            unread === true ? 'unread' : '',
+            isRead === true ? 'read' : '',
+            attachmentCount > 0 ? 'attachment' : '',
+        ].filter(Boolean),
         auth: row.recipient_confidence || row.ingress_source || '-',
         ip: row.source || '-',
         risk: row.ingress_source === 'collector-unresolved'
-            ? '进入异常队列'
+            ? t('anomalyQueue')
             : mailRenderLabel({ html, text, parseStatus: row.parse_status }),
         body,
         text,
@@ -71,9 +87,12 @@ export const normalizeAdminMailRows = (rows = []) => (Array.isArray(rows) ? rows
 export const normalizeUnknownMailRows = (rows = []) => (Array.isArray(rows) ? rows : []).map((row) => ({
     id: `unknown-${row.id}`,
     level: 'P2',
-    title: compactText(row.subject, extractHeader(row.raw, 'Subject') || `未知收件人 #${row.id}`),
-    owner: row.address || row.original_recipient || '收件流',
-    status: '未知地址',
+    title: compactText(row.subject, extractHeader(row.raw, 'Subject') || t('unknownRecipientTitle', { id: row.id })),
+    owner: row.address || row.original_recipient || t('mailFlow'),
+    status: t('unknownAddress'),
+    statusKey: 'unknown',
+    statusTone: 'danger',
+    statusTokens: ['unknown'],
     detail: compactText(row.text, compactText(stripHtml(row.html || row.message), compactRaw(row.raw))),
     domain: getDomain(row.address || row.original_recipient),
     originalDomain: row.original_domain || '',
@@ -128,18 +147,19 @@ export const matchesAdminRow = (row, filters, view) => {
         || row.address === filters.address
         || row.to === filters.address
         || row.owner === filters.address
-    const statusText = [
-        row.status,
-        row.result,
-        row.risk,
-        row.auth,
-        row.is_read ? '已读 read' : '',
-        row.unread ? '未读 unread' : '',
-        Number(row.attachmentCount || 0) > 0 ? 'attachment 有附件' : '',
-    ].filter(Boolean).join(' ').toLowerCase()
+    // Semantic tokens, not display text: a translated status must not change
+    // which rows a filter selects.
+    const statusTokens = row.statusTokens || [
+        row.is_read ? 'read' : '',
+        row.unread ? 'unread' : '',
+        Number(row.attachmentCount || 0) > 0 ? 'attachment' : '',
+    ].filter(Boolean)
     const options = statusOptionsForView(view)
     const activeStatus = options.includes(filters.status) ? filters.status : 'all'
-    const inStatus = activeStatus === 'all' || statusText.includes(activeStatus.toLowerCase())
+    const inStatus = activeStatus === 'all'
+        || statusTokens.includes(activeStatus)
+        // legacy/free-form statuses (the access view uses 'active' / 'success')
+        || String(row.status || '').toLowerCase().includes(activeStatus.toLowerCase())
     return inQuery && inDomain && inAddress && inStatus
 }
 
@@ -163,11 +183,11 @@ export const buildAdminMailHierarchy = ({
     }
     return {
         queues: [
-            { id: 'queue-all', label: '全部邮件', count: allCount, status: 'all' },
-            { id: 'queue-unread', label: '未读', count: unreadCount, status: '未读' },
-            { id: 'queue-saved', label: '已保存', count: mails.filter((row) => row.result === '已保存').length, status: '已保存' },
-            { id: 'queue-attachment', label: '有附件', count: attachmentCount, status: 'attachment' },
-            { id: 'queue-unknown', label: '未知收件人', count: unknownMails.length, status: '未知地址' },
+            { id: 'queue-all', label: t('queueAll'), count: allCount, status: 'all' },
+            { id: 'queue-unread', label: t('unread'), count: unreadCount, status: 'unread' },
+            { id: 'queue-saved', label: t('saved'), count: mails.filter((row) => row.isSaved).length, status: 'saved' },
+            { id: 'queue-attachment', label: t('hasAttachment'), count: attachmentCount, status: 'attachment' },
+            { id: 'queue-unknown', label: t('unknownRecipient'), count: unknownMails.length, status: 'unknown' },
         ],
         domains: domains.map((domain) => ({
             ...domain,
@@ -220,33 +240,33 @@ export const buildAdminRendererMail = (row, renderMode) => row ? ({
 export const buildAdminMailRail = (mail) => {
     if (!mail) {
         return {
-            title: '选择一封邮件',
+            title: t('selectMail'),
             subtitle: '',
             tags: [],
             empty: true,
         }
     }
     return {
-        title: '邮件详情',
+        title: t('mailDetail'),
         subtitle: mail.subject,
         tags: [
-            mail.unread ? '未读' : '已读',
-            mail.messageIsHtml ? 'HTML 已隔离渲染' : mail.risk,
+            mail.unread ? t('unread') : t('read'),
+            mail.messageIsHtml ? t('htmlSandboxed') : mail.risk,
             mail.attachmentLabel,
         ].filter(Boolean),
         kv: [
-            ['发件人', mail.sender],
-            ['收件地址', mail.to],
-            ['接收时间', mail.fullTime || mail.time],
-            ['认证', mail.auth],
-            ['来源', mail.ip],
-            ['附件', mail.attachmentLabel],
-            ['渲染', mail.messageIsHtml ? 'HTML 已隔离渲染' : mail.risk, 'status'],
+            [t('fieldSender'), mail.sender],
+            [t('fieldRecipient'), mail.to],
+            [t('fieldReceivedAt'), mail.fullTime || mail.time],
+            [t('fieldAuth'), mail.auth],
+            [t('fieldSource'), mail.ip],
+            [t('fieldAttachments'), mail.attachmentLabel],
+            [t('fieldRender'), mail.messageIsHtml ? t('htmlSandboxed') : mail.risk, 'status'],
         ],
         body: mail.body,
         mail,
         actions: [
-            { label: '删除', action: 'delete-current', danger: true },
+            { label: t('delete'), action: 'delete-current', danger: true },
         ],
     }
 }

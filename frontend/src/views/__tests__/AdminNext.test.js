@@ -42,7 +42,13 @@ vi.mock('../../utils/email-parser', () => ({
 }))
 
 import AdminNext from '../AdminNext.vue'
+import i18n from '../../i18n'
 import { useGlobalState } from '../../store'
+
+// The console renders through vue-i18n. Pin the locale so the assertions below
+// keep checking the exact zh copy the product ships, rather than whatever the
+// host machine's browser language happens to be.
+i18n.global.locale.value = 'zh'
 
 const state = useGlobalState()
 
@@ -157,7 +163,7 @@ const mountAdmin = async ({
     const wrapper = mount(AdminNext, {
         attachTo: document.body,
         global: {
-            plugins: [router],
+            plugins: [router, i18n],
             stubs: {
                 Turnstile: true,
                 MailContentRenderer: true,

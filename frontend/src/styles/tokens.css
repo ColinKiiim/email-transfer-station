@@ -1,0 +1,190 @@
+/*
+ * Email Transfer Station design tokens.
+ *
+ * One source of truth for every product surface: the public mailbox (`/`),
+ * the user workspace (`/user`), the shared-inbox link (`/i/:token`) and the
+ * admin console (`/admin`). Surfaces map these tokens onto their own local
+ * variable names, so a palette change here reaches all of them.
+ *
+ * The ramp is calibrated against mainstream mail clients: Outlook web's
+ * communication-blue accent and neutral chrome, Gmail's tinted selection and
+ * generous list rhythm.
+ *
+ * Dark mode is driven by `html.dark`, which `useDark()` from @vueuse/core
+ * toggles, so it stays in sync with the Naive UI `darkTheme` used by App.vue.
+ */
+
+:root {
+    color-scheme: light;
+
+    /* Brand ramp */
+    --ets-brand: #0f6cbd;
+    --ets-brand-hover: #115ea3;
+    --ets-brand-pressed: #0c4a80;
+    --ets-brand-soft: #ebf3fc;
+    --ets-brand-soft-strong: #d7e8fa;
+    --ets-brand-contrast: #ffffff;
+    --ets-on-brand-soft: #0a4f8f;
+
+    /* Neutral surfaces */
+    --ets-bg: #f3f6fb;
+    --ets-bg-elevated: #ffffff;
+    --ets-surface: #ffffff;
+    --ets-surface-alt: #f7f9fc;
+    --ets-surface-sunken: #eef2f8;
+    --ets-scrim: rgba(11, 22, 38, 0.44);
+
+    /* Text */
+    --ets-text: #1b1b1f;
+    --ets-text-strong: #0b1220;
+    --ets-text-muted: #5f6368;
+    --ets-text-subtle: #80868b;
+    --ets-text-on-accent: #ffffff;
+
+    /* Lines */
+    --ets-border: #e1e4e9;
+    --ets-border-strong: #c7cbd1;
+    --ets-divider: rgba(11, 22, 38, 0.08);
+
+    /* Interaction */
+    --ets-hover: #f1f3f4;
+    --ets-selected: #e8f0fe;
+    --ets-selected-strong: #d3e3fd;
+    --ets-focus-ring: #2b88d8;
+
+    /* Semantic */
+    --ets-success: #107c41;
+    --ets-success-soft: #dff6e7;
+    --ets-warn: #a15c07;
+    --ets-warn-soft: #fdf1d3;
+    --ets-danger: #c4314b;
+    --ets-danger-soft: #fde7e9;
+    --ets-info: #0f6cbd;
+    --ets-info-soft: #ebf3fc;
+
+    /* Elevation — flat hairline, resting card, floating overlay */
+    --ets-shadow-hairline: 0 0 0 1px var(--ets-border);
+    --ets-shadow-card:
+        0 0 0 1px var(--ets-border),
+        0 1px 2px rgba(11, 22, 38, 0.06);
+    --ets-shadow-raised:
+        0 0 0 1px var(--ets-border),
+        0 2px 4px rgba(11, 22, 38, 0.06),
+        0 8px 16px -12px rgba(11, 22, 38, 0.28);
+    --ets-shadow-overlay:
+        0 0 0 1px var(--ets-border),
+        0 12px 32px -8px rgba(11, 22, 38, 0.24),
+        0 2px 6px rgba(11, 22, 38, 0.08);
+
+    /*
+     * Blend endpoints. Surfaces tint *toward the page* and text tints *toward
+     * maximum contrast*; both directions invert in dark mode, so every
+     * `color-mix(... , white|black)` in a themed sheet must go through these
+     * instead of naming a literal colour.
+     */
+    --ets-mix-bg: var(--ets-surface);
+    --ets-mix-fg: #000000;
+
+    /*
+     * Inverted chrome (toasts, tooltips): a surface that contrasts with the
+     * page in both modes rather than following it.
+     */
+    --ets-inverted: #1f2937;
+    --ets-inverted-strong: #111827;
+    --ets-on-inverted: #ffffff;
+
+    /*
+     * Canvas for sender-authored mail HTML. Mail bodies assume a light page,
+     * so this stays light unless the reader is explicitly rendering dark —
+     * ShadowHtmlComponent injects its own dark styles inside the shadow root.
+     */
+    --ets-mail-canvas: #ffffff;
+
+    /* Shape */
+    --ets-radius-xs: 4px;
+    --ets-radius-sm: 6px;
+    --ets-radius-md: 8px;
+    --ets-radius-lg: 12px;
+    --ets-radius-pill: 999px;
+
+    /* Type */
+    --ets-font-ui: "Segoe UI Variable", "Segoe UI", "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", "Helvetica Neue", Arial, sans-serif;
+    --ets-font-mono: "Cascadia Mono", "SFMono-Regular", "Consolas", "Liberation Mono", "Menlo", monospace;
+
+    /* Motion — short for state, medium for layout */
+    --ets-motion-fast: 120ms;
+    --ets-motion-base: 180ms;
+    --ets-motion-ease: cubic-bezier(0.33, 0, 0.13, 1);
+}
+
+html.dark {
+    color-scheme: dark;
+
+    --ets-brand: #479ef5;
+    --ets-brand-hover: #62abf5;
+    --ets-brand-pressed: #2886de;
+    --ets-brand-soft: #10304f;
+    --ets-brand-soft-strong: #17436d;
+    --ets-brand-contrast: #06182b;
+    --ets-on-brand-soft: #a9d3f8;
+
+    --ets-bg: #16181c;
+    --ets-bg-elevated: #202226;
+    --ets-surface: #202226;
+    --ets-surface-alt: #26282d;
+    --ets-surface-sunken: #1a1c20;
+    --ets-scrim: rgba(0, 0, 0, 0.62);
+
+    --ets-text: #e8eaed;
+    --ets-text-strong: #ffffff;
+    --ets-text-muted: #a2a9b0;
+    --ets-text-subtle: #868d95;
+    --ets-text-on-accent: #06182b;
+
+    --ets-border: #33363b;
+    --ets-border-strong: #4a4e55;
+    --ets-divider: rgba(255, 255, 255, 0.09);
+
+    --ets-hover: #2a2d33;
+    --ets-selected: #1c3550;
+    --ets-selected-strong: #24466b;
+    --ets-focus-ring: #7bb8f2;
+
+    --ets-success: #5cc08a;
+    --ets-success-soft: #123324;
+    --ets-warn: #e2a03f;
+    --ets-warn-soft: #3a2b0e;
+    --ets-danger: #f1707b;
+    --ets-danger-soft: #40191f;
+    --ets-info: #479ef5;
+    --ets-info-soft: #10304f;
+
+    --ets-mix-bg: var(--ets-surface);
+    --ets-mix-fg: #ffffff;
+
+    --ets-inverted: #e8eaed;
+    --ets-inverted-strong: #f5f6f8;
+    --ets-on-inverted: #16181c;
+
+    --ets-mail-canvas: var(--ets-surface);
+
+    --ets-shadow-hairline: 0 0 0 1px var(--ets-border);
+    --ets-shadow-card:
+        0 0 0 1px var(--ets-border),
+        0 1px 2px rgba(0, 0, 0, 0.4);
+    --ets-shadow-raised:
+        0 0 0 1px var(--ets-border),
+        0 2px 4px rgba(0, 0, 0, 0.36),
+        0 8px 16px -12px rgba(0, 0, 0, 0.6);
+    --ets-shadow-overlay:
+        0 0 0 1px var(--ets-border),
+        0 12px 32px -8px rgba(0, 0, 0, 0.6),
+        0 2px 6px rgba(0, 0, 0, 0.44);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --ets-motion-fast: 1ms;
+        --ets-motion-base: 1ms;
+    }
+}

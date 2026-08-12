@@ -1,6 +1,8 @@
 <script setup>
 import { computed, useSlots } from 'vue'
 
+import AppUtilityMenu from './AppUtilityMenu.vue'
+
 const props = defineProps({
   title: {
     type: String,
@@ -53,8 +55,10 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
 </script>
 
 <template>
-  <div class="access-shell">
-    <aside class="access-sidebar">
+  <!-- The rail is omitted entirely when there is nothing to navigate (e.g. the
+       signed-out state), instead of reserving 232px of empty column. -->
+  <div class="access-shell" :class="{ 'has-rail': railItems.length > 0 }">
+    <aside v-if="railItems.length" class="access-sidebar">
       <div class="brand-row">
         <div class="brand-mark" aria-hidden="true">
           <svg viewBox="0 0 24 24">
@@ -75,6 +79,7 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
           type="button"
           class="rail-item"
           :class="{ 'is-active': item.id === activeId }"
+          :aria-current="item.id === activeId ? 'page' : undefined"
           @click="emit('select', item.id)"
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -105,6 +110,7 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
         </div>
         <div class="top-actions">
           <slot name="actions" />
+          <AppUtilityMenu />
         </div>
       </header>
 
@@ -126,34 +132,35 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #f4f7fb;
+  background: var(--ets-bg);
 }
 
 .access-shell {
-  --access-bg: #f4f7fb;
-  --access-surface: rgba(255, 255, 255, 0.92);
-  --access-surface-strong: #ffffff;
-  --access-text: #0f172a;
-  --access-muted: #64748b;
-  --access-border: rgba(15, 23, 42, 0.08);
-  --access-accent: #0f6fd9;
-  --access-accent-soft: #dceeff;
-  --access-shadow:
-    0 0 0 1px rgba(15, 23, 42, 0.06),
-    0 1px 2px -1px rgba(15, 23, 42, 0.08),
-    0 16px 48px -32px rgba(15, 23, 42, 0.45);
+  --access-bg: var(--ets-bg);
+  --access-surface: var(--ets-surface);
+  --access-surface-strong: var(--ets-surface);
+  --access-text: var(--ets-text);
+  --access-muted: var(--ets-text-muted);
+  --access-border: var(--ets-border);
+  --access-accent: var(--ets-brand);
+  --access-accent-soft: var(--ets-brand-soft);
+  --access-shadow: var(--ets-shadow-card);
   display: grid;
-  grid-template-columns: 232px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   width: 100%;
   height: 100dvh;
   min-height: 0;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(244, 247, 251, 0.96)),
+    linear-gradient(180deg, var(--ets-surface-alt), var(--ets-bg)),
     var(--access-bg);
   color: var(--access-text);
   text-align: left;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.access-shell.has-rail {
+  grid-template-columns: 232px minmax(0, 1fr);
 }
 
 .access-sidebar {
@@ -162,7 +169,7 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
   min-width: 0;
   padding: 20px 12px;
   border-right: 1px solid var(--access-border);
-  background: rgba(255, 255, 255, 0.78);
+  background: var(--ets-surface);
 }
 
 .brand-row {
@@ -180,7 +187,7 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  background: #dceeff;
+  background: var(--ets-brand-soft);
   color: var(--access-accent);
   box-shadow: var(--access-shadow);
 }
@@ -204,7 +211,7 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
 
 .brand-copy strong {
   overflow: hidden;
-  color: #020617;
+  color: var(--ets-text-strong);
   font-size: 15px;
   font-weight: 760;
   line-height: 1.1;
@@ -237,7 +244,7 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
   border-radius: 8px;
   padding: 0 10px;
   background: transparent;
-  color: #334155;
+  color: var(--ets-text);
   font: inherit;
   text-align: left;
   cursor: pointer;
@@ -251,13 +258,13 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
 }
 
 .rail-item:hover {
-  background: rgba(15, 111, 217, 0.08);
-  color: #075ab4;
+  background: var(--ets-hover);
+  color: var(--ets-on-brand-soft);
 }
 
 .rail-item.is-active {
   background: var(--access-accent-soft);
-  color: #075ab4;
+  color: var(--ets-on-brand-soft);
 }
 
 .rail-item span {
@@ -273,7 +280,7 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
   border-radius: 999px;
   padding: 2px 7px;
   background: var(--access-accent);
-  color: #fff;
+  color: var(--ets-brand-contrast);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   text-align: center;
@@ -298,7 +305,7 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
   min-height: 74px;
   padding: 16px 24px 12px;
   border-bottom: 1px solid var(--access-border);
-  background: rgba(255, 255, 255, 0.76);
+  background: var(--ets-surface);
   backdrop-filter: blur(18px);
 }
 
@@ -317,7 +324,7 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
 .title-block h1 {
   margin: 0;
   overflow: hidden;
-  color: #020617;
+  color: var(--ets-text-strong);
   font-size: 26px;
   font-weight: 780;
   line-height: 1.15;
@@ -339,7 +346,7 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
 .identity-label {
   max-width: min(58vw, 560px);
   overflow: hidden;
-  color: #334155;
+  color: var(--ets-text);
   font-weight: 650;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -352,25 +359,25 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
 .status-pill {
   border-radius: 999px;
   padding: 3px 8px;
-  background: #eef2ff;
-  color: #1d4ed8;
+  background: var(--ets-brand-soft);
+  color: var(--ets-on-brand-soft);
   font-size: 11px;
   font-weight: 700;
 }
 
 .tone-success {
-  background: #dcfce7;
-  color: #15803d;
+  background: var(--ets-success-soft);
+  color: var(--ets-success);
 }
 
 .tone-warning {
-  background: #fef3c7;
-  color: #b45309;
+  background: var(--ets-warn-soft);
+  color: var(--ets-warn);
 }
 
 .tone-error {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: var(--ets-danger-soft);
+  color: var(--ets-danger);
 }
 
 .top-actions {
@@ -384,7 +391,7 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
 .access-commandbar {
   padding: 12px 24px;
   border-bottom: 1px solid var(--access-border);
-  background: rgba(244, 247, 251, 0.8);
+  background: var(--ets-bg);
 }
 
 .access-view {

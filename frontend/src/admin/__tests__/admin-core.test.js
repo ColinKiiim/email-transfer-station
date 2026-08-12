@@ -26,8 +26,6 @@ import {
     ACCESS_STATUS_OPTIONS,
     ICON_SHAPES,
     NAV_GROUPS,
-    ROADMAP_ROWS,
-    STATIC_RISKS,
     TABLE_SPECS,
     VIEW_META,
 } from '../admin-view-config'
@@ -44,15 +42,13 @@ describe('admin view configuration', () => {
 
     it('keeps data-table column labels unique within each table', () => {
         for (const columns of Object.values(TABLE_SPECS)) {
-            const labels = columns.map((column) => column.label)
+            const labels = columns.map((column) => column.labelKey)
             expect(new Set(labels).size).toBe(labels.length)
         }
     })
 
-    it('keeps access filters and roadmap rows explicit', () => {
+    it('keeps access filters explicit', () => {
         expect(ACCESS_STATUS_OPTIONS).toEqual(['all', 'active', 'success'])
-        expect(new Set(ROADMAP_ROWS.map((row) => row.id)).size).toBe(ROADMAP_ROWS.length)
-        expect(STATIC_RISKS.every((row) => row.level && row.owner && row.status)).toBe(true)
     })
 })
 

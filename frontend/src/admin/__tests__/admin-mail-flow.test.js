@@ -56,6 +56,8 @@ describe('admin mail-flow model', () => {
             owner: 'missing@example.test',
             domain: 'example.test',
             status: '未知地址',
+            statusKey: 'unknown',
+            statusTone: 'danger',
         })
     })
 
@@ -77,7 +79,7 @@ describe('admin mail-flow model', () => {
             query: 'from:sender has:attachment',
             domain: 'example.test',
             address: 'all',
-            status: '未读',
+            status: 'unread',
         }, 'flow')).toEqual([rows[0]])
         expect(filterAdminRows(rows, {
             query: 'is:read',

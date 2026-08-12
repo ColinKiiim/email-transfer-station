@@ -12,7 +12,7 @@ import AiExtractInfo from './AiExtractInfo.vue'
 const props = defineProps({
   title: {
     type: String,
-    default: '收件箱',
+    default: '',
   },
   description: {
     type: String,
@@ -67,6 +67,7 @@ const props = defineProps({
 const emit = defineEmits(['update:addressFilter'])
 const message = useMessage()
 const { t } = useScopedI18n('components.MailBox')
+const { t: tw } = useScopedI18n('components.AccessMailWorkbench')
 const { autoRefresh, configAutoRefreshInterval, useUTCDate, loading } = useGlobalState()
 
 const rawData = ref([])
@@ -341,7 +342,7 @@ onBeforeUnmount(() => {
     <section class="mail-command-surface">
       <div class="command-copy">
         <h2>{{ title }}</h2>
-        <p>{{ description || '按发件人、主题、摘要和时间快速定位邮件。' }}</p>
+        <p>{{ description || tw('searchHint') }}</p>
       </div>
       <div class="command-controls">
         <n-select
@@ -351,16 +352,16 @@ onBeforeUnmount(() => {
           :options="addressOptions"
           clearable
           filterable
-          placeholder="全部地址"
+          :placeholder="tw('allAddresses')"
         />
         <n-input
           v-model:value="localFilterKeyword"
           class="keyword-filter"
           clearable
-          placeholder="搜索当前页邮件"
+          :placeholder="tw('searchCurrentPage')"
         />
         <n-button :loading="isRefreshing" type="primary" @click="backFirstPageAndRefresh">
-          同步
+          {{ tw('sync') }}
         </n-button>
       </div>
     </section>
@@ -368,19 +369,19 @@ onBeforeUnmount(() => {
     <section class="mail-workbench-grid">
       <aside class="mail-facets">
         <div class="facet-card">
-          <span>当前页</span>
+          <span>{{ tw('currentPage') }}</span>
           <strong>{{ data.length }}</strong>
           <p>{{ rangeLabel }}</p>
         </div>
         <div class="facet-card">
-          <span>未读</span>
+          <span>{{ tw('unread') }}</span>
           <strong>{{ unreadCount }}</strong>
-          <p>{{ autoRefresh ? `自动同步 ${autoRefreshInterval}s` : '手动同步' }}</p>
+          <p>{{ autoRefresh ? tw('autoSyncCountdown', { seconds: autoRefreshInterval }) : tw('manualSync') }}</p>
         </div>
         <div class="facet-actions">
           <n-switch v-model:value="autoRefresh" size="small" :round="false">
-            <template #checked>自动同步</template>
-            <template #unchecked>手动同步</template>
+            <template #checked>{{ tw('autoSync') }}</template>
+            <template #unchecked>{{ tw('manualSync') }}</template>
           </n-switch>
           <n-button v-if="!multiActionMode" tertiary @click="multiActionModeClick(true)">
             {{ t('multiAction') }}
@@ -414,8 +415,8 @@ onBeforeUnmount(() => {
       <section class="mail-list-panel">
         <div class="panel-head">
           <div>
-            <span>邮件列表</span>
-            <b>{{ count }} 封</b>
+            <span>{{ tw('mailList') }}</span>
+            <b>{{ tw('mailCount', { total: count }) }}</b>
           </div>
           <n-pagination
             v-model:page="page"
@@ -437,7 +438,7 @@ onBeforeUnmount(() => {
             @click="clickRow(row)"
           >
             <n-checkbox v-if="multiActionMode" v-model:checked="row.checked" @click.stop />
-            <span v-if="row.unread" class="unread-dot" aria-label="未读" />
+            <span v-if="row.unread" class="unread-dot" :aria-label="tw('unread')" />
             <div class="mail-row-body">
               <div class="mail-row-head">
                 <strong>{{ row.subject }}</strong>
@@ -477,7 +478,7 @@ onBeforeUnmount(() => {
         <article v-if="curMail" class="detail-card">
           <header class="detail-head">
             <div>
-              <span>邮件详情</span>
+              <span>{{ tw('mailDetail') }}</span>
               <h2>{{ curMail.subject }}</h2>
             </div>
             <n-popconfirm v-if="enableUserDeleteEmail" @positive-click="deleteCurrentMail">
@@ -501,7 +502,7 @@ onBeforeUnmount(() => {
         <div v-else class="empty-detail">
           <n-icon :component="InboxRound" :size="56" />
           <h2>{{ count === 0 ? t('emptyInbox') : t('pleaseSelectMail') }}</h2>
-          <p>选择一封邮件后在这里阅读正文、元数据和附件。</p>
+          <p>{{ tw('emptyDetailHint') }}</p>
         </div>
       </section>
     </section>
@@ -547,18 +548,15 @@ onBeforeUnmount(() => {
   min-width: 0;
   border-radius: 8px;
   padding: 14px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow:
-    0 0 0 1px rgba(15, 23, 42, 0.06),
-    0 1px 2px -1px rgba(15, 23, 42, 0.08),
-    0 16px 48px -34px rgba(15, 23, 42, 0.5);
+  background: var(--ets-surface);
+  box-shadow: var(--ets-shadow-card);
 }
 
 .command-copy h2,
 .detail-head h2,
 .empty-detail h2 {
   margin: 0;
-  color: #020617;
+  color: var(--ets-text-strong);
   font-weight: 760;
   line-height: 1.2;
   text-wrap: balance;
@@ -571,7 +569,7 @@ onBeforeUnmount(() => {
 .command-copy p,
 .empty-detail p {
   margin: 4px 0 0;
-  color: #64748b;
+  color: var(--ets-text-muted);
   font-size: 12px;
   line-height: 1.45;
   text-wrap: pretty;
@@ -611,11 +609,8 @@ onBeforeUnmount(() => {
 .empty-detail {
   min-width: 0;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow:
-    0 0 0 1px rgba(15, 23, 42, 0.06),
-    0 1px 2px -1px rgba(15, 23, 42, 0.08),
-    0 16px 48px -34px rgba(15, 23, 42, 0.48);
+  background: var(--ets-surface);
+  box-shadow: var(--ets-shadow-card);
 }
 
 .mail-facets {
@@ -629,14 +624,14 @@ onBeforeUnmount(() => {
 .facet-card {
   border-radius: 7px;
   padding: 12px;
-  background: #f8fafc;
+  background: var(--ets-surface-alt);
 }
 
 .facet-card span,
 .panel-head span,
 .detail-head span {
   display: block;
-  color: #64748b;
+  color: var(--ets-text-muted);
   font-size: 12px;
   font-weight: 650;
 }
@@ -644,7 +639,7 @@ onBeforeUnmount(() => {
 .facet-card strong {
   display: block;
   margin-top: 4px;
-  color: #0f172a;
+  color: var(--ets-text);
   font-size: 25px;
   font-weight: 780;
   line-height: 1;
@@ -653,7 +648,7 @@ onBeforeUnmount(() => {
 
 .facet-card p {
   margin: 6px 0 0;
-  color: #64748b;
+  color: var(--ets-text-muted);
   font-size: 12px;
 }
 
@@ -686,11 +681,11 @@ onBeforeUnmount(() => {
   align-items: center;
   min-height: 54px;
   padding: 10px 12px;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  border-bottom: 1px solid var(--ets-border);
 }
 
 .panel-head b {
-  color: #0f172a;
+  color: var(--ets-text);
   font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
@@ -708,7 +703,7 @@ onBeforeUnmount(() => {
   align-items: start;
   width: 100%;
   border: 0;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  border-bottom: 1px solid var(--ets-border);
   padding: 12px 12px 12px 24px;
   background: transparent;
   color: inherit;
@@ -735,11 +730,11 @@ onBeforeUnmount(() => {
 
 .mail-row:hover,
 .mail-row.is-selected {
-  background: #eef6ff;
+  background: var(--ets-selected);
 }
 
 .mail-row.is-selected {
-  box-shadow: inset 3px 0 0 #0f6fd9;
+  box-shadow: inset 3px 0 0 var(--ets-brand);
 }
 
 .mail-row:not(.is-unread) .unread-dot {
@@ -753,7 +748,7 @@ onBeforeUnmount(() => {
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background: #0f6fd9;
+  background: var(--ets-brand);
 }
 
 .mail-row.has-checkbox .unread-dot {
@@ -775,7 +770,7 @@ onBeforeUnmount(() => {
 .mail-row-head strong {
   overflow: hidden;
   display: -webkit-box;
-  color: #0f172a;
+  color: var(--ets-text);
   font-size: 14px;
   font-weight: 650;
   line-height: 1.35;
@@ -789,7 +784,7 @@ onBeforeUnmount(() => {
 }
 
 .mail-row-head time {
-  color: #64748b;
+  color: var(--ets-text-muted);
   font-size: 12px;
   line-height: 1.4;
   white-space: nowrap;
@@ -802,7 +797,7 @@ onBeforeUnmount(() => {
   gap: 5px 8px;
   min-width: 0;
   margin-top: 6px;
-  color: #475569;
+  color: var(--ets-text-muted);
   font-size: 12px;
   line-height: 1.35;
 }
@@ -818,8 +813,8 @@ onBeforeUnmount(() => {
   flex: 0 0 auto;
   border-radius: 999px;
   padding: 1px 7px;
-  background: #eef2ff;
-  color: #1d4ed8;
+  background: var(--ets-brand-soft);
+  color: var(--ets-on-brand-soft);
   font-size: 11px;
   font-weight: 650;
   font-variant-numeric: tabular-nums;
@@ -829,7 +824,7 @@ onBeforeUnmount(() => {
   overflow: hidden;
   display: -webkit-box;
   margin: 6px 0 0;
-  color: #64748b;
+  color: var(--ets-text-muted);
   font-size: 12px;
   line-height: 1.45;
   -webkit-line-clamp: 2;
@@ -847,7 +842,7 @@ onBeforeUnmount(() => {
   gap: 10px;
   min-height: 44px;
   padding: 10px 14px;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  border-bottom: 1px solid var(--ets-border);
 }
 
 .detail-card {
@@ -881,7 +876,7 @@ onBeforeUnmount(() => {
   gap: 8px;
   min-height: 360px;
   padding: 24px;
-  color: #64748b;
+  color: var(--ets-text-muted);
   text-align: center;
 }
 

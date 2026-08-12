@@ -250,7 +250,7 @@ describe('admin operations and delivery view models', () => {
             { label: 'Worker', value: '可用' },
             { label: 'D1', value: '可用' },
             { label: 'KV', value: '可用' },
-            { label: 'Pages', value: 'admin-next preview' },
+            { label: 'Pages', value: '-' },
         ])
         expect(buildAdminOpsRail(ops)).toMatchObject({
             title: '运行边界',

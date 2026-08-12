@@ -39,11 +39,11 @@ describe('admin route state', () => {
 
     it('keeps unrelated query keys while removing defaults and retired keys', () => {
         expect(buildAdminRouteQuery(
-            { lang: 'zh', demo: '1', view: 'flow', status: '未读' },
+            { lang: 'zh', demo: '1', view: 'flow', status: 'unread' },
             { view: 'overview', status: 'all', q: '' },
             ['demo'],
         )).toEqual({ lang: 'zh', view: 'overview' })
-        expect(statusOptionsForView('flow')).toContain('未读')
+        expect(statusOptionsForView('flow')).toContain('unread')
         expect(statusOptionsForView('access')).toContain('active')
         expect(statusOptionsForView('overview')).toEqual(['all'])
     })

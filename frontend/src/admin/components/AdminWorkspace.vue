@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from 'vue'
+import { useScopedI18n } from '@/i18n/app'
 
 import { statusClass } from '../admin-formatters'
 import { ICON_SHAPES as iconShapes } from '../admin-view-config'
@@ -12,6 +13,8 @@ defineProps({
     actions: { type: Object, required: true },
 })
 
+const { t } = useScopedI18n('admin.workspace')
+
 const mailWorkspace = ref(null)
 const shapeList = (name) => iconShapes[name] || iconShapes.check
 
@@ -22,7 +25,7 @@ defineExpose({
 
 <template>
     <section class="view" :aria-busy="model.ui.syncing ? 'true' : 'false'" aria-live="polite">
-        <div v-if="model.activeView === 'overview'" class="state-band" aria-label="运行状态">
+        <div v-if="model.activeView === 'overview'" class="state-band" :aria-label="t('runtimeState')">
             <div v-for="card in model.stateCards" :key="card.label" class="state-card"
                 :class="{ warn: card.tone === 'warn', error: card.tone === 'danger' }">
                 <strong>{{ card.value }}</strong>
@@ -48,13 +51,13 @@ defineExpose({
                 </option>
             </select>
             <button v-if="model.hasActiveFilters" class="btn" type="button"
-                @click="actions.handleAction('reset-filters')">清除筛选</button>
+                @click="actions.handleAction('reset-filters')">{{ t('clearFilters') }}</button>
         </div>
 
         <AdminViewFeedback :syncing="model.ui.syncing" :errors="model.pageLoadErrors"
             :show-errors="model.showAdminPage" @retry="actions.handleAction('refresh')" />
 
-        <div v-if="model.activeView === 'ops'" class="ops-boundary-strip" aria-label="运行边界">
+        <div v-if="model.activeView === 'ops'" class="ops-boundary-strip" :aria-label="t('runtimeBoundary')">
             <div v-for="item in model.opsBoundaryItems" :key="item.label" class="ops-boundary-item">
                 <span>{{ item.label }}</span>
                 <strong class="status" :class="statusClass(item.value)">{{ item.value }}</strong>

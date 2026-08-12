@@ -4,6 +4,7 @@ import { useScopedI18n } from '@/i18n/app'
 import { useRouter } from 'vue-router'
 
 import { useGlobalState } from '../../store'
+import { clearSessionStorageKeys } from '../../utils/session'
 import { api } from '../../api'
 import { getRouterPathWithLang } from '../../utils'
 
@@ -23,6 +24,8 @@ const confirmPassword = ref('')
 const { locale, t } = useScopedI18n('views.index.AccountSettings')
 
 const logout = async () => {
+    // Shared teardown: clears every credential, not only this address's JWT.
+    clearSessionStorageKeys()
     jwt.value = '';
     await router.push(getRouterPathWithLang("/", locale.value))
     location.reload()
@@ -33,6 +36,7 @@ const deleteAccount = async () => {
         await api.fetch(`/api/delete_address`, {
             method: 'DELETE'
         });
+        clearSessionStorageKeys()
         jwt.value = '';
         await router.push(getRouterPathWithLang("/", locale.value))
         location.reload()
@@ -73,13 +77,17 @@ const changePassword = async () => {
         return;
     }
     try {
-        await api.fetch(`/api/address_change_password`, {
+        // Changing the password revokes every Address JWT issued against the old
+        // one, including this tab's. The worker returns a replacement so the
+        // current session continues; other devices are signed out as intended.
+        const result = await api.fetch(`/api/address_change_password`, {
             method: 'POST',
             body: JSON.stringify({
                 new_password: newPassword.value,
                 password_format: 'plain'
             })
         });
+        if (result?.jwt) jwt.value = result.jwt;
         message.success(t("passwordChanged"));
         newPassword.value = '';
         confirmPassword.value = '';

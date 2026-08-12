@@ -2,6 +2,9 @@ import { computed, nextTick, reactive, ref, watch } from 'vue'
 
 import { adminApi } from './admin-api'
 import { formatAddressCredential, toD1DateTime } from './admin-formatters'
+import { adminT } from './admin-i18n'
+
+const t = adminT('admin.actions')
 
 export const useAdminConsoleActions = ({
     activeView,
@@ -51,7 +54,7 @@ export const useAdminConsoleActions = ({
         value: '',
         note: '',
     })
-    const addressDomainOptions = computed(() => domainRows.value.filter((row) => row.enabled === '启用'))
+    const addressDomainOptions = computed(() => domainRows.value.filter((row) => row.isEnabled))
     const selectedAddressDomain = computed(() => (
         addressDomainOptions.value.find((row) => row.domain === addressCreateForm.domain)
     ))
@@ -76,7 +79,7 @@ export const useAdminConsoleActions = ({
         clearOneTimeResult()
         if (type === 'new-address' || type === 'quick-create') {
             addressCreateForm.name = ''
-            addressCreateForm.domain = currentDomain.value?.enabled === '启用'
+            addressCreateForm.domain = currentDomain.value?.isEnabled
                 ? currentDomain.value.domain
                 : addressDomainOptions.value[0]?.domain || ''
             addressCreateForm.enablePrefix = !!openSettings.value.prefix
@@ -110,28 +113,28 @@ export const useAdminConsoleActions = ({
         const text = candidates[activeView.value] || window.location.href
         try {
             await navigator.clipboard.writeText(text)
-            showSuccess('已复制到剪贴板')
+            showSuccess(t('copied'))
         } catch (error) {
-            showError(error?.message || '复制失败')
+            showError(error?.message || t('copyFailed'))
         }
     }
 
     const copyText = async (text) => {
         if (!text) {
-            showWarning('没有可复制内容')
+            showWarning(t('nothingToCopy'))
             return
         }
         try {
             await navigator.clipboard.writeText(text)
-            showSuccess('已复制到剪贴板')
+            showSuccess(t('copied'))
         } catch (error) {
-            showError(error?.message || '复制失败')
+            showError(error?.message || t('copyFailed'))
         }
     }
 
-    const deleteMailRows = async (rows, scopeLabel = '选中邮件') => {
+    const deleteMailRows = async (rows, scopeLabel = t('scopeSelectedMails')) => {
         if (!showAdminPage.value) {
-            showWarning('请先登录管理员会话后再执行生产删除')
+            showWarning(t('signInBeforeDelete'))
             return
         }
         const targets = rows
@@ -141,20 +144,20 @@ export const useAdminConsoleActions = ({
                 label: row.subject || row.to || `Mail #${row.sourceId}`,
             }))
         if (targets.length === 0) {
-            showWarning('没有可删除的生产邮件')
+            showWarning(t('noProductionMailsToDelete'))
             return
         }
-        const confirmed = window.confirm(`确认从生产收件箱删除 ${targets.length} 封${scopeLabel}？此操作会删除 raw_mails 和对应已读状态，无法在后台撤销。`)
+        const confirmed = window.confirm(t('confirmDeleteMails', { count: targets.length, scope: scopeLabel }))
         if (!confirmed) return
         const previousSelected = ui.selected.flow
         let deleted = 0
         try {
             for (const target of targets) {
                 const result = await adminApi.deleteMail(target.id)
-                if (result?.success === false) throw new Error(`删除失败：${target.label}`)
+                if (result?.success === false) throw new Error(t('deleteMailFailed', { label: target.label }))
                 deleted += 1
             }
-            showSuccess(`已删除 ${deleted} 封生产邮件`)
+            showSuccess(t('deletedMails', { count: deleted }))
             await refreshAll()
             const remaining = filteredMailRows.value
             if (remaining.some((row) => row.id === previousSelected)) {
@@ -167,26 +170,26 @@ export const useAdminConsoleActions = ({
             }
             syncMailQueryToRoute({ mailId: ui.selected.flow || undefined })
         } catch (error) {
-            showError(error?.message || `已删除 ${deleted} 封后中断`)
+            showError(error?.message || t('deleteInterrupted', { count: deleted }))
             await refreshAll()
         }
     }
 
     const deleteCurrentMail = async () => {
         if (!currentMail.value) {
-            showWarning('请先选择一封邮件')
+            showWarning(t('selectMailFirst'))
             return
         }
-        await deleteMailRows([currentMail.value], '当前邮件')
+        await deleteMailRows([currentMail.value], t('scopeCurrentMail'))
     }
 
     const deleteFilteredMails = async () => {
-        await deleteMailRows(filteredMailRows.value, '当前筛选结果')
+        await deleteMailRows(filteredMailRows.value, t('scopeFilteredMails'))
     }
 
     const requireProductionWrite = (label) => {
         if (!showAdminPage.value) {
-            showWarning(`请先登录管理员会话后再执行${label}`)
+            showWarning(t('signInBeforeAction', { action: label }))
             return false
         }
         return true
@@ -195,7 +198,7 @@ export const useAdminConsoleActions = ({
     const runProductionAction = async (key, label, confirmText, task) => {
         if (!requireProductionWrite(label)) return
         if (actionBusy.value) {
-            showWarning('已有生产操作执行中')
+            showWarning(t('busy'))
             return
         }
         if (confirmText && !window.confirm(confirmText)) return
@@ -203,7 +206,7 @@ export const useAdminConsoleActions = ({
         try {
             await task()
         } catch (error) {
-            showError(error?.message || `${label}失败`)
+            showError(error?.message || t('actionFailed', { action: label }))
         } finally {
             actionBusy.value = ''
         }
@@ -220,15 +223,15 @@ export const useAdminConsoleActions = ({
         const name = addressCreateForm.name.trim()
         const domain = addressCreateForm.domain.trim().toLowerCase()
         if (!name || !domain) {
-            showWarning('请输入地址名并选择域名')
+            showWarning(t('addressNameAndDomainRequired'))
             return
         }
-        if (!requireProductionWrite('新增地址')) return
+        if (!requireProductionWrite(t('labelCreateAddress'))) return
         if (actionBusy.value) {
-            showWarning('已有生产操作执行中')
+            showWarning(t('busy'))
             return
         }
-        if (!window.confirm(`确认创建 ${name}@${domain}？创建成功后地址凭证只显示一次。`)) return
+        if (!window.confirm(t('confirmCreateAddress', { address: `${name}@${domain}` }))) return
         actionBusy.value = 'address-create'
         try {
             const result = await adminApi.createAddress({
@@ -241,15 +244,15 @@ export const useAdminConsoleActions = ({
             const address = result?.address || `${name}@${domain}`
             const credential = formatAddressCredential(address, result?.jwt, result?.password, window.location.origin)
             showOneTimeResult(
-                `地址已创建：${address}`,
+                t('addressCreatedTitle', { address }),
                 credential,
                 result?.jwt || result?.password
-                    ? '凭证只显示本次。请复制到可信密码管理器。'
-                    : '地址已创建，但接口未返回凭证。',
+                    ? t('credentialShownOnce')
+                    : t('addressCreatedNoCredential'),
             )
-            showSuccess('地址已创建')
+            showSuccess(t('addressCreated'))
         } catch (error) {
-            showError(error?.message || '新增地址失败')
+            showError(error?.message || t('createAddressFailed'))
         } finally {
             actionBusy.value = ''
         }
@@ -258,15 +261,15 @@ export const useAdminConsoleActions = ({
     const createSharePackage = async () => {
         const row = currentAddress.value
         if (!row?.sourceId) {
-            showWarning('请先选择一个生产地址')
+            showWarning(t('selectProductionAddressFirst'))
             return
         }
-        if (!requireProductionWrite('创建访问包')) return
+        if (!requireProductionWrite(t('labelCreateSharePackage'))) return
         if (actionBusy.value) {
-            showWarning('已有生产操作执行中')
+            showWarning(t('busy'))
             return
         }
-        if (!window.confirm(`确认为 ${row.address} 创建只读访问包？分享链接只显示一次。`)) return
+        if (!window.confirm(t('confirmCreateSharePackage', { address: row.address }))) return
         actionBusy.value = 'share-create'
         try {
             const result = await adminApi.createShareToken(row.sourceId, {
@@ -276,13 +279,13 @@ export const useAdminConsoleActions = ({
             await refreshAll()
             const shareUrl = result?.token ? `${window.location.origin}/i/${encodeURIComponent(result.token)}` : ''
             showOneTimeResult(
-                `访问包已创建：${row.address}`,
+                t('sharePackageCreatedTitle', { address: row.address }),
                 shareUrl,
-                shareUrl ? '链接仅显示本次；持有者可只读查看该地址。' : '访问包已创建，但接口未返回 token。',
+                shareUrl ? t('shareLinkShownOnce') : t('sharePackageCreatedNoToken'),
             )
-            showSuccess('访问包已创建')
+            showSuccess(t('sharePackageCreated'))
         } catch (error) {
-            showError(error?.message || '创建访问包失败')
+            showError(error?.message || t('createSharePackageFailed'))
         } finally {
             actionBusy.value = ''
         }
@@ -291,13 +294,13 @@ export const useAdminConsoleActions = ({
     const deleteCurrentAddress = async () => {
         const row = currentAddress.value
         if (!row?.sourceId) {
-            showWarning('当前地址不是生产地址，无法删除')
+            showWarning(t('addressNotProductionDelete'))
             return
         }
         await runProductionAction(
             'address-delete',
-            '删除地址',
-            `确认删除 ${row.address}？该地址的 ${row.mails} 封收件、${row.sent} 封发送记录和访问包会一起删除，无法撤销。`,
+            t('labelDeleteAddress'),
+            t('confirmDeleteAddress', { address: row.address, mailCount: row.mails, sentCount: row.sent }),
             async () => {
                 const result = await adminApi.deleteAddress(row.sourceId, {
                     credentialVersion: row.credentialVersion,
@@ -305,10 +308,10 @@ export const useAdminConsoleActions = ({
                     sentCount: row.sent,
                     shareCount: row.packages,
                 })
-                if (result?.success === false) throw new Error('删除地址失败')
+                if (result?.success === false) throw new Error(t('deleteAddressFailed'))
                 await refreshAll()
                 ui.selected.identity = addressRows.value[0]?.id || ''
-                showSuccess(`已删除 ${row.address}`)
+                showSuccess(t('addressDeleted', { address: row.address }))
             },
         )
     }
@@ -316,29 +319,29 @@ export const useAdminConsoleActions = ({
     const disableCurrentDomain = async () => {
         const row = currentDomain.value
         if (!row?.sourceId) {
-            showWarning('当前域名不是 D1 管理记录，无法停用')
+            showWarning(t('domainNotManagedDisable'))
             return
         }
-        if (!requireProductionWrite('停用域名')) return
+        if (!requireProductionWrite(t('labelDisableDomain'))) return
         if (actionBusy.value) {
-            showWarning('已有生产操作执行中')
+            showWarning(t('busy'))
             return
         }
         actionBusy.value = 'domain-disable'
         try {
             const impact = await adminApi.getDomainImpact(row.sourceId)
             const confirmed = window.confirm(
-                `确认停用 ${row.domain}？影响 ${impact?.address_count ?? 0} 个地址和 ${impact?.mail_count ?? 0} 封邮件；已有数据不会自动迁移。`,
+                t('confirmDisableDomain', { domain: row.domain, addressCount: impact?.address_count ?? 0, mailCount: impact?.mail_count ?? 0 }),
             )
             if (!confirmed) return
             const result = await adminApi.disableDomain(row.sourceId, {
                 configVersion: row.configVersion,
             })
-            if (result?.success === false) throw new Error('停用域名失败')
+            if (result?.success === false) throw new Error(t('disableDomainFailed'))
             await refreshAll()
-            showSuccess(`已停用 ${row.domain}`)
+            showSuccess(t('domainDisabled', { domain: row.domain }))
         } catch (error) {
-            showError(error?.message || '停用域名失败')
+            showError(error?.message || t('disableDomainFailed'))
         } finally {
             actionBusy.value = ''
         }
@@ -347,19 +350,19 @@ export const useAdminConsoleActions = ({
     const showCurrentCredential = async () => {
         const row = currentAddress.value
         if (!row?.sourceId) {
-            showWarning('当前地址不是生产地址，无法显示凭证')
+            showWarning(t('addressNotProductionShowCredential'))
             return
         }
         await runProductionAction(
             'credential-show',
-            '显示地址凭证',
-            `确认显示 ${row.address} 的当前 JWT 和固定登录链接？请确保屏幕不会被无关人员看到。`,
+            t('labelShowCredential'),
+            t('confirmShowCredential', { address: row.address }),
             async () => {
                 const result = await adminApi.showAddressCredential(row.sourceId, row.credentialVersion)
                 showOneTimeResult(
-                    `地址凭证：${row.address}`,
+                    t('credentialTitle', { address: row.address }),
                     formatAddressCredential(row.address, result?.jwt, '', window.location.origin),
-                    '结果在关闭后会从页面状态清除；轮换凭证前当前 JWT 仍然有效。',
+                    t('credentialNote'),
                 )
             },
         )
@@ -368,24 +371,24 @@ export const useAdminConsoleActions = ({
     const rotateCurrentCredential = async () => {
         const row = currentAddress.value
         if (!row?.sourceId) {
-            showWarning('当前地址不是生产地址，无法轮换凭证')
+            showWarning(t('addressNotProductionRotate'))
             return
         }
         await runProductionAction(
             'rotate',
-            '凭证轮换',
-            `确认轮换 ${row.address} 的地址凭证？旧地址 JWT 会失效，新的凭证只会显示一次，请在安全位置复制保存。`,
+            t('labelRotateCredential'),
+            t('confirmRotateCredential', { address: row.address }),
             async () => {
                 const result = await adminApi.rotateAddressCredential(row.sourceId, row.credentialVersion)
                 await refreshAll()
                 if (result?.jwt) {
                     showOneTimeResult(
-                        `凭证已轮换：${row.address}`,
+                        t('credentialRotatedTitle', { address: row.address }),
                         formatAddressCredential(result?.address || row.address, result.jwt, '', window.location.origin),
-                        '旧 JWT 已失效；新凭证在关闭后会从页面状态清除。',
+                        t('credentialRotatedNote'),
                     )
                 } else {
-                    showSuccess(`已轮换 ${row.address} 的凭证`)
+                    showSuccess(t('credentialRotated', { address: row.address }))
                 }
             }
         )
@@ -394,18 +397,18 @@ export const useAdminConsoleActions = ({
     const revokeCurrentShareTokens = async () => {
         const row = currentAddress.value
         if (!row?.sourceId) {
-            showWarning('当前地址不是生产地址，无法撤销访问包')
+            showWarning(t('addressNotProductionRevoke'))
             return
         }
         await runProductionAction(
             'revoke',
-            '撤销访问包',
-            `确认撤销 ${row.address} 的全部活跃访问包？已分享的只读链接会立即失效。`,
+            t('labelRevokeSharePackages'),
+            t('confirmRevokeSharePackages', { address: row.address }),
             async () => {
                 const result = await adminApi.revokeShareTokens(row.sourceId)
-                if (result?.success === false) throw new Error('撤销访问包失败')
+                if (result?.success === false) throw new Error(t('revokeSharePackagesFailed'))
                 await refreshAll()
-                showSuccess(`已撤销 ${row.address} 的访问包`)
+                showSuccess(t('sharePackagesRevoked', { address: row.address }))
             }
         )
     }
@@ -413,18 +416,18 @@ export const useAdminConsoleActions = ({
     const clearCurrentAddressInbox = async () => {
         const row = currentAddress.value
         if (!row?.sourceId) {
-            showWarning('当前地址不是生产地址，无法清空收件')
+            showWarning(t('addressNotProductionClearInbox'))
             return
         }
         await runProductionAction(
             'clear-inbox',
-            '清空地址收件',
-            `确认清空 ${row.address} 的生产收件箱？此操作会删除该地址 raw_mails 和已读状态，无法在后台撤销。`,
+            t('labelClearInbox'),
+            t('confirmClearInbox', { address: row.address }),
             async () => {
                 const result = await adminApi.clearAddressInbox(row.sourceId, row.mails)
-                if (result?.success === false) throw new Error('清空地址收件失败')
+                if (result?.success === false) throw new Error(t('clearInboxFailed'))
                 await refreshAll()
-                showSuccess(`已清空 ${row.address} 的收件箱`)
+                showSuccess(t('inboxCleared', { address: row.address }))
             }
         )
     }
@@ -432,12 +435,12 @@ export const useAdminConsoleActions = ({
     const checkCurrentDomainRoute = async () => {
         const row = currentDomain.value
         if (!row?.sourceId) {
-            showWarning('当前域名来自公开设置，无法执行生产检查')
+            showWarning(t('domainFromPublicSettingsCheck'))
             return
         }
-        if (!requireProductionWrite('域名路由检查')) return
+        if (!requireProductionWrite(t('labelDomainRouteCheck'))) return
         if (actionBusy.value) {
-            showWarning('已有生产操作执行中')
+            showWarning(t('busy'))
             return
         }
         actionBusy.value = 'verify'
@@ -445,14 +448,14 @@ export const useAdminConsoleActions = ({
             if (String(row.mode || '').includes('Cloudflare')) {
                 const result = await adminApi.checkCloudflareDomain(row.sourceId)
                 const ruleCount = Array.isArray(result?.rules) ? result.rules.length : 0
-                showSuccess(`Cloudflare 路由检查完成：${ruleCount} 条规则`)
+                showSuccess(t('cloudflareRouteCheckDone', { count: ruleCount }))
             } else {
                 const result = await adminApi.getDomainImpact(row.sourceId)
-                showSuccess(`域名影响检查完成：${result?.address_count ?? 0} 个地址，${result?.mail_count ?? 0} 封邮件`)
+                showSuccess(t('domainImpactCheckDone', { addressCount: result?.address_count ?? 0, mailCount: result?.mail_count ?? 0 }))
             }
             await refreshAll()
         } catch (error) {
-            showError(error?.message || '域名路由检查失败')
+            showError(error?.message || t('domainRouteCheckFailed'))
         } finally {
             actionBusy.value = ''
         }
@@ -461,23 +464,23 @@ export const useAdminConsoleActions = ({
     const checkCurrentDomainImpact = async () => {
         const row = currentDomain.value
         if (!row?.sourceId) {
-            showWarning('当前域名来自公开设置，无法计算生产停用影响')
+            showWarning(t('domainFromPublicSettingsImpact'))
             return
         }
         if (!showAdminPage.value) {
-            showWarning('请先登录管理员会话后再检查停用影响')
+            showWarning(t('signInBeforeImpactCheck'))
             return
         }
         if (actionBusy.value) {
-            showWarning('已有生产操作执行中')
+            showWarning(t('busy'))
             return
         }
         actionBusy.value = 'domain-impact'
         try {
             const result = await adminApi.getDomainImpact(row.sourceId)
-            showSuccess(`停用影响：${result?.address_count ?? 0} 个地址，${result?.mail_count ?? 0} 封邮件`)
+            showSuccess(t('disableImpact', { addressCount: result?.address_count ?? 0, mailCount: result?.mail_count ?? 0 }))
         } catch (error) {
-            showError(error?.message || '停用影响检查失败')
+            showError(error?.message || t('disableImpactCheckFailed'))
         } finally {
             actionBusy.value = ''
         }
@@ -507,34 +510,34 @@ export const useAdminConsoleActions = ({
     }
 
     const startDomainVerification = async (domainRow, silent = false) => {
-        if (!domainRow?.sourceId && !domainRow?.id) throw new Error('当前域名不是 D1 管理记录')
+        if (!domainRow?.sourceId && !domainRow?.id) throw new Error(t('domainNotManaged'))
         const id = domainRow.sourceId || domainRow.id
         const configVersion = domainRow.configVersion || domainRow.config_version
         const result = await adminApi.startDomainVerification(id, configVersion)
         await refreshAll()
         if (!silent) {
-            const target = result?.verification_address || '验证地址'
-            showSuccess(`验证已开始，请向 ${target} 发送测试邮件`)
+            const target = result?.verification_address || t('verificationAddressFallback')
+            showSuccess(t('verificationStarted', { target }))
         }
         return result
     }
 
     const checkDomainVerification = async (domainRow) => {
         if (!domainRow?.sourceId) {
-            showWarning('当前域名不是 D1 管理记录，无法检查验证')
+            showWarning(t('domainNotManagedVerifyCheck'))
             return
         }
         await runProductionAction(
             'domain-verify-check',
-            '检查域名验证',
+            t('labelCheckVerification'),
             '',
             async () => {
                 const result = await adminApi.checkDomainVerification(domainRow.sourceId, domainRow.configVersion)
                 await refreshAll()
                 if (result?.success === false) {
-                    showWarning(`还没有收到验证邮件：${result?.verification_address || domainRow.verificationAddress || domainRow.domain}`)
+                    showWarning(t('verificationMailNotReceived', { address: result?.verification_address || domainRow.verificationAddress || domainRow.domain }))
                 } else {
-                    showSuccess(`${domainRow.domain} 已验证，可进入地址创建流程`)
+                    showSuccess(t('domainVerified', { domain: domainRow.domain }))
                 }
             }
         )
@@ -543,10 +546,10 @@ export const useAdminConsoleActions = ({
     const performCloudflareSetup = async (domainRow) => {
         const check = await adminApi.checkCloudflareDomain(domainRow.sourceId)
         if (!check?.automatic_setup_supported) {
-            throw new Error('当前域名不是 Cloudflare zone 根域，暂不支持自动配置子域名')
+            throw new Error(t('notCloudflareZoneRoot'))
         }
         const replaceCatchAll = !!check?.setup_preview?.catch_all_conflict
-            && window.confirm(`Cloudflare 上已有 catch-all 规则。确认替换为发送到 Worker：${domainRow.domain}？`)
+            && window.confirm(t('confirmReplaceCatchAll', { domain: domainRow.domain }))
         if (check?.setup_preview?.catch_all_conflict && !replaceCatchAll) return null
         await adminApi.setupCloudflareDomain(domainRow.sourceId, {
             configVersion: domainRow.configVersion,
@@ -561,22 +564,22 @@ export const useAdminConsoleActions = ({
 
     const setupCloudflareDomain = async (domainRow) => {
         if (!domainRow?.sourceId) {
-            showWarning('当前域名不是 D1 管理记录，无法自动配置 Cloudflare')
+            showWarning(t('domainNotManagedCloudflareSetup'))
             return
         }
         if (domainRow.receiveMode && domainRow.receiveMode !== 'cloudflare_email') {
-            showWarning('当前域名不是 Cloudflare Email Routing 模式')
+            showWarning(t('domainNotCloudflareMode'))
             return
         }
         await runProductionAction(
             'cloudflare-setup',
-            'Cloudflare 自动配置',
-            `确认在 Cloudflare 为 ${domainRow.domain} 配置 Email Routing DNS 和 catch-all 到 Worker？如检测到已有 catch-all，会先要求二次确认。`,
+            t('labelCloudflareSetup'),
+            t('confirmCloudflareSetup', { domain: domainRow.domain }),
             async () => {
                 const verification = await performCloudflareSetup(domainRow)
                 showSuccess(verification?.verification_address
-                    ? `Cloudflare 已配置，请向 ${verification.verification_address} 发送测试邮件后检查验证`
-                    : 'Cloudflare 已配置，请开始域名验证')
+                    ? t('cloudflareConfiguredSendTest', { target: verification.verification_address })
+                    : t('cloudflareConfiguredStartVerification'))
             }
         )
     }
@@ -585,13 +588,13 @@ export const useAdminConsoleActions = ({
         if (domainActivationBusy.value) return
         const domain = domainActivationForm.domain.trim().toLowerCase()
         if (!domain) {
-            showWarning('请输入域名')
+            showWarning(t('domainRequired'))
             return
         }
-        if (!requireProductionWrite('新增接收域')) return
+        if (!requireProductionWrite(t('labelCreateDomain'))) return
         const mode = domainActivationForm.receiveMode
-        const label = mode === 'cloudflare_email' ? 'Cloudflare 自动配置' : 'ImprovMX 转发验证'
-        if (!window.confirm(`确认新增 ${domain} 并启动 ${label}？`)) return
+        const label = mode === 'cloudflare_email' ? t('labelCloudflareSetup') : t('labelImprovmxVerification')
+        if (!window.confirm(t('confirmCreateDomain', { domain, action: label }))) return
         domainActivationBusy.value = true
         actionBusy.value = mode === 'cloudflare_email' ? 'cloudflare-create' : 'improvmx-create'
         try {
@@ -604,7 +607,7 @@ export const useAdminConsoleActions = ({
                 allowRandomSubdomain: domainActivationForm.allowRandomSubdomain,
             })
             const row = await refreshAndFindDomain(created?.id)
-            if (!row) throw new Error('域名已创建，但刷新后未找到记录')
+            if (!row) throw new Error(t('domainCreatedNotFound'))
             const rowRef = {
                 sourceId: row.id,
                 domain: row.domain,
@@ -614,18 +617,18 @@ export const useAdminConsoleActions = ({
             if (mode === 'cloudflare_email') {
                 const verification = await performCloudflareSetup(rowRef)
                 showSuccess(verification?.verification_address
-                    ? `Cloudflare 已配置，请向 ${verification.verification_address} 发送测试邮件后检查验证`
-                    : 'Cloudflare 已配置，请开始域名验证')
+                    ? t('cloudflareConfiguredSendTest', { target: verification.verification_address })
+                    : t('cloudflareConfiguredStartVerification'))
             } else if (mode === 'improvmx_forward') {
                 const verification = await startDomainVerification({
                     id: row.id,
                     config_version: row.config_version,
                 }, true)
-                showSuccess(`ImprovMX collector 已生成：${verification?.collector_address || row.collector_address || '请刷新查看'}`)
+                showSuccess(t('improvmxCollectorReady', { address: verification?.collector_address || row.collector_address || t('refreshToView') }))
             }
             domainActivationOpen.value = false
         } catch (error) {
-            showError(error?.message || '新增域名失败')
+            showError(error?.message || t('createDomainFailed'))
         } finally {
             domainActivationBusy.value = false
             actionBusy.value = ''
@@ -634,11 +637,11 @@ export const useAdminConsoleActions = ({
 
     const runHealthCheck = async () => {
         if (!showAdminPage.value) {
-            showWarning('请先登录管理员会话后再执行健康检查')
+            showWarning(t('signInBeforeHealthCheck'))
             return
         }
         if (actionBusy.value) {
-            showWarning('已有生产操作执行中')
+            showWarning(t('busy'))
             return
         }
         actionBusy.value = 'health-check'
@@ -646,9 +649,9 @@ export const useAdminConsoleActions = ({
             await refreshAll()
             const apiState = workerStatusLabel.value
             const dbState = opsRows.value[1]?.status || dbVersionLabel.value
-            showSuccess(`健康检查完成：Worker ${apiState}，D1 ${dbState}`)
+            showSuccess(t('healthCheckDone', { worker: apiState, database: dbState }))
         } catch (error) {
-            showError(error?.message || '健康检查失败')
+            showError(error?.message || t('healthCheckFailed'))
         } finally {
             actionBusy.value = ''
         }
@@ -657,7 +660,7 @@ export const useAdminConsoleActions = ({
     const handleAction = async (type) => {
         if (type === 'refresh') {
             await refreshAll()
-            showSuccess('同步完成，当前选中项已保留')
+            showSuccess(t('syncDone'))
             return
         }
         if (type === 'reset-filters') {
@@ -674,7 +677,7 @@ export const useAdminConsoleActions = ({
                 status: undefined,
                 mode: undefined,
             }, ['item'])
-            showSuccess('筛选已清除')
+            showSuccess(t('filtersCleared'))
             return
         }
         if (type === 'copy') {
@@ -736,8 +739,8 @@ export const useAdminConsoleActions = ({
         if (type === 'verify-start') {
             await runProductionAction(
                 'domain-verify-start',
-                '开始域名验证',
-                `确认为 ${currentDomain.value?.domain || '当前域名'} 生成新的验证地址？旧验证地址会失效。`,
+                t('labelStartDomainVerification'),
+                t('confirmRegenerateVerification', { domain: currentDomain.value?.domain || t('currentDomainFallback') }),
                 async () => startDomainVerification(currentDomain.value)
             )
             return
@@ -746,7 +749,7 @@ export const useAdminConsoleActions = ({
             await checkDomainVerification(currentDomain.value)
             return
         }
-        showWarning('该操作缺少可验证的生产写入合同')
+        showWarning(t('unsupportedAction'))
     }
 
     const handleDomainRowAction = async (row, type) => {

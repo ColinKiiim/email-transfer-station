@@ -12,6 +12,7 @@ import Header from './views/Header.vue';
 import { api } from './api'
 import { getNaiveLocaleConfig } from './i18n/naive-locale'
 import { DEFAULT_LOCALE, isSupportedLocale } from './i18n/utils'
+import { naiveDarkOverrides, naiveLightOverrides } from './styles/naive-theme'
 
 const {
   isDark, loading, useSideMargin, telegramApp, isTelegram
@@ -21,6 +22,9 @@ const adSlot = import.meta.env.VITE_GOOGLE_AD_SLOT;
 const { locale } = useI18n({ useScope: 'global' });
 const route = useRoute()
 const theme = computed(() => isDark.value ? darkTheme : null)
+// Keeps Naive UI's palette in step with src/styles/tokens.css, so embedded
+// Naive controls stop rendering in their stock green next to the blue chrome.
+const themeOverrides = computed(() => isDark.value ? naiveDarkOverrides : naiveLightOverrides)
 const localeConfig = computed(() => getNaiveLocaleConfig(isSupportedLocale(locale.value) ? locale.value : DEFAULT_LOCALE))
 const isMobile = useIsMobile()
 const isShareOnlyRoute = computed(() => route.meta?.shareOnly === true)
@@ -93,7 +97,8 @@ onMounted(async () => {
 </script>
 
 <template>
-  <n-config-provider :locale="localeConfig.locale" :date-locale="localeConfig.dateLocale" :theme="theme">
+  <n-config-provider :locale="localeConfig.locale" :date-locale="localeConfig.dateLocale" :theme="theme"
+    :theme-overrides="themeOverrides">
     <n-global-style />
     <n-spin description="loading..." :show="showGlobalLoading">
       <n-notification-provider container-style="margin-top: 60px;">

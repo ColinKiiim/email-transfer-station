@@ -16,7 +16,11 @@ const turnstileLoading = ref(false)
 let turnstileRenderQueue = Promise.resolve()
 
 const refresh = () => rerenderTurnstile()
-defineExpose({ refresh })
+// `reset` is an alias so callers cannot miss by name. The admin login path
+// used to call `refresh` on a wrapper that only exposed `reset`, and the
+// wrapper called `reset` on this component, which only exposed `refresh` —
+// two optional calls that silently did nothing.
+defineExpose({ refresh, reset: refresh })
 
 const rerenderTurnstile = () => {
     cfToken.value = "";
@@ -27,8 +31,29 @@ const rerenderTurnstile = () => {
     return turnstileRenderQueue
 }
 
+const TURNSTILE_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'
+
+/*
+ * Load Cloudflare's script only when an instance actually enables Turnstile.
+ *
+ * It used to sit in index.html as a synchronous, non-deferred <script> in
+ * <head>, so it blocked HTML parsing and the module entry on every route — and
+ * every visitor's browser contacted challenges.cloudflare.com even on
+ * deployments that never turn Turnstile on, including anonymous share links.
+ */
+const ensureTurnstileScript = () => {
+    if (typeof document === 'undefined') return
+    if (window.turnstile || document.querySelector(`script[src="${TURNSTILE_SRC}"]`)) return
+    const script = document.createElement('script')
+    script.src = TURNSTILE_SRC
+    script.async = true
+    script.defer = true
+    document.head.appendChild(script)
+}
+
 const checkCfTurnstile = async (remove) => {
     if (!openSettings.value.cfTurnstileSiteKey) return;
+    ensureTurnstileScript();
     turnstileLoading.value = true;
     try {
         let container = document.getElementById(containerId);
@@ -37,9 +62,16 @@ const checkCfTurnstile = async (remove) => {
             container = document.getElementById(containerId);
             await new Promise(r => setTimeout(r, 10));
         }
-        count = 100;
+        // The script is now fetched on demand rather than blocking <head>, so
+        // allow a network round trip (10s) instead of the previous 1s, and fail
+        // loudly rather than throwing an opaque TypeError on window.turnstile.
+        count = 1000;
         while (!window.turnstile && count-- > 0) {
             await new Promise(r => setTimeout(r, 10));
+        }
+        if (!window.turnstile) {
+            console.error('Turnstile script did not load; the challenge cannot be rendered');
+            return;
         }
         if (remove && cfTurnstileId.value) {
             window.turnstile.remove(cfTurnstileId.value);

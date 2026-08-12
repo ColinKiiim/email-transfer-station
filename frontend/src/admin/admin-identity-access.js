@@ -1,4 +1,7 @@
 import { formatDate, getDomain } from './admin-formatters'
+import { adminT } from './admin-i18n'
+
+const t = adminT('admin.identity')
 
 export const buildAdminAddressRows = (rows = [], enableAddressPassword = false) => rows.map((row) => {
     const tags = Array.isArray(row.labels)
@@ -12,14 +15,14 @@ export const buildAdminAddressRows = (rows = [], enableAddressPassword = false) 
         domain: getDomain(row.name),
         owner: row.user_id ? `user:${row.user_id}` : 'admin',
         tags,
-        source: row.source || '管理员创建',
+        source: t('sourceAdminCreated'),
         mails: row.mail_count || 0,
         sent: row.send_count || 0,
         packages: row.active_share_token_count || 0,
         credentialVersion: Number(row.credential_version || 1),
-        credential: row.credential_version ? `v${row.credential_version}` : '正常',
-        password: enableAddressPassword ? '启用' : '关闭',
-        note: row.owner_note || row.source_meta || '地址身份记录',
+        credential: row.credential_version ? `v${row.credential_version}` : t('credentialNormal'),
+        password: enableAddressPassword ? t('passwordEnabled') : t('passwordDisabled'),
+        note: row.owner_note || row.source_meta || t('defaultNote'),
         updated: row.updated_at || '-',
     }
 })
@@ -27,7 +30,7 @@ export const buildAdminAddressRows = (rows = [], enableAddressPassword = false) 
 export const buildAdminShareRows = (rows = []) => rows.map((row) => ({
     id: `pkg-${row.id}`,
     sourceId: row.id,
-    label: row.label || `访问包 #${row.id}`,
+    label: row.label || t('sharePackageLabel', { id: row.id }),
     address: row.address,
     scopes: row.scopes || 'read',
     status: row.status || 'active',
@@ -40,9 +43,9 @@ export const buildAdminUserRows = (rows = []) => rows.map((row) => ({
     id: `user-${row.id}`,
     user: row.display_name || row.username || row.email || `user:${row.id}`,
     role: row.role || '-',
-    addresses: `${row.address_count || 0} 个地址`,
-    auth: row.oauth_provider || '本地账号',
-    status: row.enabled === false ? '停用' : '启用',
+    addresses: t('addressCount', { count: row.address_count || 0 }),
+    auth: row.oauth_provider || t('authLocal'),
+    status: row.enabled === false ? t('userDisabled') : t('userEnabled'),
     last: formatDate(row.updated_at || row.created_at),
 }))
 
@@ -78,39 +81,39 @@ export const buildAdminProcessingRows = (rows = []) => rows.slice(0, 8).map((row
 }))
 
 export const buildAdminAddressRail = (address) => address ? ({
-    title: '地址详情',
+    title: t('addressRailTitle'),
     subtitle: address.address,
     tags: address.tags,
     kv: [
-        ['备注', address.note],
-        ['收件 / 发送', `${address.mails} / ${address.sent}`],
-        ['分享包', `${address.packages} 个`],
-        ['地址密码', address.password],
-        ['凭证', address.credential, 'status'],
+        [t('kvNote'), address.note],
+        [t('kvReceivedSent'), `${address.mails} / ${address.sent}`],
+        [t('kvSharePackages'), t('sharePackageCount', { count: address.packages })],
+        [t('kvAddressPassword'), address.password],
+        [t('kvCredential'), address.credential, 'status'],
     ],
     actions: [
-        { label: '显示凭证', action: 'show-credential', primary: true },
-        { label: '轮换凭证', action: 'rotate' },
-        { label: '创建访问包', modal: 'share-package' },
-        { label: '撤销访问包', action: 'revoke' },
-        { label: '清空收件', action: 'clear-inbox', danger: true },
-        { label: '删除地址', action: 'delete-address', danger: true },
+        { label: t('actionShowCredential'), action: 'show-credential', primary: true },
+        { label: t('actionRotateCredential'), action: 'rotate' },
+        { label: t('actionCreateSharePackage'), modal: 'share-package' },
+        { label: t('actionRevokeSharePackage'), action: 'revoke' },
+        { label: t('actionClearInbox'), action: 'clear-inbox', danger: true },
+        { label: t('actionDeleteAddress'), action: 'delete-address', danger: true },
     ],
 }) : null
 
 export const buildAdminExceptionRail = (exception) => exception ? ({
-    title: '异常邮件',
+    title: t('exceptionRailTitle'),
     subtitle: exception.title,
-    tags: [exception.level, exception.status, '未知收件人'],
+    tags: [exception.level, exception.status, t('tagUnknownRecipient')],
     kv: [
-        ['收件对象', exception.owner],
-        ['域名', exception.domain || '-'],
-        ['级别', exception.level],
-        ['状态', exception.status, 'status'],
+        [t('kvRecipient'), exception.owner],
+        [t('kvDomain'), exception.domain || '-'],
+        [t('kvLevel'), exception.level],
+        [t('kvStatus'), exception.status, 'status'],
     ],
     body: exception.detail,
     actions: [
-        { label: '创建地址', modal: 'new-address', primary: true },
-        { label: '保留观察', action: 'refresh' },
+        { label: t('actionCreateAddress'), modal: 'new-address', primary: true },
+        { label: t('actionKeepWatching'), action: 'refresh' },
     ],
 }) : null

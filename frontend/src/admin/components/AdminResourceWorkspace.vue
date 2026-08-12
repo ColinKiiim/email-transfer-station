@@ -1,4 +1,6 @@
 <script setup>
+import { useScopedI18n } from '@/i18n/app'
+
 import { cellText, formatNumber, statusClass } from '../admin-formatters'
 import AdminEmptyState from './AdminEmptyState.vue'
 
@@ -6,29 +8,32 @@ defineProps({
     model: { type: Object, required: true },
     actions: { type: Object, required: true },
 })
+
+const { t: tCol } = useScopedI18n('admin.column')
+const { t } = useScopedI18n('admin.resource')
 </script>
 
 <template>
-    <div v-if="model.activeView === 'overview'" class="overview-home" aria-label="运行总控入口">
+    <div v-if="model.activeView === 'overview'" class="overview-home" :aria-label="t('overviewAria')">
         <button type="button" class="overview-entry primary-entry" @click="actions.setView('flow')">
-            <span class="overview-entry-kicker">收件工作区</span>
-            <strong>{{ formatNumber(model.explicitUnreadMailCount) }} 未读</strong>
-            <span>{{ formatNumber(model.mailRows.length) }} 封最近邮件，进入收件箱查看正文、附件和渲染状态。</span>
+            <span class="overview-entry-kicker">{{ t('flowKicker') }}</span>
+            <strong>{{ t('unreadCount', { count: formatNumber(model.explicitUnreadMailCount) }) }}</strong>
+            <span>{{ t('flowDesc', { count: formatNumber(model.mailRows.length) }) }}</span>
         </button>
         <button type="button" class="overview-entry" @click="actions.setView('routing')">
-            <span class="overview-entry-kicker">入口与路由</span>
-            <strong>{{ formatNumber(model.domainRows.length) }} 个域名</strong>
-            <span>检查 collector、接收方式、验证状态和域名归属。</span>
+            <span class="overview-entry-kicker">{{ t('routingKicker') }}</span>
+            <strong>{{ t('domainCount', { count: formatNumber(model.domainRows.length) }) }}</strong>
+            <span>{{ t('routingDesc') }}</span>
         </button>
         <button type="button" class="overview-entry" @click="actions.setView('identity')">
-            <span class="overview-entry-kicker">地址身份</span>
-            <strong>{{ formatNumber(model.addressRows.length) }} 个地址</strong>
-            <span>管理地址、标签、凭证、分享包和账号归属。</span>
+            <span class="overview-entry-kicker">{{ t('identityKicker') }}</span>
+            <strong>{{ t('addressCount', { count: formatNumber(model.addressRows.length) }) }}</strong>
+            <span>{{ t('identityDesc') }}</span>
         </button>
         <button type="button" class="overview-entry" @click="actions.setView('ops')">
-            <span class="overview-entry-kicker">运行维护</span>
-            <strong>{{ model.blockingLoadErrors.length ? '需复核' : model.workerStatusLabel }}</strong>
-            <span>查看 Worker、D1、KV、DB 版本和后台接口状态。</span>
+            <span class="overview-entry-kicker">{{ t('opsKicker') }}</span>
+            <strong>{{ model.blockingLoadErrors.length ? t('needsReview') : model.workerStatusLabel }}</strong>
+            <span>{{ t('opsDesc') }}</span>
         </button>
     </div>
 
@@ -43,12 +48,12 @@ defineProps({
             </div>
             <div class="table-wrap">
                 <table>
-                    <caption class="sr-only">{{ panel.title }} 数据表</caption>
+                    <caption class="sr-only">{{ t('tableCaption', { title: panel.title }) }}</caption>
                     <thead>
                         <tr>
-                            <th v-for="column in panel.columns" :key="column.label"
+                            <th v-for="column in panel.columns" :key="column.labelKey"
                                 :class="{ num: column.type === 'number' }">
-                                {{ column.label }}
+                                {{ tCol(column.labelKey) }}
                             </th>
                         </tr>
                     </thead>
@@ -58,7 +63,7 @@ defineProps({
                             :class="{ 'is-selected': actions.isSelected(panel.kind, row) }"
                             @click="actions.selectRow(panel.kind, row.id)"
                             @keydown="actions.handleRowKey($event, panel.kind, row)">
-                            <td v-for="column in panel.columns" :key="column.label"
+                            <td v-for="column in panel.columns" :key="column.labelKey"
                                 :class="{ num: column.type === 'number' }">
                                 <template v-if="column.type === 'entity'">
                                     <div class="cell-main">
@@ -68,39 +73,41 @@ defineProps({
                                             <span v-for="tag in row[column.tags]" :key="tag" class="tag">{{ tag }}</span>
                                         </span>
                                         <span v-if="panel.kind === 'identity' && column.main === 'address'" class="cell-actions">
-                                            <button type="button" @click.stop="actions.openMailFromAddress(row.address)">查看收件</button>
-                                            <button type="button" @click.stop="actions.copyText(row.address)">复制</button>
-                                            <button type="button" @click.stop="actions.openSharePackage(row)">分享</button>
+                                            <button type="button" @click.stop="actions.openMailFromAddress(row.address)">{{ t('viewMail') }}</button>
+                                            <button type="button" @click.stop="actions.copyText(row.address)">{{ t('copy') }}</button>
+                                            <button type="button" @click.stop="actions.openSharePackage(row)">{{ t('share') }}</button>
                                         </span>
                                     </div>
                                 </template>
+                                <!-- Prefer the row's explicit tone; the text heuristic is
+                                     only a fallback for rows not yet migrated. -->
                                 <span v-else-if="column.type === 'status'" class="status"
-                                    :class="statusClass(row[column.key])">
+                                    :class="statusClass(row[`${column.key}Tone`] || row[column.key])">
                                     {{ cellText(row, column.key) }}
                                 </span>
                                 <span v-else-if="column.type === 'domainActions'" class="cell-actions domain-actions">
                                     <button v-if="row.receiveMode === 'cloudflare_email'" type="button"
                                         :disabled="!row.sourceId || !!model.actionBusy"
                                         @click.stop="actions.handleDomainRowAction(row, 'cloudflare-setup')">
-                                        自动配置
+                                        {{ t('autoSetup') }}
                                     </button>
                                     <button type="button" :disabled="!row.sourceId || !!model.actionBusy"
                                         @click.stop="actions.handleDomainRowAction(row, 'verify-start')">
-                                        开始验证
+                                        {{ t('startVerify') }}
                                     </button>
                                     <button type="button"
                                         :disabled="!row.sourceId || !row.verificationAddress || !!model.actionBusy"
                                         @click.stop="actions.handleDomainRowAction(row, 'verify-check')">
-                                        检查验证
+                                        {{ t('checkVerify') }}
                                     </button>
                                     <button type="button" :disabled="!row.sourceId || !!model.actionBusy"
                                         @click.stop="actions.handleDomainRowAction(row, 'verify')">
-                                        检查路由
+                                        {{ t('checkRouting') }}
                                     </button>
-                                    <button v-if="row.enabled === '启用'" type="button"
+                                    <button v-if="row.isEnabled" type="button"
                                         :disabled="!row.sourceId || !!model.actionBusy"
                                         @click.stop="actions.handleDomainRowAction(row, 'domain-disable')">
-                                        停用
+                                        {{ t('disable') }}
                                     </button>
                                 </span>
                                 <strong v-else-if="column.type === 'strong'">{{ cellText(row, column.key) }}</strong>
@@ -115,7 +122,7 @@ defineProps({
                         </tr>
                         <tr v-if="panel.rows.length === 0">
                             <td :colspan="panel.columns.length">
-                                <AdminEmptyState :action-label="model.hasActiveFilters ? '清除筛选' : ''"
+                                <AdminEmptyState :action-label="model.hasActiveFilters ? t('clearFilters') : ''"
                                     @action="actions.handleAction('reset-filters')" />
                             </td>
                         </tr>
@@ -127,15 +134,15 @@ defineProps({
         <section v-if="model.activeView === 'identity'" class="panel third">
             <div class="panel-head">
                 <div>
-                    <h2>固定凭证链接</h2>
+                    <h2>{{ t('fixedCredentialLink') }}</h2>
                 </div>
             </div>
             <div class="inner-pad">
                 <dl class="kv">
-                    <dt>当前策略</dt><dd>credential_version 校验</dd>
-                    <dt>显示方式</dt><dd>管理员确认后展示一次</dd>
-                    <dt>泄露处理</dt><dd>轮换后旧链接立即失效</dd>
-                    <dt>审计</dt><dd>show / rotate / revoke 均写入事件</dd>
+                    <dt>{{ t('currentPolicy') }}</dt><dd>{{ t('currentPolicyValue') }}</dd>
+                    <dt>{{ t('displayMode') }}</dt><dd>{{ t('displayModeValue') }}</dd>
+                    <dt>{{ t('leakHandling') }}</dt><dd>{{ t('leakHandlingValue') }}</dd>
+                    <dt>{{ t('audit') }}</dt><dd>{{ t('auditValue') }}</dd>
                 </dl>
             </div>
         </section>
@@ -143,7 +150,7 @@ defineProps({
         <section v-if="model.activeView === 'routing'" class="panel split">
             <div class="panel-head">
                 <div>
-                    <h2>配置检查</h2>
+                    <h2>{{ t('configCheck') }}</h2>
                 </div>
             </div>
             <div class="inner-pad timeline">
@@ -158,15 +165,15 @@ defineProps({
         <section v-if="model.activeView === 'delivery'" class="panel third">
             <div class="panel-head">
                 <div>
-                    <h2>内容处理</h2>
+                    <h2>{{ t('contentProcessing') }}</h2>
                 </div>
             </div>
             <div class="inner-pad">
                 <dl class="kv">
-                    <dt>AI 提取</dt><dd><span class="status warn">灰度中</span></dd>
-                    <dt>HTML 预览</dt><dd><span class="status ok">隔离渲染</span></dd>
-                    <dt>附件转存</dt><dd><span class="status warn">仅展示入口</span></dd>
-                    <dt>自动回复</dt><dd><span class="status warn">暂未执行生产写入</span></dd>
+                    <dt>{{ t('aiExtract') }}</dt><dd><span class="status warn">{{ t('aiExtractValue') }}</span></dd>
+                    <dt>{{ t('htmlPreview') }}</dt><dd><span class="status ok">{{ t('htmlPreviewValue') }}</span></dd>
+                    <dt>{{ t('attachmentTransfer') }}</dt><dd><span class="status warn">{{ t('attachmentTransferValue') }}</span></dd>
+                    <dt>{{ t('autoReply') }}</dt><dd><span class="status warn">{{ t('autoReplyValue') }}</span></dd>
                 </dl>
             </div>
         </section>

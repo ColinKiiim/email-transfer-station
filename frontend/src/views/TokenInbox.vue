@@ -26,11 +26,11 @@ const token = computed(() => {
 })
 
 const title = computed(() => label.value || address.value || t('mailbox'))
-const identityLabel = computed(() => address.value || '共享收件箱')
+const identityLabel = computed(() => address.value || t('mailbox'))
 const statusLabel = computed(() => {
-  if (resolving.value) return '验证中'
-  if (errorText.value) return '无效链接'
-  return shareJwt.value ? '只读分享' : '等待验证'
+  if (resolving.value) return t('verifying')
+  if (errorText.value) return t('invalidLink')
+  return shareJwt.value ? t('readOnlyShare') : t('awaitingVerification')
 })
 const statusTone = computed(() => errorText.value ? 'error' : (shareJwt.value ? 'success' : 'warning'))
 
@@ -42,6 +42,12 @@ const resolveToken = async () => {
     address.value = ''
     label.value = ''
     const res = await api.fetch(`/open_api/share/${encodeURIComponent(token.value || '')}`)
+    // A 2xx response carrying no `jwt` is not success. Without this the three
+    // template branches (resolving / error / inbox) are all false and the page
+    // renders an entirely blank pane with no explanation — reproducible whenever
+    // something upstream answers 200 with the SPA shell instead of the API, e.g.
+    // a misconfigured Pages BACKEND binding.
+    if (!res?.jwt) throw new Error(t('invalidToken'))
     shareJwt.value = res.jwt
     address.value = res.address
     label.value = res.label || ''
@@ -80,15 +86,15 @@ onMounted(resolveToken)
     :title="title"
     kicker="shared mailbox access"
     :identity-label="identityLabel"
-    identity-meta="通过分享 token 只读访问"
+    :identity-meta="t('identityMeta')"
     :status-label="statusLabel"
     :status-tone="statusTone"
   >
     <template #rail-footer>
       <div class="share-summary">
-        <span>访问模式</span>
+        <span>{{ t('accessMode') }}</span>
         <strong>Read only</strong>
-        <p>可阅读邮件和附件；不能删除、发送或管理地址。</p>
+        <p>{{ t('accessModeDesc') }}</p>
       </div>
     </template>
 
@@ -101,25 +107,25 @@ onMounted(resolveToken)
       <h2>{{ t('invalidToken') }}</h2>
       <p>{{ errorText }}</p>
       <div class="token-next-steps">
-        <strong>这个分享链接可能已经过期、被撤销，或复制不完整。</strong>
+        <strong>{{ t('errorHint') }}</strong>
         <ul>
-          <li>请确认链接来自地址管理员。</li>
-          <li>如果你本来拥有账号，可以进入用户入口查看已绑定地址。</li>
-          <li>如果这是临时协作链接，请让分享者重新生成访问包。</li>
+          <li>{{ t('errorHintAdmin') }}</li>
+          <li>{{ t('errorHintUser') }}</li>
+          <li>{{ t('errorHintTemporary') }}</li>
         </ul>
       </div>
       <div class="token-actions">
-        <n-button tertiary type="primary" @click="resolveToken">重新验证</n-button>
-        <n-button tag="a" :href="userPath" tertiary>进入用户入口</n-button>
-        <n-button tag="a" :href="homePath" tertiary>返回首页</n-button>
+        <n-button tertiary type="primary" @click="resolveToken">{{ t('retryVerify') }}</n-button>
+        <n-button tag="a" :href="userPath" tertiary>{{ t('goToUserPortal') }}</n-button>
+        <n-button tag="a" :href="homePath" tertiary>{{ t('backToHome') }}</n-button>
       </div>
     </section>
 
     <AccessMailWorkbench
       v-else-if="shareJwt"
       :key="mailBoxKey"
-      title="共享收件箱"
-      description="这是只读访问视图，风格与管理台一致，但不会暴露地址管理或写入操作。"
+      :title="t('mailbox')"
+      :description="t('workbenchDescription')"
       :show-e-mail-to="false"
       :show-reply="false"
       :show-save-s3="false"
@@ -127,6 +133,17 @@ onMounted(resolveToken)
       :fetch-mail-data="fetchMailData"
       :update-mail-read-state="updateMailReadState"
     />
+
+    <!-- Belt and braces: even if some future state escapes the three branches
+         above, the recipient sees an explanation and a way forward rather than
+         an empty page. -->
+    <section v-else class="token-state-card is-error">
+      <h2>{{ t('invalidToken') }}</h2>
+      <div class="token-actions">
+        <n-button tertiary type="primary" @click="resolveToken">{{ t('retryVerify') }}</n-button>
+        <n-button tag="a" :href="homePath" tertiary>{{ t('backToHome') }}</n-button>
+      </div>
+    </section>
   </AccessShell>
 </template>
 
@@ -135,29 +152,26 @@ onMounted(resolveToken)
 .token-state-card {
   min-width: 0;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow:
-    0 0 0 1px rgba(15, 23, 42, 0.06),
-    0 1px 2px -1px rgba(15, 23, 42, 0.08),
-    0 16px 48px -34px rgba(15, 23, 42, 0.48);
+  background: var(--ets-surface);
+  box-shadow: var(--ets-shadow-card);
 }
 
 .share-summary {
   display: grid;
   gap: 3px;
   padding: 12px;
-  background: #f8fafc;
+  background: var(--ets-surface-alt);
 }
 
 .share-summary span,
 .token-state-card span {
-  color: #64748b;
+  color: var(--ets-text-muted);
   font-size: 12px;
   font-weight: 650;
 }
 
 .share-summary strong {
-  color: #0f172a;
+  color: var(--ets-text);
   font-size: 14px;
   font-weight: 760;
 }
@@ -165,7 +179,7 @@ onMounted(resolveToken)
 .share-summary p,
 .token-state-card p {
   margin: 0;
-  color: #64748b;
+  color: var(--ets-text-muted);
   font-size: 12px;
   line-height: 1.45;
   text-wrap: pretty;
@@ -181,7 +195,7 @@ onMounted(resolveToken)
 
 .token-state-card h2 {
   margin: 0;
-  color: #020617;
+  color: var(--ets-text-strong);
   font-size: 22px;
   font-weight: 760;
   line-height: 1.2;
@@ -189,7 +203,7 @@ onMounted(resolveToken)
 }
 
 .token-state-card.is-error {
-  background: #fff7f7;
+  background: var(--ets-danger-soft);
 }
 
 .token-next-steps {
@@ -197,18 +211,18 @@ onMounted(resolveToken)
   gap: 8px;
   border-radius: 8px;
   padding: 12px;
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--ets-surface-alt);
 }
 
 .token-next-steps strong {
-  color: #991b1b;
+  color: var(--ets-danger);
   font-size: 14px;
 }
 
 .token-next-steps ul {
   margin: 0;
   padding-left: 18px;
-  color: #64748b;
+  color: var(--ets-text-muted);
   font-size: 13px;
   line-height: 1.55;
 }

@@ -1,3 +1,7 @@
+import { adminT } from './admin-i18n'
+
+const t = adminT('admin.format')
+
 export const queryValue = (value, fallback = '') => {
     const text = Array.isArray(value) ? value[0] : value
     return text == null || text === '' ? fallback : String(text)
@@ -23,17 +27,35 @@ export const modeLabel = (mode) => {
 
 export const setupLabel = (status) => {
     const labels = {
-        active: '已验证',
-        pending_verification: '需验证',
-        draft: '草稿',
-        error: '失败',
-        disabled: '停用',
+        active: t('setupVerified'),
+        pending_verification: t('setupPendingVerification'),
+        draft: t('setupDraft'),
+        error: t('setupError'),
+        disabled: t('setupDisabled'),
     }
-    return labels[status] || status || '需复核'
+    return labels[status] || status || t('setupUnknown')
 }
 
+/**
+ * The four presentation tones a status badge can take.
+ *
+ * Rows should carry one of these directly (`row.<field>Tone`) rather than
+ * relying on `statusClass` to guess from display text — see below.
+ */
+export const TONES = ['ok', 'warn', 'danger', 'neutral']
+
+/**
+ * Resolve a badge tone.
+ *
+ * Prefer passing a tone from `TONES`, which is returned unchanged. The text
+ * heuristic below is a fallback for rows that have not been migrated yet, and
+ * it is inherently fragile: it derives colour by matching the *localised*
+ * display string, so a translated status silently degrades to `neutral`. Any
+ * new row builder must emit an explicit tone instead of depending on it.
+ */
 export const statusClass = (value) => {
     const text = String(value || '')
+    if (TONES.includes(text)) return text
     if (/失败|撤销|异常|删除|危险|阻止|未知地址|停用|关闭|denied|failed|revoked/i.test(text)) return 'danger'
     if (/待|需|观察|警告|复核|灰度|规划|巡检|设计|pending|draft|expired|skipped/i.test(text)) return 'warn'
     if (/可用|启用|活跃|成功|已保存|已验证|正常|通过|默认|active|success|ok/i.test(text)) return 'ok'
@@ -92,7 +114,7 @@ export const compactRaw = (raw) => {
         .join('\n\n')
         .replace(/\s+/g, ' ')
         .trim()
-    return text ? text.slice(0, 240) : '邮件正文会在详情页通过安全渲染策略呈现。'
+    return text ? text.slice(0, 240) : t('bodyRenderNotice')
 }
 
 export const normalizedAttachments = (value) => {
@@ -108,23 +130,23 @@ export const normalizedAttachments = (value) => {
 
 export const formatAttachmentCount = (value) => {
     const count = Number(value || 0)
-    return count > 0 ? `${count} 个附件` : '无附件'
+    return count > 0 ? t('attachmentCount', { count }) : t('noAttachment')
 }
 
 export const mailRenderLabel = (row) => {
-    if (row?.html) return 'HTML 已隔离渲染'
-    if (row?.text) return '纯文本'
-    if (row?.parseStatus === 'parsed') return '已解析'
-    return '仅原始邮件'
+    if (row?.html) return t('renderHtmlIsolated')
+    if (row?.text) return t('renderPlainText')
+    if (row?.parseStatus === 'parsed') return t('renderParsed')
+    return t('renderRawOnly')
 }
 
 export const adminMailCacheKey = (row) => row?.sourceId ? String(row.sourceId) : row?.id || ''
 
 export const formatAddressCredential = (address, jwt, password = '', origin = '') => [
-    `地址: ${address}`,
+    t('credentialAddress', { address }),
     jwt ? `JWT: ${jwt}` : '',
-    jwt ? `登录链接: ${origin}/?jwt=${encodeURIComponent(jwt)}` : '',
-    password ? `地址密码: ${password}` : '',
+    jwt ? t('credentialLoginLink', { link: `${origin}/?jwt=${encodeURIComponent(jwt)}` }) : '',
+    password ? t('credentialPassword', { password }) : '',
 ].filter(Boolean).join('\n')
 
 export const toD1DateTime = (value) => {

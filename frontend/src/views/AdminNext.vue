@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useHead } from '@unhead/vue'
+import { useScopedI18n } from '@/i18n/app'
 import { useRoute, useRouter } from 'vue-router'
 
 import { api } from '../api'
@@ -52,15 +53,15 @@ import {
     getDomain,
 } from '../admin/admin-formatters'
 import {
-    ROADMAP_ROWS as roadmapRows,
     SIDEBAR_COLLAPSED_KEY,
-    STATIC_RISKS as staticRisks,
     TABLE_SPECS as tableSpecs,
     VIEW_META as viewMeta,
 } from '../admin/admin-view-config'
 
 const route = useRoute()
 const router = useRouter()
+const { t: tNav } = useScopedI18n('admin.nav')
+const { t } = useScopedI18n('admin.console')
 
 const {
     adminAuth,
@@ -93,7 +94,6 @@ const ui = reactive({
         delivery: 'notify-mailhook',
         access: 'risk-html',
         ops: 'worker',
-        roadmap: 'road-mobile',
         logs: '',
         users: '',
         audit: '',
@@ -190,23 +190,23 @@ const sidebarCollapsed = ref(
 
 const activeView = computed(() => viewMeta[ui.view] ? ui.view : 'overview')
 const activeMeta = computed(() => viewMeta[activeView.value])
-const pageTitle = computed(() => `${activeMeta.value.title} · Email Transfer Station`)
+const pageTitle = computed(() => `${tNav(activeView.value)} · Email Transfer Station`)
 const detailContext = computed(() => ui.detailKind || activeView.value)
 const workerStatusLabel = computed(() => {
-    if (!showAdminPage.value) return '需登录'
+    if (!showAdminPage.value) return t('signInRequired')
     const database = live.workerConfig?.DIAGNOSTICS?.database
-    if (!live.workerConfig) return live.fetchedAdmin ? '未知' : '待同步'
-    return database?.ok === false ? '需巡检' : '可用'
+    if (!live.workerConfig) return live.fetchedAdmin ? t('unknown') : t('pendingSync')
+    return database?.ok === false ? t('needsInspection') : t('available')
 })
 const dbVersionLabel = computed(() => {
-    if (!showAdminPage.value) return '需登录'
-    return live.dbVersion?.code_db_version || live.workerConfig?.DIAGNOSTICS?.database?.code_version || '未知'
+    if (!showAdminPage.value) return t('signInRequired')
+    return live.dbVersion?.code_db_version || live.workerConfig?.DIAGNOSTICS?.database?.code_version || t('unknown')
 })
 const syncLabel = computed(() => {
-    if (ui.syncing) return '同步中'
-    if (!showAdminPage.value) return '公开设置'
-    if (blockingLoadErrors.value.length) return '同步部分失败'
-    return live.lastSynced ? `已同步 ${live.lastSynced}` : '待同步'
+    if (ui.syncing) return t('syncing')
+    if (!showAdminPage.value) return t('publicSettings')
+    if (blockingLoadErrors.value.length) return t('syncPartiallyFailed')
+    return live.lastSynced ? t('syncedAt', { time: live.lastSynced }) : t('pendingSync')
 })
 
 useHead({
@@ -280,12 +280,30 @@ const fetchAdminData = async () => {
     live.lastSynced = new Date().toLocaleTimeString('zh-CN', { hour12: false })
 }
 
+/*
+ * Public and user-level settings must be fetched before the admin gate is
+ * evaluated, not after.
+ *
+ * `showAdminPage` is true when `adminAuth` is set, OR `userSettings.is_admin`,
+ * OR `openSettings.disableAdminPasswordCheck`. Those last two only become known
+ * by fetching — and the fetch used to sit behind an early return that required
+ * `showAdminPage` to already be true. A user whose admin rights come from
+ * ADMIN_USER_ROLE could therefore never enter the console: the data proving
+ * they may enter was only loaded once they had entered.
+ *
+ * Neither endpoint needs an admin session, so fetching them unconditionally is
+ * safe and costs one request each per page load.
+ */
+const loadGateSettings = async () => {
+    if (!openSettings.value.fetched) await api.getOpenSettings(adminMessageSink, adminNotificationSink)
+    if (!userSettings.value.fetched) await api.getUserSettings(adminMessageSink)
+}
+
 const refreshAll = async () => {
     ui.syncing = true
     try {
+        await loadGateSettings()
         if (!showAdminPage.value || showAdminAuth.value) return
-        if (!openSettings.value.fetched) await api.getOpenSettings(adminMessageSink, adminNotificationSink)
-        if (!userSettings.value.fetched) await api.getUserSettings(adminMessageSink)
         await fetchAdminData()
     } finally {
         ui.syncing = false
@@ -421,26 +439,27 @@ const pageLoadErrors = computed(() => {
 const navBadges = computed(() => ({
     overview: null,
     mails: explicitUnreadMailCount.value > 0
-        ? { value: explicitUnreadMailCount.value, label: `${formatNumber(explicitUnreadMailCount.value)} 封未读` }
+        ? { value: explicitUnreadMailCount.value, label: t('unreadCount', { count: formatNumber(explicitUnreadMailCount.value) }) }
         : null,
     addresses: null,
     domains: null,
     delivery: null,
     access: null,
-    ops: blockingLoadErrors.value.length > 0 ? { dot: true, label: '部分后台接口暂不可用' } : null,
-    roadmap: null,
+    ops: blockingLoadErrors.value.length > 0 ? { dot: true, label: t('backendPartiallyUnavailable') } : null,
 }))
 const activeStatusOptions = computed(() => {
+    // Values are the stable filter keys from FLOW_STATUS_OPTIONS (they end up in
+    // the URL query); only `label` is user-facing and translatable.
     if (activeView.value === 'flow') return [
-        { value: 'all', label: '全部状态' },
-        { value: '未读', label: '未读' },
-        { value: '已读', label: '已读' },
-        { value: 'attachment', label: '有附件' },
-        { value: '已保存', label: '已保存' },
-        { value: '未知地址', label: '未知地址' },
+        { value: 'all', label: t('statusAll') },
+        { value: 'unread', label: t('statusUnread') },
+        { value: 'read', label: t('statusRead') },
+        { value: 'attachment', label: t('statusAttachment') },
+        { value: 'saved', label: t('statusSaved') },
+        { value: 'unknown', label: t('statusUnknownAddress') },
     ]
     if (activeView.value === 'access') return [
-        { value: 'all', label: '全部状态' },
+        { value: 'all', label: t('statusAll') },
         { value: 'active', label: 'active' },
         { value: 'success', label: 'success' },
     ]
@@ -523,51 +542,48 @@ const activePanels = computed(() => {
     const view = activeView.value
     if (view === 'overview') {
         return [
-            { id: 'domains', title: '入口状态', columns: tableSpecs.domains, rows: filterRows(domainRows.value), kind: 'routing', layout: 'split' },
-            { id: 'logs', title: '最近处理', columns: tableSpecs.logs, rows: filterRows(processingRows.value), kind: 'logs' },
+            { id: 'domains', title: t('panelEntryStatus'), columns: tableSpecs.domains, rows: filterRows(domainRows.value), kind: 'routing', layout: 'split' },
+            { id: 'logs', title: t('panelRecentProcessing'), columns: tableSpecs.logs, rows: filterRows(processingRows.value), kind: 'logs' },
         ]
     }
     if (view === 'flow') {
         return [
-            { id: 'mails', title: '邮件记录', columns: tableSpecs.mails, rows: filterRows(mailRows.value), kind: 'flow', layout: 'split' },
-            { id: 'unknown', title: '异常队列', columns: tableSpecs.risks, rows: filterRows(unknownRows.value), kind: 'access', layout: 'split' },
-            { id: 'logs', title: '处理日志', columns: tableSpecs.logs, rows: filterRows(processingRows.value), kind: 'logs' },
+            { id: 'mails', title: t('panelMailRecords'), columns: tableSpecs.mails, rows: filterRows(mailRows.value), kind: 'flow', layout: 'split' },
+            { id: 'unknown', title: t('panelExceptionQueue'), columns: tableSpecs.risks, rows: filterRows(unknownRows.value), kind: 'access', layout: 'split' },
+            { id: 'logs', title: t('panelProcessingLogs'), columns: tableSpecs.logs, rows: filterRows(processingRows.value), kind: 'logs' },
         ]
     }
     if (view === 'identity') {
         return [
-            { id: 'addresses', title: '地址账本', columns: tableSpecs.addresses, rows: filterRows(addressRows.value), kind: 'identity' },
-            { id: 'users', title: '用户与角色', columns: tableSpecs.users, rows: filterRows(userRows.value), kind: 'users', layout: 'third' },
+            { id: 'addresses', title: t('panelAddressLedger'), columns: tableSpecs.addresses, rows: filterRows(addressRows.value), kind: 'identity' },
+            { id: 'users', title: t('panelUsersAndRoles'), columns: tableSpecs.users, rows: filterRows(userRows.value), kind: 'users', layout: 'third' },
         ]
     }
     if (view === 'routing') {
         return [
-            { id: 'domains', title: '域名与接收方式', columns: tableSpecs.routing, rows: filterRows(domainRows.value), kind: 'routing' },
-            { id: 'destinations', title: '转发目的地', columns: tableSpecs.destinations, rows: filterRows(routeRows.value), kind: 'routing', layout: 'split' },
+            { id: 'domains', title: t('panelDomainsAndReceiveModes'), columns: tableSpecs.routing, rows: filterRows(domainRows.value), kind: 'routing' },
+            { id: 'destinations', title: t('panelForwardDestinations'), columns: tableSpecs.destinations, rows: filterRows(routeRows.value), kind: 'routing', layout: 'split' },
         ]
     }
     if (view === 'delivery') {
         return [
-            { id: 'channels', title: '出站与通知通道', columns: tableSpecs.notifications, rows: filterRows(notificationRows.value), kind: 'delivery' },
-            { id: 'sender', title: '地址级发送', columns: tableSpecs.sender, rows: filterRows(senderAccessRows.value), kind: 'delivery', layout: 'third' },
-            { id: 'sendbox', title: '发送箱', columns: tableSpecs.mails, rows: filterRows(sendBoxRows.value), kind: 'delivery', layout: 'third' },
+            { id: 'channels', title: t('panelOutboundChannels'), columns: tableSpecs.notifications, rows: filterRows(notificationRows.value), kind: 'delivery' },
+            { id: 'sender', title: t('panelAddressLevelSending'), columns: tableSpecs.sender, rows: filterRows(senderAccessRows.value), kind: 'delivery', layout: 'third' },
+            { id: 'sendbox', title: t('panelSendBox'), columns: tableSpecs.mails, rows: filterRows(sendBoxRows.value), kind: 'delivery', layout: 'third' },
         ]
     }
     if (view === 'access') {
         return [
-            { id: 'shares', title: '访问包', columns: tableSpecs.shares, rows: filterRows(shareRows.value), kind: 'access', layout: 'split' },
-            { id: 'risks', title: '审阅风险', columns: tableSpecs.risks, rows: filterRows(staticRisks), kind: 'access', layout: 'split' },
-            { id: 'audit', title: '审计与访问日志', columns: tableSpecs.audit, rows: filterRows(auditRows.value), kind: 'audit' },
+            { id: 'shares', title: t('panelAccessPackages'), columns: tableSpecs.shares, rows: filterRows(shareRows.value), kind: 'access', layout: 'split' },
+            { id: 'audit', title: t('panelAuditAndAccessLogs'), columns: tableSpecs.audit, rows: filterRows(auditRows.value), kind: 'audit' },
         ]
     }
     if (view === 'ops') {
         return [
-            { id: 'ops', title: '运行维护', columns: tableSpecs.ops, rows: filterRows(opsRows.value), kind: 'ops' },
+            { id: 'ops', title: t('panelOperations'), columns: tableSpecs.ops, rows: filterRows(opsRows.value), kind: 'ops' },
         ]
     }
-    return [
-        { id: 'roadmap', title: '能力路线', columns: tableSpecs.roadmap, rows: filterRows(roadmapRows), kind: 'roadmap' },
-    ]
+    return []
 })
 
 const selectRow = (kind, id) => {
@@ -595,7 +611,7 @@ const selectRow = (kind, id) => {
     if (activeView.value === 'flow' && (kind === 'flow' || kind === 'exception')) {
         ui.detailKind = kind
         detailOpen.value = false
-    } else if (['flow', 'exception', 'identity', 'routing', 'delivery', 'ops', 'roadmap'].includes(kind)) {
+    } else if (['flow', 'exception', 'identity', 'routing', 'delivery', 'ops'].includes(kind)) {
         ui.detailKind = kind
         detailOpen.value = true
     }
@@ -696,41 +712,41 @@ const {
 const toolbarActions = computed(() => {
     const view = activeView.value
     if (view === 'flow') return [
-        { label: '保留选择刷新', icon: 'refresh', action: 'refresh' },
-        { label: '复制收件地址', icon: 'copy', action: 'copy' },
-        { label: '批量删除', icon: 'check', action: 'delete', danger: true },
+        { label: t('actionRefreshKeepSelection'), icon: 'refresh', action: 'refresh' },
+        { label: t('actionCopyRecipientAddress'), icon: 'copy', action: 'copy' },
+        { label: t('actionBulkDelete'), icon: 'check', action: 'delete', danger: true },
     ]
     if (view === 'identity') return [
-        { label: '新增地址', icon: 'plus', modal: 'new-address', primary: true },
-        { label: '复制当前地址', icon: 'copy', action: 'copy' },
-        { label: '显示凭证', icon: 'lock', action: 'show-credential' },
-        { label: '轮换凭证', icon: 'refresh', action: 'rotate' },
-        { label: '撤销访问包', icon: 'lock', action: 'revoke' },
-        { label: '清空收件', icon: 'check', action: 'clear-inbox', danger: true },
-        { label: '删除地址', icon: 'check', action: 'delete-address', danger: true },
+        { label: t('actionNewAddress'), icon: 'plus', modal: 'new-address', primary: true },
+        { label: t('actionCopyCurrentAddress'), icon: 'copy', action: 'copy' },
+        { label: t('actionShowCredential'), icon: 'lock', action: 'show-credential' },
+        { label: t('actionRotateCredential'), icon: 'refresh', action: 'rotate' },
+        { label: t('actionRevokeAccessPackage'), icon: 'lock', action: 'revoke' },
+        { label: t('actionClearInbox'), icon: 'check', action: 'clear-inbox', danger: true },
+        { label: t('actionDeleteAddress'), icon: 'check', action: 'delete-address', danger: true },
     ]
     if (view === 'routing') return [
-        { label: '新增域名', icon: 'plus', action: 'new-domain' },
+        { label: t('actionNewDomain'), icon: 'plus', action: 'new-domain' },
     ]
     if (view === 'delivery') return [
-        { label: '刷新通道', icon: 'refresh', action: 'refresh' },
+        { label: t('actionRefreshChannels'), icon: 'refresh', action: 'refresh' },
     ]
     if (view === 'access') return []
     if (view === 'ops') return [
-        { label: '健康检查', icon: 'check', action: 'health-check' },
+        { label: t('actionHealthCheck'), icon: 'check', action: 'health-check' },
     ]
     return []
 })
 
 const modalTitle = computed(() => {
     const titles = {
-        'new-address': '新增地址身份',
-        'share-package': '生成访问包',
+        'new-address': t('modalNewAddressIdentity'),
+        'share-package': t('modalGenerateAccessPackage'),
     }
-    return actionModal.value === 'one-time-result' ? oneTimeResult.title : titles[actionModal.value] || '操作'
+    return actionModal.value === 'one-time-result' ? oneTimeResult.title : titles[actionModal.value] || t('modalFallbackTitle')
 })
 
-const modalPrimaryLabel = computed(() => actionModal.value === 'share-package' ? '创建访问包' : '创建地址')
+const modalPrimaryLabel = computed(() => actionModal.value === 'share-package' ? t('modalSubmitAccessPackage') : t('modalSubmitAddress'))
 
 const submitActionModal = async () => {
     if (actionModal.value === 'share-package') {
@@ -750,24 +766,11 @@ const currentRail = computed(() => {
     if (context === 'routing') return buildAdminDomainRail(currentDomain.value)
     if (context === 'delivery') return buildAdminNotificationRail(currentNotification.value)
     if (context === 'ops') return buildAdminOpsRail(opsRows.value)
-    if (context === 'roadmap') {
-        return {
-            title: '移动端兼容准备',
-            subtitle: '现在不做移动版，但不能把结构堵死',
-            tags: ['桌面三栏', '抽屉详情', '底部导航'],
-            kv: [
-                ['桌面结构', '侧栏 + 工作区 + 详情栏'],
-                ['移动映射', '底部导航 + 列表页 + 抽屉详情'],
-                ['当前约束', '预留', 'status'],
-                ['下一步', '稳定模块边界后拆路由文件'],
-            ],
-        }
-    }
+    // No row selected yet: an empty state, not a fabricated alert list.
     return {
-        title: '近期告警',
-        subtitle: '来自审阅和当前运行面',
-        tags: ['P1', 'P2', '路线'],
-        alerts: staticRisks,
+        title: t('railEmptyTitle'),
+        subtitle: t('railEmptySubtitle'),
+        empty: true,
     }
 })
 
@@ -916,10 +919,15 @@ const handleGlobalKeydown = (event) => {
     if (event.key === 'Escape' && detailOpen.value && !actionModal.value && !domainActivationOpen.value) closeDetail()
 }
 
-onMounted(() => {
+onMounted(async () => {
     syncSelectionFromRoute()
-    initializeAdminSession()
     window.addEventListener('keydown', handleGlobalKeydown)
+    // Load the settings the admin gate reads BEFORE evaluating it — see the
+    // comment on loadGateSettings. initializeAdminSession only refreshes admin
+    // data when showAdminPage is already true, so doing it there would keep the
+    // same circular dependency.
+    await loadGateSettings()
+    await initializeAdminSession()
 })
 
 onBeforeUnmount(() => {

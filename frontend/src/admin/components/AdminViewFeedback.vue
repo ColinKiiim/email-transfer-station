@@ -1,4 +1,8 @@
 <script setup>
+import { useScopedI18n } from '@/i18n/app'
+
+const { t } = useScopedI18n('admin.workspace')
+
 defineProps({
     syncing: { type: Boolean, default: false },
     errors: { type: Array, default: () => [] },
@@ -10,14 +14,14 @@ defineEmits(['retry'])
 
 <template>
     <span class="sr-only" role="status" aria-live="polite" aria-atomic="true">
-        {{ syncing ? '后台数据同步中' : '后台数据同步完成' }}
+        {{ syncing ? t('syncing') : t('synced') }}
     </span>
     <div v-if="errors.length && showErrors" class="notice warn" role="alert"
         aria-live="assertive" aria-atomic="true">
-        <strong>后台数据加载失败</strong>
+        <strong>{{ t('loadFailed') }}</strong>
         <span>{{ errors.slice(0, 2).join('；') }}</span>
         <button class="btn" type="button" :disabled="syncing" @click="$emit('retry')">
-            {{ syncing ? '重试中' : '重新同步' }}
+            {{ syncing ? t('retrying') : t('retry') }}
         </button>
     </div>
 </template>

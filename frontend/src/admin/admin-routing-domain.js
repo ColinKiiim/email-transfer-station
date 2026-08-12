@@ -1,4 +1,8 @@
 import { modeLabel, setupLabel } from './admin-formatters'
+import { adminT } from './admin-i18n'
+
+const t = adminT('admin.routing')
+
 
 export const buildAdminDomainRows = ({
     domains = [],
@@ -22,7 +26,11 @@ export const buildAdminDomainRows = ({
                 setupStatus: row.setup_status,
                 mode: modeLabel(row.receive_mode),
                 setup: setupLabel(row.setup_status),
-                enabled: row.enabled ? '启用' : '关闭',
+                enabled: row.enabled ? t('enabled') : t('disabled'),
+                // Semantic companion to `enabled`; every condition and badge
+                // colour keys off these, never off the display string.
+                isEnabled: !!row.enabled,
+                enabledTone: row.enabled ? 'ok' : 'danger',
                 allowRandomSubdomain: !!row.allow_random_subdomain,
                 configVersion: row.config_version,
                 verificationAddress: row.verification_address,
@@ -30,8 +38,8 @@ export const buildAdminDomainRows = ({
                 lastError: row.last_error,
                 canAutoSetupCloudflare: !!row.can_auto_setup_cloudflare,
                 missingRequirements: row.missing_requirements || [],
-                creation: row.allow_address_creation ? '允许创建' : '仅管理员',
-                default: row.is_default ? '默认' : '否',
+                creation: row.allow_address_creation ? t('creationAllowed') : t('creationAdminOnly'),
+                default: row.is_default ? t('defaultYes') : t('defaultNo'),
                 collector: row.collector_address || (row.receive_mode === 'cloudflare_email' ? 'catch-all -> Worker' : '-'),
                 verification: row.verification_address || row.setup_status || '-',
                 auth: row.source === 'env'
@@ -53,10 +61,12 @@ export const buildAdminDomainRows = ({
             label: row.display_label || row.label || row.domain,
             mode: modeLabel(row.receive_mode),
             setup: setupLabel(row.setup_status),
-            enabled: row.enabled === false ? '关闭' : '启用',
+            enabled: row.enabled === false ? t('disabled') : t('enabled'),
+            isEnabled: row.enabled !== false,
+            enabledTone: row.enabled === false ? 'danger' : 'ok',
             allowRandomSubdomain: !!row.allow_random_subdomain,
-            creation: row.allow_address_creation ? '允许创建' : '仅管理员',
-            default: row.is_default ? '默认' : '否',
+            creation: row.allow_address_creation ? t('creationAllowed') : t('creationAdminOnly'),
+            default: row.is_default ? t('defaultYes') : t('defaultNo'),
             collector: row.collector_address || '-',
             verification: row.verification_address || '-',
             verificationAddress: row.verification_address,
@@ -72,11 +82,13 @@ export const buildAdminDomainRows = ({
             domain: row.value,
             label: row.label || row.value,
             mode: 'Worker env registry',
-            setup: '需复核',
-            enabled: '启用',
+            setup: t('setupNeedsReview'),
+            enabled: t('enabled'),
+            isEnabled: true,
+            enabledTone: 'ok',
             allowRandomSubdomain: false,
-            creation: openSettings.defaultDomains?.includes(row.value) ? '允许创建' : '仅管理员',
-            default: openSettings.defaultDomains?.[0] === row.value ? '默认' : '否',
+            creation: openSettings.defaultDomains?.includes(row.value) ? t('creationAllowed') : t('creationAdminOnly'),
+            default: openSettings.defaultDomains?.[0] === row.value ? t('defaultYes') : t('defaultNo'),
             collector: '-',
             verification: '-',
             auth: 'open settings',
@@ -96,16 +108,16 @@ export const buildAdminRouteRows = (domains, mailWebhook) => [
         type: row.mode,
         inUse: row.addresses,
         status: row.enabled,
-        next: String(row.mode).includes('ImprovMX') ? '复核 collector 与 DMARC' : '保持 catch-all 到 Worker',
+        next: String(row.mode).includes('ImprovMX') ? t('nextReviewCollector') : t('nextKeepCatchAll'),
     })),
     {
         id: 'route-hook',
         destination: '/api/admin/mail_webhook/settings',
-        domain: '全部域名',
+        domain: t('allDomains'),
         type: 'Webhook',
         inUse: mailWebhook?.enabled ? 1 : 0,
-        status: mailWebhook?.enabled ? '启用' : '需更新',
-        next: '保存成功门禁未接入前仅显示配置状态',
+        status: mailWebhook?.enabled ? t('enabled') : t('needsUpdate'),
+        next: t('webhookNext'),
     },
 ]
 
@@ -116,38 +128,40 @@ export const buildRoutingActivationRows = (domains, domainAutomation) => {
     const improvmxDomains = domains.filter((row) => (
         row.receiveMode === 'improvmx_forward' || String(row.mode || '').includes('ImprovMX')
     ))
-    const cloudflareReady = cloudflareDomains.some((row) => row.setup === '已验证' || row.setupStatus === 'active')
+    // Semantic status only. Comparing against the localised `setup` label
+    // would silently stop matching as soon as the console is translated.
+    const cloudflareReady = cloudflareDomains.some((row) => row.setupStatus === 'active')
     const improvmxReady = improvmxDomains.some((row) => row.collector && row.collector !== '-')
     const hasPendingVerification = domains.some((row) => row.verificationAddress)
     const hasCloudflareToken = !!domainAutomation?.has_token || domains.some((row) => row.canAutoSetupCloudflare)
     return [
-        { code: '01', title: 'Cloudflare 自动配置', state: hasCloudflareToken ? '可用' : '缺 token', tone: hasCloudflareToken ? 'ok' : 'warn' },
-        { code: '02', title: 'catch-all 到 Worker', state: cloudflareReady ? '已验证' : '待配置', tone: cloudflareReady ? 'ok' : 'warn' },
-        { code: '03', title: 'ImprovMX collector 激活', state: improvmxReady ? '可用' : '待生成', tone: improvmxReady ? 'ok' : 'warn' },
-        { code: '04', title: '验证邮件闭环', state: hasPendingVerification ? '待检查' : '按需生成', tone: hasPendingVerification ? 'warn' : 'ok' },
+        { code: '01', title: t('activationCloudflareAuto'), state: hasCloudflareToken ? t('stateAvailable') : t('stateMissingToken'), tone: hasCloudflareToken ? 'ok' : 'warn' },
+        { code: '02', title: t('activationCatchAll'), state: cloudflareReady ? t('stateVerified') : t('statePendingSetup'), tone: cloudflareReady ? 'ok' : 'warn' },
+        { code: '03', title: t('activationImprovmxCollector'), state: improvmxReady ? t('stateAvailable') : t('statePendingGeneration'), tone: improvmxReady ? 'ok' : 'warn' },
+        { code: '04', title: t('activationVerificationLoop'), state: hasPendingVerification ? t('statePendingCheck') : t('stateOnDemand'), tone: hasPendingVerification ? 'warn' : 'ok' },
     ]
 }
 
 export const buildAdminDomainRail = (domain) => domain ? ({
-    title: '域名详情',
+    title: t('railTitle'),
     subtitle: domain.domain,
     tags: [domain.mode, domain.enabled],
     kv: [
-        ['配置', domain.setup, 'status'],
+        [t('kvSetup'), domain.setup, 'status'],
         ['Collector', domain.collector],
-        ['认证', domain.auth],
-        ['验证', domain.updated],
+        [t('kvAuth'), domain.auth],
+        [t('kvVerification'), domain.updated],
     ],
     actions: [
         {
-            label: domain.receiveMode === 'improvmx_forward' ? 'ImprovMX 指引' : '自动配置 CF',
+            label: domain.receiveMode === 'improvmx_forward' ? t('actionImprovmxGuide') : t('actionCloudflareSetup'),
             action: domain.receiveMode === 'improvmx_forward' ? 'verify-start' : 'cloudflare-setup',
             primary: true,
         },
-        { label: '开始验证', action: 'verify-start' },
-        { label: '检查验证', action: 'verify-check' },
-        { label: '检查路由', action: 'verify' },
-        { label: '停用影响', action: 'domain-impact', danger: true },
-        { label: '停用域名', action: 'domain-disable', danger: true },
+        { label: t('actionVerifyStart'), action: 'verify-start' },
+        { label: t('actionVerifyCheck'), action: 'verify-check' },
+        { label: t('actionVerifyRoute'), action: 'verify' },
+        { label: t('actionDisableImpact'), action: 'domain-impact', danger: true },
+        { label: t('actionDisableDomain'), action: 'domain-disable', danger: true },
     ],
 }) : null

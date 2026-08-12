@@ -22,6 +22,7 @@ const buildHarness = (overrides = {}) => {
         sourceId: 1,
         domain: 'example.test',
         enabled: '启用',
+        isEnabled: true,
         mode: 'Cloudflare Email Routing',
         receiveMode: 'cloudflare_email',
         configVersion: 3,

@@ -1,7 +1,10 @@
 <script setup>
 import { ref } from 'vue'
+import { useScopedI18n } from '@/i18n/app'
 
 import Turnstile from '../../components/Turnstile.vue'
+
+const { t } = useScopedI18n('admin.login')
 
 const account = defineModel('account', { type: String, default: '' })
 const password = defineModel('password', { type: String, default: '' })
@@ -15,8 +18,11 @@ defineProps({
 const emit = defineEmits(['submit'])
 const turnstile = ref(null)
 
+// The caller (useAdminSession) invokes `refresh`; expose both names so a
+// rename on either side cannot silently disable the widget reset again.
 defineExpose({
-    reset: () => turnstile.value?.reset?.(),
+    refresh: () => turnstile.value?.refresh?.(),
+    reset: () => turnstile.value?.refresh?.(),
 })
 </script>
 
@@ -34,22 +40,22 @@ defineExpose({
             </div>
             <form class="login-card" @submit.prevent="emit('submit')">
                 <div class="login-copy">
-                    <h1 id="admin-auth-title">管理员登录</h1>
+                    <h1 id="admin-auth-title">{{ t('title') }}</h1>
                 </div>
                 <div class="form-grid">
                     <label class="form-field full">
-                        <span>管理员账号</span>
+                        <span>{{ t('account') }}</span>
                         <input v-model="account" class="field" type="text" autocomplete="username"
                             autocapitalize="none" spellcheck="false" />
                     </label>
                     <label class="form-field full">
-                        <span>密码</span>
+                        <span>{{ t('password') }}</span>
                         <input v-model="password" class="field" type="password" autocomplete="current-password" />
                     </label>
                 </div>
                 <Turnstile ref="turnstile" v-if="openSettings.enableGlobalTurnstileCheck" v-model:value="cfToken" />
                 <button class="btn primary login-submit" type="submit" :disabled="loading">
-                    {{ loading ? '登录中' : '登录' }}
+                    {{ loading ? t('submitting') : t('submit') }}
                 </button>
             </form>
         </div>

@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from 'vue'
+import { useScopedI18n } from '@/i18n/app'
 
 import MailContentRenderer from '../../components/MailContentRenderer.vue'
 import { formatNumber, statusClass } from '../admin-formatters'
@@ -10,6 +11,7 @@ defineProps({
     actions: { type: Object, required: true },
 })
 
+const { t } = useScopedI18n('admin.mailView')
 const mailList = ref(null)
 
 defineExpose({
@@ -19,15 +21,15 @@ defineExpose({
 
 <template>
     <div class="mail-workbench" :class="`flow-mode-${model.ui.flowMode}`"
-        :style="model.mailGridStyle" aria-label="收件流工作台">
-        <aside class="mail-facets" aria-label="收件流筛选">
+        :style="model.mailGridStyle" :aria-label="t('workbenchLabel')">
+        <aside class="mail-facets" :aria-label="t('facetsLabel')">
             <div class="facet-card">
                 <div class="facet-title">
-                    <strong>队列</strong>
-                    <span class="help-tip" data-tip="常规邮件、未知收件人和渲染风险归在同一条收件链路里。" tabindex="0" aria-label="说明">?</span>
+                    <strong>{{ t('queues') }}</strong>
+                    <span class="help-tip" :data-tip="t('queueTip')" tabindex="0" :aria-label="t('helpTip')">?</span>
                     <button type="button" class="facet-mini-action mobile-only"
                         @click="model.ui.flowMode = 'list'; actions.syncMailQueryToRoute({ mode: undefined })">
-                        返回列表
+                        {{ t('backToList') }}
                     </button>
                 </div>
                 <button v-for="queue in model.mailHierarchy.queues" :key="queue.id" class="facet-row"
@@ -40,12 +42,12 @@ defineExpose({
 
             <div class="facet-card">
                 <div class="facet-title">
-                    <strong>邮箱</strong>
+                    <strong>{{ t('mailboxes') }}</strong>
                 </div>
                 <div class="mail-tree">
                     <button class="facet-row" :class="{ 'is-active': model.ui.domain === 'all' && model.ui.address === 'all' }"
                         type="button" @click="actions.setMailDomain('all')">
-                        <span>全部域名</span>
+                        <span>{{ t('allDomains') }}</span>
                         <b>{{ formatNumber(model.mailHierarchy.queues[0]?.count ?? model.mailRows.length) }}</b>
                     </button>
                     <div v-for="domain in model.mailHierarchy.domains" :key="domain.id || domain.domain" class="tree-group">
@@ -53,7 +55,7 @@ defineExpose({
                             <button class="tree-toggle-btn" type="button"
                                 :class="{ 'is-collapsed': actions.isMailDomainCollapsed(domain.domain) }"
                                 :aria-expanded="!actions.isMailDomainCollapsed(domain.domain)"
-                                :aria-label="actions.isMailDomainCollapsed(domain.domain) ? '展开域名' : '折叠域名'"
+                                :aria-label="actions.isMailDomainCollapsed(domain.domain) ? t('expandDomain') : t('collapseDomain')"
                                 @click="actions.toggleMailDomain(domain.domain)"></button>
                             <button class="facet-row domain-row" type="button" @click="actions.setMailDomain(domain.domain)">
                                 <span>{{ domain.domain }}</span>
@@ -72,26 +74,26 @@ defineExpose({
                 </div>
             </div>
         </aside>
-        <button type="button" class="column-resizer facets-resizer" aria-label="调整筛选列宽"
+        <button type="button" class="column-resizer facets-resizer" :aria-label="t('resizeFacetsColumn')"
             @pointerdown="actions.startMailColumnResize('facets-list', $event)"></button>
 
-        <section class="mail-list-panel panel" aria-label="邮件列表">
+        <section class="mail-list-panel panel" :aria-label="t('mailListLabel')">
             <div class="panel-head">
                 <div>
                     <div class="panel-title-line">
-                        <h2>收件箱</h2>
-                        <span class="help-tip" data-tip="搜索支持 from:、to:、subject:、has:attachment、is:unread。" tabindex="0" aria-label="搜索说明">?</span>
+                        <h2>{{ t('inbox') }}</h2>
+                        <span class="help-tip" :data-tip="t('searchTip')" tabindex="0" :aria-label="t('searchTipLabel')">?</span>
                     </div>
                 </div>
                 <div class="panel-head-actions">
                     <button type="button" class="btn compact-btn mobile-only"
                         @click="model.ui.flowMode = 'filters'; actions.syncMailQueryToRoute({ mode: 'filters' })">
-                        邮箱
+                        {{ t('mailboxes') }}
                     </button>
-                    <span class="status neutral">{{ formatNumber(model.filteredMailRows.length) }} 封</span>
+                    <span class="status neutral">{{ t('mailCount', { count: formatNumber(model.filteredMailRows.length) }) }}</span>
                 </div>
             </div>
-            <div ref="mailList" class="mail-list" role="listbox" aria-label="邮件记录">
+            <div ref="mailList" class="mail-list" role="listbox" :aria-label="t('mailRecordsLabel')">
                 <button v-for="row in model.filteredMailRows" :key="row.id" class="mail-row" type="button"
                     role="option" :aria-selected="actions.isSelected('flow', row)"
                     :class="{ 'is-selected': actions.isSelected('flow', row), 'is-unread': row.unread }"
@@ -105,14 +107,14 @@ defineExpose({
                         <span class="mail-snippet">{{ row.sender }}</span>
                         <small>{{ row.body }}</small>
                     </span>
-                    <span v-if="row.result !== '已保存' || row.attachmentCount > 0" class="mail-meta">
-                        <span class="status" :class="statusClass(row.result)">{{ row.result }}</span>
-                        <span v-if="row.attachmentCount > 0">{{ row.attachmentCount }} 附件</span>
+                    <span v-if="!row.isSaved || row.attachmentCount > 0" class="mail-meta">
+                        <span class="status" :class="statusClass(row.resultTone || row.result)">{{ row.result }}</span>
+                        <span v-if="row.attachmentCount > 0">{{ t('attachmentCount', { count: row.attachmentCount }) }}</span>
                     </span>
                 </button>
 
                 <div v-if="model.filteredUnknownRows.length" class="queue-section">
-                    <div class="queue-title">异常队列</div>
+                    <div class="queue-title">{{ t('exceptionQueue') }}</div>
                     <button v-for="row in model.filteredUnknownRows" :key="row.id" class="mail-row exception"
                         type="button" role="option" :aria-selected="actions.isSelected('exception', row)"
                         :class="{ 'is-selected': actions.isSelected('exception', row) }"
@@ -127,20 +129,20 @@ defineExpose({
                             <small>{{ row.detail }}</small>
                         </span>
                         <span class="mail-meta">
-                            <span class="status" :class="statusClass(row.status)">{{ row.status }}</span>
+                            <span class="status" :class="statusClass(row.statusTone || row.status)">{{ row.status }}</span>
                         </span>
                     </button>
                 </div>
 
                 <AdminEmptyState v-if="model.filteredMailRows.length === 0 && model.filteredUnknownRows.length === 0"
-                    :action-label="model.hasActiveFilters ? '清除筛选' : ''"
+                    :action-label="model.hasActiveFilters ? t('clearFilters') : ''"
                     @action="actions.handleAction('reset-filters')" />
             </div>
         </section>
-        <button type="button" class="column-resizer detail-resizer" aria-label="调整列表和详情列宽"
+        <button type="button" class="column-resizer detail-resizer" :aria-label="t('resizeDetailColumn')"
             @pointerdown="actions.startMailColumnResize('list-detail', $event)"></button>
 
-        <aside class="mail-detail-panel panel" aria-label="邮件详情">
+        <aside class="mail-detail-panel panel" :aria-label="t('mailDetailLabel')">
             <div class="panel-head">
                 <div>
                     <h2>{{ model.currentRail.title }}</h2>
@@ -152,25 +154,25 @@ defineExpose({
                     :title="model.currentRail.title" :description="model.currentRail.subtitle" />
                 <template v-else>
                     <div v-if="model.currentMail" class="mail-reader-actions">
-                        <button type="button" class="btn mobile-only" @click="actions.closeMailDetail">返回列表</button>
+                        <button type="button" class="btn mobile-only" @click="actions.closeMailDetail">{{ t('backToList') }}</button>
                         <button type="button" class="btn" :disabled="!model.canGoPrevMail"
-                            @click="actions.selectAdjacentMail(-1)">上一封</button>
+                            @click="actions.selectAdjacentMail(-1)">{{ t('prevMail') }}</button>
                         <button type="button" class="btn" :disabled="!model.canGoNextMail"
-                            @click="actions.selectAdjacentMail(1)">下一封</button>
-                        <button type="button" class="btn" @click="actions.copyCurrent">复制收件地址</button>
-                        <button type="button" class="btn danger" @click="actions.deleteCurrentMail">删除</button>
+                            @click="actions.selectAdjacentMail(1)">{{ t('nextMail') }}</button>
+                        <button type="button" class="btn" @click="actions.copyCurrent">{{ t('copyRecipient') }}</button>
+                        <button type="button" class="btn danger" @click="actions.deleteCurrentMail">{{ t('delete') }}</button>
                     </div>
                     <dl v-if="model.currentMail" class="mail-summary">
                         <div>
-                            <dt>发件人</dt>
+                            <dt>{{ t('sender') }}</dt>
                             <dd>{{ model.currentMail.sender }}</dd>
                         </div>
                         <div>
-                            <dt>收件人</dt>
+                            <dt>{{ t('recipient') }}</dt>
                             <dd>{{ model.currentMail.to }}</dd>
                         </div>
                         <div>
-                            <dt>时间</dt>
+                            <dt>{{ t('time') }}</dt>
                             <dd>{{ model.currentMail.fullTime || model.currentMail.time }}</dd>
                         </div>
                     </dl>
@@ -179,17 +181,17 @@ defineExpose({
                     </div>
                     <section class="body-section">
                         <div class="body-section-head">
-                            <strong>正文</strong>
-                            <div class="render-toggle" role="group" aria-label="正文显示模式">
+                            <strong>{{ t('body') }}</strong>
+                            <div class="render-toggle" role="group" :aria-label="t('renderModeLabel')">
                                 <button type="button" :class="{ 'is-active': model.ui.mailRenderMode === 'html' }"
                                     :disabled="!model.currentRail.mail?.html"
                                     @click="model.ui.mailRenderMode = 'html'">HTML</button>
                                 <button type="button" :class="{ 'is-active': model.ui.mailRenderMode === 'text' }"
                                     :disabled="!model.currentRail.mail?.text"
-                                    @click="model.ui.mailRenderMode = 'text'">文本</button>
+                                    @click="model.ui.mailRenderMode = 'text'">{{ t('textMode') }}</button>
                                 <button type="button" :class="{ 'is-active': model.ui.mailRenderMode === 'raw' }"
                                     :disabled="!model.currentRail.mail?.raw"
-                                    @click="model.ui.mailRenderMode = 'raw'">原始</button>
+                                    @click="model.ui.mailRenderMode = 'raw'">{{ t('rawMode') }}</button>
                             </div>
                         </div>
                         <div v-if="model.currentRendererMail && model.ui.mailRenderMode === 'html'" class="mail-body html-body">
@@ -201,11 +203,11 @@ defineExpose({
                         <pre v-else-if="model.currentRail.mail?.raw && model.ui.mailRenderMode === 'raw'"
                             class="mail-body raw-body">{{ model.currentRail.mail.raw }}</pre>
                         <p v-else-if="model.currentRail.body" class="mail-body text-fallback">{{ model.currentRail.body }}</p>
-                        <p v-else class="mail-body text-fallback">当前记录没有可展示正文。</p>
+                        <p v-else class="mail-body text-fallback">{{ t('emptyBody') }}</p>
                     </section>
                     <section v-if="model.currentRail.mail?.attachments?.length" class="attachment-section">
                         <div class="body-section-head">
-                            <strong>附件</strong>
+                            <strong>{{ t('attachments') }}</strong>
                             <span>{{ model.currentRail.mail.attachmentLabel }}</span>
                         </div>
                         <div class="attachment-list">
@@ -216,7 +218,7 @@ defineExpose({
                         </div>
                     </section>
                     <details v-if="model.currentRail.kv" class="metadata-section">
-                        <summary>技术信息</summary>
+                        <summary>{{ t('technicalInfo') }}</summary>
                         <dl class="kv">
                             <template v-for="item in model.currentRail.kv" :key="item[0]">
                                 <dt>{{ item[0] }}</dt>

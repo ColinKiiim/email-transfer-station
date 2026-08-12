@@ -12,36 +12,61 @@ body:has(.admin-next) .n-message-container {
     display: none;
 }
 
+/*
+ * The console keeps its short local variable names, but every one of them now
+ * resolves to a shared token from src/styles/tokens.css. That means light and
+ * dark are defined in exactly one place for every surface in the product, and
+ * this sheet does not need a parallel dark-mode copy of its 2000+ rules.
+ *
+ * `--mix-bg` / `--mix-fg` are the blend endpoints: tint *toward the page* and
+ * tint *toward contrast*. Both flip in dark mode, which is why no rule below
+ * may name a literal `white` or `black` inside color-mix().
+ *
+ * These are declared on the HOST, not on `.admin-next`. `.toast` is a sibling
+ * of the console shell rather than a descendant, so scoping the variables to
+ * `.admin-next` left every one of them undefined on the toast — it rendered as
+ * white text with no background at all.
+ */
+.admin-next-host {
+    --shell: var(--ets-inverted);
+    --shell-2: var(--ets-inverted-strong);
+    --shell-fg: var(--ets-on-inverted);
+    --bg: var(--ets-bg);
+    --surface: var(--ets-surface);
+    --surface-soft: var(--ets-surface-alt);
+    --surface-sunken: var(--ets-surface-sunken);
+    --fg: var(--ets-text);
+    --muted: var(--ets-text-muted);
+    --subtle: var(--ets-text-subtle);
+    --border: var(--ets-border);
+    --border-strong: var(--ets-border-strong);
+    --accent: var(--ets-brand);
+    --accent-soft: var(--ets-brand-soft);
+    --accent-contrast: var(--ets-brand-contrast);
+    --success: var(--ets-success);
+    --success-soft: var(--ets-success-soft);
+    --warn: var(--ets-warn);
+    --warn-soft: var(--ets-warn-soft);
+    --danger: var(--ets-danger);
+    --danger-soft: var(--ets-danger-soft);
+    --info: var(--ets-info);
+    --info-soft: var(--ets-info-soft);
+    --mix-bg: var(--ets-mix-bg);
+    --mix-fg: var(--ets-mix-fg);
+    --scrim: var(--ets-scrim);
+    --mail-canvas: var(--ets-mail-canvas);
+    --shadow-border: var(--ets-shadow-card);
+    --shadow-pop: var(--ets-shadow-raised);
+    --radius: var(--ets-radius-md);
+    --radius-sm: var(--ets-radius-sm);
+}
+
 .admin-next-host .admin-next {
-    --shell: oklch(24% 0.035 252);
-    --shell-2: oklch(30% 0.04 252);
-    --bg: oklch(97.8% 0.004 250);
-    --surface: oklch(100% 0 0);
-    --surface-soft: oklch(98.2% 0.005 250);
-    --fg: oklch(20% 0.026 252);
-    --muted: oklch(50% 0.026 252);
-    --subtle: oklch(62% 0.024 252);
-    --border: oklch(89% 0.012 252);
-    --border-strong: oklch(82% 0.016 252);
-    --accent: oklch(53% 0.17 255);
-    --accent-soft: oklch(94% 0.04 255);
-    --success: oklch(55% 0.14 153);
-    --success-soft: oklch(95% 0.045 153);
-    --warn: oklch(68% 0.16 70);
-    --warn-soft: oklch(96% 0.055 77);
-    --danger: oklch(57% 0.2 28);
-    --danger-soft: oklch(95% 0.05 28);
-    --info: oklch(58% 0.13 220);
-    --info-soft: oklch(94% 0.045 220);
-    --shadow-border: 0 0 0 1px rgba(10, 24, 48, 0.07), 0 1px 2px -1px rgba(10, 24, 48, 0.08), 0 10px 30px -24px rgba(10, 24, 48, 0.45);
-    --shadow-pop: 0 0 0 1px rgba(10, 24, 48, 0.08), 0 18px 48px -24px rgba(10, 24, 48, 0.45);
-    --radius: 8px;
-    --radius-sm: 5px;
     height: 100dvh;
     min-height: 0;
     background: var(--bg);
     color: var(--fg);
-    font: 14px/1.5 "Segoe UI Variable", "Segoe UI", "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", "Helvetica Neue", Arial, sans-serif;
+    font: 14px/1.5 var(--ets-font-ui);
     letter-spacing: 0;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -80,7 +105,7 @@ body:has(.admin-next) .n-message-container {
     min-height: 100dvh;
     padding: clamp(56px, 10vh, 112px) 20px 32px;
     background:
-        linear-gradient(180deg, oklch(100% 0 0), var(--bg) 72%),
+        linear-gradient(180deg, var(--surface), var(--bg) 72%),
         var(--bg);
     overflow: auto;
 }
@@ -189,7 +214,7 @@ body:has(.admin-next) .n-message-container {
 .admin-next-host .select:focus-visible,
 .admin-next-host textarea:focus-visible,
 .admin-next-host tr[tabindex]:focus-visible {
-    outline: 2px solid color-mix(in oklch, var(--accent) 72%, white);
+    outline: 2px solid var(--ets-focus-ring);
     outline-offset: 2px;
 }
 
@@ -212,7 +237,7 @@ body:has(.admin-next) .n-message-container {
     padding: 18px 12px;
     background: var(--surface);
     color: var(--fg);
-    box-shadow: 1px 0 0 rgba(10, 24, 48, 0.08);
+    box-shadow: 1px 0 0 var(--border);
 }
 
 .admin-next-host .brand {
@@ -232,7 +257,7 @@ body:has(.admin-next) .n-message-container {
     place-items: center;
     border-radius: var(--radius);
     background: var(--accent-soft);
-    color: color-mix(in oklch, var(--accent) 84%, black);
+    color: color-mix(in oklch, var(--accent) 84%, var(--mix-fg));
     box-shadow: var(--shadow-border);
 }
 
@@ -307,7 +332,7 @@ body:has(.admin-next) .n-message-container {
 
 .admin-next-host .nav-link.is-active {
     background: var(--accent-soft);
-    color: color-mix(in oklch, var(--accent) 80%, black);
+    color: color-mix(in oklch, var(--accent) 80%, var(--mix-fg));
 }
 
 @media (hover: hover) {
@@ -329,7 +354,7 @@ body:has(.admin-next) .n-message-container {
     border-radius: 999px;
     padding: 1px 7px;
     background: var(--accent);
-    color: white;
+    color: var(--accent-contrast);
     font-size: 11px;
     font-variant-numeric: tabular-nums;
     text-align: center;
@@ -461,7 +486,7 @@ body:has(.admin-next) .n-message-container {
     align-items: center;
     padding: 14px 18px;
     background: color-mix(in oklch, var(--surface) 90%, transparent);
-    box-shadow: 0 1px 0 rgba(10, 24, 48, 0.08);
+    box-shadow: 0 1px 0 var(--border);
 }
 
 .admin-next-host .topbar-controls {
@@ -599,7 +624,7 @@ body:has(.admin-next) .n-message-container {
 
 .admin-next-host .btn.primary {
     background: var(--accent);
-    color: white;
+    color: var(--accent-contrast);
 }
 
 .admin-next-host .btn.danger {
@@ -671,11 +696,11 @@ body:has(.admin-next) .n-message-container {
 }
 
 .admin-next-host .state-card.warn {
-    background: color-mix(in oklch, var(--warn-soft) 48%, white);
+    background: color-mix(in oklch, var(--warn-soft) 48%, var(--mix-bg));
 }
 
 .admin-next-host .state-card.error {
-    background: color-mix(in oklch, var(--danger-soft) 42%, white);
+    background: color-mix(in oklch, var(--danger-soft) 42%, var(--mix-bg));
 }
 
 .admin-next-host .toolbar,
@@ -753,7 +778,7 @@ body:has(.admin-next) .n-message-container {
 }
 
 .admin-next-host .overview-entry.primary-entry {
-    background: color-mix(in oklch, var(--accent-soft) 42%, white);
+    background: color-mix(in oklch, var(--accent-soft) 42%, var(--mix-bg));
 }
 
 .admin-next-host .overview-entry-kicker {
@@ -980,7 +1005,7 @@ body:has(.admin-next) .n-message-container {
 .admin-next-host .facet-row:hover,
 .admin-next-host .facet-row.is-active {
     background: var(--accent-soft);
-    color: color-mix(in oklch, var(--accent) 82%, black);
+    color: color-mix(in oklch, var(--accent) 82%, var(--mix-fg));
 }
 
 .admin-next-host .facet-row b {
@@ -1049,7 +1074,7 @@ body:has(.admin-next) .n-message-container {
 
 .admin-next-host .tree-toggle-btn:hover,
 .admin-next-host .tree-toggle-btn:focus-visible {
-    color: color-mix(in oklch, var(--accent) 82%, black);
+    color: color-mix(in oklch, var(--accent) 82%, var(--mix-fg));
     outline: none;
 }
 
@@ -1160,7 +1185,7 @@ body:has(.admin-next) .n-message-container {
     border-top: 1px solid var(--border);
     border-radius: 0;
     padding: 10px 8px;
-    background: oklch(95.6% 0.012 255);
+    background: var(--surface-sunken);
     color: var(--fg);
     text-align: left;
 }
@@ -1171,11 +1196,11 @@ body:has(.admin-next) .n-message-container {
 
 .admin-next-host .mail-row:hover,
 .admin-next-host .mail-row.is-selected {
-    background: color-mix(in oklch, var(--accent-soft) 50%, white);
+    background: color-mix(in oklch, var(--accent-soft) 50%, var(--mix-bg));
 }
 
 .admin-next-host .mail-row.exception {
-    background: color-mix(in oklch, var(--warn-soft) 28%, white);
+    background: color-mix(in oklch, var(--warn-soft) 28%, var(--mix-bg));
 }
 
 .admin-next-host .mail-row.is-unread .mail-main strong {
@@ -1184,7 +1209,7 @@ body:has(.admin-next) .n-message-container {
 }
 
 .admin-next-host .mail-row:not(.is-unread) .mail-main strong {
-    color: color-mix(in oklch, var(--fg) 82%, white);
+    color: color-mix(in oklch, var(--fg) 82%, var(--mix-bg));
     font-weight: 520;
 }
 
@@ -1392,7 +1417,7 @@ body:has(.admin-next) .n-message-container {
 
 .admin-next-host .html-body {
     max-height: none;
-    background: white;
+    background: var(--mail-canvas);
 }
 
 .admin-next-host .html-body :deep(.mail-content-renderer) {
@@ -1407,7 +1432,7 @@ body:has(.admin-next) .n-message-container {
     max-width: 100%;
     height: auto;
     border-radius: 4px;
-    outline: 1px solid rgba(0, 0, 0, 0.1);
+    outline: 1px solid var(--ets-divider);
 }
 
 .admin-next-host .html-body :deep(img[alt]) {
@@ -1526,7 +1551,7 @@ body:has(.admin-next) .n-message-container {
 
 .admin-next-host tr[tabindex]:hover,
 .admin-next-host tr.is-selected {
-    background: color-mix(in oklch, var(--accent-soft) 44%, white);
+    background: color-mix(in oklch, var(--accent-soft) 44%, var(--mix-bg));
 }
 
 .admin-next-host .num {
@@ -1632,17 +1657,17 @@ body:has(.admin-next) .n-message-container {
 
 .admin-next-host .status.ok {
     background: var(--success-soft);
-    color: color-mix(in oklch, var(--success) 78%, black);
+    color: color-mix(in oklch, var(--success) 78%, var(--mix-fg));
 }
 
 .admin-next-host .status.warn {
     background: var(--warn-soft);
-    color: color-mix(in oklch, var(--warn) 78%, black);
+    color: color-mix(in oklch, var(--warn) 78%, var(--mix-fg));
 }
 
 .admin-next-host .status.danger {
     background: var(--danger-soft);
-    color: color-mix(in oklch, var(--danger) 78%, black);
+    color: color-mix(in oklch, var(--danger) 78%, var(--mix-fg));
 }
 
 .admin-next-host .tag-row {
@@ -1717,8 +1742,8 @@ body:has(.admin-next) .n-message-container {
     min-width: 0;
     overflow: auto;
     padding: 16px 14px;
-    background: color-mix(in oklch, var(--surface-soft) 82%, white);
-    box-shadow: -1px 0 0 rgba(10, 24, 48, 0.08);
+    background: color-mix(in oklch, var(--surface-soft) 82%, var(--mix-bg));
+    box-shadow: -1px 0 0 var(--border);
 }
 
 .admin-next-host .rail .panel {
@@ -1738,7 +1763,7 @@ body:has(.admin-next) .n-message-container {
     display: grid;
     place-items: center;
     padding: 18px;
-    background: rgba(4, 12, 24, 0.45);
+    background: var(--scrim);
 }
 
 .admin-next-host .modal {
@@ -1764,7 +1789,7 @@ body:has(.admin-next) .n-message-container {
 }
 
 .admin-next-host .modal-head {
-    box-shadow: 0 1px 0 rgba(10, 24, 48, 0.08);
+    box-shadow: 0 1px 0 var(--border);
 }
 
 .admin-next-host .modal-head h2 {
@@ -1803,7 +1828,7 @@ body:has(.admin-next) .n-message-container {
 
 .admin-next-host .modal-actions {
     justify-content: flex-end;
-    box-shadow: 0 -1px 0 rgba(10, 24, 48, 0.08);
+    box-shadow: 0 -1px 0 var(--border);
 }
 
 .admin-next-host .icon-btn {
@@ -1848,7 +1873,7 @@ body:has(.admin-next) .n-message-container {
     border-radius: var(--radius);
     padding: 10px 12px;
     background: var(--shell);
-    color: white;
+    color: var(--shell-fg);
     box-shadow: var(--shadow-pop);
     transition-property: opacity, transform;
     transition-duration: 160ms;
@@ -1867,7 +1892,7 @@ body:has(.admin-next) .n-message-container {
     z-index: 45;
     display: grid;
     justify-items: end;
-    background: rgba(4, 12, 24, 0.42);
+    background: var(--scrim);
 }
 
 .admin-next-host .detail-drawer {
@@ -1926,7 +1951,7 @@ body:has(.admin-next) .n-message-container {
         z-index: 45;
         display: grid;
         justify-items: end;
-        background: rgba(4, 12, 24, 0.42);
+        background: var(--scrim);
     }
 
     .admin-next-host .detail-drawer {
@@ -2113,37 +2138,58 @@ body:has(.admin-next) .n-message-container {
         width: 100%;
     }
 
+    /*
+     * Below 900px the sidebar is row 1 of a two-row `height: 100dvh` grid — a
+     * horizontal band, not a vertical rail. The collapsed treatment used to
+     * force `height: 100dvh` here too, which made row 1 consume the whole
+     * viewport and resolved row 2 (the entire topbar + workspace) to 0px, with
+     * `overflow: hidden` on both the app and <html> leaving nothing to scroll.
+     * Because the collapsed flag is persisted in localStorage, collapsing the
+     * sidebar once on desktop broke every later visit on a phone.
+     *
+     * The collapsed state has no meaning for a horizontal band, so at this
+     * breakpoint it simply keeps the expanded band layout.
+     */
     .admin-next-host .is-sidebar-collapsed .sidebar {
         display: grid;
-        grid-template-rows: auto minmax(0, 1fr);
+        grid-template-columns: minmax(0, 1fr);
         gap: 10px;
-        width: 72px;
-        height: 100dvh;
-        padding: 18px 8px;
+        width: auto;
+        height: auto;
+        padding: 12px;
     }
 
     .admin-next-host .is-sidebar-collapsed .brand {
-        margin-bottom: 0;
-        transform: translateX(4px);
+        margin-bottom: 10px;
+        transform: none;
     }
 
     .admin-next-host .is-sidebar-collapsed .nav-scroll {
         display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
         gap: 8px;
-        width: 56px;
-        max-width: 56px;
+        width: auto;
+        max-width: 100%;
         overflow-x: hidden;
         overflow-y: auto;
     }
 
     .admin-next-host .is-sidebar-collapsed .nav-group {
-        display: grid;
+        display: contents;
     }
 
     .admin-next-host .is-sidebar-collapsed .nav-link {
         min-width: 0;
-        width: 56px;
-        max-width: 56px;
+        width: 100%;
+        max-width: none;
+    }
+
+    .admin-next-host .is-sidebar-collapsed .nav-text {
+        position: static;
+        width: auto;
+        height: auto;
+        overflow: hidden;
+        clip: auto;
     }
 
     .admin-next-host .topbar {

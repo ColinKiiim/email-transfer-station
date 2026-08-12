@@ -1,5 +1,9 @@
 import { reactive } from 'vue'
 
+import { adminT } from './admin-i18n'
+
+const t = adminT('admin.feedback')
+
 const TOAST_TONES = new Set(['info', 'success', 'warning', 'error'])
 
 export const useAdminFeedback = ({ duration = 1800 } = {}) => {
@@ -17,7 +21,7 @@ export const useAdminFeedback = ({ duration = 1800 } = {}) => {
     }
 
     const showToast = (text, tone = 'info') => {
-        toastState.text = String(text || '操作已处理')
+        toastState.text = String(text || t('fallback'))
         toastState.tone = TOAST_TONES.has(tone) ? tone : 'info'
         toastState.visible = true
         if (toastTimer) globalThis.clearTimeout(toastTimer)
