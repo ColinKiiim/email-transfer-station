@@ -414,6 +414,14 @@ export const MESSAGE_REGISTRY = {
     }
   },
   "views.TokenInbox": {
+    "brandContext": {
+      "en": "Shared access",
+      "zh": "共享访问"
+    },
+    "shellKicker": {
+      "en": "Shared mailbox access",
+      "zh": "共享邮箱访问"
+    },
     "invalidToken": {
       "en": "Invalid or expired inbox link",
       "zh": "无效或已过期的收件箱链接"
@@ -592,6 +600,10 @@ export const MESSAGE_REGISTRY = {
     }
   },
   "views.Header": {
+    "mailboxContext": {
+      "en": "Mailbox access",
+      "zh": "邮箱访问"
+    },
     "accessHeader": {
       "en": "Access Password",
       "zh": "访问密码"
@@ -636,6 +648,30 @@ export const MESSAGE_REGISTRY = {
   "views.user.BindAddress": {
   },
   "views.User": {
+    "brandContext": {
+      "en": "User workspace",
+      "zh": "用户工作台"
+    },
+    "shellKickerSignedIn": {
+      "en": "Mailbox access and address ownership",
+      "zh": "邮箱访问与地址归属"
+    },
+    "shellKickerGuest": {
+      "en": "Secure sign in",
+      "zh": "安全登录"
+    },
+    "surfaceLinksLabel": {
+      "en": "Product areas",
+      "zh": "产品区域"
+    },
+    "home": {
+      "en": "Home",
+      "zh": "主页"
+    },
+    "adminConsole": {
+      "en": "Admin console",
+      "zh": "管理控制台"
+    },
     "address_management": {
       "en": "My Addresses",
       "zh": "我的邮箱地址"
@@ -1430,6 +1466,22 @@ export const MESSAGE_REGISTRY = {
     }
   },
   "admin.login": {
+    "contextLabel": {
+      "en": "Admin console",
+      "zh": "管理控制台"
+    },
+    "description": {
+      "en": "Use your administrator credentials to manage this station.",
+      "zh": "使用管理员凭据管理当前邮件站。"
+    },
+    "surfaceLinksLabel": {
+      "en": "Product areas",
+      "zh": "产品区域"
+    },
+    "home": {
+      "en": "Home",
+      "zh": "主页"
+    },
     "title": {
       "en": "Administrator sign-in",
       "zh": "管理员登录"
@@ -1494,6 +1546,22 @@ export const MESSAGE_REGISTRY = {
     }
   },
   "admin.shell": {
+    "contextLabel": {
+      "en": "Admin console",
+      "zh": "管理控制台"
+    },
+    "surfaceLinksLabel": {
+      "en": "Product areas",
+      "zh": "产品区域"
+    },
+    "home": {
+      "en": "Home",
+      "zh": "主页"
+    },
+    "userView": {
+      "en": "User workspace",
+      "zh": "用户工作台"
+    },
     "mainNav": {
       "en": "Main navigation",
       "zh": "主导航"

@@ -7,6 +7,8 @@ import { clearSessionStorageKeys } from '../utils/session'
 import { useGlobalState } from '../store'
 import AccessShell from '../components/AccessShell.vue'
 import AccessMailWorkbench from '../components/AccessMailWorkbench.vue'
+import ProductSurfaceLinks from '../components/ProductSurfaceLinks.vue'
+import { getRouterPathWithLang } from '../utils'
 import AddressMangement from './user/AddressManagement.vue'
 import UserSettingsPage from './user/UserSettings.vue'
 import BindAddress from './user/BindAddress.vue'
@@ -21,7 +23,7 @@ const {
   openSettings,
 } = useGlobalState()
 
-const { t } = useScopedI18n('views.User')
+const { t, locale } = useScopedI18n('views.User')
 const addressFilter = ref('')
 const addressFilterOptions = ref([])
 const addressesLoaded = ref(false)
@@ -46,7 +48,13 @@ const railItems = computed(() => {
 })
 
 const shellTitle = computed(() => isSignedIn.value ? t('shellTitleSignedIn') : t('shellTitleGuest'))
-const shellKicker = computed(() => isSignedIn.value ? 'mailbox access and address ownership' : 'secure sign in')
+const shellKicker = computed(() => isSignedIn.value ? t('shellKickerSignedIn') : t('shellKickerGuest'))
+const surfaceItems = computed(() => [
+  { id: 'home', label: t('home'), to: getRouterPathWithLang('/', locale.value) },
+  ...(userSettings.value.is_admin
+    ? [{ id: 'admin', label: t('adminConsole'), to: getRouterPathWithLang('/admin', locale.value) }]
+    : []),
+])
 const statusLabel = computed(() => {
   if (!userOpenSettings.value.fetched || !userSettings.value.fetched) return t('statusSyncing')
   return isSignedIn.value ? t('statusSignedIn') : t('statusNeedsSignIn')
@@ -156,6 +164,7 @@ onMounted(async () => {
   <AccessShell
     :title="shellTitle"
     :kicker="shellKicker"
+    :brand-context="t('brandContext')"
     :identity-label="identityLabel"
     :identity-meta="identityMeta"
     :status-label="statusLabel"
@@ -165,6 +174,7 @@ onMounted(async () => {
     @select="userTab = $event"
   >
     <template #actions>
+      <ProductSurfaceLinks :items="surfaceItems" :aria-label="t('surfaceLinksLabel')" />
       <n-button v-if="isSignedIn" tertiary @click="fetchAddressOptions">
         {{ t('refreshAddresses') }}
       </n-button>

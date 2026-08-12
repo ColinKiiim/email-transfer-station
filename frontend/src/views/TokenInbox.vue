@@ -84,7 +84,8 @@ onMounted(resolveToken)
 <template>
   <AccessShell
     :title="title"
-    kicker="shared mailbox access"
+    :kicker="t('shellKicker')"
+    :brand-context="t('brandContext')"
     :identity-label="identityLabel"
     :identity-meta="t('identityMeta')"
     :status-label="statusLabel"

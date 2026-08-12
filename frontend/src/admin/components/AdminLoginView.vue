@@ -1,10 +1,17 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 
+import AppUtilityMenu from '../../components/AppUtilityMenu.vue'
+import ProductBrand from '../../components/ProductBrand.vue'
+import ProductSurfaceLinks from '../../components/ProductSurfaceLinks.vue'
 import Turnstile from '../../components/Turnstile.vue'
+import { getRouterPathWithLang } from '../../utils'
 
-const { t } = useScopedI18n('admin.login')
+const { t, locale } = useScopedI18n('admin.login')
+const surfaceItems = computed(() => [
+    { id: 'home', label: t('home'), to: getRouterPathWithLang('/', locale.value) },
+])
 
 const account = defineModel('account', { type: String, default: '' })
 const password = defineModel('password', { type: String, default: '' })
@@ -28,19 +35,18 @@ defineExpose({
 
 <template>
     <section class="admin-next login-page" aria-labelledby="admin-auth-title">
-        <div class="login-shell">
-            <div class="login-brand" aria-hidden="true">
-                <span class="brand-mark login-mark">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M3.5 6.5h17v11h-17z" />
-                        <path d="m4 7 8 6 8-6" />
-                    </svg>
-                </span>
-                <span>Email Transfer Station</span>
+        <header class="login-topbar">
+            <ProductBrand :context-label="t('contextLabel')" />
+            <div class="login-top-actions">
+                <ProductSurfaceLinks :items="surfaceItems" :aria-label="t('surfaceLinksLabel')" />
+                <AppUtilityMenu />
             </div>
+        </header>
+        <div class="login-shell">
             <form class="login-card" @submit.prevent="emit('submit')">
                 <div class="login-copy">
                     <h1 id="admin-auth-title">{{ t('title') }}</h1>
+                    <p>{{ t('description') }}</p>
                 </div>
                 <div class="form-grid">
                     <label class="form-field full">

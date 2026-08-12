@@ -1,8 +1,11 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 
 import AppUtilityMenu from '../../components/AppUtilityMenu.vue'
+import ProductBrand from '../../components/ProductBrand.vue'
+import ProductSurfaceLinks from '../../components/ProductSurfaceLinks.vue'
+import { getRouterPathWithLang } from '../../utils'
 
 import { formatBadgeCount } from '../admin-formatters'
 import {
@@ -15,8 +18,13 @@ defineProps({
     actions: { type: Object, required: true },
 })
 
-const { t } = useScopedI18n('admin.shell')
+const { t, locale } = useScopedI18n('admin.shell')
 const { t: tNav } = useScopedI18n('admin.nav')
+
+const surfaceItems = computed(() => [
+    { id: 'home', label: t('home'), to: getRouterPathWithLang('/', locale.value) },
+    { id: 'user', label: t('userView'), to: getRouterPathWithLang('/user', locale.value) },
+])
 
 const shapeList = (name) => iconShapes[name] || iconShapes.check
 const searchInput = ref(null)
@@ -41,17 +49,12 @@ defineExpose({
                             v-bind="shape.attrs" />
                     </svg>
                 </button>
-                <div class="brand-mark" aria-hidden="true">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M3.5 6.5h17v11h-17z" />
-                        <path d="m4 7 8 6 8-6" />
-                    </svg>
-                </div>
-                <div class="brand-title">Email Transfer<span>station admin</span></div>
+                <ProductBrand class="admin-product-brand" :context-label="t('contextLabel')" />
             </div>
 
             <header class="topbar">
                 <div class="page-title">
+                    <p>{{ t('contextLabel') }}</p>
                     <h1>{{ tNav(model.activeView) }}</h1>
                 </div>
 
@@ -75,6 +78,7 @@ defineExpose({
                     </label>
 
                     <div class="top-actions">
+                        <ProductSurfaceLinks compact :items="surfaceItems" :aria-label="t('surfaceLinksLabel')" />
                         <AppUtilityMenu />
                         <span class="sync-state" :class="{ 'is-loading': model.ui.syncing }" role="status" aria-live="polite">
                             {{ model.syncLabel }}

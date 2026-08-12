@@ -213,6 +213,20 @@ afterEach(() => {
 })
 
 describe('AdminNext behavior baseline', () => {
+    it('keeps the shared product identity and user-facing exits on both admin states', async () => {
+        const login = await mountAdmin({ authenticated: false })
+
+        expect(login.wrapper.get('.login-topbar .product-brand').text()).toContain('管理控制台')
+        expect(login.wrapper.get('.login-topbar .surface-link').attributes('href')).toBe('/')
+        login.wrapper.unmount()
+
+        const consoleView = await mountAdmin()
+        expect(consoleView.wrapper.get('.brand .product-brand').text()).toContain('管理控制台')
+        expect(consoleView.wrapper.findAll('.top-actions .surface-link').map((link) => link.attributes('href')))
+            .toEqual(['/', '/user'])
+        consoleView.wrapper.unmount()
+    })
+
     it('establishes an admin session after a successful login', async () => {
         const { wrapper } = await mountAdmin({ authenticated: false })
 

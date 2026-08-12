@@ -17,6 +17,7 @@ import { getRouterPathWithLang, hashPassword } from '../utils'
 import { DEFAULT_LOCALE, isSupportedLocale, replaceLocaleInFullPath } from '../i18n/utils'
 import { getLocaleLabel, SUPPORTED_LOCALES } from '../i18n/locale-registry'
 import Turnstile from '../components/Turnstile.vue'
+import ProductBrand from '../components/ProductBrand.vue'
 import { NButton, NIcon } from 'naive-ui'
 
 const PRODUCT_TITLE = 'Email Transfer Station'
@@ -254,12 +255,10 @@ onMounted(async () => {
     <div>
         <n-page-header>
             <template #title>
-                <h3>{{ openSettings.title || PRODUCT_TITLE }}</h3>
-            </template>
-            <template #avatar>
-                <div @click="logoClick">
-                    <n-avatar style="margin-left: 10px;" src="/email-transfer-station-logo.svg" />
-                </div>
+                <button type="button" class="header-brand-button" :aria-label="openSettings.title || PRODUCT_TITLE"
+                    @click="logoClick">
+                    <ProductBrand class="header-product-brand" compact :context-label="t('mailboxContext')" />
+                </button>
             </template>
             <template #extra>
                 <n-space align="center" class="header-extra">
@@ -320,6 +319,25 @@ onMounted(async () => {
 .header-extra {
     align-items: center;
     flex-wrap: nowrap;
+}
+
+.header-brand-button {
+    display: block;
+    max-width: min(360px, 38vw);
+    border: 0;
+    padding: 0;
+    background: transparent;
+    cursor: pointer;
+}
+
+.header-brand-button:focus-visible {
+    border-radius: var(--ets-radius-sm);
+    outline: 2px solid var(--ets-focus-ring);
+    outline-offset: 3px;
+}
+
+.header-product-brand {
+    max-width: 100%;
 }
 
 .header-extra :deep(.n-space-item) {
@@ -409,11 +427,8 @@ onMounted(async () => {
         min-width: 0;
     }
 
-    :deep(.n-page-header__title h3) {
+    .header-brand-button {
         max-width: calc(100vw - 136px);
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
     }
 }
 </style>

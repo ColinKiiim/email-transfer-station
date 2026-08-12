@@ -2,6 +2,7 @@
 import { computed, useSlots } from 'vue'
 
 import AppUtilityMenu from './AppUtilityMenu.vue'
+import ProductBrand from './ProductBrand.vue'
 
 const props = defineProps({
   title: {
@@ -9,6 +10,10 @@ const props = defineProps({
     required: true,
   },
   kicker: {
+    type: String,
+    default: '',
+  },
+  brandContext: {
     type: String,
     default: '',
   },
@@ -60,16 +65,7 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
   <div class="access-shell" :class="{ 'has-rail': railItems.length > 0 }">
     <aside v-if="railItems.length" class="access-sidebar">
       <div class="brand-row">
-        <div class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 24 24">
-            <path d="M4 6h16v12H4z" />
-            <path d="m4 7 8 6 8-6" />
-          </svg>
-        </div>
-        <div class="brand-copy">
-          <strong>Email Transfer</strong>
-          <span>station access</span>
-        </div>
+        <ProductBrand :context-label="brandContext" />
       </div>
 
       <nav v-if="railItems.length" class="rail-nav" aria-label="Access navigation">
@@ -97,15 +93,18 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
 
     <main class="access-main">
       <header class="access-topbar">
-        <div class="title-block">
-          <p v-if="kicker" class="kicker">{{ kicker }}</p>
-          <h1>{{ title }}</h1>
-          <div class="identity-line">
-            <span v-if="identityLabel" class="identity-label">{{ identityLabel }}</span>
-            <span v-if="identityMeta" class="identity-meta">{{ identityMeta }}</span>
-            <span v-if="statusLabel" class="status-pill" :class="`tone-${statusTone}`">
-              {{ statusLabel }}
-            </span>
+        <div class="topbar-lead" :class="{ 'has-brand': !railItems.length }">
+          <ProductBrand v-if="!railItems.length" :context-label="brandContext" />
+          <div class="title-block">
+            <p v-if="kicker" class="kicker">{{ kicker }}</p>
+            <h1>{{ title }}</h1>
+            <div class="identity-line">
+              <span v-if="identityLabel" class="identity-label">{{ identityLabel }}</span>
+              <span v-if="identityMeta" class="identity-meta">{{ identityMeta }}</span>
+              <span v-if="statusLabel" class="status-pill" :class="`tone-${statusTone}`">
+                {{ statusLabel }}
+              </span>
+            </div>
           </div>
         </div>
         <div class="top-actions">
@@ -173,26 +172,10 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
 }
 
 .brand-row {
-  display: grid;
-  grid-template-columns: 40px minmax(0, 1fr);
-  gap: 10px;
-  align-items: center;
   min-height: 48px;
   margin-bottom: 22px;
 }
 
-.brand-mark {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: var(--ets-brand-soft);
-  color: var(--access-accent);
-  box-shadow: var(--access-shadow);
-}
-
-.brand-mark svg,
 .rail-item svg {
   width: 18px;
   height: 18px;
@@ -203,27 +186,6 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
   stroke-linejoin: round;
 }
 
-.brand-copy {
-  display: grid;
-  gap: 1px;
-  min-width: 0;
-}
-
-.brand-copy strong {
-  overflow: hidden;
-  color: var(--ets-text-strong);
-  font-size: 15px;
-  font-weight: 760;
-  line-height: 1.1;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.brand-copy span {
-  color: var(--access-muted);
-  font-size: 12px;
-  line-height: 1.2;
-}
 
 .rail-nav {
   display: grid;
@@ -311,6 +273,17 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
 
 .title-block {
   min-width: 0;
+}
+
+.topbar-lead {
+  min-width: 0;
+}
+
+.topbar-lead.has-brand {
+  display: grid;
+  grid-template-columns: minmax(180px, 232px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: center;
 }
 
 .kicker {
@@ -420,10 +393,6 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
     margin-bottom: 0;
   }
 
-  .brand-copy span {
-    display: none;
-  }
-
   .rail-nav {
     grid-auto-flow: column;
     grid-auto-columns: max-content;
@@ -446,6 +415,11 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
     gap: 10px;
     min-height: 0;
     padding: 14px 16px 10px;
+  }
+
+  .topbar-lead.has-brand {
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
 
   .top-actions {
