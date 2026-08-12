@@ -24,6 +24,24 @@ CREATE INDEX IF NOT EXISTS idx_raw_mails_original_domain ON raw_mails(original_d
 
 CREATE INDEX IF NOT EXISTS idx_raw_mails_ingress_source ON raw_mails(ingress_source);
 
+CREATE TABLE IF NOT EXISTS mail_read_states (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    mail_id INTEGER NOT NULL,
+    actor_type TEXT NOT NULL,
+    actor_id TEXT NOT NULL,
+    address TEXT,
+    read_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(mail_id, actor_type, actor_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_mail_read_states_actor ON mail_read_states(actor_type, actor_id, read_at);
+
+CREATE INDEX IF NOT EXISTS idx_mail_read_states_mail ON mail_read_states(mail_id);
+
+CREATE INDEX IF NOT EXISTS idx_mail_read_states_address ON mail_read_states(address);
+
 CREATE TABLE IF NOT EXISTS address (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE,

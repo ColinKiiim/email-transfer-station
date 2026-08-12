@@ -560,8 +560,13 @@ const resetPassword = async (c: Context<HonoCustomType>) => {
         passwordInput,
         isAddressPasswordV2Enabled(c.env.ENABLE_ADDRESS_PASSWORD_V2),
     );
+    // Resetting a password is a revocation: bump credential_version so every
+    // Address JWT issued against the old password stops validating. Without
+    // this, an administrator "resetting" a compromised mailbox leaves every
+    // previously issued token working.
     const { success } = await c.env.DB.prepare(
-        `UPDATE address SET password = ?, updated_at = datetime('now') WHERE id = ?`
+        `UPDATE address SET password = ?, credential_version = COALESCE(credential_version, 1) + 1,`
+        + ` updated_at = datetime('now') WHERE id = ?`
     ).bind(storedPassword, id).run();
     if (!success) {
         return c.text(msgs.FailedUpdatePasswordMsg, 500);

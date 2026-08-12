@@ -139,9 +139,17 @@ async function email(message: ForwardableEmailMessage, env: Bindings, ctx: Execu
             throw dbError;
         }
     };
-    // save email
+    // Save the message first. Storing it is the only durable step; forwarding,
+    // Telegram, webhooks, the RPC hand-off, auto-reply and AI extraction are all
+    // side effects that must not observe a message that was never stored.
+    //
+    // A failed save has to reject the delivery. Returning without a reject tells
+    // Cloudflare Email Routing the message was accepted, so the sender sees a
+    // successful delivery for a message that no longer exists anywhere. Both a
+    // falsy `success` and a thrown error (D1 unavailable, row/statement size
+    // limit, constraint violation, missing table) must take that path.
+    let saved = false;
     try {
-        let success = false;
         if (getBooleanValue(env.ENABLE_MAIL_GZIP)) {
             let compressed: ArrayBuffer | null = null;
             try {
@@ -150,20 +158,22 @@ async function email(message: ForwardableEmailMessage, env: Bindings, ctx: Execu
                 console.error("gzip compression failed, falling back to plaintext", gzipError);
             }
             if (compressed) {
-                ({ success } = await saveCompressed(compressed));
+                ({ success: saved } = await saveCompressed(compressed));
             } else {
-                ({ success } = await savePlaintext());
+                ({ success: saved } = await savePlaintext());
             }
         } else {
-            ({ success } = await savePlaintext());
-        }
-        if (!success) {
-            message.setReject(`Failed save message to ${inboundRecipient.address}`);
-            console.error(`Failed save message from ${message.from} to ${inboundRecipient.address}`);
+            ({ success: saved } = await savePlaintext());
         }
     }
     catch (error) {
+        saved = false;
         console.error("save email error", error);
+    }
+    if (!saved) {
+        message.setReject(`Failed save message to ${inboundRecipient.address}`);
+        console.error(`Failed save message from ${message.from} to ${inboundRecipient.address}`);
+        return;
     }
 
     // forward email

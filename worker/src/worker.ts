@@ -20,6 +20,7 @@ import { queueAccessEvent } from './audit';
 import { getAddressCreationDomainNames } from './domains';
 import { corsPolicy } from './cors_policy';
 import { adminAuthMiddleware } from './admin_security';
+import { validateAddressJwtPayload, validateShareJwtPayload } from './address_authority';
 
 const API_PATHS = [
 	"/api/",
@@ -150,38 +151,6 @@ const checkoutUserRolePayload = async (
 	} catch (e) {
 		console.error(e);
 	}
-}
-
-const validateAddressJwtPayload = async (
-	c: Context<HonoCustomType>,
-	payload: JwtPayload
-): Promise<boolean> => {
-	if (!payload?.address || !payload?.address_id) return false;
-	const row = await c.env.DB.prepare(
-		`SELECT name, COALESCE(credential_version, 1) AS credential_version`
-		+ ` FROM address WHERE id = ?`
-	).bind(payload.address_id).first<{ name: string, credential_version: number }>();
-	if (!row || row.name !== payload.address) return false;
-	const payloadVersion = Number(payload.credential_version ?? 1);
-	return Number(row.credential_version || 1) === payloadVersion;
-}
-
-const validateShareJwtPayload = async (
-	c: Context<HonoCustomType>,
-	payload: JwtPayload
-): Promise<boolean> => {
-	if (!payload?.share_token_id || !payload?.address_id) return false;
-	const row = await c.env.DB.prepare(
-		`SELECT t.id`
-		+ ` FROM address_share_tokens t`
-		+ ` JOIN address a ON a.id = t.address_id`
-		+ ` WHERE t.id = ?`
-		+ ` AND t.address_id = ?`
-		+ ` AND a.name = ?`
-		+ ` AND t.revoked_at IS NULL`
-		+ ` AND (t.expires_at IS NULL OR t.expires_at > datetime('now'))`
-	).bind(payload.share_token_id, payload.address_id, payload.address).first("id");
-	return !!row;
 }
 
 // api auth

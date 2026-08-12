@@ -12,6 +12,8 @@ import { handleListQuery, isSendMailBindingEnabled, updateAddressUpdatedAt } fro
 import { getSendBalanceState, requestSendMailAccess } from './send_balance';
 import { ensureSendMailLimit, increaseSendMailLimitCount, SendMailLimitError } from './send_mail_limit_utils';
 import { getActiveDomainNames } from '../domains';
+import { recordAccessEvent } from '../audit';
+import { authorizeAddressSend } from '../address_authority';
 
 
 export const api = new Hono<HonoCustomType>()
@@ -262,16 +264,36 @@ api.post('/api/send_mail', async (c) => {
     return c.json({ status: "ok" })
 })
 
+// The SMTP proxy's only send path. It sits under /external/ and therefore does
+// NOT pass through the /api/* auth middleware, so it must repeat that
+// middleware's authority checks itself: a valid signature alone would accept a
+// rotated (revoked) address credential and a read-only share token.
 api.post('/external/api/send_mail', async (c) => {
     const msgs = i18n.getMessagesbyContext(c);
     const { token } = await c.req.json();
     try {
-        const { address } = await Jwt.verify(token, c.env.JWT_SECRET, "HS256");
-        if (!address) {
-            return c.text(msgs.AddressNotFoundMsg, 400)
+        const payload = await Jwt.verify(token, c.env.JWT_SECRET, "HS256");
+        const authorized = await authorizeAddressSend(c, payload as JwtPayload);
+        if (!authorized.ok) {
+            await recordAccessEvent(c, {
+                event_type: "address.send.denied",
+                actor_type: payload?.share_token_id ? "share_token" : "address",
+                actor_id: (payload?.share_token_id || payload?.address_id || null) as string | null,
+                actor_label: (payload?.address || null) as string | null,
+                resource_type: "address",
+                resource_id: (payload?.address_id || null) as string | null,
+                resource_label: (payload?.address || null) as string | null,
+                status: "denied",
+                failure_reason: authorized.reason === 'read_only'
+                    ? "share_token_read_only"
+                    : "invalid_credential",
+            });
+            return authorized.reason === 'read_only'
+                ? c.text("Share token is read-only", 403)
+                : c.text(msgs.InvalidAddressCredentialMsg, 401)
         }
         const reqJson = await c.req.json();
-        await sendMail(c, address as string, reqJson);
+        await sendMail(c, authorized.address, reqJson);
         return c.json({ status: "ok" })
     } catch (e) {
         console.error("Failed to send mail", e);

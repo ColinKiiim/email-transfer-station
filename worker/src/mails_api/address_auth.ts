@@ -37,8 +37,12 @@ export default {
             passwordInput,
             isAddressPasswordV2Enabled(c.env.ENABLE_ADDRESS_PASSWORD_V2),
         );
+        // Changing the password revokes previously issued Address JWTs, so any
+        // other device holding one is signed out. The caller gets a fresh token
+        // below so the session it is changing from survives.
         const { success } = await c.env.DB.prepare(
-            `UPDATE address SET password = ?, updated_at = datetime('now') WHERE id = ?`
+            `UPDATE address SET password = ?, credential_version = COALESCE(credential_version, 1) + 1,`
+            + ` updated_at = datetime('now') WHERE id = ?`
         ).bind(storedPassword, address_id).run();
 
         if (!success) {
@@ -56,7 +60,8 @@ export default {
             status: "success",
         });
 
-        return c.json({ success: true });
+        const jwt = await issueAddressJwt(c, address, address_id);
+        return c.json({ success: true, jwt });
     },
 
     // 地址密码登录
