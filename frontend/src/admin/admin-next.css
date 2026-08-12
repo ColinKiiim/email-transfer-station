@@ -161,19 +161,18 @@ body:has(.admin-next) .n-message-container {
 }
 
 .admin-next-host .app {
+    --sidebar-width: 244px;
+
     display: grid;
-    grid-template-columns: 244px minmax(0, 1fr);
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
     justify-content: start;
     height: 100dvh;
     min-height: 0;
     overflow: hidden;
-    transition-property: grid-template-columns;
-    transition-duration: 180ms;
-    transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
 }
 
 .admin-next-host .app.is-flow-view {
-    grid-template-columns: 244px minmax(0, 1fr);
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
 }
 
 .admin-next-host .app.is-sidebar-collapsed {
@@ -451,7 +450,7 @@ body:has(.admin-next) .n-message-container {
 
 @media (min-width: 901px) {
     .admin-next-host .is-sidebar-collapsed .topbar {
-        padding-left: 220px;
+        padding-left: calc(var(--sidebar-width) - 72px + 18px);
     }
 }
 
@@ -1934,11 +1933,7 @@ body:has(.admin-next) .n-message-container {
 
 @media (max-width: 1600px) {
     .admin-next-host .app {
-        grid-template-columns: 232px minmax(0, 1fr);
-    }
-
-    .admin-next-host .app.is-flow-view {
-        grid-template-columns: 232px minmax(0, 1fr);
+        --sidebar-width: 232px;
     }
 
     .admin-next-host .rail {
