@@ -489,7 +489,7 @@ body:has(.admin-next) .n-message-container {
     gap: 14px;
     align-items: center;
     padding: 14px 18px;
-    background: color-mix(in oklch, var(--surface) 90%, transparent);
+    background: var(--surface);
 }
 
 .admin-next-host .topbar-controls {
@@ -717,7 +717,7 @@ body:has(.admin-next) .n-message-container {
     align-items: center;
     border-radius: var(--radius);
     padding: 8px;
-    background: color-mix(in oklch, var(--surface) 72%, transparent);
+    background: var(--surface);
     box-shadow: var(--shadow-border);
 }
 
@@ -1302,7 +1302,7 @@ body:has(.admin-next) .n-message-container {
     border-bottom: 1px solid var(--border);
     margin: -12px -12px 12px;
     padding: 8px 12px;
-    background: color-mix(in oklch, var(--surface) 96%, transparent);
+    background: var(--surface);
 }
 
 .admin-next-host .mail-reader-actions .btn {
