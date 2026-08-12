@@ -34,6 +34,7 @@ const MAIL_ATTRIBUTES = [
 const ALLOWED_URI = /^(?:(?:https?|mailto|tel|blob):|data:image\/|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i
 const SAFE_LINK = /^(?:https?:\/\/|mailto:|tel:)/i
 const SAFE_EMBEDDED_MEDIA = /^(?:blob:https?:\/\/|data:image\/(?:avif|bmp|gif|jpe?g|png|webp);base64,)/i
+const HTTPS_UPGRADE_IMAGE_HOSTS = new Set(['cdn.mcauto-images-production.sendgrid.net'])
 const CSS_FETCH_OR_EXECUTION = /(?:url\s*\(|@import|expression\s*\(|-moz-binding)/i
 const SAFE_SVG_PAINT = /^(?:none|currentcolor|transparent|#[0-9a-f]{3,8}|(?:rgb|hsl)a?\(\s*[-+0-9.% ,/]+\)|[a-z]+)$/i
 const SAFE_STYLE_PROPERTIES = new Set([
@@ -63,6 +64,11 @@ const toTemplate = (html) => {
 const normalizeRemoteImageUrl = (value) => {
     try {
         const url = new URL(String(value || '').trim())
+        if (url.protocol === 'http:' && HTTPS_UPGRADE_IMAGE_HOSTS.has(url.hostname)
+            && !url.username && !url.password && (!url.port || url.port === '80')) {
+            url.protocol = 'https:'
+            url.port = ''
+        }
         return url.protocol === 'https:' ? url.href : ''
     } catch {
         return ''
