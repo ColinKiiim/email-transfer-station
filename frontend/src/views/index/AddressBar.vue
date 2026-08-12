@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 import { useRouter } from 'vue-router'
 import { User, ExchangeAlt } from '@vicons/fa'
@@ -17,22 +17,26 @@ import AddressCredentialModal from '../../components/AddressCredentialModal.vue'
 const router = useRouter()
 
 const {
-    jwt, settings, showAddressCredential, userJwt,
+    jwt, settings, openSettings, showAddressCredential, userJwt,
     isTelegram, addressPassword
 } = useGlobalState()
 
 const { locale, t } = useScopedI18n('views.index.AddressBar')
 
 const showAddressManage = ref(false)
-const showUserEntry = computed(() => false)
+const showUserEntry = computed(() => !isTelegram.value)
 
 const onUserLogin = async () => {
     await router.push(getRouterPathWithLang("/user", locale.value))
 }
 
-onMounted(async () => {
-    await api.getSettings();
-});
+watch(
+    () => openSettings.value.fetched,
+    async (fetched) => {
+        if (fetched) await api.getSettings();
+    },
+    { immediate: true }
+);
 </script>
 
 <template>

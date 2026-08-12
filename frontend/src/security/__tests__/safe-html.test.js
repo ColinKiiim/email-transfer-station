@@ -2,7 +2,22 @@
 
 import { describe, expect, it } from 'vitest'
 
-import { sanitizeMailHtml, sanitizeOAuthIcon, sanitizeRichText } from '../safe-html'
+import {
+    normalizeExternalHttpUrl,
+    sanitizeMailHtml,
+    sanitizeOAuthIcon,
+    sanitizeRichText,
+} from '../safe-html'
+
+describe('external URL safety', () => {
+    it('allows only credential-free HTTP(S) links', () => {
+        expect(normalizeExternalHttpUrl('https://example.test/path')).toBe('https://example.test/path')
+        expect(normalizeExternalHttpUrl('http://example.test/path')).toBe('http://example.test/path')
+        expect(normalizeExternalHttpUrl('javascript:alert(1)')).toBe('')
+        expect(normalizeExternalHttpUrl('data:text/html,bad')).toBe('')
+        expect(normalizeExternalHttpUrl('https://user@example.test/path')).toBe('')
+    })
+})
 
 describe('source-specific HTML safety contracts', () => {
     it('sanitizes operator-authored rich text', () => {

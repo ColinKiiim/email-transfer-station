@@ -1396,6 +1396,10 @@ export const MESSAGE_REGISTRY = {
       "en": "Please login or click \"Get New Email\" button to get a new email address",
       "zh": "请\"登录\"或点击 \"注册新邮箱\" 按钮来获取一个新的邮箱地址"
     },
+    "pleaseUseExistingCredential": {
+      "en": "Sign in with an existing address credential, or ask the administrator for access.",
+      "zh": "请使用已有邮箱地址凭据登录，或向管理员申请访问凭据。"
+    },
     "randomSubdomainTip": {
       "en": "When enabled, the created address will use a random subdomain. Subdomain addresses are recommended for receiving only.",
       "zh": "启用后，创建出来的地址会自动挂在随机子域名下。子域名地址更建议仅用于收件。"

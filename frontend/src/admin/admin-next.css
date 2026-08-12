@@ -62,6 +62,7 @@ body:has(.admin-next) .n-message-container {
 }
 
 .admin-next-host .admin-next {
+    box-sizing: border-box;
     height: 100dvh;
     min-height: 0;
     background: var(--bg);

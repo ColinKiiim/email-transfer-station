@@ -31,6 +31,7 @@ describe('sign-out clears credentials from every surface', () => {
         clearSessionStorageKeys()
         expect(localStorage.getItem('jwt')).toBeNull()
         expect(localStorage.getItem('userJwt')).toBeNull()
+        expect(localStorage.getItem('LocalAddressCache')).toBeNull()
         expect(sessionStorage.getItem('adminAuth')).toBeNull()
         expect(sessionStorage.getItem('addressPassword')).toBeNull()
     })

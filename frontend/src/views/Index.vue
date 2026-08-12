@@ -7,6 +7,7 @@ import { useGlobalState } from '../store'
 import { api } from '../api'
 import { useIsMobile } from '../utils/composables'
 import { FullscreenExitOutlined } from '@vicons/material'
+import { putBlobToSignedUrl } from '../utils/s3-upload'
 
 import AddressBar from './index/AddressBar.vue';
 import MailBox from '../components/MailBox.vue';
@@ -70,13 +71,7 @@ const saveToS3 = async (mail_id, filename, blob) => {
       method: 'POST',
       body: JSON.stringify({ key: `${mail_id}/${filename}` })
     });
-    // upload to s3 by formdata
-    const formData = new FormData();
-    formData.append(filename, blob);
-    await fetch(url, {
-      method: 'PUT',
-      body: formData
-    });
+    await putBlobToSignedUrl(url, blob);
     message.success(t('saveToS3Success'));
   } catch (error) {
     console.error(error);

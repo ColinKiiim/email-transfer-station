@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, computed, nextTick, watch } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 import { useRouter } from 'vue-router'
 import { NewLabelOutlined, EmailOutlined } from '@vicons/material'
@@ -146,11 +146,8 @@ const generateNameLoading = ref(false);
 const generateName = async () => {
     try {
         generateNameLoading.value = true;
-        const { faker } = await import('https://esm.sh/@faker-js/faker');
-        emailName.value = faker.internet.email()
-            .split('@')[0]
-            .replace(/\s+/g, '.')
-            .replace(/\.{2,}/g, '.')
+        emailName.value = crypto.randomUUID()
+            .replaceAll('-', '')
             .replace(addressRegex.value, '')
             .toLowerCase();
         // support maxAddressLen
@@ -242,6 +239,30 @@ const showNewAddressTab = computed(() => {
     return openSettings.value.enableUserCreateEmail;
 });
 
+const availableTabs = computed(() => [
+    { value: 'signin', label: loginAndBindTag.value },
+    ...(showNewAddressTab.value ? [{ value: 'register', label: t('getNewEmail') }] : []),
+    { value: 'help', label: t('help') },
+]);
+
+const onTabKeydown = async (event, index) => {
+    const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End'];
+    if (!keys.includes(event.key)) return;
+    event.preventDefault();
+    const last = availableTabs.value.length - 1;
+    const nextIndex = event.key === 'Home' ? 0
+        : event.key === 'End' ? last
+            : event.key === 'ArrowLeft' ? (index + last) % availableTabs.value.length
+                : (index + 1) % availableTabs.value.length;
+    tabValue.value = availableTabs.value[nextIndex].value;
+    await nextTick();
+    document.getElementById(`login-tab-${tabValue.value}`)?.focus();
+};
+
+watch(showNewAddressTab, (visible) => {
+    if (!visible && tabValue.value === 'register') tabValue.value = 'signin';
+});
+
 onMounted(async () => {
     if (!openSettings.value.domains || openSettings.value.domains.length === 0) {
         await api.getOpenSettings(message, notification);
@@ -256,22 +277,35 @@ onMounted(async () => {
         <n-alert v-if="userSettings.user_email" :show-icon="false" :bordered="false" closable>
             <span>{{ t('bindUserInfo') }}</span>
         </n-alert>
-        <n-tabs v-if="openSettings.fetched" v-model:value="tabValue" size="large" justify-content="space-evenly">
-            <n-tab-pane name="signin" :tab="loginAndBindTag">
+        <div v-if="openSettings.fetched">
+            <div class="login-tab-list" role="tablist" :aria-label="loginAndBindTag">
+                <button v-for="(tab, index) in availableTabs" :id="`login-tab-${tab.value}`" :key="tab.value"
+                    type="button" role="tab" class="login-tab" :class="{ active: tabValue === tab.value }"
+                    :aria-selected="tabValue === tab.value" :aria-controls="`login-panel-${tab.value}`"
+                    :tabindex="tabValue === tab.value ? 0 : -1" @click="tabValue = tab.value"
+                    @keydown="onTabKeydown($event, index)">
+                    {{ tab.label }}
+                </button>
+            </div>
+            <section v-if="tabValue === 'signin'" id="login-panel-signin" role="tabpanel"
+                aria-labelledby="login-tab-signin" class="login-tab-panel">
                 <n-form>
                     <div v-if="loginMethod === 'password'">
-                        <n-form-item-row :label="t('email')" required>
-                            <n-input v-model:value="loginAddress" />
+                        <n-form-item-row :label="t('email')" :label-props="{ for: 'address-login-email' }" required>
+                            <n-input v-model:value="loginAddress"
+                                :input-props="{ id: 'address-login-email', autocomplete: 'username' }" />
                         </n-form-item-row>
-                        <n-form-item-row :label="t('password')" required>
+                        <n-form-item-row :label="t('password')" :label-props="{ for: 'address-login-password' }" required>
                             <n-input v-model:value="loginPassword" type="password" show-password-on="click"
+                                :input-props="{ id: 'address-login-password', autocomplete: 'current-password' }"
                                 @keyup.enter="login" />
                         </n-form-item-row>
                     </div>
 
                     <div v-else>
-                        <n-form-item-row :label="t('credential')" required>
-                            <n-input v-model:value="credential" type="textarea" :autosize="{ minRows: 3 }" />
+                        <n-form-item-row :label="t('credential')" :label-props="{ for: 'address-login-credential' }" required>
+                            <n-input v-model:value="credential" type="textarea" :autosize="{ minRows: 3 }"
+                                :input-props="{ id: 'address-login-credential', autocomplete: 'off' }" />
                         </n-form-item-row>
                     </div>
 
@@ -299,8 +333,9 @@ onMounted(async () => {
                         {{ t('getNewEmail') }}
                     </n-button>
                 </n-form>
-            </n-tab-pane>
-            <n-tab-pane v-if="showNewAddressTab" name="register" :tab="t('getNewEmail')">
+            </section>
+            <section v-else-if="tabValue === 'register' && showNewAddressTab" id="login-panel-register"
+                role="tabpanel" aria-labelledby="login-tab-register" class="login-tab-panel">
                 <n-spin :show="generateNameLoading">
                     <n-form>
                         <span>
@@ -341,14 +376,15 @@ onMounted(async () => {
                         </n-button>
                     </n-form>
                 </n-spin>
-            </n-tab-pane>
-            <n-tab-pane name="help" :tab="t('help')">
+            </section>
+            <section v-else id="login-panel-help" role="tabpanel" aria-labelledby="login-tab-help"
+                class="login-tab-panel">
                 <n-alert :show-icon="false" :bordered="false">
-                    <span>{{ t('pleaseGetNewEmail') }}</span>
+                    <span>{{ showNewAddressTab ? t('pleaseGetNewEmail') : t('pleaseUseExistingCredential') }}</span>
                 </n-alert>
                 <AdminContact />
-            </n-tab-pane>
-        </n-tabs>
+            </section>
+        </div>
     </div>
 </template>
 
@@ -362,6 +398,37 @@ onMounted(async () => {
 
 .n-form .n-button {
     margin-top: 10px;
+}
+
+.login-tab-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    gap: 4px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--ets-border);
+}
+
+.login-tab {
+    min-height: 40px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.login-tab:hover {
+    background: var(--ets-hover);
+}
+
+.login-tab.active {
+    border-bottom-color: var(--ets-brand);
+    color: var(--ets-brand);
+}
+
+.login-tab-panel {
+    text-align: left;
 }
 
 .switch-login-button {

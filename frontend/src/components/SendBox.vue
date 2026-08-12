@@ -312,7 +312,7 @@ onMounted(async () => {
           </n-list-item>
         </n-list>
       </div>
-      <n-drawer v-model:show="curMail" width="100%" placement="bottom" :trap-focus="false" :block-scroll="false"
+      <n-drawer v-model:show="curMail" width="100%" placement="bottom"
         style="height: 80vh;">
         <n-drawer-content :title="curMail ? curMail.subject : ''" closable>
           <n-card :bordered="false" embedded style="overflow: auto;">

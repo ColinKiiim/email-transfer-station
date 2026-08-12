@@ -93,16 +93,20 @@ const columns = [
                 ),
                 h(NPopconfirm,
                     {
-                        onPositiveClick: () => {
-                            api.fetch(`/telegram/unbind_address`, {
-                                method: 'POST',
-                                body: JSON.stringify({
-                                    initData: telegramApp.value.initData,
-                                    address: row.address
-                                })
-                            });
-                            jwt.value = ""
-                            location.reload()
+                        onPositiveClick: async () => {
+                            try {
+                                await api.fetch(`/telegram/unbind_address`, {
+                                    method: 'POST',
+                                    body: JSON.stringify({
+                                        initData: telegramApp.value.initData,
+                                        address: row.address
+                                    })
+                                });
+                                jwt.value = ""
+                                location.reload()
+                            } catch (error) {
+                                message.error((error as Error).message || "error");
+                            }
                         }
                     },
                     {

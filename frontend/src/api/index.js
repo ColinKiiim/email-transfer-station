@@ -156,6 +156,17 @@ const getSettings = async () => {
             auto_reply: res["auto_reply"],
             send_balance: res["send_balance"],
         };
+    } catch (error) {
+        if (error instanceof ApiRequestError
+            && error.status === 401
+            && openSettings.value.fetched
+            && !openSettings.value.needAuth
+        ) {
+            jwt.value = '';
+            settings.value.address = '';
+            return "";
+        }
+        throw error;
     } finally {
         settings.value.fetched = true;
     }

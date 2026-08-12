@@ -38,7 +38,7 @@ const menuValue = computed(() => {
     if (route.path.includes("admin")) return "admin";
     return "home";
 });
-const showUserEntry = computed(() => !isTelegram.value && route.path.includes("user"));
+const showUserEntry = computed(() => !isTelegram.value);
 
 const cfToken = ref('')
 const turnstileRef = ref(null)

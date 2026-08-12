@@ -236,7 +236,7 @@ const handleSaveToS3 = async (filename, blob) => {
     </div>
   </div>
 
-  <n-drawer v-model:show="showFullscreen" width="100%" placement="bottom" :trap-focus="false" :block-scroll="false"
+  <n-drawer v-model:show="showFullscreen" width="100%" placement="bottom"
     style="height: 100vh;">
     <n-drawer-content :title="mail.subject" closable>
       <div class="fullscreen-mail-content" :class="{ 'dark-mode': isDark }">

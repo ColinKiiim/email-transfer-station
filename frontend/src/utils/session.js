@@ -16,6 +16,7 @@ export const CREDENTIAL_STORAGE_KEYS = Object.freeze({
     local: [
         'jwt',            // address bearer credential
         'userJwt',        // user session
+        'LocalAddressCache', // saved address bearer credentials
         'auth',           // site-wide password
         'announcement',   // per-instance content the next account should re-see
     ],

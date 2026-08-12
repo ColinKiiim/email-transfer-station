@@ -148,6 +148,11 @@ body,
   -moz-osx-font-smoothing: grayscale;
 }
 
+:where(button, a, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--ets-focus-ring);
+  outline-offset: 2px;
+}
+
 .n-switch {
   margin-left: 10px;
   margin-right: 10px;

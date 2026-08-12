@@ -4,6 +4,7 @@ import { useScopedI18n } from '@/i18n/app';
 import { ContentCopyOutlined, LinkRound, CodeRound } from '@vicons/material';
 import { useMessage } from 'naive-ui';
 import { useGlobalState } from '../store';
+import { normalizeExternalHttpUrl } from '../security/safe-html';
 
 const message = useMessage();
 const { isDark } = useGlobalState();
@@ -83,6 +84,10 @@ const isLink = computed(() => {
   return aiExtract.value && aiExtract.value.type !== 'auth_code';
 });
 
+const safeLink = computed(() => isLink.value
+  ? normalizeExternalHttpUrl(aiExtract.value?.result)
+  : '');
+
 const displayText = computed(() => {
   if (!aiExtract.value) return '';
   // For auth_code, always show the raw result (verification code)
@@ -103,8 +108,8 @@ const copyToClipboard = async () => {
 };
 
 const openLink = () => {
-  if (isLink.value && aiExtract.value.result) {
-    window.open(aiExtract.value.result, '_blank');
+  if (safeLink.value) {
+    window.open(safeLink.value, '_blank', 'noopener,noreferrer');
   }
 };
 </script>
@@ -130,7 +135,7 @@ const openLink = () => {
             <n-icon :component="ContentCopyOutlined" />
           </template>
         </n-button>
-        <n-button v-if="isLink" size="small" @click="openLink" tertiary type="primary">
+        <n-button v-if="safeLink" size="small" @click="openLink" tertiary type="primary">
           {{ t('open') }}
         </n-button>
       </n-space>

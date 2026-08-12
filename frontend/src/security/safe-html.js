@@ -54,6 +54,16 @@ const SAFE_STYLE_PROPERTIES = new Set([
     'white-space', 'width', 'word-break', 'word-spacing',
 ])
 
+export const normalizeExternalHttpUrl = (value) => {
+    try {
+        const url = new URL(String(value || '').trim())
+        if ((url.protocol !== 'http:' && url.protocol !== 'https:') || url.username || url.password) return ''
+        return url.href
+    } catch {
+        return ''
+    }
+}
+
 const toTemplate = (html) => {
     if (typeof document === 'undefined') return null
     const template = document.createElement('template')
