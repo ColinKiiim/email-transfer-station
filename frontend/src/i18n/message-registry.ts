@@ -978,6 +978,18 @@ export const MESSAGE_REGISTRY = {
       "en": "Logging in...",
       "zh": "登录中..."
     },
+    "loginFailed": {
+      "en": "Login failed",
+      "zh": "登录失败"
+    },
+    "success": {
+      "en": "Login successful",
+      "zh": "登录成功"
+    },
+    "backToLogin": {
+      "en": "Back to login",
+      "zh": "返回登录"
+    },
     "stateNotMatch": {
       "en": "state not match",
       "zh": "state 不匹配"

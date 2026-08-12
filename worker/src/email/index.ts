@@ -18,6 +18,11 @@ import {
     getManagedReceiveDomains,
     getPendingVerificationRecipients,
 } from "../domains";
+import {
+    buildInboundDedupKey,
+    releaseInboundDelivery,
+    reserveInboundDelivery,
+} from "./idempotency";
 
 
 async function email(message: ForwardableEmailMessage, env: Bindings, ctx: ExecutionContext) {
@@ -76,6 +81,17 @@ async function email(message: ForwardableEmailMessage, env: Bindings, ctx: Execu
     }
 
     const message_id = message.headers.get("Message-ID");
+    const dedupKey = await buildInboundDedupKey(inboundRecipient.address, message_id, rawEmail);
+    try {
+        if (!await reserveInboundDelivery(env.DB, inboundRecipient.address, dedupKey)) {
+            console.log(`Duplicate inbound delivery skipped for ${inboundRecipient.address}`);
+            return;
+        }
+    } catch (error) {
+        message.setReject(`Failed reserve message to ${inboundRecipient.address}`);
+        console.error("reserve inbound delivery error", error);
+        return;
+    }
     const savePlaintext = async (): Promise<{ success: boolean }> => {
         try {
             return await env.DB.prepare(
@@ -171,11 +187,18 @@ async function email(message: ForwardableEmailMessage, env: Bindings, ctx: Execu
         console.error("save email error", error);
     }
     if (!saved) {
+        try {
+            await releaseInboundDelivery(env.DB, inboundRecipient.address, dedupKey);
+        } catch (error) {
+            console.error("release inbound delivery reservation error", error);
+        }
         message.setReject(`Failed save message to ${inboundRecipient.address}`);
         console.error(`Failed save message from ${message.from} to ${inboundRecipient.address}`);
         return;
     }
 
+    // ponytail: the receipt makes external effects at-most-once; use an outbox
+    // if guaranteed retry of each individual integration becomes necessary.
     // forward email
     await forwardEmail(message, env, inboundRecipient.address);
 

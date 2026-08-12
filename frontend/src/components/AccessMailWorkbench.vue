@@ -5,7 +5,7 @@ import { CloudDownloadRound, ArrowBackIosNewFilled, ArrowForwardIosFilled, Inbox
 
 import { useGlobalState } from '../store'
 import { utcToLocalDate } from '../utils'
-import { processItem } from '../utils/email-parser'
+import { processItem, revokeMailObjectUrls, revokeObjectUrl } from '../utils/email-parser'
 import MailContentRenderer from './MailContentRenderer.vue'
 import AiExtractInfo from './AiExtractInfo.vue'
 
@@ -157,10 +157,12 @@ const refresh = async ({ keepPage = true } = {}) => {
       pageSize.value,
       (page.value - 1) * pageSize.value,
     )
-    rawData.value = await Promise.all((results || []).map(async (item) => {
+    const nextData = await Promise.all((results || []).map(async (item) => {
       item.checked = false
       return await processItem(item)
     }))
+    revokeMailObjectUrls(rawData.value)
+    rawData.value = nextData
     count.value = Number.isFinite(Number(totalCount)) ? Number(totalCount) : rawData.value.length
     const selectedId = curMail.value?.id
     curMail.value = data.value.find((mail) => mail.id === selectedId) || data.value[0] || null
@@ -291,6 +293,7 @@ const multiActionDownload = async () => {
     for (const mail of selectedMails) {
       zip.file(`${mail.id}.eml`, mail.raw)
     }
+    revokeObjectUrl(multiActionDownloadZip.value.url)
     multiActionDownloadZip.value = {
       url: URL.createObjectURL(await zip.generateAsync({ type: 'blob' })),
       filename: `mails-${new Date().toISOString().replace(/:/g, '-')}.zip`,
@@ -334,6 +337,8 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   clearInterval(timer.value)
+  revokeMailObjectUrls(rawData.value)
+  revokeObjectUrl(multiActionDownloadZip.value.url)
 })
 </script>
 

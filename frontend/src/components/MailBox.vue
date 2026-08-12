@@ -5,7 +5,7 @@ import { useScopedI18n } from '@/i18n/app'
 import { useGlobalState } from '../store'
 import { CloudDownloadRound, ArrowBackIosNewFilled, ArrowForwardIosFilled, InboxRound } from '@vicons/material'
 import { useIsMobile } from '../utils/composables'
-import { processItem } from '../utils/email-parser'
+import { processItem, revokeMailObjectUrls, revokeObjectUrl } from '../utils/email-parser'
 import { utcToLocalDate } from '../utils';
 import { buildReplyModel, buildForwardModel } from '../utils/mail-actions'
 import MailContentRenderer from "./MailContentRenderer.vue";
@@ -184,10 +184,12 @@ const refresh = async () => {
       pageSize.value, (page.value - 1) * pageSize.value
     );
     loading.value = true;
-    rawData.value = await Promise.all(results.map(async (item) => {
+    const nextData = await Promise.all(results.map(async (item) => {
       item.checked = false;
       return await processItem(item);
     }));
+    revokeMailObjectUrls(rawData.value);
+    rawData.value = nextData;
     count.value = Number.isFinite(Number(totalCount)) ? Number(totalCount) : rawData.value.length;
     const selectedId = curMail.value?.id;
     curMail.value = data.value.find((mail) => mail.id === selectedId) || null;
@@ -341,6 +343,7 @@ const multiActionDownload = async () => {
     for (const mail of selectedMails) {
       zip.file(`${mail.id}.eml`, mail.raw);
     }
+    revokeObjectUrl(multiActionDownloadZip.value.url);
     multiActionDownloadZip.value = {
       url: URL.createObjectURL(await zip.generateAsync({ type: "blob" })),
       filename: `mails-${new Date().toISOString().replace(/:/g, '-')}.zip`
@@ -359,6 +362,8 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   clearInterval(timer.value)
+  revokeMailObjectUrls(rawData.value)
+  revokeObjectUrl(multiActionDownloadZip.value.url)
 })
 </script>
 

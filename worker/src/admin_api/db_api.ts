@@ -221,6 +221,30 @@ CREATE INDEX IF NOT EXISTS idx_user_passkeys_user_id ON user_passkeys(user_id);
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_user_passkeys_user_id_passkey_id ON user_passkeys(user_id, passkey_id);
 
+CREATE TABLE IF NOT EXISTS user_verification_challenges (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL,
+    purpose TEXT NOT NULL,
+    code_hash TEXT NOT NULL,
+    expires_at DATETIME NOT NULL,
+    consumed_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(email, purpose)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_verification_challenges_expires_at ON user_verification_challenges(expires_at);
+
+CREATE TABLE IF NOT EXISTS inbound_mail_receipts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    address TEXT NOT NULL,
+    dedup_key TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(address, dedup_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_inbound_mail_receipts_created_at ON inbound_mail_receipts(created_at);
+
 CREATE TABLE IF NOT EXISTS audit_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     actor_type TEXT,
@@ -654,6 +678,38 @@ export default {
                 CREATE INDEX IF NOT EXISTS idx_mail_read_states_address ON mail_read_states(address);
             `;
             const query = mailReadStateMigrationQueries.replace(/[\r\n]/g, " ")
+                .split(";")
+                .map((statement) => statement.trim())
+                .filter((statement) => statement.length > 0)
+                .join(";\n");
+            await c.env.DB.exec(query);
+        }
+        if (version && isVersionLte(version, "v0.0.14")) {
+            const deliveryAuthorityQueries = `
+                CREATE TABLE IF NOT EXISTS user_verification_challenges (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    email TEXT NOT NULL,
+                    purpose TEXT NOT NULL,
+                    code_hash TEXT NOT NULL,
+                    expires_at DATETIME NOT NULL,
+                    consumed_at DATETIME,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(email, purpose)
+                );
+                CREATE INDEX IF NOT EXISTS idx_user_verification_challenges_expires_at
+                    ON user_verification_challenges(expires_at);
+                CREATE TABLE IF NOT EXISTS inbound_mail_receipts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    address TEXT NOT NULL,
+                    dedup_key TEXT NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(address, dedup_key)
+                );
+                CREATE INDEX IF NOT EXISTS idx_inbound_mail_receipts_created_at
+                    ON inbound_mail_receipts(created_at);
+            `;
+            const query = deliveryAuthorityQueries.replace(/[\r\n]/g, " ")
                 .split(";")
                 .map((statement) => statement.trim())
                 .filter((statement) => statement.length > 0)

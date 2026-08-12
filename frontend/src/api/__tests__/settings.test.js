@@ -48,3 +48,26 @@ describe('address settings credential recovery', () => {
         expect(mocks.request).not.toHaveBeenCalled()
     })
 })
+
+describe('global request loading state', () => {
+    it('stays busy until all concurrent requests settle', async () => {
+        let resolveFirst
+        let resolveSecond
+        mocks.request
+            .mockReturnValueOnce(new Promise((resolve) => { resolveFirst = resolve }))
+            .mockReturnValueOnce(new Promise((resolve) => { resolveSecond = resolve }))
+
+        const first = api.fetch('/open_api/first')
+        const second = api.fetch('/open_api/second')
+        expect(state.loading.value).toBe(true)
+        await vi.waitFor(() => expect(mocks.request).toHaveBeenCalledTimes(2))
+
+        resolveFirst({ status: 200, data: { ok: 1 } })
+        await first
+        expect(state.loading.value).toBe(true)
+
+        resolveSecond({ status: 200, data: { ok: 2 } })
+        await second
+        expect(state.loading.value).toBe(false)
+    })
+})

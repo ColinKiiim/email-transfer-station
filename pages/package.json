@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "wrangler pages dev",
     "build": "corepack pnpm --dir ../frontend run build:pages",
-    "check": "node --check functions/_middleware.js",
+    "check": "node --check functions/_middleware.js && node -e \"const fs=require('node:fs'); for (const f of ['_headers','_routes.json']) { const p='../frontend/dist/'+f; if (!fs.existsSync(p)) throw new Error('Missing '+p); } JSON.parse(fs.readFileSync('../frontend/dist/_routes.json','utf8'));\"",
     "deploy": "corepack pnpm run build && wrangler pages deploy --branch production"
   },
   "license": "MIT",

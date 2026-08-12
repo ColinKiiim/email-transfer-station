@@ -7,6 +7,14 @@ import { executeCustomSqlCleanup } from './admin_api/cleanup_api';
 
 export async function scheduled(event: ScheduledEvent, env: Bindings, ctx: any) {
     console.log("Scheduled event: ", event);
+    try {
+        await env.DB.batch([
+            env.DB.prepare(`DELETE FROM user_verification_challenges WHERE expires_at <= datetime('now')`),
+            env.DB.prepare(`DELETE FROM inbound_mail_receipts WHERE created_at < datetime('now', '-30 day')`),
+        ]);
+    } catch (error) {
+        console.error("delivery authority cleanup failed", error);
+    }
     const autoCleanupSetting = await getJsonSetting<CleanupSettings>(
         { env: env, } as Context<HonoCustomType>,
         CONSTANTS.AUTO_CLEANUP_KEY

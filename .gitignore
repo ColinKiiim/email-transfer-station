@@ -134,7 +134,8 @@ dist
 .pnp.*
 
 .wrangler
-wrangler.toml
+/worker/wrangler.toml
+!/pages/wrangler.toml
 .dev.vars
 
 # E2E test artifacts

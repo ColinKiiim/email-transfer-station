@@ -73,7 +73,7 @@ export const getPreferredLocale = (
   return FALLBACK_LOCALE
 }
 
-export const getInitialLocale = () => DEFAULT_LOCALE
+export const getInitialLocale = () => getPreferredLocale(getStoredLocale(), getBrowserLocales())
 
 const splitPathSuffix = (fullPath: string) => {
   const match = fullPath.match(/^([^?#]*)(.*)$/)

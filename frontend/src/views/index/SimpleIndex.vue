@@ -15,7 +15,7 @@ import { useGlobalState } from '../../store'
 import { api } from '../../api'
 import Login from '../common/Login.vue'
 import AccountSettings from './AccountSettings.vue'
-import { processItem } from '../../utils/email-parser'
+import { processItem, revokeMailObjectUrls } from '../../utils/email-parser'
 import MailContentRenderer from '../../components/MailContentRenderer.vue'
 import AddressSelect from '../../components/AddressSelect.vue'
 
@@ -49,7 +49,9 @@ const fetchMails = async () => {
         const { results, count } = await api.fetch(`/api/mails?limit=1&offset=${currentPage.value - 1}`)
         totalCount.value = count > 0 ? count : totalCount.value;
         const rawMail = results && results.length > 0 ? results[0] : null
-        currentMail.value = rawMail ? await processItem(rawMail) : null
+        const nextMail = rawMail ? await processItem(rawMail) : null
+        revokeMailObjectUrls(currentMail.value)
+        currentMail.value = nextMail
     } catch (error) {
         console.error('Failed to fetch mails:', error)
         message.error(t('fetchMailsFailed'))
@@ -62,6 +64,7 @@ const deleteMail = async () => {
     try {
         await api.fetch(`/api/mails/${currentMail.value.id}`, { method: 'DELETE' });
         message.success(t('deleteSuccess'));
+        revokeMailObjectUrls(currentMail.value)
         currentMail.value = null;
         await refreshMails();
     } catch (error) {
@@ -123,6 +126,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
     clearInterval(timer.value)
+    revokeMailObjectUrls(currentMail.value)
 })
 </script>
 

@@ -52,6 +52,7 @@ vi.mock("../email/recipient", () => ({
 }));
 
 import { email } from "../email/index";
+import { buildInboundDedupKey } from "../email/idempotency";
 
 const RAW = "From: sender@example.test\r\nSubject: hi\r\n\r\nbody";
 
@@ -64,12 +65,23 @@ const makeMessage = () => ({
     setReject: vi.fn(),
 });
 
-/** DB whose INSERT behaviour the test controls. */
-const makeEnv = (run: () => Promise<{ success: boolean }>) => ({
+/** DB whose durable mail INSERT behaviour the test controls. */
+const makeEnv = (
+    run: () => Promise<{ success: boolean }>,
+    reserveChanges = 1,
+) => ({
     DB: {
-        prepare: () => ({
+        prepare: (sql: string) => ({
             bind: () => ({
-                run,
+                run: () => {
+                    if (sql.includes("INSERT OR IGNORE INTO inbound_mail_receipts")) {
+                        return Promise.resolve({ success: true, meta: { changes: reserveChanges } });
+                    }
+                    if (sql.includes("DELETE FROM inbound_mail_receipts")) {
+                        return Promise.resolve({ success: true, meta: { changes: 1 } });
+                    }
+                    return run();
+                },
                 first: async () => null,
             }),
             first: async () => null,
@@ -120,5 +132,23 @@ describe("inbound mail is never silently dropped", () => {
         expect(forwardEmail).toHaveBeenCalledTimes(1);
         expect(autoReply).toHaveBeenCalledTimes(1);
         expect(extractEmailInfo).toHaveBeenCalledTimes(1);
+    });
+
+    it("accepts a duplicate receipt without repeating storage or side effects", async () => {
+        const message = makeMessage();
+        const insert = vi.fn(async () => ({ success: true }));
+
+        await email(message as never, makeEnv(insert, 0), {} as ExecutionContext);
+
+        expect(message.setReject).not.toHaveBeenCalled();
+        expect(insert).not.toHaveBeenCalled();
+        for (const fn of sideEffects) expect(fn).not.toHaveBeenCalled();
+    });
+
+    it("falls back to a stable content hash when Message-ID is absent", async () => {
+        const first = await buildInboundDedupKey("inbox@example.test", null, RAW);
+        const second = await buildInboundDedupKey("inbox@example.test", null, RAW);
+        expect(first).toMatch(/^sha256:[a-f0-9]{64}$/);
+        expect(second).toBe(first);
     });
 });

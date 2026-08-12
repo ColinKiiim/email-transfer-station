@@ -29,6 +29,16 @@ function applyParseFailure(item) {
     item.parseFailed = true;
 }
 
+export function revokeObjectUrl(url) {
+    if (typeof url === 'string' && url.startsWith('blob:')) URL.revokeObjectURL(url);
+}
+
+export function revokeMailObjectUrls(mails) {
+    for (const mail of Array.isArray(mails) ? mails : [mails]) {
+        for (const attachment of mail?.attachments || []) revokeObjectUrl(attachment?.url);
+    }
+}
+
 export async function processItem(item) {
     // Try to parse the email using mail-parser-wasm
     item.originalSource = item.source;
@@ -65,6 +75,7 @@ export async function processItem(item) {
         return item;
     }
     // Fallback to PostalMime
+    revokeMailObjectUrls(item);
     try {
         const parsedEmail = await PostalMime.parse(item.raw);
         item.source = parsedEmail.from?.address || item.source;

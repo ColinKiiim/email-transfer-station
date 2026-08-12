@@ -13,7 +13,7 @@
     "build:telegram:pages": "VITE_IS_TELEGRAM=true vite build -m pages --emptyOutDir",
     "build:telegram:release": "VITE_IS_TELEGRAM=true vite build -m example --emptyOutDir",
     "preview": "vite preview",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {

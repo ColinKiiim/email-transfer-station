@@ -8,6 +8,7 @@ import {
     DEFAULT_LOCALE,
     getBrowserLocales,
     getPreferredLocale,
+    getStoredLocale,
     replaceLocaleInFullPath,
     resolveSupportedLocale,
 } from '../i18n/utils'
@@ -73,13 +74,16 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
     const routeLocale = resolveSupportedLocale(to.path.split('/')[1])
-    const resolvedLocale = routeLocale || DEFAULT_LOCALE
+    const resolvedLocale = routeLocale || getPreferredLocale(
+        preferredLocale.value || getStoredLocale(),
+        getBrowserLocales(),
+    )
     i18n.global.locale.value = resolvedLocale
 
     if (routeLocale) {
         preferredLocale.value = routeLocale
     } else if (!preferredLocale.value) {
-        preferredLocale.value = getPreferredLocale('', getBrowserLocales())
+        preferredLocale.value = resolvedLocale
     }
 
     if (Object.prototype.hasOwnProperty.call(to.query, 'jwt')) {
@@ -103,6 +107,10 @@ router.beforeEach((to, from, next) => {
         if (canonicalRoutePath !== to.fullPath) {
             return next(canonicalRoutePath)
         }
+    }
+
+    if (resolvedLocale !== DEFAULT_LOCALE) {
+        return next(replaceLocaleInFullPath(to.fullPath, resolvedLocale))
     }
 
     if (routeLocale === DEFAULT_LOCALE) {

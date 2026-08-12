@@ -21,7 +21,10 @@ const instance = axios.create({
     validateStatus: (status) => status >= 200 && status <= 500
 });
 
+let pendingRequests = 0;
+
 const apiFetch = async (path, options = {}) => {
+    pendingRequests++;
     loading.value = true;
     try {
         // Get browser fingerprint for request tracking
@@ -76,7 +79,8 @@ const apiFetch = async (path, options = {}) => {
         }
         throw new Error(error?.message || formatApiErrorData(error));
     } finally {
-        loading.value = false;
+        pendingRequests = Math.max(0, pendingRequests - 1);
+        loading.value = pendingRequests > 0;
     }
 }
 

@@ -9,6 +9,11 @@ import { recordAccessEvent, recordAuditEvent } from "../audit";
 import { secureRandomInt } from "../security_random";
 import { issueUserJwt } from "../user_identity";
 import { createUserPasswordRecord, verifyUserPasswordRecord } from "../user_password";
+import {
+    consumeUserVerificationChallenge,
+    releaseUserVerificationChallenge,
+    reserveUserVerificationChallenge,
+} from "../user_verification";
 
 export default {
     verifyCode: async (c: Context<HonoCustomType>) => {
@@ -44,13 +49,12 @@ export default {
         if (!settings.verifyMailSender) {
             return c.text(msgs.VerifyMailSenderNotSetMsg, 400)
         }
-        // check if code exists in KV
-        const tmpcode = await c.env.KV.get(`temp-mail:${email}`)
-        if (tmpcode) {
+        // Reserve the address/purpose generation before sending. D1's unique
+        // constraint makes concurrent requests select exactly one live code.
+        const code = (100000 + secureRandomInt(900000)).toString();
+        if (!await reserveUserVerificationChallenge(c.env.DB, email, code)) {
             return c.text(msgs.CodeAlreadySentMsg, 400)
         }
-        // generate code 6 digits and convert to string
-        const code = (100000 + secureRandomInt(900000)).toString();
         // send code to email
         try {
             await sendMail(c, settings.verifyMailSender, {
@@ -62,10 +66,13 @@ export default {
                 is_html: false,
             })
         } catch (e) {
+            try {
+                await releaseUserVerificationChallenge(c.env.DB, email, code);
+            } catch (releaseError) {
+                console.error("Failed to release verify code reservation", releaseError);
+            }
             return c.text(`Failed to send verify code: ${(e as Error).message}`, 500)
         }
-        // save to KV
-        await c.env.KV.put(`temp-mail:${email}`, code, { expirationTtl: 300 });
         return c.json({
             success: true,
             expirationTtl: 300
@@ -118,8 +125,7 @@ export default {
         }
         // check code
         if (settings.enableMailVerify) {
-            const verifyCode = await c.env.KV.get(`temp-mail:${email}`)
-            if (verifyCode != code) {
+            if (!await consumeUserVerificationChallenge(c.env.DB, email, code)) {
                 return c.text(msgs.InvalidVerifyCodeMsg, 400)
             }
         }

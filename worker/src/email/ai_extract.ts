@@ -215,8 +215,8 @@ export async function extractEmailInfo(
 
             // Update the raw_mails record with metadata
             await env.DB.prepare(
-                `UPDATE raw_mails SET metadata = ? WHERE message_id = ?`
-            ).bind(metadata, message_id).run();
+                `UPDATE raw_mails SET metadata = ? WHERE address = ? AND message_id = ?`
+            ).bind(metadata, address, message_id).run();
 
             console.log(`AI extraction completed for ${message_id}: ${result.type}`);
         }

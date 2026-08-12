@@ -4,7 +4,7 @@ import { mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import ShadowHtmlComponent from '../../components/ShadowHtmlComponent.vue'
-import { processItem } from '../email-parser'
+import { processItem, revokeMailObjectUrls } from '../email-parser'
 
 const badgeMail = `MIME-Version: 1.0\r
 From: sender@example.test\r
@@ -36,6 +36,7 @@ iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9ZK1sAAAAA
 describe('mail parser inline media', () => {
     afterEach(() => {
         delete URL.createObjectURL
+        delete URL.revokeObjectURL
         vi.restoreAllMocks()
     })
 
@@ -67,5 +68,20 @@ describe('mail parser inline media', () => {
             expect(image?.getAttribute('data-removed-remote-media')).toBe('src')
         }
         wrapper.unmount()
+    })
+
+    it('releases attachment Blob URLs when parsed mail is replaced', () => {
+        const revokeObjectURL = vi.fn()
+        Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: revokeObjectURL })
+
+        revokeMailObjectUrls([
+            { attachments: [{ url: 'blob:https://mail.example/1' }, { url: 'https://cdn.example/image.png' }] },
+            { attachments: [{ url: 'blob:https://mail.example/2' }] },
+        ])
+
+        expect(revokeObjectURL.mock.calls.map(([url]) => url)).toEqual([
+            'blob:https://mail.example/1',
+            'blob:https://mail.example/2',
+        ])
     })
 })

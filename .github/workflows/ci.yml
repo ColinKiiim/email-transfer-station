@@ -13,6 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v6
         with:
           version: 10.10.0
@@ -43,10 +45,21 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm run check
       - name: Check repository whitespace
-        run: git diff --check
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          BASE_REF: ${{ github.base_ref }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            git diff --check "origin/$BASE_REF...HEAD"
+          elif printf '%s' "$BEFORE_SHA" | grep -Eq '^0+$'; then
+            git diff --check "$(git hash-object -t tree /dev/null)..HEAD"
+          else
+            git diff --check "$BEFORE_SHA..HEAD"
+          fi
 
   e2e:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

@@ -3,8 +3,8 @@ import { useRoute } from 'vue-router'
 
 import { useGlobalState } from '../../store'
 import { api } from '../../api'
-import { onMounted, watch } from 'vue';
-import { processItem } from '../../utils/email-parser'
+import { onBeforeUnmount, onMounted, watch } from 'vue';
+import { processItem, revokeMailObjectUrls } from '../../utils/email-parser'
 import MailContentRenderer from '../../components/MailContentRenderer.vue'
 
 const { telegramApp, loading } = useGlobalState()
@@ -14,7 +14,9 @@ const curMail = ref({});
 
 watch(telegramApp, async () => {
     if (telegramApp.value.initData) {
-        curMail.value = await fetchMailData();
+        const nextMail = await fetchMailData();
+        revokeMailObjectUrls(curMail.value);
+        curMail.value = nextMail;
     }
 });
 
@@ -42,6 +44,8 @@ const fetchMailData = async () => {
 onMounted(async () => {
     curMail.value = await fetchMailData();
 });
+
+onBeforeUnmount(() => revokeMailObjectUrls(curMail.value));
 </script>
 
 <template>
