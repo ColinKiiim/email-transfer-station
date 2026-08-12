@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from "vue";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useScopedI18n } from '@/i18n/app'
 import { CloudDownloadRound, ReplyFilled, ForwardFilled, FullscreenRound } from '@vicons/material'
 import ShadowHtmlComponent from "./ShadowHtmlComponent.vue";
@@ -7,9 +7,11 @@ import AiExtractInfo from "./AiExtractInfo.vue";
 import { getDownloadEmlUrl } from '../utils/email-parser';
 import { utcToLocalDate } from '../utils';
 import { useGlobalState } from '../store';
-import { sanitizeMailHtml } from '../security/safe-html';
+import { restoreRemoteMailImages, sanitizeMailHtml } from '../security/safe-html';
 
 const { preferShowTextMail, useIframeShowMail, useUTCDate, isDark } = useGlobalState();
+
+
 
 const { t } = useScopedI18n('components.MailContentRenderer')
 
@@ -55,6 +57,28 @@ const props = defineProps({
     type: Function,
     default: () => { }
   }
+})
+
+/*
+ * `getDownloadEmlUrl` mints a Blob object URL of the entire raw message. It used
+ * to be called straight from the template binding, so every re-render — every
+ * selection change, filter keystroke and auto-refresh tick — allocated another
+ * copy of the full MIME source and never released it. Object URLs live until the
+ * document unloads, so a long-lived admin session grew without bound.
+ *
+ * Derive it once per message instead, and revoke the previous one.
+ */
+const downloadUrl = ref('')
+watch(
+  () => props.mail?.raw,
+  (raw) => {
+    if (downloadUrl.value) URL.revokeObjectURL(downloadUrl.value)
+    downloadUrl.value = raw ? getDownloadEmlUrl(raw) : ''
+  },
+  { immediate: true },
+)
+onBeforeUnmount(() => {
+  if (downloadUrl.value) URL.revokeObjectURL(downloadUrl.value)
 });
 
 const showTextMail = ref(preferShowTextMail.value);
@@ -62,12 +86,22 @@ const showAttachments = ref(false);
 const curAttachments = ref([]);
 const attachmentLoding = ref(false);
 const showFullscreen = ref(false);
+const remoteImagesAllowed = ref(false);
 
 const safeMessage = computed(() => sanitizeMailHtml(props.mail.message));
+const hasBlockedRemoteImages = computed(() => safeMessage.value.includes('data-remote-src='));
+const renderedMessage = computed(() => remoteImagesAllowed.value
+  ? restoreRemoteMailImages(safeMessage.value)
+  : safeMessage.value);
+watch(() => [props.mail?.id, props.mail?.message], () => {
+  remoteImagesAllowed.value = false;
+});
 const iframeRenderGuardStyle = `<style>
   html, body {
     margin: 0;
     max-width: 100%;
+    background-color: #fff;
+    color: #202124;
   }
   *, *::before, *::after {
     box-sizing: border-box;
@@ -90,7 +124,7 @@ const iframeRenderGuardStyle = `<style>
     word-break: normal;
   }
 </style>`;
-const iframeMessage = computed(() => `${safeMessage.value}${iframeRenderGuardStyle}`);
+const iframeMessage = computed(() => `${renderedMessage.value}${iframeRenderGuardStyle}`);
 const hasHtmlMessage = computed(() => !!props.mail.messageIsHtml && safeMessage.value.trim().length > 0);
 const textMessage = computed(() => String(
   props.mail.text || (!props.mail.messageIsHtml ? props.mail.message : '') || ''
@@ -160,7 +194,7 @@ const handleSaveToS3 = async (filename, blob) => {
       </n-button>
 
       <n-button tag="a" target="_blank" tertiary type="info" size="small" :download="mail.id + '.eml'"
-        :href="getDownloadEmlUrl(mail.raw)">
+        :href="downloadUrl">
         <template #icon>
           <n-icon :component="CloudDownloadRound" />
         </template>
@@ -202,11 +236,18 @@ const handleSaveToS3 = async (filename, blob) => {
       <n-alert v-if="mail.parseFailed" type="warning" :bordered="false" class="mail-render-alert">
         {{ t('parseFailed') }}
       </n-alert>
+      <div v-if="!showPlainText && hasBlockedRemoteImages && !remoteImagesAllowed" class="remote-media-notice">
+        <span>{{ t('remoteImagesBlocked') }}</span>
+        <button type="button" class="remote-media-button" @click="remoteImagesAllowed = true">
+          {{ t('loadRemoteImages') }}
+        </button>
+      </div>
       <pre v-if="showPlainText" class="mail-text">{{ textMessage }}</pre>
       <iframe v-else-if="useIframeShowMail" :srcdoc="iframeMessage" class="mail-iframe" sandbox=""
         referrerpolicy="no-referrer">
       </iframe>
-      <ShadowHtmlComponent v-else :key="mail.id" :htmlContent="safeMessage" :isDark="isDark" class="mail-html" />
+      <ShadowHtmlComponent v-else :key="mail.id" :htmlContent="safeMessage" :isDark="isDark"
+        :allowRemoteImages="remoteImagesAllowed" class="mail-html" />
     </div>
   </div>
 
@@ -217,11 +258,18 @@ const handleSaveToS3 = async (filename, blob) => {
         <n-alert v-if="mail.parseFailed" type="warning" :bordered="false" class="mail-render-alert">
           {{ t('parseFailed') }}
         </n-alert>
+        <div v-if="!showPlainText && hasBlockedRemoteImages && !remoteImagesAllowed" class="remote-media-notice">
+          <span>{{ t('remoteImagesBlocked') }}</span>
+          <button type="button" class="remote-media-button" @click="remoteImagesAllowed = true">
+            {{ t('loadRemoteImages') }}
+          </button>
+        </div>
         <pre v-if="showPlainText" class="mail-text">{{ textMessage }}</pre>
         <iframe v-else-if="useIframeShowMail" :srcdoc="iframeMessage" class="mail-iframe" sandbox=""
           referrerpolicy="no-referrer">
         </iframe>
-        <ShadowHtmlComponent v-else :key="mail.id" :htmlContent="safeMessage" :isDark="isDark" class="mail-html" />
+        <ShadowHtmlComponent v-else :key="mail.id" :htmlContent="safeMessage" :isDark="isDark"
+          :allowRemoteImages="remoteImagesAllowed" class="mail-html" />
       </div>
     </n-drawer-content>
   </n-drawer>
@@ -301,6 +349,41 @@ const handleSaveToS3 = async (filename, blob) => {
   margin-bottom: 10px;
 }
 
+.remote-media-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--ets-border, #d5d9e0);
+  border-radius: 8px;
+  background: var(--ets-surface-muted, #f5f7fa);
+  color: var(--ets-text, #202124);
+}
+
+.remote-media-button {
+  flex: 0 0 auto;
+  border: 0;
+  padding: 4px;
+  background: transparent;
+  color: var(--ets-accent, #1a73e8);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.remote-media-button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.dark-mode .remote-media-notice {
+  border-color: var(--ets-border, #3c4043);
+  background: var(--ets-surface-muted, #292a2d);
+  color: var(--ets-text, #e8eaed);
+}
+
 .mail-text {
   white-space: pre-wrap;
   word-wrap: break-word;
@@ -355,6 +438,11 @@ const handleSaveToS3 = async (filename, blob) => {
 
   .mail-content {
     margin-top: 6px;
+  }
+
+  .remote-media-notice {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 </style>

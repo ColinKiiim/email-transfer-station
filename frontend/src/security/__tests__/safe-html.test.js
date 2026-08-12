@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from 'vitest'
 
-import { sanitizeMailHtml, sanitizeOAuthIcon, sanitizeRichText } from '../safe-html'
+import { restoreRemoteMailImages, sanitizeMailHtml, sanitizeOAuthIcon, sanitizeRichText } from '../safe-html'
 
 describe('source-specific HTML safety contracts', () => {
     it('sanitizes operator-authored rich text', () => {
@@ -71,6 +71,11 @@ describe('source-specific HTML safety contracts', () => {
             expect(image?.getAttribute('src')).toBeNull()
             expect(image?.getAttribute('data-removed-remote-media')).toBe('src')
         }
+        expect(template.content.querySelector('img[alt="https"]')?.getAttribute('data-remote-src'))
+            .toBe('https://tracker.example/b')
+        for (const alt of ['http', 'relative', 'protocol-relative', 'svg-data', 'bad-blob']) {
+            expect(template.content.querySelector(`img[alt="${alt}"]`)?.getAttribute('data-remote-src')).toBeNull()
+        }
         expect(output).toContain('src="data:image/png;base64,AA=="')
         expect(output).toContain('src="blob:https://app.example/id"')
         expect(output).toContain('<p style="color: red;">safe style</p>')
@@ -79,5 +84,30 @@ describe('source-specific HTML safety contracts', () => {
         expect(output).toContain('href="https://safe.example"')
         expect(output).toContain('rel="noopener noreferrer nofollow"')
         expect(sanitizeMailHtml(output)).toBe(output)
+    })
+
+    it('restores only inert HTTPS image sources after explicit opt-in', () => {
+        const blocked = sanitizeMailHtml([
+            '<img alt="safe" src="https://cdn.example.test/logo.png">',
+            '<img alt="http" src="http://cdn.example.test/logo.png">',
+            '<img alt="relative" src="/logo.png">',
+            '<img alt="spoofed" data-remote-src="javascript:alert(1)">',
+            '<img alt="data" src="data:image/png;base64,AA==">',
+            '<script>alert(1)</script>',
+        ].join(''))
+        const restored = restoreRemoteMailImages(blocked)
+        const template = document.createElement('template')
+        template.innerHTML = restored
+
+        const safe = template.content.querySelector('img[alt="safe"]')
+        expect(safe?.getAttribute('src')).toBe('https://cdn.example.test/logo.png')
+        expect(safe?.getAttribute('referrerpolicy')).toBe('no-referrer')
+        expect(safe?.getAttribute('loading')).toBe('lazy')
+        for (const alt of ['http', 'relative', 'spoofed']) {
+            expect(template.content.querySelector(`img[alt="${alt}"]`)?.getAttribute('src')).toBeNull()
+        }
+        expect(template.content.querySelector('img[alt="data"]')?.getAttribute('src')).toBe('data:image/png;base64,AA==')
+        expect(restored).not.toMatch(/<script|javascript:/i)
+        expect(restoreRemoteMailImages(restored)).toBe(restored)
     })
 })

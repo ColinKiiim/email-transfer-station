@@ -26,8 +26,9 @@ const MAIL_TAGS = [
 ]
 const MAIL_ATTRIBUTES = [
     'align', 'alt', 'aria-label', 'border', 'cellpadding', 'cellspacing', 'colspan',
-    'data-removed-remote-media', 'data-removed-unsafe-style', 'dir', 'height', 'href',
-    'lang', 'referrerpolicy', 'rel', 'role', 'rowspan', 'src', 'style', 'target', 'title',
+    'data-remote-src', 'data-removed-remote-media', 'data-removed-unsafe-style', 'dir',
+    'height', 'href', 'lang', 'loading', 'referrerpolicy', 'rel', 'role', 'rowspan',
+    'src', 'style', 'target', 'title',
     'valign', 'width',
 ]
 
@@ -58,6 +59,15 @@ const toTemplate = (html) => {
     const template = document.createElement('template')
     template.innerHTML = html
     return template
+}
+
+const normalizeRemoteImageUrl = (value) => {
+    try {
+        const url = new URL(String(value || '').trim())
+        return url.protocol === 'https:' ? url.href : ''
+    } catch {
+        return ''
+    }
 }
 
 const hardenLinks = (template) => {
@@ -146,16 +156,40 @@ export const sanitizeMailHtml = (value) => {
     const template = toTemplate(sanitized)
     if (!template) return ''
 
-    template.content.querySelectorAll('[src]').forEach((element) => {
+    template.content.querySelectorAll('img[src]').forEach((element) => {
         const source = element.getAttribute('src')?.trim() || ''
         if (!SAFE_EMBEDDED_MEDIA.test(source)) {
             element.removeAttribute('src')
             element.setAttribute('data-removed-remote-media', 'src')
+            const remoteSource = normalizeRemoteImageUrl(source)
+            if (remoteSource) element.setAttribute('data-remote-src', remoteSource)
+            else element.removeAttribute('data-remote-src')
         }
+    })
+    template.content.querySelectorAll('img[data-remote-src]').forEach((element) => {
+        const remoteSource = normalizeRemoteImageUrl(element.getAttribute('data-remote-src'))
+        if (remoteSource) element.setAttribute('data-remote-src', remoteSource)
+        else element.removeAttribute('data-remote-src')
     })
     template.content.querySelectorAll('[style]').forEach((element) => {
         sanitizeInlineStyle(element)
     })
     hardenLinks(template)
+    return template.innerHTML
+}
+
+export const restoreRemoteMailImages = (value) => {
+    const template = toTemplate(sanitizeMailHtml(value))
+    if (!template) return ''
+
+    template.content.querySelectorAll('img[data-remote-src]').forEach((image) => {
+        const source = normalizeRemoteImageUrl(image.getAttribute('data-remote-src'))
+        if (!source) return
+        image.removeAttribute('referrerpolicy')
+        image.removeAttribute('loading')
+        image.setAttribute('src', source)
+        image.setAttribute('referrerpolicy', 'no-referrer')
+        image.setAttribute('loading', 'lazy')
+    })
     return template.innerHTML
 }

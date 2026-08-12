@@ -5,7 +5,7 @@
 
 <script setup>
 import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue';
-import { sanitizeMailHtml } from '../security/safe-html';
+import { restoreRemoteMailImages, sanitizeMailHtml } from '../security/safe-html';
 
 const props = defineProps({
     htmlContent: {
@@ -16,19 +16,27 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    allowRemoteImages: {
+        type: Boolean,
+        default: false,
+    },
 });
 
 const shadowHost = ref(null);
 let shadowRoot = null;
 const useFallback = ref(false);
 
-const safeHtml = computed(() => sanitizeMailHtml(props.htmlContent));
+const safeHtml = computed(() => props.allowRemoteImages
+    ? restoreRemoteMailImages(props.htmlContent)
+    : sanitizeMailHtml(props.htmlContent));
 
 const mailRenderGuardStyle = `<style>
     :host {
         display: block;
         min-width: 0;
         max-width: 100%;
+        background-color: #fff;
+        color: #202124;
         overflow-wrap: break-word;
     }
     *, *::before, *::after {
@@ -78,7 +86,6 @@ const renderShadowDom = () => {
         if (shadowRoot) {
             const darkModeStyle = props.isDark
                 ? `<style>
-                    :host { color: #e0e0e0; }
                     a { color: #A8C7FA; }
                    </style>`
                 : '';
@@ -120,6 +127,8 @@ watch(() => [safeHtml.value, props.isDark], () => {
 .fallback-mail-html {
     min-width: 0;
     max-width: 100%;
+    background-color: #fff;
+    color: #202124;
     overflow-wrap: break-word;
 }
 
