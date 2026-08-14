@@ -374,6 +374,7 @@ describe('AdminNext behavior baseline', () => {
         expect(wrapper.get('.toolbar').text()).not.toContain('复制收件地址')
         expect(wrapper.find('.mail-reader-actions').exists()).toBe(false)
         expect(wrapper.find('.mail-detail-panel .panel-head .danger').exists()).toBe(true)
+        expect(wrapper.findAll('.mail-detail-panel button.danger')).toHaveLength(1)
 
         const copy = wrapper.get('.mail-summary .recipient-summary .mail-copy-button')
         expect(copy.attributes('aria-label')).toBe('复制收件地址')

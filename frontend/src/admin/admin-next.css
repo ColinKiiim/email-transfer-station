@@ -1336,8 +1336,23 @@ body:has(.admin-next) .n-message-container {
 }
 
 .admin-next-host .mail-summary .mail-copy-button {
-    flex: 0 0 40px;
+    flex: 0 0 24px;
+    width: 24px;
+    height: 24px;
+    min-height: 24px;
+    border-radius: 4px;
     padding: 0;
+    background: transparent;
+    color: var(--muted);
+}
+
+.admin-next-host .mail-summary .recipient-summary dt {
+    justify-content: flex-start;
+    gap: 4px;
+}
+
+.admin-next-host .mail-summary .mail-copy-button:hover {
+    color: var(--fg);
 }
 
 .admin-next-host .mail-summary dd {

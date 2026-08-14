@@ -265,9 +265,6 @@ export const buildAdminMailRail = (mail) => {
         ],
         body: mail.body,
         mail,
-        actions: [
-            { label: t('delete'), action: 'delete-current', danger: true },
-        ],
     }
 }
 
