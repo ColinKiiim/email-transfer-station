@@ -269,7 +269,7 @@ body:has(.admin-next) .n-message-container {
     align-items: center;
     width: 208px;
     min-height: 44px;
-    margin: 18px 12px 6px;
+    margin: 18px 8px 6px 16px;
     will-change: auto;
 }
 
