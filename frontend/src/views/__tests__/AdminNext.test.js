@@ -88,7 +88,7 @@ const fixtureResponse = async (path, options = {}) => {
     if (path.startsWith('/api/admin/mails?')) {
         return { results: runtime.mails, count: runtime.mails.length, unread_count: 0 }
     }
-    if (path === '/api/admin/mails_unknow?limit=100&offset=0') return { results: [] }
+    if (path === '/api/admin/mails_unknow?limit=100&offset=0&include_raw=false') return { results: [] }
     if (path === '/api/admin/address?limit=50&offset=0') return { results: runtime.addresses }
     if (path === '/api/admin/access_packages?limit=50&offset=0') return { results: runtime.accessPackages }
     if (path === '/api/admin/audit_events?limit=20&offset=0') return { results: [] }

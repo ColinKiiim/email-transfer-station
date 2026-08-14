@@ -2,7 +2,12 @@
 
 import { describe, expect, it, vi } from 'vitest'
 
-import { createAdminApi, loadAdminSnapshot, normalizeAdminSnapshot } from '../admin-api'
+import {
+    createAdminApi,
+    loadAdminSnapshot,
+    loadRemainingAdminMails,
+    normalizeAdminSnapshot,
+} from '../admin-api'
 
 const REQUEST_ID = '12345678-1234-4123-8123-123456789abc'
 const requestIdOptions = { requestIdFactory: () => REQUEST_ID }
@@ -20,6 +25,7 @@ describe('admin API adapter', () => {
         await client.getLoginSettings()
         await client.login({ username: 'admin', passwordHash: 'fixture-hash', cfToken: 'fixture-turnstile' })
         await client.listMails({ limit: 25, offset: 50 })
+        await client.getMail('mail/7')
         await client.listAddresses()
 
         expect(fetcher.mock.calls).toEqual([
@@ -32,7 +38,8 @@ describe('admin API adapter', () => {
                     cf_token: 'fixture-turnstile',
                 }),
             }],
-            ['/api/admin/mails?limit=25&offset=50'],
+            ['/api/admin/mails?limit=25&offset=50&include_raw=false'],
+            ['/api/admin/mails/mail%2F7'],
             ['/api/admin/address?limit=50&offset=0'],
         ])
     })
@@ -116,13 +123,13 @@ describe('admin snapshot DTO', () => {
         })
     })
 
-    it('loads paginated mail data, keeps partial pages, and suppresses optional Telegram errors', async () => {
+    it('returns the first mail page immediately and streams later pages separately', async () => {
         const fetcher = vi.fn(async (path) => {
-            if (path === '/api/admin/mails?limit=100&offset=0') {
-                return { results: [{ id: 1 }], count: 250, unread_count: 3 }
+            if (path === '/api/admin/mails?limit=25&offset=0&include_raw=false') {
+                return { results: [{ id: 1 }], count: 75, unread_count: 3 }
             }
-            if (path === '/api/admin/mails?limit=100&offset=100') return { results: [{ id: 2 }] }
-            if (path === '/api/admin/mails?limit=100&offset=200') throw new Error('third page unavailable')
+            if (path === '/api/admin/mails?limit=25&offset=25&include_raw=false') return { results: [{ id: 2 }] }
+            if (path === '/api/admin/mails?limit=25&offset=50&include_raw=false') return { results: [] }
             if (path === '/api/admin/telegram/status') throw new Error('optional integration unavailable')
             if (path === '/api/admin/domains') {
                 return { results: [{ id: 9, domain: 'example.test' }], cloudflare_automation: { has_token: false } }
@@ -132,11 +139,16 @@ describe('admin snapshot DTO', () => {
 
         const snapshot = await loadAdminSnapshot(createAdminApi(fetcher))
 
-        expect(snapshot.mails).toEqual([{ id: 1 }, { id: 2 }])
-        expect(snapshot.mailTotalCount).toBe(250)
+        expect(snapshot.mails).toEqual([{ id: 1 }])
+        expect(snapshot.mailTotalCount).toBe(75)
         expect(snapshot.mailUnreadCount).toBe(3)
         expect(snapshot.domains).toEqual([{ id: 9, domain: 'example.test' }])
-        expect(snapshot.errors).toEqual(['mails: third page unavailable'])
-        expect(fetcher).toHaveBeenCalledWith('/api/admin/mails?limit=100&offset=200')
+        expect(snapshot.errors).toEqual([])
+        expect(fetcher).not.toHaveBeenCalledWith('/api/admin/mails?limit=25&offset=25&include_raw=false')
+
+        const later = []
+        await loadRemainingAdminMails(createAdminApi(fetcher), snapshot.mailTotalCount, (rows) => later.push(...rows))
+        expect(later).toEqual([{ id: 2 }])
+        expect(fetcher).toHaveBeenCalledWith('/api/admin/mails?limit=25&offset=50&include_raw=false')
     })
 })

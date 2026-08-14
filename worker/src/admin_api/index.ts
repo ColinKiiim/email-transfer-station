@@ -56,6 +56,7 @@ api.post('/admin/domains/:id/cloudflare/setup', domains.cloudflareSetup)
 
 // mail api
 api.get('/admin/mails', admin_mail_api.getMails)
+api.get('/admin/mails/:id', admin_mail_api.getMail)
 api.get('/admin/mail_domains', admin_mail_api.getDomains)
 api.get('/admin/mail_addresses', admin_mail_api.getAddresses)
 api.get('/admin/mails_unknow', admin_mail_api.getUnknowMails)

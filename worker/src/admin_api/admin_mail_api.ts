@@ -5,6 +5,10 @@ import {
     readStateFromRequest,
     updateRawMailReadState,
 } from "../mail_read_state";
+import { resolveRawEmailRow } from "../gzip";
+import { RawMailRow } from "../models";
+
+const ADMIN_MAIL_PREVIEW_RAW_LIMIT = 64 * 1024;
 
 const fallbackHeader = (raw: string, name: string): string => {
     const match = raw.match(new RegExp(`^${name}:\\s*(.+)$`, "im"));
@@ -113,24 +117,31 @@ const textParts = (raw: string, depth = 0): { body: string, contentType: string,
 };
 
 export const fallbackBodyPreview = (raw: string): string => {
-    const parts = textParts(raw).filter((part) => part.contentType.startsWith("text/") && !part.disposition.includes("attachment"));
+    // ponytail: list previews inspect 64 KiB; fetch the single-mail detail for the full body.
+    const previewRaw = raw.slice(0, ADMIN_MAIL_PREVIEW_RAW_LIMIT);
+    const parts = textParts(previewRaw).filter((part) => part.contentType.startsWith("text/") && !part.disposition.includes("attachment"));
     const part = parts.find((item) => item.contentType === "text/plain") || parts.find((item) => item.contentType === "text/html");
     const body = part
         ? decodeTransferBody(part.body, part.transferEncoding, part.charset)
-        : splitHeadersAndBody(raw).body;
+        : splitHeadersAndBody(previewRaw).body;
     return normalizeMailText(stripHtml(body).slice(0, 4000)).slice(0, 1000);
 };
 
-const toAdminParsedMailRow = async (row: Record<string, unknown>): Promise<Record<string, unknown>> => {
+export const toAdminParsedMailRow = async (
+    row: Record<string, unknown>,
+    includeRaw = true,
+): Promise<Record<string, unknown>> => {
     const raw = typeof row.raw === "string" ? row.raw : "";
-    const headers = unfoldHeaders(raw);
+    const previewRaw = raw.slice(0, ADMIN_MAIL_PREVIEW_RAW_LIMIT);
+    const headers = unfoldHeaders(splitHeadersAndBody(previewRaw).headers);
     const sender = normalizeMailText(fallbackHeader(headers, "From"))
         || (typeof row.source === "string" ? row.source : "");
     const subject = normalizeMailText(fallbackHeader(headers, "Subject"))
         || (typeof row.message_id === "string" ? row.message_id : `Mail #${row.id}`);
-    const text = fallbackBodyPreview(raw);
+    const text = fallbackBodyPreview(previewRaw);
+    const { raw: _raw, ...summary } = row;
     return {
-        ...row,
+        ...(includeRaw ? row : summary),
         sender,
         subject,
         text,
@@ -142,7 +153,11 @@ const toAdminParsedMailRow = async (row: Record<string, unknown>): Promise<Recor
     };
 };
 
-const withAdminParsedMailRows = async (c: Context<HonoCustomType>, response: Response): Promise<Response> => {
+const withAdminParsedMailRows = async (
+    c: Context<HonoCustomType>,
+    response: Response,
+    includeRaw = true,
+): Promise<Response> => {
     if (response.status !== 200) return response;
     const payload = await response.json() as {
         results?: Record<string, unknown>[],
@@ -150,7 +165,7 @@ const withAdminParsedMailRows = async (c: Context<HonoCustomType>, response: Res
         unread_count?: number,
     };
     const results = Array.isArray(payload.results)
-        ? await Promise.all(payload.results.map(toAdminParsedMailRow))
+        ? await Promise.all(payload.results.map((row) => toAdminParsedMailRow(row, includeRaw)))
         : [];
     return c.json({
         ...payload,
@@ -160,7 +175,7 @@ const withAdminParsedMailRows = async (c: Context<HonoCustomType>, response: Res
 
 export default {
     getMails: async (c: Context<HonoCustomType>) => {
-        const { address, domain, address_prefix, limit, offset } = c.req.query();
+        const { address, domain, address_prefix, include_raw, limit, offset } = c.req.query();
         const addressQuery = address ? `r.address = ?` : "";
         const addressParams = address ? [address] : [];
         const domainQuery = domain ? `lower(substr(r.address, instr(r.address, '@') + 1)) = lower(?)` : "";
@@ -173,7 +188,25 @@ export default {
         return await withAdminParsedMailRows(
             c,
             await listRawMailsWithReadState(c, ADMIN_MAIL_READ_ACTOR, finalQuery, filterParams, limit, offset),
+            include_raw !== "false",
         );
+    },
+    getMail: async (c: Context<HonoCustomType>) => {
+        const { id } = c.req.param();
+        const result = await c.env.DB.prepare(
+            `SELECT r.*,`
+            + ` mrs.read_at AS read_at,`
+            + ` CASE WHEN mrs.read_at IS NULL THEN 0 ELSE 1 END AS is_read,`
+            + ` CASE WHEN mrs.read_at IS NULL THEN 1 ELSE 0 END AS unread`
+            + ` FROM raw_mails r`
+            + ` LEFT JOIN mail_read_states mrs`
+            + ` ON mrs.mail_id = r.id`
+            + ` AND mrs.actor_type = ?`
+            + ` AND mrs.actor_id = ?`
+            + ` WHERE r.id = ?`
+        ).bind(ADMIN_MAIL_READ_ACTOR.actorType, ADMIN_MAIL_READ_ACTOR.actorId, id).first<RawMailRow>();
+        if (!result) return c.json({ error: "Mail not found" }, 404);
+        return c.json(await toAdminParsedMailRow(await resolveRawEmailRow(result)));
     },
     getDomains: async (c: Context<HonoCustomType>) => {
         const { results } = await c.env.DB.prepare(
@@ -223,7 +256,7 @@ export default {
         return c.json({ results });
     },
     getUnknowMails: async (c: Context<HonoCustomType>) => {
-        const { limit, offset } = c.req.query();
+        const { include_raw, limit, offset } = c.req.query();
         return await withAdminParsedMailRows(
             c,
             await listRawMailsWithReadState(
@@ -234,6 +267,7 @@ export default {
                 limit,
                 offset,
             ),
+            include_raw !== "false",
         );
     },
     updateReadState: async (c: Context<HonoCustomType>) => {

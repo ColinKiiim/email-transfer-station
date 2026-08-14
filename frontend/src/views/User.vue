@@ -312,7 +312,8 @@ onMounted(async () => {
   grid-template-columns: minmax(240px, 0.8fr) minmax(320px, 520px);
   gap: 18px;
   align-items: start;
-  max-width: 1040px;
+  width: min(100%, 1040px);
+  margin-inline: auto;
   padding: 22px;
 }
 

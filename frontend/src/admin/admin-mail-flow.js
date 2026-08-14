@@ -214,6 +214,7 @@ export const buildAdminDisplayMail = (row, parsed) => {
         html,
         text,
         message: parsed?.message || html || text || row.body || '',
+        raw: parsed?.raw || row.raw || '',
         messageIsHtml: !!(parsed?.messageIsHtml || html),
         attachments,
         attachmentCount: attachments.length || row.attachmentCount,
@@ -274,6 +275,7 @@ export const useAdminMailFlow = ({
     ui,
     activeView,
     parseItem,
+    loadMail,
     resetListScroll,
     syncRoute,
     replaceRouteQuery,
@@ -292,18 +294,20 @@ export const useAdminMailFlow = ({
 
     const parseAdminMailDetail = async (row) => {
         const key = adminMailCacheKey(row)
-        if (!key || !row?.raw || parsedMailCache[key] || parsedMailPending.value === key) return
+        if (!key || parsedMailCache[key] || parsedMailPending.value === key) return
         parsedMailPending.value = key
         try {
+            const detail = row.raw ? row : await loadMail?.(row.sourceId || row.id)
+            if (!detail?.raw) return
             parsedMailCache[key] = await parseItem({
                 id: row.sourceId || row.id,
-                raw: row.raw,
-                source: row.sender,
-                address: row.to,
-                subject: row.subject,
-                created_at: row.created_at || row.fullTime || row.time,
-                attachments: row.attachments || [],
-                metadata: row.metadata || {},
+                raw: detail.raw,
+                source: detail.sender || detail.source || row.sender,
+                address: detail.address || row.to,
+                subject: detail.subject || row.subject,
+                created_at: detail.created_at || row.created_at || row.fullTime || row.time,
+                attachments: detail.attachments || row.attachments || [],
+                metadata: detail.metadata || row.metadata || {},
             })
         } catch (error) {
             onParseError(error)

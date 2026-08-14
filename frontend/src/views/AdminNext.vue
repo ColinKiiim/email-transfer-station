@@ -8,7 +8,7 @@ import { api } from '../api'
 import { useGlobalState } from '../store'
 import { hashPassword } from '../utils'
 import { processItem } from '../utils/email-parser'
-import { adminApi, loadAdminSnapshot } from '../admin/admin-api'
+import { adminApi, loadAdminSnapshot, loadRemainingAdminMails } from '../admin/admin-api'
 import { useAdminConsoleActions } from '../admin/admin-console-actions'
 import { useAdminFeedback } from '../admin/admin-feedback'
 import AdminConsoleShell from '../admin/components/AdminConsoleShell.vue'
@@ -176,6 +176,7 @@ const live = reactive({
     fetchedAdmin: false,
     lastSynced: '',
 })
+let adminLoadGeneration = 0
 
 const {
     disposeFeedback,
@@ -218,6 +219,7 @@ useHead({
 })
 
 const clearAdminSessionState = () => {
+    adminLoadGeneration += 1
     live.overview = null
     live.statistics = null
     live.domains = []
@@ -275,9 +277,27 @@ const adminNotificationSink = {
 
 const fetchAdminData = async () => {
     if (!showAdminPage.value) return
-    Object.assign(live, await loadAdminSnapshot())
+    const generation = ++adminLoadGeneration
+    let overview
+    try {
+        overview = await adminApi.getOverview()
+    } catch (error) {
+        if (showAdminAuth.value) return
+        throw error
+    }
+    const snapshot = await loadAdminSnapshot(adminApi, { overview })
+    if (generation !== adminLoadGeneration) return
+    Object.assign(live, snapshot)
     live.fetchedAdmin = true
     live.lastSynced = new Date().toLocaleTimeString('zh-CN', { hour12: false })
+    void loadRemainingAdminMails(adminApi, snapshot.mailTotalCount, (rows) => {
+        if (generation !== adminLoadGeneration || showAdminAuth.value) return false
+        const loaded = new Set(live.mails.map((row) => row.id))
+        live.mails.push(...rows.filter((row) => !loaded.has(row.id)))
+        return true
+    }).catch((error) => {
+        if (generation === adminLoadGeneration && !showAdminAuth.value) recordLoadError('mails', error)
+    })
 }
 
 /*
@@ -366,6 +386,7 @@ const {
     ui,
     activeView,
     parseItem: processItem,
+    loadMail: (id) => adminApi.getMail(id),
     resetListScroll: resetMailListScroll,
     syncRoute: syncMailQueryToRoute,
     replaceRouteQuery,

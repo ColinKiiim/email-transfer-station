@@ -1,7 +1,7 @@
 import { api } from '../api'
 import { createAdminRequestId } from '../security/admin-request'
 
-const ADMIN_MAIL_PAGE_LIMIT = 100
+const ADMIN_MAIL_PAGE_LIMIT = 25
 const ADMIN_MAIL_FETCH_MAX = 500
 
 const pathId = (value) => encodeURIComponent(String(value))
@@ -28,8 +28,9 @@ export const createAdminApi = (fetcher, { requestIdFactory = createAdminRequestI
     listDomains: () => fetcher('/api/admin/domains'),
     listMailDomains: () => fetcher('/api/admin/mail_domains'),
     listMailAddresses: () => fetcher('/api/admin/mail_addresses'),
-    listMails: ({ limit = ADMIN_MAIL_PAGE_LIMIT, offset = 0 } = {}) => fetcher(`/api/admin/mails?limit=${limit}&offset=${offset}`),
-    listUnknownMails: () => fetcher('/api/admin/mails_unknow?limit=100&offset=0'),
+    listMails: ({ limit = ADMIN_MAIL_PAGE_LIMIT, offset = 0 } = {}) => fetcher(`/api/admin/mails?limit=${limit}&offset=${offset}&include_raw=false`),
+    getMail: (id) => fetcher(`/api/admin/mails/${pathId(id)}`),
+    listUnknownMails: () => fetcher('/api/admin/mails_unknow?limit=100&offset=0&include_raw=false'),
     listAddresses: () => fetcher('/api/admin/address?limit=50&offset=0'),
     listAccessPackages: () => fetcher('/api/admin/access_packages?limit=50&offset=0'),
     listAuditEvents: () => fetcher('/api/admin/audit_events?limit=20&offset=0'),
@@ -140,7 +141,15 @@ export const normalizeAdminSnapshot = (raw, errors = []) => ({
     errors: [...errors],
 })
 
-export const loadAdminSnapshot = async (client = adminApi) => {
+export const loadRemainingAdminMails = async (client, total, onPage) => {
+    const upperBound = Math.min(Number(total) || 0, ADMIN_MAIL_FETCH_MAX)
+    for (let offset = ADMIN_MAIL_PAGE_LIMIT; offset < upperBound; offset += ADMIN_MAIL_PAGE_LIMIT) {
+        const rows = resultRows(await client.listMails({ limit: ADMIN_MAIL_PAGE_LIMIT, offset }))
+        if (!rows.length || onPage(rows) === false) break
+    }
+}
+
+export const loadAdminSnapshot = async (client = adminApi, seed = {}) => {
     const errors = []
     const recordError = (label, error) => {
         errors.push(`${label}: ${error?.message || error || 'error'}`)
@@ -153,41 +162,13 @@ export const loadAdminSnapshot = async (client = adminApi) => {
             return [key, null]
         }
     }
-    const loadAllMails = async () => {
-        const first = await client.listMails({ limit: ADMIN_MAIL_PAGE_LIMIT, offset: 0 })
-        const count = Number(first.count || first.results?.length || 0)
-        const pageCount = Math.min(
-            Math.ceil(count / ADMIN_MAIL_PAGE_LIMIT),
-            Math.ceil(ADMIN_MAIL_FETCH_MAX / ADMIN_MAIL_PAGE_LIMIT),
-        )
-        if (pageCount <= 1) return first
-        const rest = await Promise.all(
-            Array.from({ length: pageCount - 1 }, async (_, index) => {
-                const offset = (index + 1) * ADMIN_MAIL_PAGE_LIMIT
-                try {
-                    return await client.listMails({ limit: ADMIN_MAIL_PAGE_LIMIT, offset })
-                } catch (error) {
-                    recordError('mails', error)
-                    return null
-                }
-            }),
-        )
-        return {
-            ...first,
-            results: [
-                ...resultRows(first),
-                ...rest.flatMap(resultRows),
-            ],
-        }
-    }
-
     const reads = [
-        ['overview', 'overview', () => client.getOverview()],
+        ['overview', 'overview', () => seed.overview ?? client.getOverview()],
         ['statistics', 'statistics', () => client.getStatistics()],
         ['domains', 'domains', () => client.listDomains()],
         ['mailDomains', 'mail domains', () => client.listMailDomains()],
         ['mailAddresses', 'mail addresses', () => client.listMailAddresses()],
-        ['mails', 'mails', loadAllMails],
+        ['mails', 'mails', () => client.listMails({ limit: ADMIN_MAIL_PAGE_LIMIT, offset: 0 })],
         ['unknownMails', 'unknown mails', () => client.listUnknownMails()],
         ['addresses', 'addresses', () => client.listAddresses()],
         ['accessPackages', 'access packages', () => client.listAccessPackages()],

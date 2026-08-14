@@ -148,7 +148,10 @@ describe('admin mail-flow model', () => {
     })
 
     it('caches MIME parsing and owns adjacent-selection and filter actions', async () => {
-        const source = ref([rawMail(1), rawMail(2)])
+        const source = ref([
+            { ...rawMail(1), raw: '' },
+            { ...rawMail(2), raw: '' },
+        ])
         const ui = reactive({
             view: 'flow',
             query: '',
@@ -165,8 +168,10 @@ describe('admin mail-flow model', () => {
             html: '<p>Parsed</p>',
             message: '<p>Parsed</p>',
             messageIsHtml: true,
+            raw: rawMail(1).raw,
             attachments: [],
         })
+        const loadMail = vi.fn().mockImplementation((id) => rawMail(id))
         const syncRoute = vi.fn()
         const onSelectionMissing = vi.fn()
         const scope = effectScope()
@@ -177,6 +182,7 @@ describe('admin mail-flow model', () => {
             ui,
             activeView: ref('flow'),
             parseItem,
+            loadMail,
             resetListScroll: vi.fn(),
             syncRoute,
             replaceRouteQuery: vi.fn(),
@@ -189,7 +195,9 @@ describe('admin mail-flow model', () => {
         await Promise.resolve()
         await nextTick()
         expect(parseItem).toHaveBeenCalledTimes(1)
+        expect(loadMail).toHaveBeenCalledWith(1)
         expect(flow.currentDisplayMail.value.subject).toBe('Parsed fixture')
+        expect(flow.currentDisplayMail.value.raw).toContain('Fixture body')
         expect(ui.mailRenderMode).toBe('html')
 
         await flow.parseAdminMailDetail(flow.currentMail.value)
@@ -200,7 +208,7 @@ describe('admin mail-flow model', () => {
             domain: 'example.test',
         }))
 
-        source.value = [rawMail(2)]
+        source.value = [{ ...rawMail(2), raw: '' }]
         await nextTick()
         expect(ui.selected.flow).toBe('')
         expect(onSelectionMissing).toHaveBeenCalledTimes(1)
