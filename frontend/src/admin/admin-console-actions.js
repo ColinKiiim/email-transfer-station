@@ -773,7 +773,6 @@ export const useAdminConsoleActions = ({
         openActionModal,
         closeActionModal,
         openSharePackage,
-        copyCurrent,
         copyText,
         deleteCurrentMail,
         createAddressIdentity,

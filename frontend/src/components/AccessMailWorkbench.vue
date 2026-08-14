@@ -1,7 +1,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
-import { CloudDownloadRound, ArrowBackIosNewFilled, ArrowForwardIosFilled, InboxRound } from '@vicons/material'
+import { CloudDownloadRound, InboxRound } from '@vicons/material'
 
 import { useGlobalState } from '../store'
 import { utcToLocalDate } from '../utils'
@@ -112,18 +112,6 @@ const rangeLabel = computed(() => {
   return `${start}-${end} / ${count.value}`
 })
 
-const canGoPrevMail = computed(() => {
-  if (!curMail.value) return false
-  const currentIndex = data.value.findIndex((mail) => mail.id === curMail.value.id)
-  return currentIndex > 0 || page.value > 1
-})
-
-const canGoNextMail = computed(() => {
-  if (!curMail.value) return false
-  const currentIndex = data.value.findIndex((mail) => mail.id === curMail.value.id)
-  return currentIndex < data.value.length - 1 || count.value > page.value * pageSize.value
-})
-
 const compactWhitespace = (value) => String(value || '').replace(/\s+/g, ' ').trim()
 const stripHtmlForPreview = (value) => compactWhitespace(String(value || '').replace(/<[^>]*>/g, ' '))
 const mailPreview = (row) => stripHtmlForPreview(row.text || row.message || '').slice(0, 180)
@@ -189,38 +177,6 @@ const clickRow = async (row) => {
   await nextTick()
   if (typeof window !== 'undefined' && window.innerWidth <= 1180) {
     detailPanelRef.value?.scrollIntoView?.({ block: 'start', behavior: 'smooth' })
-  }
-}
-
-const prevMail = async () => {
-  if (!canGoPrevMail.value) return
-  const currentIndex = data.value.findIndex((mail) => mail.id === curMail.value.id)
-  if (currentIndex > 0) {
-    curMail.value = data.value[currentIndex - 1]
-    await markMailRead(curMail.value)
-  } else if (page.value > 1) {
-    page.value--
-    await refresh()
-    if (data.value.length > 0) {
-      curMail.value = data.value[data.value.length - 1]
-      await markMailRead(curMail.value)
-    }
-  }
-}
-
-const nextMail = async () => {
-  if (!canGoNextMail.value) return
-  const currentIndex = data.value.findIndex((mail) => mail.id === curMail.value.id)
-  if (currentIndex < data.value.length - 1) {
-    curMail.value = data.value[currentIndex + 1]
-    await markMailRead(curMail.value)
-  } else if (count.value > page.value * pageSize.value) {
-    page.value++
-    await refresh()
-    if (data.value.length > 0) {
-      curMail.value = data.value[0]
-      await markMailRead(curMail.value)
-    }
   }
 }
 
@@ -465,21 +421,6 @@ onBeforeUnmount(() => {
       </section>
 
       <section ref="detailPanelRef" class="mail-detail-panel">
-        <div class="detail-toolbar">
-          <n-button text size="small" :disabled="!canGoPrevMail" @click="prevMail">
-            <template #icon>
-              <n-icon><ArrowBackIosNewFilled /></n-icon>
-            </template>
-            {{ t('prevMail') }}
-          </n-button>
-          <n-button text size="small" icon-placement="right" :disabled="!canGoNextMail" @click="nextMail">
-            <template #icon>
-              <n-icon><ArrowForwardIosFilled /></n-icon>
-            </template>
-            {{ t('nextMail') }}
-          </n-button>
-        </div>
-
         <article v-if="curMail" class="detail-card">
           <header class="detail-head">
             <div>
@@ -671,6 +612,10 @@ onBeforeUnmount(() => {
   min-height: 0;
 }
 
+.mail-detail-panel {
+  grid-template-rows: minmax(0, 1fr);
+}
+
 .mail-list-panel {
   grid-area: list;
 }
@@ -841,19 +786,10 @@ onBeforeUnmount(() => {
   margin: 48px 12px;
 }
 
-.detail-toolbar {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  min-height: 44px;
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--ets-border);
-}
-
 .detail-card {
   min-height: 0;
   overflow: auto;
-  border-radius: 0 0 8px 8px;
+  border-radius: 8px;
   box-shadow: none;
 }
 

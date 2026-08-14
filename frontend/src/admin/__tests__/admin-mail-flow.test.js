@@ -167,7 +167,6 @@ describe('admin mail-flow model', () => {
             messageIsHtml: true,
             attachments: [],
         })
-        const selectMail = vi.fn()
         const syncRoute = vi.fn()
         const onSelectionMissing = vi.fn()
         const scope = effectScope()
@@ -182,7 +181,6 @@ describe('admin mail-flow model', () => {
             syncRoute,
             replaceRouteQuery: vi.fn(),
             persistView: vi.fn(),
-            selectMail,
             onSelectionMissing,
             onParseError: vi.fn(),
         }))
@@ -196,9 +194,6 @@ describe('admin mail-flow model', () => {
 
         await flow.parseAdminMailDetail(flow.currentMail.value)
         expect(parseItem).toHaveBeenCalledTimes(1)
-        flow.selectAdjacentMail(1)
-        expect(selectMail).toHaveBeenCalledWith('mail-2')
-
         flow.setMailAddress('ops@example.test')
         expect(syncRoute).toHaveBeenCalledWith(expect.objectContaining({
             address: 'ops@example.test',

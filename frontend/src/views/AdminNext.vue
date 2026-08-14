@@ -347,9 +347,6 @@ const addressRows = computed(() => buildAdminAddressRows(
 ))
 
 const {
-    canGoNextMail,
-    canGoPrevMail,
-    closeMailDetail,
     currentDisplayMail,
     currentMail,
     currentRendererMail,
@@ -358,7 +355,6 @@ const {
     filteredUnknownRows,
     mailRows,
     openMailFromAddress,
-    selectAdjacentMail,
     setMailAddress,
     setMailDomain,
     setMailStatus,
@@ -374,7 +370,6 @@ const {
     syncRoute: syncMailQueryToRoute,
     replaceRouteQuery,
     persistView,
-    selectMail: (id) => selectRow('flow', id),
     onSelectionMissing: () => {
         if (activeView.value === 'flow') replaceRouteQuery({ mailId: undefined, mode: undefined }, ['item'])
     },
@@ -679,7 +674,6 @@ const {
     openActionModal,
     closeActionModal,
     openSharePackage,
-    copyCurrent,
     copyText,
     deleteCurrentMail,
     createAddressIdentity,
@@ -713,7 +707,6 @@ const toolbarActions = computed(() => {
     const view = activeView.value
     if (view === 'flow') return [
         { label: t('actionRefreshKeepSelection'), icon: 'refresh', action: 'refresh' },
-        { label: t('actionCopyRecipientAddress'), icon: 'copy', action: 'copy' },
         { label: t('actionBulkDelete'), icon: 'check', action: 'delete', danger: true },
     ]
     if (view === 'identity') return [
@@ -810,8 +803,6 @@ const workspaceModel = computed(() => ({
     currentRail: currentRail.value,
     currentMail: currentMail.value,
     currentRendererMail: currentRendererMail.value,
-    canGoPrevMail: canGoPrevMail.value,
-    canGoNextMail: canGoNextMail.value,
     explicitUnreadMailCount: explicitUnreadMailCount.value,
     domainRows: domainRows.value,
     addressRows: addressRows.value,
@@ -871,9 +862,6 @@ const workspaceActions = {
     isSelected,
     selectRow,
     handleRowKey,
-    closeMailDetail,
-    selectAdjacentMail,
-    copyCurrent,
     deleteCurrentMail,
     runRailAction,
     setView,

@@ -154,6 +154,18 @@ export const MESSAGE_REGISTRY = {
       "en": "View Attachments",
       "zh": "查看附件"
     },
+    "copyFailed": {
+      "en": "Unable to copy recipient address",
+      "zh": "无法复制收件地址"
+    },
+    "copyRecipient": {
+      "en": "Copy recipient address",
+      "zh": "复制收件地址"
+    },
+    "copySuccess": {
+      "en": "Recipient address copied",
+      "zh": "收件地址已复制"
+    },
     "delete": {
       "en": "Delete",
       "zh": "删除"
@@ -2754,14 +2766,6 @@ export const MESSAGE_REGISTRY = {
       "en": "Mail detail",
       "zh": "邮件详情"
     },
-    "prevMail": {
-      "en": "Previous",
-      "zh": "上一封"
-    },
-    "nextMail": {
-      "en": "Next",
-      "zh": "下一封"
-    },
     "copyRecipient": {
       "en": "Copy recipient address",
       "zh": "复制收件地址"
@@ -2943,10 +2947,6 @@ export const MESSAGE_REGISTRY = {
     "actionRefreshKeepSelection": {
       "en": "Refresh, keep selection",
       "zh": "保留选择刷新"
-    },
-    "actionCopyRecipientAddress": {
-      "en": "Copy recipient address",
-      "zh": "复制收件地址"
     },
     "actionBulkDelete": {
       "en": "Bulk delete",

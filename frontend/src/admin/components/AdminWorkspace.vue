@@ -35,14 +35,16 @@ defineExpose({
 
         <div v-if="model.toolbarActions.length" class="toolbar">
             <button v-for="action in model.toolbarActions" :key="action.label" type="button" class="btn"
-                :class="{ primary: action.primary, danger: action.danger }"
+                :class="{ primary: action.primary, danger: action.danger, 'icon-only': model.activeView === 'flow' && action.action === 'refresh' }"
+                :aria-label="model.activeView === 'flow' && action.action === 'refresh' ? action.label : undefined"
+                :title="model.activeView === 'flow' && action.action === 'refresh' ? action.label : undefined"
                 :disabled="!!model.actionBusy"
                 @click="action.modal ? actions.openActionModal(action.modal) : actions.handleAction(action.action)">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                     <component :is="shape.tag" v-for="(shape, index) in shapeList(action.icon)" :key="index"
                         v-bind="shape.attrs" />
                 </svg>
-                {{ action.label }}
+                <span v-if="!(model.activeView === 'flow' && action.action === 'refresh')">{{ action.label }}</span>
             </button>
             <select v-if="model.activeStatusOptions.length" :value="model.activeStatusValue" class="select"
                 @change="actions.changeStatus($event.target.value)">

@@ -148,27 +148,32 @@ defineExpose({
                     <h2>{{ model.currentRail.title }}</h2>
                     <p>{{ model.currentRail.subtitle }}</p>
                 </div>
+                <button v-if="model.currentMail" type="button" class="btn danger"
+                    :disabled="!!model.actionBusy" @click="actions.deleteCurrentMail">
+                    {{ t('delete') }}
+                </button>
             </div>
             <div class="inner-pad detail-pane-body">
                 <AdminEmptyState v-if="model.currentRail.empty" class="reader-empty"
                     :title="model.currentRail.title" :description="model.currentRail.subtitle" />
                 <template v-else>
-                    <div v-if="model.currentMail" class="mail-reader-actions">
-                        <button type="button" class="btn mobile-only" @click="actions.closeMailDetail">{{ t('backToList') }}</button>
-                        <button type="button" class="btn" :disabled="!model.canGoPrevMail"
-                            @click="actions.selectAdjacentMail(-1)">{{ t('prevMail') }}</button>
-                        <button type="button" class="btn" :disabled="!model.canGoNextMail"
-                            @click="actions.selectAdjacentMail(1)">{{ t('nextMail') }}</button>
-                        <button type="button" class="btn" @click="actions.copyCurrent">{{ t('copyRecipient') }}</button>
-                        <button type="button" class="btn danger" @click="actions.deleteCurrentMail">{{ t('delete') }}</button>
-                    </div>
                     <dl v-if="model.currentMail" class="mail-summary">
                         <div>
                             <dt>{{ t('sender') }}</dt>
                             <dd>{{ model.currentMail.sender }}</dd>
                         </div>
-                        <div>
-                            <dt>{{ t('recipient') }}</dt>
+                        <div class="recipient-summary">
+                            <dt>
+                                <span>{{ t('recipient') }}</span>
+                                <button type="button" class="icon-btn mail-copy-button"
+                                    :aria-label="t('copyRecipient')" :title="t('copyRecipient')"
+                                    @click="actions.copyText(model.currentMail.to)">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                        <path d="M8 8h11v11H8z" />
+                                        <path d="M5 16H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h11a1 1 0 0 1 1 1v1" />
+                                    </svg>
+                                </button>
+                            </dt>
                             <dd>{{ model.currentMail.to }}</dd>
                         </div>
                         <div>

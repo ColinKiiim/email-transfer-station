@@ -359,11 +359,34 @@ describe('AdminNext behavior baseline', () => {
         failed.wrapper.unmount()
     })
 
+    it('keeps mail actions in the detail header and removes the old toolbar', async () => {
+        const writeText = vi.fn().mockResolvedValue(undefined)
+        Object.defineProperty(navigator, 'clipboard', {
+            configurable: true,
+            value: { writeText },
+        })
+        const { wrapper } = await mountAdmin({ path: '/admin?view=flow&mailId=mail-7&mode=detail' })
+
+        const refresh = wrapper.get('.toolbar button[aria-label="保留选择刷新"]')
+        expect(refresh.text()).toBe('')
+        expect(refresh.attributes('title')).toBe('保留选择刷新')
+        expect(refresh.find('svg').exists()).toBe(true)
+        expect(wrapper.get('.toolbar').text()).not.toContain('复制收件地址')
+        expect(wrapper.find('.mail-reader-actions').exists()).toBe(false)
+        expect(wrapper.find('.mail-detail-panel .panel-head .danger').exists()).toBe(true)
+
+        const copy = wrapper.get('.mail-summary .recipient-summary .mail-copy-button')
+        expect(copy.attributes('aria-label')).toBe('复制收件地址')
+        await copy.trigger('click')
+        expect(writeText).toHaveBeenCalledWith('ops@example.test')
+        wrapper.unmount()
+    })
+
     it('cancels a destructive mail write before the API call', async () => {
         const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
         const { wrapper } = await mountAdmin({ path: '/admin?view=flow&mailId=mail-7&mode=detail' })
 
-        await wrapper.get('.mail-reader-actions .danger').trigger('click')
+        await wrapper.get('.mail-detail-panel .panel-head .danger').trigger('click')
         await settle()
 
         expect(confirm).toHaveBeenCalledOnce()
@@ -377,7 +400,7 @@ describe('AdminNext behavior baseline', () => {
         runtime.deleteError = new Error('删除接口失败')
         const { wrapper } = await mountAdmin({ path: '/admin?view=flow&mailId=mail-7&mode=detail' })
 
-        await wrapper.get('.mail-reader-actions .danger').trigger('click')
+        await wrapper.get('.mail-detail-panel .panel-head .danger').trigger('click')
         await settle()
 
         expect(wrapper.get('.toast').text()).toContain('删除接口失败')
@@ -390,7 +413,7 @@ describe('AdminNext behavior baseline', () => {
         vi.spyOn(window, 'confirm').mockReturnValue(true)
         const { wrapper } = await mountAdmin({ path: '/admin?view=flow&mailId=mail-7&mode=detail' })
 
-        await wrapper.get('.mail-reader-actions .danger').trigger('click')
+        await wrapper.get('.mail-detail-panel .panel-head .danger').trigger('click')
         await settle()
 
         expect(mocks.fetch).toHaveBeenCalledWith('/api/admin/mails/7', expect.objectContaining({

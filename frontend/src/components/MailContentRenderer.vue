@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useScopedI18n } from '@/i18n/app'
+import { useMessage } from 'naive-ui'
 import { CloudDownloadRound, ReplyFilled, ForwardFilled, FullscreenRound } from '@vicons/material'
 import ShadowHtmlComponent from "./ShadowHtmlComponent.vue";
 import AiExtractInfo from "./AiExtractInfo.vue";
@@ -14,6 +15,7 @@ const { preferShowTextMail, useIframeShowMail, useUTCDate, isDark } = useGlobalS
 
 
 const { t } = useScopedI18n('components.MailContentRenderer')
+const message = useMessage()
 
 const props = defineProps({
   mail: {
@@ -130,6 +132,20 @@ const handleDelete = () => {
   props.onDelete();
 };
 
+const copyRecipientAddress = async () => {
+  const address = String(props.mail.address || '').trim()
+  if (!address || !navigator.clipboard?.writeText) {
+    message.error(t('copyFailed'))
+    return
+  }
+  try {
+    await navigator.clipboard.writeText(address)
+    message.success(t('copySuccess'))
+  } catch (error) {
+    message.error(error?.message || t('copyFailed'))
+  }
+}
+
 const handleViewAttachments = () => {
   curAttachments.value = props.mail.attachments;
   showAttachments.value = true;
@@ -168,9 +184,18 @@ const handleSaveToS3 = async (filename, blob) => {
       <n-tag type="info" class="mail-meta-chip mail-meta-address">
         FROM: {{ mail.source }}
       </n-tag>
-      <n-tag v-if="showEMailTo" type="info" class="mail-meta-chip mail-meta-address">
-        TO: {{ mail.address }}
-      </n-tag>
+      <span v-if="showEMailTo" class="mail-meta-recipient">
+        <n-tag type="info" class="mail-meta-chip mail-meta-address">
+          TO: {{ mail.address }}
+        </n-tag>
+        <button type="button" class="mail-copy-button" :aria-label="t('copyRecipient')"
+          :title="t('copyRecipient')" @click.stop="copyRecipientAddress">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 8h11v11H8z" />
+            <path d="M5 16H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h11a1 1 0 0 1 1 1v1" />
+          </svg>
+        </button>
+      </span>
 
       <!-- 操作按钮 -->
       <n-popconfirm v-if="enableUserDeleteEmail" @positive-click="handleDelete">
@@ -314,6 +339,54 @@ const handleSaveToS3 = async (filename, blob) => {
   flex: 1 1 260px;
 }
 
+.mail-meta-recipient {
+  display: flex;
+  flex: 1 1 260px;
+  gap: 6px;
+  align-items: flex-start;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.mail-meta-recipient .mail-meta-address {
+  min-width: 0;
+}
+
+.mail-copy-button {
+  display: grid;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  padding: 0;
+  background: transparent;
+  color: var(--ets-text-muted);
+  cursor: pointer;
+}
+
+.mail-copy-button:hover {
+  background: var(--ets-surface-alt);
+  color: var(--ets-text);
+}
+
+.mail-copy-button:focus-visible {
+  outline: 2px solid var(--ets-focus-ring);
+  outline-offset: 2px;
+}
+
+.mail-copy-button svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
 .mail-content-renderer :deep(.n-button) {
   min-height: 32px;
 }
@@ -376,6 +449,10 @@ const handleSaveToS3 = async (filename, blob) => {
   }
 
   .mail-meta-address {
+    flex-basis: 100%;
+  }
+
+  .mail-meta-recipient {
     flex-basis: 100%;
   }
 

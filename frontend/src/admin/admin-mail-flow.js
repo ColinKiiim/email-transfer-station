@@ -281,7 +281,6 @@ export const useAdminMailFlow = ({
     syncRoute,
     replaceRouteQuery,
     persistView,
-    selectMail,
     onSelectionMissing,
     onParseError,
 }) => {
@@ -291,11 +290,6 @@ export const useAdminMailFlow = ({
     const filteredMailRows = computed(() => filterRows(mailRows.value))
     const filteredUnknownRows = computed(() => filterRows(unknownRows.value))
     const currentMail = computed(() => mailRows.value.find((row) => row.id === ui.selected.flow) || null)
-    const currentMailIndex = computed(() => filteredMailRows.value.findIndex((row) => row.id === ui.selected.flow))
-    const canGoPrevMail = computed(() => currentMailIndex.value > 0)
-    const canGoNextMail = computed(() => (
-        currentMailIndex.value >= 0 && currentMailIndex.value < filteredMailRows.value.length - 1
-    ))
     const parsedMailCache = reactive({})
     const parsedMailPending = ref('')
 
@@ -353,18 +347,6 @@ export const useAdminMailFlow = ({
         resetListScroll()
         syncRoute({ q: ui.query || undefined })
     }
-    const selectAdjacentMail = (step) => {
-        const index = currentMailIndex.value
-        if (index < 0) return
-        const next = filteredMailRows.value[index + step]
-        if (next) selectMail(next.id)
-    }
-    const closeMailDetail = () => {
-        ui.flowMode = 'list'
-        ui.detailKind = ''
-        ui.selected.flow = ''
-        replaceRouteQuery({ mode: undefined, mailId: undefined }, ['item'])
-    }
     const openMailFromAddress = (address) => {
         if (!address) return
         ui.view = 'flow'
@@ -405,9 +387,6 @@ export const useAdminMailFlow = ({
     })
 
     return {
-        canGoNextMail,
-        canGoPrevMail,
-        closeMailDetail,
         currentDisplayMail,
         currentMail,
         currentParsedMail,
@@ -419,7 +398,6 @@ export const useAdminMailFlow = ({
         openMailFromAddress,
         openMailFromDomain,
         parseAdminMailDetail,
-        selectAdjacentMail,
         setMailAddress,
         setMailDomain,
         setMailStatus,

@@ -385,6 +385,7 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
   }
 
   .access-shell.has-rail {
+    grid-template-columns: 1fr;
     grid-template-rows: auto minmax(0, 1fr);
   }
 

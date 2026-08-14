@@ -634,6 +634,12 @@ body:has(.admin-next) .n-message-container {
     white-space: nowrap;
 }
 
+.admin-next-host .toolbar .btn.icon-only {
+    width: 40px;
+    min-width: 40px;
+    padding-inline: 0;
+}
+
 .admin-next-host .btn:hover {
     box-shadow: var(--shadow-pop);
 }
@@ -1305,23 +1311,6 @@ body:has(.admin-next) .n-message-container {
     overscroll-behavior: contain;
 }
 
-.admin-next-host .mail-reader-actions {
-    position: sticky;
-    top: 0;
-    z-index: 2;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    border-bottom: 1px solid var(--border);
-    margin: -12px -12px 12px;
-    padding: 8px 12px;
-    background: var(--surface);
-}
-
-.admin-next-host .mail-reader-actions .btn {
-    min-height: 34px;
-}
-
 .admin-next-host .mail-summary {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1338,17 +1327,26 @@ body:has(.admin-next) .n-message-container {
 }
 
 .admin-next-host .mail-summary dt {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
     color: var(--muted);
     font-size: 12px;
+}
+
+.admin-next-host .mail-summary .mail-copy-button {
+    flex: 0 0 40px;
+    padding: 0;
 }
 
 .admin-next-host .mail-summary dd {
     min-width: 0;
     margin: 0;
     overflow: hidden;
+    overflow-wrap: anywhere;
     color: var(--fg);
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: normal;
 }
 
 .admin-next-host .mail-detail-panel .panel-head {
@@ -2382,17 +2380,6 @@ body:has(.admin-next) .n-message-container {
 
     .admin-next-host .app.is-flow-view .detail-pane-body {
         min-height: 0;
-    }
-
-    .admin-next-host .app.is-flow-view .mail-reader-actions {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        overflow-x: hidden;
-    }
-
-    .admin-next-host .app.is-flow-view .mail-reader-actions .btn {
-        min-width: 0;
-        padding-inline: 8px;
     }
 
     .admin-next-host .detail-drawer-backdrop {
