@@ -13,6 +13,9 @@ export default defineConfig({
   build: {
     outDir: './dist',
   },
+  test: {
+    setupFiles: './src/vitest.setup.js',
+  },
   plugins: [
     vue(),
     wasm(),
