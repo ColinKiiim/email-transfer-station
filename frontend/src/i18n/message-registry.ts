@@ -2818,6 +2818,10 @@ export const MESSAGE_REGISTRY = {
     }
   },
   "admin.mailView": {
+    "unread": {
+      "en": "Unread",
+      "zh": "未读"
+    },
     "workbenchLabel": {
       "en": "Mail flow workbench",
       "zh": "收件流工作台"

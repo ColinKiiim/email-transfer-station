@@ -921,12 +921,7 @@ body:has(.admin-next) .n-message-container {
 .admin-next-host .mail-workbench {
     position: relative;
     display: grid;
-    grid-template-columns:
-        minmax(180px, var(--mail-facets-width, 220px))
-        4px
-        minmax(360px, var(--mail-list-width, 540px))
-        4px
-        minmax(420px, 1fr);
+    grid-template-columns: minmax(360px, var(--mail-list-width, 480px)) 4px minmax(420px, 1fr);
     gap: 0;
     align-items: stretch;
     height: 100%;
@@ -935,6 +930,36 @@ body:has(.admin-next) .n-message-container {
     border-radius: var(--radius);
     background: var(--bg);
     isolation: isolate;
+}
+
+.admin-next-host .mail-facets,
+.admin-next-host .facets-resizer {
+    display: none !important;
+}
+
+.admin-next-host .app.is-flow-view .toolbar {
+    display: none !important;
+}
+
+.admin-next-host .filter-select {
+    display: inline-flex;
+    align-items: center;
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--fg);
+    font-size: 12px;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.15s ease;
+}
+
+.admin-next-host .filter-select:hover,
+.admin-next-host .filter-select:focus {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.22);
 }
 
 .admin-next-host .mail-workbench > .panel {
@@ -1475,13 +1500,93 @@ body:has(.admin-next) .n-message-container {
 }
 
 .admin-next-host .mail-detail-panel .panel-head {
-    padding: 12px 16px 8px;
+    padding: 14px 18px 10px;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.admin-next-host .mail-detail-head-content {
+    min-width: 0;
+    flex: 1;
+}
+
+.admin-next-host .mail-detail-head-content h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1.35;
+    word-break: break-word;
 }
 
 .admin-next-host .mail-detail-panel .panel-head p {
+    margin: 4px 0 0;
+    font-size: 12px;
+    color: var(--muted);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.admin-next-host .gmail-sender-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    border-radius: var(--radius);
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.admin-next-host .sender-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3b82f6, #6366f1);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 700;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.admin-next-host .sender-body {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.admin-next-host .sender-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+}
+
+.admin-next-host .sender-name {
+    font-size: 14px;
+    font-weight: 650;
+    color: #ffffff;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.admin-next-host .sender-time {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.45);
+    white-space: nowrap;
+}
+
+.admin-next-host .recipient-text {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.6);
 }
 
 .admin-next-host .reader-empty {

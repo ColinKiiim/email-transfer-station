@@ -55,6 +55,7 @@ const props = defineProps({
     type: Function,
     default: () => { }
   },
+
   onSaveToS3: {
     type: Function,
     default: () => { }
@@ -90,12 +91,14 @@ const attachmentLoding = ref(false);
 const showFullscreen = ref(false);
 
 const safeMessage = computed(() => sanitizeMailHtml(props.mail.message));
-const iframeRenderGuardStyle = `<style>
+const iframeRenderGuardStyle = computed(() => `<style>
   html, body {
     margin: 0;
     max-width: 100%;
-    background-color: #fff;
-    color: #202124;
+    background-color: ${isDark.value ? '#1e2129' : '#ffffff'};
+    color: ${isDark.value ? '#e6edf3' : '#202124'};
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.6;
   }
   *, *::before, *::after {
     box-sizing: border-box;
@@ -113,12 +116,13 @@ const iframeRenderGuardStyle = `<style>
     overflow-wrap: break-word;
   }
   a {
+    color: ${isDark.value ? '#60a5fa' : '#2563eb'};
     max-width: 100%;
     overflow-wrap: break-word;
     word-break: normal;
   }
-</style>`;
-const iframeMessage = computed(() => `${safeMessage.value}${iframeRenderGuardStyle}`);
+</style>`);
+const iframeMessage = computed(() => `${safeMessage.value}${iframeRenderGuardStyle.value}`);
 const hasHtmlMessage = computed(() => !!props.mail.messageIsHtml && safeMessage.value.trim().length > 0);
 const textMessage = computed(() => String(
   props.mail.text || (!props.mail.messageIsHtml ? props.mail.message : '') || ''

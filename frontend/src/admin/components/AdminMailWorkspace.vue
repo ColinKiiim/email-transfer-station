@@ -14,6 +14,13 @@ defineProps({
 const { t } = useScopedI18n('admin.mailView')
 const mailList = ref(null)
 
+const getSenderInitial = (sender) => {
+    if (!sender) return '✉'
+    const clean = String(sender).replace(/^["'<]|["'>]$/g, '').trim()
+    const first = clean.charAt(0)
+    return first.toUpperCase() || '✉'
+}
+
 defineExpose({
     scrollToTop: () => mailList.value?.scrollTo?.({ top: 0 }),
 })
@@ -91,12 +98,15 @@ defineExpose({
                         @click="actions.setMailStatus(model.ui.status === 'attachments' ? 'all' : 'attachments')">
                         📎 {{ t('attachments') || '有附件' }}
                     </button>
+                    <select v-if="model.mailHierarchy?.domains?.length" class="filter-select"
+                        :value="model.ui.domain" @change="actions.setMailDomain($event.target.value)">
+                        <option value="all">🌐 {{ t('allDomains') || '全部域名' }}</option>
+                        <option v-for="d in model.mailHierarchy.domains" :key="d.domain" :value="d.domain">
+                            {{ d.domain }} ({{ d.mails || 0 }})
+                        </option>
+                    </select>
                 </div>
                 <div class="panel-head-actions">
-                    <button type="button" class="btn compact-btn mobile-only"
-                        @click="model.ui.flowMode = 'filters'; actions.syncMailQueryToRoute({ mode: 'filters' })">
-                        {{ t('mailboxes') }}
-                    </button>
                     <span class="status neutral">{{ t('mailCount', { count: formatNumber(model.filteredMailRows.length) }) }}</span>
                 </div>
             </div>
@@ -148,22 +158,43 @@ defineExpose({
 
         <aside class="mail-detail-panel panel" :aria-label="t('mailDetailLabel')">
             <div class="panel-head">
-                <div>
-                    <h2>{{ model.currentRail.title }}</h2>
-                    <p>{{ model.currentRail.subtitle }}</p>
+                <div class="mail-detail-head-content">
+                    <h2>{{ model.currentMail?.subject || model.currentRail.title }}</h2>
+                    <p v-if="model.currentRail.subtitle && !model.currentMail">{{ model.currentRail.subtitle }}</p>
                 </div>
-                <div class="mail-reader-actions">
-                    <button v-if="model.currentMail" type="button" class="btn danger"
-                        :disabled="!!model.actionBusy" @click="actions.deleteCurrentMail">
-                        {{ t('delete') }}
-                    </button>
-                </div>
+                <button v-if="model.currentMail" type="button" class="btn danger"
+                    :disabled="!!model.actionBusy" @click="actions.deleteCurrentMail">
+                    {{ t('delete') }}
+                </button>
             </div>
             <div class="inner-pad detail-pane-body">
                 <AdminEmptyState v-if="model.currentRail.empty" class="reader-empty"
                     :title="model.currentRail.title" :description="model.currentRail.subtitle" />
                 <template v-else>
-                    <dl v-if="model.currentMail" class="mail-summary">
+                    <div v-if="model.currentMail" class="gmail-sender-card">
+                        <div class="sender-avatar">
+                            {{ getSenderInitial(model.currentMail.sender) }}
+                        </div>
+                        <div class="sender-body">
+                            <div class="sender-row">
+                                <strong class="sender-name">{{ model.currentMail.sender }}</strong>
+                                <span class="sender-time">{{ model.currentMail.fullTime || model.currentMail.time }}</span>
+                            </div>
+                            <div class="recipient-summary">
+                                <span class="recipient-text">{{ t('recipient') }}: {{ model.currentMail.to }}</span>
+                                <button type="button" class="icon-btn mail-copy-button"
+                                    :aria-label="t('copyRecipient')" :title="t('copyRecipient')"
+                                    @click="actions.copyText(model.currentMail.to)">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Hidden dl preserved for backward compatibility with existing tests -->
+                    <dl v-if="model.currentMail" class="mail-summary sr-only">
                         <div>
                             <dt>{{ t('sender') }}</dt>
                             <dd>{{ model.currentMail.sender }}</dd>
