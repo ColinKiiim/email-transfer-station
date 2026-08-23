@@ -342,7 +342,7 @@ const recentMails = computed(() => {
             </div>
         </section>
 
-        <section v-if="model.activeView === 'delivery'" class="panel split">
+        <section v-if="model.activeView === 'delivery'" class="panel">
             <div class="panel-head">
                 <div>
                     <h2>{{ t('contentProcessing') }}</h2>

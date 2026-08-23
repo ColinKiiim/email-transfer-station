@@ -574,8 +574,8 @@ const activePanels = computed(() => {
     }
     if (view === 'flow') {
         return [
-            { id: 'mails', title: t('panelMailRecords'), columns: tableSpecs.mails, rows: filterRows(mailRows.value), kind: 'flow', layout: 'split' },
-            { id: 'unknown', title: t('panelExceptionQueue'), columns: tableSpecs.risks, rows: filterRows(unknownRows.value), kind: 'access', layout: 'split' },
+            { id: 'mails', title: t('panelMailRecords'), columns: tableSpecs.mails, rows: filterRows(mailRows.value), kind: 'flow' },
+            { id: 'unknown', title: t('panelExceptionQueue'), columns: tableSpecs.risks, rows: filterRows(unknownRows.value), kind: 'access' },
             { id: 'logs', title: t('panelProcessingLogs'), columns: tableSpecs.logs, rows: filterRows(processingRows.value), kind: 'logs' },
         ]
     }
@@ -594,13 +594,13 @@ const activePanels = computed(() => {
     if (view === 'delivery') {
         return [
             { id: 'channels', title: t('panelOutboundChannels'), columns: tableSpecs.notifications, rows: filterRows(notificationRows.value), kind: 'delivery' },
-            { id: 'sender', title: t('panelAddressLevelSending'), columns: tableSpecs.sender, rows: filterRows(senderAccessRows.value), kind: 'delivery', layout: 'third' },
-            { id: 'sendbox', title: t('panelSendBox'), columns: tableSpecs.mails, rows: filterRows(sendBoxRows.value), kind: 'delivery', layout: 'third' },
+            { id: 'sender', title: t('panelAddressLevelSending'), columns: tableSpecs.sender, rows: filterRows(senderAccessRows.value), kind: 'delivery', layout: 'split' },
+            { id: 'sendbox', title: t('panelSendBox'), columns: tableSpecs.mails, rows: filterRows(sendBoxRows.value), kind: 'delivery', layout: 'split' },
         ]
     }
     if (view === 'access') {
         return [
-            { id: 'shares', title: t('panelAccessPackages'), columns: tableSpecs.shares, rows: filterRows(shareRows.value), kind: 'access', layout: 'split' },
+            { id: 'shares', title: t('panelAccessPackages'), columns: tableSpecs.shares, rows: filterRows(shareRows.value), kind: 'access' },
             { id: 'audit', title: t('panelAuditAndAccessLogs'), columns: tableSpecs.audit, rows: filterRows(auditRows.value), kind: 'audit' },
         ]
     }
