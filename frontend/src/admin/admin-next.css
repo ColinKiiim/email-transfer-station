@@ -1336,23 +1336,43 @@ body:has(.admin-next) .n-message-container {
 }
 
 .admin-next-host .mail-summary .mail-copy-button {
-    flex: 0 0 24px;
-    width: 24px;
-    height: 24px;
-    min-height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
+    min-height: 18px;
+    border: none;
+    outline: none;
     border-radius: 4px;
     padding: 0;
     background: transparent;
     color: var(--muted);
+    opacity: 0.7;
+    cursor: pointer;
+    box-shadow: none;
+    vertical-align: middle;
+    transition: all 120ms ease;
 }
 
 .admin-next-host .mail-summary .recipient-summary dt {
     justify-content: flex-start;
-    gap: 4px;
+    gap: 6px;
 }
 
 .admin-next-host .mail-summary .mail-copy-button:hover {
     color: var(--fg);
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.admin-next-host .mail-summary .mail-copy-button svg {
+    width: 13px;
+    height: 13px;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    fill: none;
 }
 
 .admin-next-host .mail-summary dd {
