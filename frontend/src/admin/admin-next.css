@@ -494,10 +494,10 @@ body:has(.admin-next) .n-message-container {
 }
 
 .admin-next-host .topbar-controls {
-    display: grid;
-    grid-template-columns: minmax(140px, 200px) minmax(280px, 1fr) auto;
-    gap: 12px;
+    display: flex;
     align-items: center;
+    justify-content: space-between;
+    gap: 16px;
     min-width: 0;
 }
 
@@ -518,11 +518,13 @@ body:has(.admin-next) .n-message-container {
 }
 
 .admin-next-host .select {
-    padding: 0 10px;
+    padding: 0 12px;
+    font-size: 13px;
 }
 
 .admin-next-host .field {
-    padding: 0 10px;
+    padding: 0 12px;
+    font-size: 13px;
 }
 
 .admin-next-host textarea {
@@ -536,16 +538,27 @@ body:has(.admin-next) .n-message-container {
     grid-template-columns: 16px minmax(0, 1fr) auto;
     gap: 9px;
     align-items: center;
-    min-height: 40px;
+    min-height: 38px;
+    max-width: 480px;
+    width: 100%;
     border-radius: var(--radius);
-    padding: 0 10px;
-    background: var(--surface);
-    box-shadow: var(--shadow-border);
+    padding: 0 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: none;
+    transition: all 120ms ease;
+}
+
+.admin-next-host .searchbox:focus-within {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(59, 130, 246, 0.5);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
 .admin-next-host .searchbox .field {
-    min-height: 36px;
+    min-height: 34px;
     padding: 0;
+    background: transparent;
     box-shadow: none;
     overflow: hidden;
     text-overflow: ellipsis;

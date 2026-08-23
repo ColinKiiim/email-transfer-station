@@ -56,13 +56,6 @@ defineExpose({
                 <h1 class="sr-only">{{ tNav(model.activeView) }}</h1>
 
                 <div class="topbar-controls">
-                    <select v-model="model.ui.domain" class="select domain-select" :aria-label="t('domainScope')"
-                        @change="actions.changeDomain">
-                        <option v-for="domain in model.domainOptions" :key="domain" :value="domain">
-                            {{ domain === 'all' ? t('allDomains') : domain }}
-                        </option>
-                    </select>
-
                     <label class="searchbox">
                         <svg viewBox="0 0 24 24">
                             <component :is="shape.tag" v-for="(shape, index) in shapeList('search')" :key="index"
