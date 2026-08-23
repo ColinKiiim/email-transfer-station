@@ -202,8 +202,9 @@ const addressDomainStats = computed(() => {
         <section v-for="panel in model.activePanels" :key="panel.id" class="panel"
             :class="[panel.layout, `panel-${panel.id}`]">
             <div class="panel-head">
-                <div>
+                <div class="panel-head-title">
                     <h2>{{ panel.title }}</h2>
+                    <span v-if="panel.rows && panel.rows.length" class="panel-badge-count">{{ panel.rows.length }}</span>
                     <p v-if="panel.note">{{ panel.note }}</p>
                 </div>
                 <div class="panel-head-actions">

@@ -53,9 +53,10 @@ defineExpose({
             </div>
 
             <header class="topbar">
-                <div class="page-title">
-                    <p>{{ t('contextLabel') }}</p>
-                    <h1>{{ tNav(model.activeView) }}</h1>
+                <div class="topbar-breadcrumb">
+                    <span class="breadcrumb-root">{{ t('contextLabel') }}</span>
+                    <span class="breadcrumb-sep">/</span>
+                    <h1 class="breadcrumb-current">{{ tNav(model.activeView) }}</h1>
                 </div>
 
                 <div class="topbar-controls">

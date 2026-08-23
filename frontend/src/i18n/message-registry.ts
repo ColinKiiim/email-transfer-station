@@ -3045,8 +3045,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "处理日志"
     },
     "panelAddressLedger": {
-      "en": "Address ledger",
-      "zh": "地址账本"
+      "en": "Email addresses",
+      "zh": "邮箱地址"
     },
     "panelUsersAndRoles": {
       "en": "Users & roles",
