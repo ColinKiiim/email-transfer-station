@@ -1599,8 +1599,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "全部域名"
     },
     "searchPlaceholder": {
-      "en": "Search: from:sender to:inbox subject:invoice has:attachment is:unread",
-      "zh": "搜索：from:sender to:inbox subject:invoice has:attachment is:unread"
+      "en": "Search mails, addresses, domains, users...",
+      "zh": "搜索邮件、地址、域名、用户..."
     },
     "signOut": {
       "en": "Sign out",
@@ -2687,6 +2687,26 @@ export const MESSAGE_REGISTRY = {
     "deleteUser": {
       "en": "Delete user",
       "zh": "删除用户"
+    },
+    "delete": {
+      "en": "Delete",
+      "zh": "删除"
+    },
+    "recentActivity": {
+      "en": "Recent Activity Stream",
+      "zh": "最近处理与审计流水"
+    },
+    "systemHealth": {
+      "en": "Runtime Health & System Specs",
+      "zh": "运行环境与系统规格"
+    },
+    "openFlow": {
+      "en": "Open Inbox",
+      "zh": "前往收件工作区"
+    },
+    "noRecentLogs": {
+      "en": "No recent events logged",
+      "zh": "暂无最近处理日志"
     },
     "currentPolicy": {
       "en": "Current policy",

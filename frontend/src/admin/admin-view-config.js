@@ -117,12 +117,14 @@ export const TABLE_SPECS = {
         { labelKey: 'packages', key: 'packages', type: 'number' },
         { labelKey: 'password', key: 'password', type: 'status' },
         { labelKey: 'credential', key: 'credential', type: 'status' },
+        { labelKey: 'actions', key: 'actions', type: 'addressActions' },
     ],
     users: [
         { labelKey: 'user', type: 'entity', main: 'user', sub: 'userEmail' },
         { labelKey: 'role', key: 'role' },
         { labelKey: 'addressScope', key: 'addresses' },
         { labelKey: 'updated', key: 'updated', type: 'time' },
+        { labelKey: 'actions', key: 'actions', type: 'userActions' },
     ],
     routing: [
         { labelKey: 'domain', type: 'entity', main: 'domain', sub: 'label' },
@@ -162,6 +164,7 @@ export const TABLE_SPECS = {
         { labelKey: 'status', key: 'status', type: 'status' },
         { labelKey: 'expires', key: 'expires', type: 'time' },
         { labelKey: 'lastUsed', key: 'last', type: 'time' },
+        { labelKey: 'actions', key: 'actions', type: 'shareActions' },
     ],
     audit: [
         { labelKey: 'time', key: 'time', type: 'time' },

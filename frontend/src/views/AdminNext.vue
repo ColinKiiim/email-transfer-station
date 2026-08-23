@@ -582,7 +582,7 @@ const activePanels = computed(() => {
     if (view === 'identity') {
         return [
             { id: 'addresses', title: t('panelAddressLedger'), columns: tableSpecs.addresses, rows: filterRows(addressRows.value), kind: 'identity' },
-            { id: 'users', title: t('panelUsersAndRoles'), columns: tableSpecs.users, rows: filterRows(userRows.value), kind: 'users', layout: 'third' },
+            { id: 'users', title: t('panelUsersAndRoles'), columns: tableSpecs.users, rows: filterRows(userRows.value), kind: 'users' },
         ]
     }
     if (view === 'routing') {
