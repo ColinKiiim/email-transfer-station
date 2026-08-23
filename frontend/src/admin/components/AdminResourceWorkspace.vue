@@ -201,12 +201,29 @@ const addressDomainStats = computed(() => {
     <div v-else class="view-grid">
         <section v-for="panel in model.activePanels" :key="panel.id" class="panel"
             :class="[panel.layout, `panel-${panel.id}`]">
-            <div class="panel-head">
-                <div class="panel-head-title">
+            <div class="panel-head" :class="{ 'panel-head-filter': panel.id === 'addresses' }">
+                <!-- Addresses View: Direct Domain Filter Pills on the left -->
+                <div v-if="panel.id === 'addresses'" class="domain-filter-bar">
+                    <button type="button" class="domain-filter-pill"
+                        :class="{ 'is-active': !model.ui.domain || model.ui.domain === 'all' }"
+                        @click="actions.setFilterDomain('all')">
+                        全部 ({{ model.addressRows.length }})
+                    </button>
+                    <button v-for="domainOpt in addressDomainStats" :key="domainOpt.domain"
+                        type="button" class="domain-filter-pill"
+                        :class="{ 'is-active': model.ui.domain === domainOpt.domain }"
+                        @click="actions.setFilterDomain(domainOpt.domain)">
+                        @{{ domainOpt.domain }} ({{ domainOpt.count }})
+                    </button>
+                </div>
+
+                <!-- Other Panels: Clean Title + Count Badge -->
+                <div v-else class="panel-head-title">
                     <h2>{{ panel.title }}</h2>
                     <span v-if="panel.rows && panel.rows.length" class="panel-badge-count">{{ panel.rows.length }}</span>
                     <p v-if="panel.note">{{ panel.note }}</p>
                 </div>
+
                 <div class="panel-head-actions">
                     <button v-if="panel.kind === 'identity' && panel.id === 'addresses'" class="btn small primary" type="button"
                         :disabled="!!model.actionBusy" @click="actions.openActionModal('new-address')">
@@ -225,21 +242,6 @@ const addressDomainStats = computed(() => {
                         {{ t('healthCheck') }}
                     </button>
                 </div>
-            </div>
-
-            <!-- Domain Quick Filter Tabs for Addresses -->
-            <div v-if="panel.id === 'addresses' && addressDomainStats.length > 0" class="domain-filter-bar">
-                <button type="button" class="domain-filter-pill"
-                    :class="{ 'is-active': !model.ui.domain || model.ui.domain === 'all' }"
-                    @click="actions.setFilterDomain('all')">
-                    全部 ({{ model.addressRows.length }})
-                </button>
-                <button v-for="domainOpt in addressDomainStats" :key="domainOpt.domain"
-                    type="button" class="domain-filter-pill"
-                    :class="{ 'is-active': model.ui.domain === domainOpt.domain }"
-                    @click="actions.setFilterDomain(domainOpt.domain)">
-                    @{{ domainOpt.domain }} ({{ domainOpt.count }})
-                </button>
             </div>
 
             <div class="table-wrap">

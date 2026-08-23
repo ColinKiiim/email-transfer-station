@@ -53,11 +53,7 @@ defineExpose({
             </div>
 
             <header class="topbar">
-                <div class="topbar-breadcrumb">
-                    <span class="breadcrumb-root">{{ t('contextLabel') }}</span>
-                    <span class="breadcrumb-sep">/</span>
-                    <h1 class="breadcrumb-current">{{ tNav(model.activeView) }}</h1>
-                </div>
+                <h1 class="sr-only">{{ tNav(model.activeView) }}</h1>
 
                 <div class="topbar-controls">
                     <select v-model="model.ui.domain" class="select domain-select" :aria-label="t('domainScope')"

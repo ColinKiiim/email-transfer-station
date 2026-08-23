@@ -486,11 +486,8 @@ body:has(.admin-next) .n-message-container {
 }
 
 .admin-next-host .topbar {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: 16px;
-    align-items: center;
-    min-height: 54px;
+    display: block;
+    min-height: 52px;
     padding: 8px 24px;
     background: var(--surface);
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
@@ -498,36 +495,14 @@ body:has(.admin-next) .n-message-container {
 
 .admin-next-host .topbar-controls {
     display: grid;
-    grid-template-columns: minmax(150px, 220px) minmax(280px, 1fr) auto;
-    gap: 10px;
+    grid-template-columns: minmax(140px, 200px) minmax(280px, 1fr) auto;
+    gap: 12px;
     align-items: center;
     min-width: 0;
 }
 
 .admin-next-host .domain-select {
     min-width: 0;
-}
-
-.admin-next-host .topbar-breadcrumb {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 13px;
-    font-weight: 500;
-    white-space: nowrap;
-}
-
-.admin-next-host .breadcrumb-root {
-    color: var(--muted);
-}
-
-.admin-next-host .breadcrumb-sep {
-    color: rgba(255, 255, 255, 0.2);
-}
-
-.admin-next-host .breadcrumb-current {
-    color: var(--fg);
-    font-weight: 600;
 }
 
 .admin-next-host .select,
@@ -2702,9 +2677,8 @@ body:has(.admin-next) .n-message-container {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 4px 18px 14px;
+    padding: 0;
     flex-wrap: wrap;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .admin-next-host .domain-filter-pill {
