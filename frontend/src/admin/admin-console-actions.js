@@ -1,5 +1,6 @@
 import { computed, nextTick, reactive, ref, watch } from 'vue'
 
+import { hashPassword } from '../utils'
 import { adminApi } from './admin-api'
 import { formatAddressCredential, toD1DateTime } from './admin-formatters'
 import { adminT } from './admin-i18n'
@@ -10,6 +11,7 @@ export const useAdminConsoleActions = ({
     activeView,
     addressRows,
     currentAddress,
+    currentUser,
     currentDomain,
     currentMail,
     dbVersionLabel,
@@ -19,6 +21,7 @@ export const useAdminConsoleActions = ({
     openSettings,
     opsRows,
     refreshAll,
+    refreshUsers,
     replaceRouteQuery,
     resetMailListScroll,
     showAdminPage,
@@ -49,6 +52,25 @@ export const useAdminConsoleActions = ({
         label: '',
         expiresAt: '',
     })
+    const userCreateForm = reactive({
+        email: '',
+        password: '',
+        username: '',
+        displayName: '',
+    })
+    const userResetPasswordForm = reactive({
+        password: '',
+    })
+    const userRoleForm = reactive({
+        roleText: '',
+    })
+    const userAddressBindForm = reactive({
+        address: '',
+        addressId: '',
+    })
+    const userBoundAddresses = ref([])
+    const userBoundAddressesLoading = ref(false)
+    const userRolesList = ref([])
     const oneTimeResult = reactive({
         title: '',
         value: '',
@@ -89,11 +111,33 @@ export const useAdminConsoleActions = ({
             shareCreateForm.label = ''
             shareCreateForm.expiresAt = ''
         }
+        if (type === 'new-user') {
+            userCreateForm.email = ''
+            userCreateForm.password = ''
+            userCreateForm.username = ''
+            userCreateForm.displayName = ''
+        }
+        if (type === 'reset-password') {
+            userResetPasswordForm.password = ''
+        }
+        if (type === 'edit-role') {
+            userRoleForm.roleText = currentUser?.value?.roleText || ''
+            void loadAvailableRoles()
+        }
+        if (type === 'user-addresses') {
+            userAddressBindForm.address = ''
+            userAddressBindForm.addressId = ''
+            if (currentUser?.value?.sourceId) {
+                void loadUserBoundAddresses(currentUser.value.sourceId)
+            }
+        }
         actionModal.value = type
     }
 
     const closeActionModal = () => {
         actionModal.value = ''
+        userCreateForm.password = ''
+        userResetPasswordForm.password = ''
         clearOneTimeResult()
     }
 
@@ -728,6 +772,26 @@ export const useAdminConsoleActions = ({
             await runHealthCheck()
             return
         }
+        if (type === 'new-user') {
+            openActionModal('new-user')
+            return
+        }
+        if (type === 'delete-user') {
+            await deleteUserAction(currentUser?.value)
+            return
+        }
+        if (type === 'reset-password') {
+            openActionModal('reset-password')
+            return
+        }
+        if (type === 'edit-role') {
+            openActionModal('edit-role')
+            return
+        }
+        if (type === 'user-addresses') {
+            openActionModal('user-addresses')
+            return
+        }
         if (type === 'new-domain') {
             openDomainActivation('cloudflare_email')
             return
@@ -752,9 +816,245 @@ export const useAdminConsoleActions = ({
         showWarning(t('unsupportedAction'))
     }
 
+    const resolveErrorMessage = (error, defaultMsg) => {
+        const code = String(error?.data?.error || error?.message || '')
+        if (code.includes('admin_current_actor_protected')) {
+            return t('actorProtectedConflict')
+        }
+        if (code.includes('admin_last_role_holder_protected')) {
+            return t('lastAdminProtectedConflict')
+        }
+        if (code.includes('admin_write_confirmation_required')) {
+            return t('actionFailed', { action: 'Confirmation' })
+        }
+        return error?.message || defaultMsg
+    }
+
+    const createUserAction = async () => {
+        const email = userCreateForm.email.trim()
+        const rawPassword = userCreateForm.password
+        const username = userCreateForm.username.trim()
+        const displayName = userCreateForm.displayName.trim()
+        if (!email) {
+            showWarning(t('emailRequired'))
+            return
+        }
+        if (!rawPassword) {
+            showWarning(t('passwordRequired'))
+            return
+        }
+        if (!requireProductionWrite('create user')) return
+        if (actionBusy.value) {
+            showWarning(t('busy'))
+            return
+        }
+        actionBusy.value = 'user-create'
+        try {
+            const passwordHash = await hashPassword(rawPassword)
+            await adminApi.createUser({ email, passwordHash, username, displayName })
+            userCreateForm.password = ''
+            userCreateForm.email = ''
+            userCreateForm.username = ''
+            userCreateForm.displayName = ''
+            closeActionModal()
+            showSuccess(t('userCreated', { user: email }))
+            if (refreshUsers) await refreshUsers()
+            else await refreshAll()
+        } catch (error) {
+            userCreateForm.password = ''
+            showError(resolveErrorMessage(error, t('createUserFailed')))
+        } finally {
+            userCreateForm.password = ''
+            actionBusy.value = ''
+        }
+    }
+
+    const resetUserPasswordAction = async () => {
+        const targetUser = currentUser?.value
+        if (!targetUser?.sourceId) {
+            showWarning(t('selectUserFirst'))
+            return
+        }
+        const rawPassword = userResetPasswordForm.password
+        if (!rawPassword) {
+            showWarning(t('passwordRequired'))
+            return
+        }
+        if (!requireProductionWrite('reset password')) return
+        if (actionBusy.value) {
+            showWarning(t('busy'))
+            return
+        }
+        if (!window.confirm(t('confirmResetPassword', { user: targetUser.user }))) return
+        actionBusy.value = 'user-reset-password'
+        try {
+            const passwordHash = await hashPassword(rawPassword)
+            await adminApi.resetUserPassword(targetUser.sourceId, passwordHash)
+            userResetPasswordForm.password = ''
+            closeActionModal()
+            showSuccess(t('userPasswordReset', { user: targetUser.user }))
+        } catch (error) {
+            userResetPasswordForm.password = ''
+            showError(resolveErrorMessage(error, t('resetPasswordFailed')))
+        } finally {
+            userResetPasswordForm.password = ''
+            actionBusy.value = ''
+        }
+    }
+
+    const updateUserRoleAction = async () => {
+        const targetUser = currentUser?.value
+        if (!targetUser?.sourceId) {
+            showWarning(t('selectUserFirst'))
+            return
+        }
+        if (!requireProductionWrite('update role')) return
+        if (actionBusy.value) {
+            showWarning(t('busy'))
+            return
+        }
+        actionBusy.value = 'user-update-role'
+        try {
+            await adminApi.setUserRole(targetUser.sourceId, userRoleForm.roleText)
+            closeActionModal()
+            showSuccess(t('userRoleUpdated', { user: targetUser.user }))
+            if (refreshUsers) await refreshUsers()
+            else await refreshAll()
+        } catch (error) {
+            showError(resolveErrorMessage(error, t('updateRoleFailed')))
+        } finally {
+            actionBusy.value = ''
+        }
+    }
+
+    const deleteUserAction = async (user = currentUser?.value) => {
+        if (!user?.sourceId) {
+            showWarning(t('selectUserFirst'))
+            return
+        }
+        if (!requireProductionWrite('delete user')) return
+        if (actionBusy.value) {
+            showWarning(t('busy'))
+            return
+        }
+        if (!window.confirm(t('confirmDeleteUser', { user: user.user }))) return
+        actionBusy.value = 'user-delete'
+        try {
+            await adminApi.deleteUser(user.sourceId)
+            if (ui.selected.users === user.id) {
+                ui.selected.users = ''
+            }
+            showSuccess(t('userDeleted', { user: user.user }))
+            if (refreshUsers) await refreshUsers()
+            else await refreshAll()
+        } catch (error) {
+            showError(resolveErrorMessage(error, t('deleteUserFailed')))
+        } finally {
+            actionBusy.value = ''
+        }
+    }
+
+    const loadUserBoundAddresses = async (userId) => {
+        if (!userId) {
+            userBoundAddresses.value = []
+            return
+        }
+        userBoundAddressesLoading.value = true
+        try {
+            const res = await adminApi.listUserBoundAddresses(userId)
+            userBoundAddresses.value = Array.isArray(res?.results) ? res.results : (Array.isArray(res) ? res : [])
+        } catch (error) {
+            userBoundAddresses.value = []
+        } finally {
+            userBoundAddressesLoading.value = false
+        }
+    }
+
+    const loadAvailableRoles = async () => {
+        try {
+            const res = await adminApi.listUserRoles()
+            const roles = Array.isArray(res?.results) ? res.results : (Array.isArray(res) ? res : [])
+            if (roles.length > 0) {
+                userRolesList.value = roles
+            } else if (Array.isArray(openSettings.value?.userRoles)) {
+                userRolesList.value = openSettings.value.userRoles
+            }
+        } catch (error) {
+            if (Array.isArray(openSettings.value?.userRoles)) {
+                userRolesList.value = openSettings.value.userRoles
+            }
+        }
+    }
+
+    const bindAddressToUser = async (user = currentUser?.value) => {
+        if (!user?.sourceId) {
+            showWarning(t('selectUserFirst'))
+            return
+        }
+        const address = userAddressBindForm.address.trim()
+        const addressId = userAddressBindForm.addressId ? Number(userAddressBindForm.addressId) : undefined
+        if (!address && !addressId) {
+            showWarning(t('addressRequired'))
+            return
+        }
+        if (!requireProductionWrite('bind address')) return
+        if (actionBusy.value) {
+            showWarning(t('busy'))
+            return
+        }
+        actionBusy.value = 'user-bind-address'
+        try {
+            await adminApi.bindUserAddress({ userId: user.sourceId, addressId, address: address || undefined })
+            userAddressBindForm.address = ''
+            userAddressBindForm.addressId = ''
+            showSuccess(t('addressBound', { user: user.user }))
+            await loadUserBoundAddresses(user.sourceId)
+            if (refreshUsers) await refreshUsers()
+            else await refreshAll()
+        } catch (error) {
+            showError(resolveErrorMessage(error, t('bindAddressFailed')))
+        } finally {
+            actionBusy.value = ''
+        }
+    }
+
+    const unbindAddressFromUser = async (user = currentUser?.value, addressItem) => {
+        if (!user?.sourceId || !addressItem) return
+        const addressName = addressItem.name || addressItem.address || (addressItem.id ? `ID #${addressItem.id}` : '-')
+        if (!window.confirm(t('confirmUnbindAddress', { address: addressName, user: user.user }))) return
+        if (!requireProductionWrite('unbind address')) return
+        if (actionBusy.value) {
+            showWarning(t('busy'))
+            return
+        }
+        actionBusy.value = 'user-unbind-address'
+        try {
+            await adminApi.unbindUserAddress({
+                userId: user.sourceId,
+                addressId: addressItem.id || undefined,
+                address: addressItem.name || addressItem.address || undefined,
+            })
+            showSuccess(t('addressUnbound', { user: user.user }))
+            await loadUserBoundAddresses(user.sourceId)
+            if (refreshUsers) await refreshUsers()
+            else await refreshAll()
+        } catch (error) {
+            showError(resolveErrorMessage(error, t('unbindAddressFailed')))
+        } finally {
+            actionBusy.value = ''
+        }
+    }
+
     const handleDomainRowAction = async (row, type) => {
         if (!row) return
         ui.selected.routing = row.id
+        await nextTick()
+        await handleAction(type)
+    }
+
+    const handleUserRowAction = async (row, type) => {
+        if (!row) return
+        ui.selected.users = row.id
         await nextTick()
         await handleAction(type)
     }
@@ -766,6 +1066,13 @@ export const useAdminConsoleActions = ({
         addressDomainOptions,
         selectedAddressDomain,
         shareCreateForm,
+        userCreateForm,
+        userResetPasswordForm,
+        userRoleForm,
+        userAddressBindForm,
+        userBoundAddresses,
+        userBoundAddressesLoading,
+        userRolesList,
         oneTimeResult,
         domainActivationOpen,
         domainActivationBusy,
@@ -778,7 +1085,15 @@ export const useAdminConsoleActions = ({
         createAddressIdentity,
         createSharePackage,
         createAndActivateDomain,
+        createUserAction,
+        resetUserPasswordAction,
+        updateUserRoleAction,
+        deleteUserAction,
+        bindAddressToUser,
+        unbindAddressFromUser,
+        loadUserBoundAddresses,
         handleAction,
         handleDomainRowAction,
+        handleUserRowAction,
     }
 }

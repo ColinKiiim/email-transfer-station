@@ -301,12 +301,121 @@ onBeforeUnmount(() => {
                         </label>
                     </div>
                 </template>
+                <template v-else-if="model.actionModal === 'new-user'">
+                    <div id="action-modal-description" class="notice modal-notice">
+                        <strong>{{ t('modalNewUser') }}</strong>
+                        <span>{{ t('modalNewUserNote') }}</span>
+                    </div>
+                    <div class="form-grid">
+                        <label class="form-field full">
+                            <span>{{ t('email') }}</span>
+                            <input v-model="model.userCreateForm.email" data-testid="user-email" data-autofocus
+                                class="field" type="email" placeholder="user@example.com" autocomplete="off" required />
+                        </label>
+                        <label class="form-field full">
+                            <span>{{ t('password') }}</span>
+                            <input v-model="model.userCreateForm.password" data-testid="user-password"
+                                class="field" type="password" placeholder="••••••••" autocomplete="new-password" required />
+                        </label>
+                        <label class="form-field">
+                            <span>{{ t('username') }}</span>
+                            <input v-model="model.userCreateForm.username" data-testid="user-username"
+                                class="field" placeholder="username (optional)" autocomplete="off" />
+                        </label>
+                        <label class="form-field">
+                            <span>{{ t('displayName') }}</span>
+                            <input v-model="model.userCreateForm.displayName" data-testid="user-display-name"
+                                class="field" placeholder="Display Name (optional)" autocomplete="off" />
+                        </label>
+                    </div>
+                </template>
+                <template v-else-if="model.actionModal === 'reset-password'">
+                    <div id="action-modal-description" class="notice modal-notice">
+                        <strong>{{ t('modalResetPassword') }}</strong>
+                        <span>{{ t('modalResetPasswordNote') }}</span>
+                    </div>
+                    <div class="form-grid">
+                        <label class="form-field full">
+                            <span>{{ t('user') }}</span>
+                            <input class="field" :value="model.currentUser?.user || '-'" readonly />
+                        </label>
+                        <label class="form-field full">
+                            <span>{{ t('newPassword') }}</span>
+                            <input v-model="model.userResetPasswordForm.password" data-testid="user-new-password" data-autofocus
+                                class="field" type="password" placeholder="••••••••" autocomplete="new-password" required />
+                        </label>
+                    </div>
+                </template>
+                <template v-else-if="model.actionModal === 'edit-role'">
+                    <div id="action-modal-description" class="notice modal-notice">
+                        <strong>{{ t('modalEditRole') }}</strong>
+                        <span>{{ t('modalEditRoleNote') }}</span>
+                    </div>
+                    <div class="form-grid">
+                        <label class="form-field full">
+                            <span>{{ t('user') }}</span>
+                            <input class="field" :value="model.currentUser?.user || '-'" readonly />
+                        </label>
+                        <label class="form-field full">
+                            <span>{{ t('role') }}</span>
+                            <select v-model="model.userRoleForm.roleText" data-testid="user-role-select" data-autofocus class="select">
+                                <option value="">{{ t('noRoleOption') }}</option>
+                                <option v-for="roleItem in model.userRolesList" :key="typeof roleItem === 'string' ? roleItem : (roleItem.role_text || roleItem.name || roleItem.id)"
+                                    :value="typeof roleItem === 'string' ? roleItem : (roleItem.role_text || roleItem.name || roleItem.role)">
+                                    {{ typeof roleItem === 'string' ? roleItem : (roleItem.role_text || roleItem.name || roleItem.role) }}
+                                </option>
+                            </select>
+                        </label>
+                    </div>
+                </template>
+                <template v-else-if="model.actionModal === 'user-addresses'">
+                    <div id="action-modal-description" class="notice modal-notice">
+                        <strong>{{ t('modalUserAddresses') }}</strong>
+                        <span>{{ t('modalUserAddressesNote') }}</span>
+                    </div>
+                    <div class="user-addresses-wrap">
+                        <div class="form-field full">
+                            <span>{{ t('user') }}</span>
+                            <input class="field" :value="model.currentUser?.user || '-'" readonly />
+                        </div>
+                        <div class="bound-addresses-section">
+                            <h4>{{ t('boundAddresses') }}</h4>
+                            <div v-if="model.userBoundAddressesLoading" class="loading-text">{{ t('running') }}...</div>
+                            <div v-else-if="!model.userBoundAddresses || model.userBoundAddresses.length === 0" class="empty-note">
+                                {{ t('noBoundAddresses') }}
+                            </div>
+                            <ul v-else class="bound-addresses-list">
+                                <li v-for="item in model.userBoundAddresses" :key="item.id || item.address || item.name" class="bound-address-item">
+                                    <span class="bound-addr-name">{{ item.name || item.address || item.display_label || `ID #${item.id}` }}</span>
+                                    <button class="btn small danger" type="button" :disabled="!!model.actionBusy"
+                                        @click.stop="actions.unbindAddressFromUser(model.currentUser, item)">
+                                        {{ t('unbind') }}
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="bind-new-address-section">
+                            <h4>{{ t('bindNewAddress') }}</h4>
+                            <div class="bind-form-row">
+                                <input v-model="model.userAddressBindForm.address" data-testid="bind-address-input"
+                                    class="field" :placeholder="t('addressNameOrId')" />
+                                <button class="btn primary small" type="button" :disabled="!model.userAddressBindForm.address || !!model.actionBusy"
+                                    @click.stop="actions.bindAddressToUser(model.currentUser)">
+                                    {{ t('bind') }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
             </div>
             <div class="modal-actions">
                 <template v-if="model.actionModal === 'one-time-result'">
                     <button class="btn primary" type="button" :disabled="!model.oneTimeResult.value"
                         @click="actions.copyText(model.oneTimeResult.value)">{{ t('copyResult') }}</button>
                     <button class="btn" type="button" @click="actions.closeActionModal">{{ t('savedSecurely') }}</button>
+                </template>
+                <template v-else-if="model.actionModal === 'user-addresses'">
+                    <button class="btn primary" type="button" @click="actions.closeActionModal">{{ t('close') }}</button>
                 </template>
                 <template v-else>
                     <button class="btn" type="button" :disabled="!!model.actionBusy"

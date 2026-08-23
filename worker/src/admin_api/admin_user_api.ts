@@ -3,7 +3,7 @@ import { Context } from 'hono';
 import { CONSTANTS } from '../constants';
 import { getJsonSetting, saveSetting, checkUserPassword, getUserRoles } from '../utils';
 import { UserSettings, GeoData, UserInfo, RoleAddressConfig } from "../models";
-import { handleListQuery } from '../common'
+import { handleListQuery, commonGetUserRole } from '../common'
 import UserBindAddressModule from '../user_api/bind_address';
 import i18n from '../i18n';
 import { recordAuditEvent } from '../audit';
@@ -38,10 +38,12 @@ export default {
             return c.text(msgs.InvalidMaxAddressCountMsg, 400)
         }
         await saveSetting(c, CONSTANTS.USER_SETTINGS_KEY, JSON.stringify(settings));
+        const actor = c.get("adminActor");
         await recordAuditEvent(c, {
             action: "user.settings.update",
-            actor_type: "admin",
-            actor_label: "admin",
+            actor_type: actor?.actor_type || "admin",
+            actor_id: actor?.actor_id,
+            actor_label: actor?.actor_label || "admin",
             resource_type: "user_settings",
             status: "success",
             metadata: {
@@ -125,10 +127,12 @@ export default {
         const user_id = await c.env.DB.prepare(
             `SELECT id FROM users WHERE user_email = ?`
         ).bind(email).first<number | undefined | null>("id");
+        const actor = c.get("adminActor");
         await recordAuditEvent(c, {
             action: "user.create",
-            actor_type: "admin",
-            actor_label: "admin",
+            actor_type: actor?.actor_type || "admin",
+            actor_id: actor?.actor_id,
+            actor_label: actor?.actor_label || "admin",
             resource_type: "user",
             resource_id: user_id || null,
             resource_label: email,
@@ -144,58 +148,103 @@ export default {
         const { user_id } = c.req.param();
         const msgs = i18n.getMessagesbyContext(c);
         if (!user_id) return c.text(msgs.UserNotFoundMsg, 400);
-        const userEmail = await c.env.DB.prepare(
-            `SELECT user_email FROM users WHERE id = ?`
-        ).bind(user_id).first<string>("user_email");
+
+        const targetUser = await c.env.DB.prepare(
+            `SELECT id, user_email FROM users WHERE id = ?`
+        ).bind(user_id).first<{ id: number, user_email: string }>();
+        if (!targetUser) {
+            return c.text(msgs.UserNotFoundMsg, 400);
+        }
+
+        const actor = c.get("adminActor");
+        if (actor && actor.actor_type === "user" && Number(actor.actor_id) === Number(user_id)) {
+            return c.json({ error: "admin_current_actor_protected" }, 409);
+        }
+
+        const targetRole = await c.env.DB.prepare(
+            `SELECT role_text FROM user_roles WHERE user_id = ?`
+        ).bind(user_id).first<string | undefined | null>("role_text");
+
+        const isAdmin = !!(c.env.ADMIN_USER_ROLE && targetRole === c.env.ADMIN_USER_ROLE);
+        if (isAdmin) {
+            const adminCount = await c.env.DB.prepare(
+                `SELECT COUNT(*) as count FROM user_roles WHERE role_text = ?`
+            ).bind(c.env.ADMIN_USER_ROLE).first<number>("count") || 0;
+            if (adminCount <= 1) {
+                return c.json({ error: "admin_last_role_holder_protected" }, 409);
+            }
+        }
+
         let results: D1Result[];
         try {
+            const deleteRoleStatement = isAdmin
+                ? c.env.DB.prepare(
+                    `DELETE FROM user_roles WHERE user_id = ? AND ((SELECT COUNT(*) FROM user_roles WHERE role_text = ?) > 1)`
+                ).bind(user_id, c.env.ADMIN_USER_ROLE)
+                : c.env.DB.prepare(`DELETE FROM user_roles WHERE user_id = ?`).bind(user_id);
+
             results = await c.env.DB.batch([
                 c.env.DB.prepare(`DELETE FROM user_passkeys WHERE user_id = ?`).bind(user_id),
-                c.env.DB.prepare(`DELETE FROM user_roles WHERE user_id = ?`).bind(user_id),
+                deleteRoleStatement,
                 c.env.DB.prepare(`DELETE FROM users_address WHERE user_id = ?`).bind(user_id),
                 c.env.DB.prepare(`DELETE FROM users WHERE id = ?`).bind(user_id),
             ]);
         } catch {
-            return c.text(msgs.FailedDeleteUserMsg, 500)
+            return c.text(msgs.FailedDeleteUserMsg, 500);
         }
+
         if (!results.every((result) => result.success)) {
-            return c.text(msgs.FailedDeleteUserMsg, 500)
+            return c.text(msgs.FailedDeleteUserMsg, 500);
         }
+
+        if (isAdmin && results[1].meta?.changes === 0) {
+            return c.json({ error: "admin_last_role_holder_protected" }, 409);
+        }
+
         await recordAuditEvent(c, {
             action: "user.delete",
-            actor_type: "admin",
-            actor_label: "admin",
+            actor_type: actor?.actor_type || "admin",
+            actor_id: actor?.actor_id,
+            actor_label: actor?.actor_label || "admin",
             resource_type: "user",
             resource_id: user_id,
-            resource_label: userEmail || null,
+            resource_label: targetUser.user_email || null,
             status: "success",
         });
-        return c.json({ success: true })
+        return c.json({ success: true });
     },
     resetPassword: async (c: Context<HonoCustomType>) => {
         const { user_id } = c.req.param();
         const { password } = await c.req.json();
         const msgs = i18n.getMessagesbyContext(c);
         if (!user_id) return c.text(msgs.UserNotFoundMsg, 400);
+
+        const targetUser = await c.env.DB.prepare(
+            `SELECT id, user_info FROM users WHERE id = ?`
+        ).bind(user_id).first<{ id: number, user_info: string | null }>();
+        if (!targetUser) {
+            return c.text(msgs.UserNotFoundMsg, 400);
+        }
+
         try {
             checkUserPassword(password);
             const passwordRecord = await createUserPasswordRecord(password);
-            const userInfo = await c.env.DB.prepare(
-                `SELECT user_info FROM users WHERE id = ?`
-            ).bind(user_id).first<string | null>("user_info");
-            const { success } = await c.env.DB.prepare(
+            const { success, meta } = await c.env.DB.prepare(
                 `UPDATE users SET password = ?, user_info = ?, updated_at = datetime('now') WHERE id = ?`
-            ).bind(passwordRecord, rotateUserAuthGeneration(userInfo), user_id).run();
-            if (!success) {
-                return c.text(msgs.FailedUpdatePasswordMsg, 500)
+            ).bind(passwordRecord, rotateUserAuthGeneration(targetUser.user_info), user_id).run();
+            if (!success || meta?.changes === 0) {
+                return c.text(msgs.FailedUpdatePasswordMsg, 500);
             }
         } catch (e) {
-            return c.text(`${msgs.FailedUpdatePasswordMsg}: ${(e as Error).message}`, 500)
+            return c.text(`${msgs.FailedUpdatePasswordMsg}: ${(e as Error).message}`, 500);
         }
+
+        const actor = c.get("adminActor");
         await recordAuditEvent(c, {
             action: "user.password.reset",
-            actor_type: "admin",
-            actor_label: "admin",
+            actor_type: actor?.actor_type || "admin",
+            actor_id: actor?.actor_id,
+            actor_label: actor?.actor_label || "admin",
             resource_type: "user",
             resource_id: user_id,
             status: "success",
@@ -206,45 +255,96 @@ export default {
         const msgs = i18n.getMessagesbyContext(c);
         const { user_id, role_text } = await c.req.json();
         if (!user_id) return c.text(msgs.InvalidUserIdMsg, 400);
+
+        const targetUser = await c.env.DB.prepare(
+            `SELECT id, user_email FROM users WHERE id = ?`
+        ).bind(user_id).first<{ id: number, user_email: string }>();
+        if (!targetUser) {
+            return c.text(msgs.UserNotFoundMsg, 400);
+        }
+
+        const currentRole = await c.env.DB.prepare(
+            `SELECT role_text FROM user_roles WHERE user_id = ?`
+        ).bind(user_id).first<string | undefined | null>("role_text");
+
+        const isCurrentAdmin = !!(c.env.ADMIN_USER_ROLE && currentRole === c.env.ADMIN_USER_ROLE);
+        const isDemotion = isCurrentAdmin && role_text !== c.env.ADMIN_USER_ROLE;
+
+        const actor = c.get("adminActor");
+        if (isDemotion) {
+            if (actor && actor.actor_type === "user" && Number(actor.actor_id) === Number(user_id)) {
+                return c.json({ error: "admin_current_actor_protected" }, 409);
+            }
+            const adminCount = await c.env.DB.prepare(
+                `SELECT COUNT(*) as count FROM user_roles WHERE role_text = ?`
+            ).bind(c.env.ADMIN_USER_ROLE).first<number>("count") || 0;
+            if (adminCount <= 1) {
+                return c.json({ error: "admin_last_role_holder_protected" }, 409);
+            }
+        }
+
         if (!role_text) {
-            const { success } = await c.env.DB.prepare(
-                `DELETE FROM user_roles WHERE user_id = ?`
-            ).bind(user_id).run();
-            if (!success) {
-                return c.text(msgs.FailedUpdateUserDefaultRoleMsg, 500)
+            const result = isDemotion
+                ? await c.env.DB.prepare(
+                    `DELETE FROM user_roles WHERE user_id = ? AND ((SELECT COUNT(*) FROM user_roles WHERE role_text = ?) > 1)`
+                ).bind(user_id, c.env.ADMIN_USER_ROLE).run()
+                : await c.env.DB.prepare(
+                    `DELETE FROM user_roles WHERE user_id = ?`
+                ).bind(user_id).run();
+
+            if (!result.success) {
+                return c.text(msgs.FailedUpdateUserDefaultRoleMsg, 500);
+            }
+            if (isDemotion && result.meta?.changes === 0) {
+                return c.json({ error: "admin_last_role_holder_protected" }, 409);
             }
             await recordAuditEvent(c, {
                 action: "user.role.clear",
-                actor_type: "admin",
-                actor_label: "admin",
+                actor_type: actor?.actor_type || "admin",
+                actor_id: actor?.actor_id,
+                actor_label: actor?.actor_label || "admin",
                 resource_type: "user",
                 resource_id: user_id,
                 status: "success",
             });
-            return c.json({ success: true })
+            return c.json({ success: true });
         }
+
         const user_roles = getUserRoles(c);
         if (!user_roles.find((r) => r.role === role_text)) {
-            return c.text(msgs.InvalidRoleTextMsg, 400)
+            return c.text(msgs.InvalidRoleTextMsg, 400);
         }
-        const { success } = await c.env.DB.prepare(
-            `INSERT INTO user_roles (user_id, role_text)`
-            + ` VALUES (?, ?)`
-            + ` ON CONFLICT(user_id) DO UPDATE SET role_text = ?, updated_at = datetime('now')`
-        ).bind(user_id, role_text, role_text).run();
-        if (!success) {
-            return c.text(msgs.FailedUpdateUserDefaultRoleMsg, 500)
+
+        const result = isDemotion
+            ? await c.env.DB.prepare(
+                `INSERT INTO user_roles (user_id, role_text)`
+                + ` VALUES (?, ?)`
+                + ` ON CONFLICT(user_id) DO UPDATE SET role_text = excluded.role_text, updated_at = datetime('now')`
+                + ` WHERE (user_roles.role_text != ? OR (SELECT COUNT(*) FROM user_roles WHERE role_text = ?) > 1)`
+            ).bind(user_id, role_text, c.env.ADMIN_USER_ROLE, c.env.ADMIN_USER_ROLE).run()
+            : await c.env.DB.prepare(
+                `INSERT INTO user_roles (user_id, role_text)`
+                + ` VALUES (?, ?)`
+                + ` ON CONFLICT(user_id) DO UPDATE SET role_text = excluded.role_text, updated_at = datetime('now')`
+            ).bind(user_id, role_text).run();
+
+        if (!result.success) {
+            return c.text(msgs.FailedUpdateUserDefaultRoleMsg, 500);
+        }
+        if (isDemotion && result.meta?.changes === 0) {
+            return c.json({ error: "admin_last_role_holder_protected" }, 409);
         }
         await recordAuditEvent(c, {
             action: "user.role.update",
-            actor_type: "admin",
-            actor_label: "admin",
+            actor_type: actor?.actor_type || "admin",
+            actor_id: actor?.actor_id,
+            actor_label: actor?.actor_label || "admin",
             resource_type: "user",
             resource_id: user_id,
             status: "success",
             metadata: { role_text },
         });
-        return c.json({ success: true })
+        return c.json({ success: true });
     },
     bindAddress: async (c: Context<HonoCustomType>) => {
         const {
@@ -256,11 +356,17 @@ export default {
         const db_address_id = address_id ?? await c.env.DB.prepare(
             `SELECT id FROM address WHERE name = ?`
         ).bind(address).first<number | undefined | null>("id");
+        if (db_user_id) {
+            const targetRole = await commonGetUserRole(c, db_user_id);
+            c.set("userRolePayload", targetRole?.role);
+        }
         const response = await UserBindAddressModule.bindByID(c, db_user_id, db_address_id);
+        const actor = c.get("adminActor");
         await recordAuditEvent(c, {
             action: "user_address.bind",
-            actor_type: "admin",
-            actor_label: "admin",
+            actor_type: actor?.actor_type || "admin",
+            actor_id: actor?.actor_id,
+            actor_label: actor?.actor_label || "admin",
             resource_type: "user_address",
             resource_id: db_address_id || null,
             resource_label: address || null,
@@ -292,10 +398,12 @@ export default {
         if (!success) {
             return c.text(msgs.OperationFailedMsg, 500);
         }
+        const actor = c.get("adminActor");
         await recordAuditEvent(c, {
             action: "user_address.unbind",
-            actor_type: "admin",
-            actor_label: "admin",
+            actor_type: actor?.actor_type || "admin",
+            actor_id: actor?.actor_id,
+            actor_label: actor?.actor_label || "admin",
             resource_type: "user_address",
             resource_id: db_address_id,
             resource_label: address || null,
@@ -331,10 +439,12 @@ export default {
             }
         }
         await saveSetting(c, CONSTANTS.ROLE_ADDRESS_CONFIG_KEY, JSON.stringify(configs));
+        const actor = c.get("adminActor");
         await recordAuditEvent(c, {
             action: "role_address_config.update",
-            actor_type: "admin",
-            actor_label: "admin",
+            actor_type: actor?.actor_type || "admin",
+            actor_id: actor?.actor_id,
+            actor_label: actor?.actor_label || "admin",
             resource_type: "role_address_config",
             status: "success",
             metadata: { role_count: Object.keys(configs).length },

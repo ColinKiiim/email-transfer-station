@@ -1899,6 +1899,10 @@ export const MESSAGE_REGISTRY = {
     "user": {
       "en": "User",
       "zh": "用户"
+    },
+    "updated": {
+      "en": "Updated at",
+      "zh": "更新时间"
     }
   },
   "admin.format": {
@@ -2091,6 +2095,66 @@ export const MESSAGE_REGISTRY = {
     "actionKeepWatching": {
       "en": "Keep watching",
       "zh": "保留观察"
+    },
+    "userRailTitle": {
+      "en": "User details",
+      "zh": "用户详情"
+    },
+    "kvEmail": {
+      "en": "Email",
+      "zh": "邮箱"
+    },
+    "kvUsername": {
+      "en": "Username",
+      "zh": "用户名"
+    },
+    "kvDisplayName": {
+      "en": "Display name",
+      "zh": "显示名"
+    },
+    "kvRole": {
+      "en": "Role",
+      "zh": "角色"
+    },
+    "kvAddresses": {
+      "en": "Addresses",
+      "zh": "地址"
+    },
+    "kvCreated": {
+      "en": "Created at",
+      "zh": "创建时间"
+    },
+    "kvUpdated": {
+      "en": "Updated at",
+      "zh": "更新时间"
+    },
+    "noRoleTag": {
+      "en": "No role",
+      "zh": "无角色"
+    },
+    "noRoleText": {
+      "en": "None",
+      "zh": "无"
+    },
+    "actionResetPassword": {
+      "en": "Reset password",
+      "zh": "重置密码"
+    },
+    "actionChangeRole": {
+      "en": "Change role",
+      "zh": "变更角色"
+    },
+    "actionManageAddresses": {
+      "en": "Manage addresses",
+      "zh": "管理绑定地址"
+    },
+    "actionDeleteUser": {
+      "en": "Delete user",
+      "zh": "删除用户"
+    },
+    "actionNewUser": {
+      "en": "New user",
+      "zh": "新增用户"
     }
   },
   "admin.mail": {
@@ -2603,6 +2667,26 @@ export const MESSAGE_REGISTRY = {
     "fixedCredentialLink": {
       "en": "Fixed credential links",
       "zh": "固定凭证链接"
+    },
+    "newUser": {
+      "en": "New user",
+      "zh": "新增用户"
+    },
+    "resetPassword": {
+      "en": "Reset password",
+      "zh": "重置密码"
+    },
+    "editRole": {
+      "en": "Change role",
+      "zh": "变更角色"
+    },
+    "manageAddresses": {
+      "en": "Manage addresses",
+      "zh": "绑定地址"
+    },
+    "deleteUser": {
+      "en": "Delete user",
+      "zh": "删除用户"
     },
     "currentPolicy": {
       "en": "Current policy",
@@ -3173,6 +3257,106 @@ export const MESSAGE_REGISTRY = {
     "expiresAt": {
       "en": "Expires at",
       "zh": "过期时间"
+    },
+    "modalNewUser": {
+      "en": "Create user",
+      "zh": "新增用户"
+    },
+    "modalNewUserNote": {
+      "en": "Add a new user account with email and password.",
+      "zh": "通过邮箱和密码添加新用户账号。"
+    },
+    "modalResetPassword": {
+      "en": "Reset password",
+      "zh": "重置用户密码"
+    },
+    "modalResetPasswordNote": {
+      "en": "Set a new password for this user. Active bearer tokens are invalidated immediately; passkeys remain valid.",
+      "zh": "为该用户设置新密码。已签发的用户登录令牌将立即失效，Passkey 保持可用。"
+    },
+    "modalEditRole": {
+      "en": "Change user role",
+      "zh": "变更用户角色"
+    },
+    "modalEditRoleNote": {
+      "en": "Assign a configured role or clear the role for this user.",
+      "zh": "为该用户分配配置的角色或清除角色。"
+    },
+    "modalUserAddresses": {
+      "en": "User bound addresses",
+      "zh": "用户绑定地址"
+    },
+    "modalUserAddressesNote": {
+      "en": "Manage email addresses bound to this user account.",
+      "zh": "管理绑定至该用户账号的邮箱地址。"
+    },
+    "modalSubmitUser": {
+      "en": "Create user",
+      "zh": "确认创建"
+    },
+    "modalSubmitResetPassword": {
+      "en": "Reset password",
+      "zh": "确认重置"
+    },
+    "modalSubmitRole": {
+      "en": "Save role",
+      "zh": "保存角色"
+    },
+    "email": {
+      "en": "Email",
+      "zh": "邮箱"
+    },
+    "password": {
+      "en": "Password",
+      "zh": "密码"
+    },
+    "newPassword": {
+      "en": "New password",
+      "zh": "新密码"
+    },
+    "username": {
+      "en": "Username",
+      "zh": "用户名"
+    },
+    "displayName": {
+      "en": "Display name",
+      "zh": "显示名"
+    },
+    "role": {
+      "en": "Role",
+      "zh": "角色"
+    },
+    "noRoleOption": {
+      "en": "None (no role)",
+      "zh": "无（普通用户）"
+    },
+    "boundAddresses": {
+      "en": "Bound addresses",
+      "zh": "已绑定地址"
+    },
+    "bindNewAddress": {
+      "en": "Bind address",
+      "zh": "绑定新地址"
+    },
+    "addressNameOrId": {
+      "en": "Address name or ID",
+      "zh": "地址名或地址 ID"
+    },
+    "unbind": {
+      "en": "Unbind",
+      "zh": "解绑"
+    },
+    "bind": {
+      "en": "Bind",
+      "zh": "绑定"
+    },
+    "noBoundAddresses": {
+      "en": "No addresses bound to this user",
+      "zh": "该用户暂无绑定地址"
+    },
+    "user": {
+      "en": "User",
+      "zh": "用户"
     }
   },
   "components.AccessMailWorkbench": {
@@ -3645,6 +3829,90 @@ export const MESSAGE_REGISTRY = {
     "confirmRegenerateVerification": {
       "en": "Generate a new verification address for {domain}? The old one stops working.",
       "zh": "确认为 {domain} 生成新的验证地址？旧验证地址会失效。"
+    },
+    "selectUserFirst": {
+      "en": "Select a user first",
+      "zh": "请先选择一个用户"
+    },
+    "confirmDeleteUser": {
+      "en": "Delete user {user}? All user passkeys, roles, and address bindings will be removed. This cannot be undone.",
+      "zh": "确认删除用户 {user}？该用户的全部 Passkey、角色与地址绑定记录将被一并删除，此操作无法撤销。"
+    },
+    "userDeleted": {
+      "en": "Deleted user {user}",
+      "zh": "已删除用户 {user}"
+    },
+    "deleteUserFailed": {
+      "en": "Failed to delete user",
+      "zh": "删除用户失败"
+    },
+    "confirmResetPassword": {
+      "en": "Reset password for {user}? Active user tokens will be invalidated immediately. Passkeys remain valid.",
+      "zh": "确认重置用户 {user} 的密码？已签发的用户登录令牌将立即失效，Passkey 保持可用。"
+    },
+    "userPasswordReset": {
+      "en": "Password reset for {user}",
+      "zh": "已重置用户 {user} 的密码"
+    },
+    "resetPasswordFailed": {
+      "en": "Failed to reset password",
+      "zh": "重置密码失败"
+    },
+    "userRoleUpdated": {
+      "en": "Updated role for {user}",
+      "zh": "已更新用户 {user} 的角色"
+    },
+    "updateRoleFailed": {
+      "en": "Failed to update role",
+      "zh": "更新角色失败"
+    },
+    "addressBound": {
+      "en": "Bound address to {user}",
+      "zh": "已绑定地址到用户 {user}"
+    },
+    "bindAddressFailed": {
+      "en": "Failed to bind address",
+      "zh": "绑定地址失败"
+    },
+    "addressUnbound": {
+      "en": "Unbound address from {user}",
+      "zh": "已解绑用户 {user} 的地址"
+    },
+    "unbindAddressFailed": {
+      "en": "Failed to unbind address",
+      "zh": "解绑地址失败"
+    },
+    "confirmUnbindAddress": {
+      "en": "Unbind address {address} from {user}?",
+      "zh": "确认解绑用户 {user} 的地址 {address}？"
+    },
+    "userCreated": {
+      "en": "Created user {user}",
+      "zh": "已创建用户 {user}"
+    },
+    "createUserFailed": {
+      "en": "Failed to create user",
+      "zh": "创建用户失败"
+    },
+    "passwordRequired": {
+      "en": "Password is required",
+      "zh": "请输入密码"
+    },
+    "emailRequired": {
+      "en": "Email is required",
+      "zh": "请输入邮箱"
+    },
+    "addressRequired": {
+      "en": "Address is required",
+      "zh": "请输入或选择地址"
+    },
+    "actorProtectedConflict": {
+      "en": "Cannot perform this action on your own current administrator account",
+      "zh": "无法对当前登录的管理员账号执行此操作"
+    },
+    "lastAdminProtectedConflict": {
+      "en": "Cannot demote or delete the last administrator",
+      "zh": "无法降级或删除最后一名管理员"
     }
   },
   "components.AppUtilityMenu": {

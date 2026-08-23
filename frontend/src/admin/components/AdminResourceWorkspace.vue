@@ -45,6 +45,12 @@ const { t } = useScopedI18n('admin.resource')
                     <h2>{{ panel.title }}</h2>
                     <p v-if="panel.note">{{ panel.note }}</p>
                 </div>
+                <div v-if="panel.kind === 'users'" class="panel-head-actions">
+                    <button class="btn small primary" type="button" :disabled="!!model.actionBusy"
+                        @click="actions.openActionModal('new-user')">
+                        {{ t('newUser') }}
+                    </button>
+                </div>
             </div>
             <div class="table-wrap">
                 <table>
@@ -76,6 +82,14 @@ const { t } = useScopedI18n('admin.resource')
                                             <button type="button" @click.stop="actions.openMailFromAddress(row.address)">{{ t('viewMail') }}</button>
                                             <button type="button" @click.stop="actions.copyText(row.address)">{{ t('copy') }}</button>
                                             <button type="button" @click.stop="actions.openSharePackage(row)">{{ t('share') }}</button>
+                                        </span>
+                                        <span v-if="panel.kind === 'users' && column.main === 'user'" class="cell-actions">
+                                            <button type="button" :disabled="!row.sourceId || !!model.actionBusy"
+                                                @click.stop="actions.handleUserRowAction(row, 'reset-password')">{{ t('resetPassword') }}</button>
+                                            <button type="button" :disabled="!row.sourceId || !!model.actionBusy"
+                                                @click.stop="actions.handleUserRowAction(row, 'edit-role')">{{ t('editRole') }}</button>
+                                            <button type="button" :disabled="!row.sourceId || !!model.actionBusy"
+                                                @click.stop="actions.handleUserRowAction(row, 'user-addresses')">{{ t('manageAddresses') }}</button>
                                         </span>
                                     </div>
                                 </template>

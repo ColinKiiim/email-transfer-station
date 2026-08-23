@@ -66,8 +66,13 @@ describe("admin session contract", () => {
 describe("admin write confirmation routing", () => {
     it("requires confirmation for every delete and selected high-impact posts", () => {
         expect(adminWriteRequiresConfirmation("DELETE", "/api/admin/mails/7")).toBe(true);
+        expect(adminWriteRequiresConfirmation("DELETE", "/api/admin/users/7")).toBe(true);
+        expect(adminWriteRequiresConfirmation("DELETE", "/api/admin/users/bind_address")).toBe(true);
         expect(adminWriteRequiresConfirmation("POST", "/api/admin/address/7/credential")).toBe(true);
         expect(adminWriteRequiresConfirmation("POST", "/api/admin/address/7/rotate_credential")).toBe(true);
+        expect(adminWriteRequiresConfirmation("POST", "/api/admin/users/7/reset_password")).toBe(true);
+        expect(adminWriteRequiresConfirmation("POST", "/api/admin/user_roles")).toBe(true);
+        expect(adminWriteRequiresConfirmation("POST", "/api/admin/users/bind_address")).toBe(true);
         expect(adminWriteRequiresConfirmation("POST", "/api/admin/db_migration")).toBe(true);
         expect(adminWriteRequiresConfirmation("POST", "/api/admin/domains/7/cloudflare/setup")).toBe(true);
     });

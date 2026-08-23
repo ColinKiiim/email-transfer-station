@@ -1841,39 +1841,6 @@ body:has(.admin-next) .n-message-container {
 
 .admin-next-host .activation-tabs {
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 14px;
-}
-
-.admin-next-host .check-row {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 10px;
-    color: var(--text);
-    font-size: 13px;
-}
-
-.admin-next-host .modal-actions {
-    justify-content: flex-end;
-    box-shadow: 0 -1px 0 var(--border);
-}
-
-.admin-next-host .icon-btn {
-    display: grid;
-    width: 40px;
-    height: 40px;
-    min-height: 40px;
-    place-items: center;
-    border: 0;
-    border-radius: var(--radius-sm);
-    background: var(--surface-soft);
-}
-
-.admin-next-host .form-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
 }
 

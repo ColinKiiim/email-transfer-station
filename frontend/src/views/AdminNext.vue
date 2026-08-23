@@ -24,6 +24,7 @@ import {
     buildAdminExceptionRail,
     buildAdminProcessingRows,
     buildAdminShareRows,
+    buildAdminUserRail,
     buildAdminUserRows,
 } from '../admin/admin-identity-access'
 import {
@@ -330,6 +331,15 @@ const refreshAll = async () => {
     }
 }
 
+const refreshUsers = async () => {
+    try {
+        const users = await adminApi.listUsers({ limit: 100 })
+        live.users = Array.isArray(users?.results) ? users.results : (Array.isArray(users) ? users : [])
+    } catch (error) {
+        recordLoadError('users', error)
+    }
+}
+
 const {
     authFunc,
     cfToken,
@@ -627,7 +637,7 @@ const selectRow = (kind, id) => {
     if (activeView.value === 'flow' && (kind === 'flow' || kind === 'exception')) {
         ui.detailKind = kind
         detailOpen.value = false
-    } else if (['flow', 'exception', 'identity', 'routing', 'delivery', 'ops'].includes(kind)) {
+    } else if (['flow', 'exception', 'identity', 'users', 'routing', 'delivery', 'ops'].includes(kind)) {
         ui.detailKind = kind
         detailOpen.value = true
     }
@@ -678,6 +688,7 @@ const markAdminMailRead = async (row) => {
 
 const currentException = computed(() => unknownRows.value.find((row) => row.id === ui.selected.exception) || unknownRows.value[0])
 const currentAddress = computed(() => addressRows.value.find((row) => row.id === ui.selected.identity) || addressRows.value[0])
+const currentUser = computed(() => userRows.value.find((row) => row.id === ui.selected.users) || userRows.value[0])
 const currentDomain = computed(() => domainRows.value.find((row) => row.id === ui.selected.routing) || domainRows.value[0])
 const currentNotification = computed(() => notificationRows.value.find((row) => row.id === ui.selected.delivery) || notificationRows.value[0])
 
@@ -688,6 +699,13 @@ const {
     addressDomainOptions,
     selectedAddressDomain,
     shareCreateForm,
+    userCreateForm,
+    userResetPasswordForm,
+    userRoleForm,
+    userAddressBindForm,
+    userBoundAddresses,
+    userBoundAddressesLoading,
+    userRolesList,
     oneTimeResult,
     domainActivationOpen,
     domainActivationBusy,
@@ -700,12 +718,20 @@ const {
     createAddressIdentity,
     createSharePackage,
     createAndActivateDomain,
+    createUserAction,
+    resetUserPasswordAction,
+    updateUserRoleAction,
+    deleteUserAction,
+    bindAddressToUser,
+    unbindAddressFromUser,
     handleAction,
     handleDomainRowAction,
+    handleUserRowAction,
 } = useAdminConsoleActions({
     activeView,
     addressRows,
     currentAddress,
+    currentUser,
     currentDomain,
     currentMail,
     dbVersionLabel,
@@ -715,6 +741,7 @@ const {
     openSettings,
     opsRows,
     refreshAll,
+    refreshUsers,
     replaceRouteQuery,
     resetMailListScroll,
     showAdminPage,
@@ -756,11 +783,21 @@ const modalTitle = computed(() => {
     const titles = {
         'new-address': t('modalNewAddressIdentity'),
         'share-package': t('modalGenerateAccessPackage'),
+        'new-user': t('modalNewUser'),
+        'reset-password': t('modalResetPassword'),
+        'edit-role': t('modalEditRole'),
+        'user-addresses': t('modalUserAddresses'),
     }
     return actionModal.value === 'one-time-result' ? oneTimeResult.title : titles[actionModal.value] || t('modalFallbackTitle')
 })
 
-const modalPrimaryLabel = computed(() => actionModal.value === 'share-package' ? t('modalSubmitAccessPackage') : t('modalSubmitAddress'))
+const modalPrimaryLabel = computed(() => {
+    if (actionModal.value === 'share-package') return t('modalSubmitAccessPackage')
+    if (actionModal.value === 'new-user') return t('modalSubmitUser')
+    if (actionModal.value === 'reset-password') return t('modalSubmitResetPassword')
+    if (actionModal.value === 'edit-role') return t('modalSubmitRole')
+    return t('modalSubmitAddress')
+})
 
 const submitActionModal = async () => {
     if (actionModal.value === 'share-package') {
@@ -769,6 +806,19 @@ const submitActionModal = async () => {
     }
     if (actionModal.value === 'new-address' || actionModal.value === 'quick-create') {
         await createAddressIdentity()
+        return
+    }
+    if (actionModal.value === 'new-user') {
+        await createUserAction()
+        return
+    }
+    if (actionModal.value === 'reset-password') {
+        await resetUserPasswordAction()
+        return
+    }
+    if (actionModal.value === 'edit-role') {
+        await updateUserRoleAction()
+        return
     }
 }
 
@@ -777,6 +827,7 @@ const currentRail = computed(() => {
     if (context === 'flow') return buildAdminMailRail(currentDisplayMail.value || currentMail.value)
     if (context === 'exception') return buildAdminExceptionRail(currentException.value)
     if (context === 'identity') return buildAdminAddressRail(currentAddress.value)
+    if (context === 'users') return buildAdminUserRail(currentUser.value)
     if (context === 'routing') return buildAdminDomainRail(currentDomain.value)
     if (context === 'delivery') return buildAdminNotificationRail(currentNotification.value)
     if (context === 'ops') return buildAdminOpsRail(opsRows.value)
@@ -848,6 +899,14 @@ const overlayModel = computed(() => ({
     openSettings: openSettings.value,
     selectedAddressDomain: selectedAddressDomain.value,
     currentAddress: currentAddress.value,
+    currentUser: currentUser.value,
+    userCreateForm,
+    userResetPasswordForm,
+    userRoleForm,
+    userAddressBindForm,
+    userBoundAddresses: userBoundAddresses.value,
+    userBoundAddressesLoading: userBoundAddressesLoading.value,
+    userRolesList: userRolesList.value,
     shareCreateForm,
     modalPrimaryLabel: modalPrimaryLabel.value,
 }))
@@ -890,6 +949,7 @@ const workspaceActions = {
     copyText,
     openSharePackage,
     handleDomainRowAction,
+    handleUserRowAction,
 }
 
 const overlayActions = {
@@ -902,6 +962,8 @@ const overlayActions = {
     closeActionModal,
     submitActionModal,
     copyText,
+    bindAddressToUser,
+    unbindAddressFromUser,
 }
 
 watch(pageTitle, (title) => {

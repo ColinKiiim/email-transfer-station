@@ -119,11 +119,10 @@ export const TABLE_SPECS = {
         { labelKey: 'credential', key: 'credential', type: 'status' },
     ],
     users: [
-        { labelKey: 'user', key: 'user', type: 'strong' },
+        { labelKey: 'user', type: 'entity', main: 'user', sub: 'userEmail' },
         { labelKey: 'role', key: 'role' },
         { labelKey: 'addressScope', key: 'addresses' },
-        { labelKey: 'signIn', key: 'auth' },
-        { labelKey: 'status', key: 'status', type: 'status' },
+        { labelKey: 'updated', key: 'updated', type: 'time' },
     ],
     routing: [
         { labelKey: 'domain', type: 'entity', main: 'domain', sub: 'label' },

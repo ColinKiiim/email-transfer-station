@@ -41,13 +41,40 @@ export const buildAdminShareRows = (rows = []) => rows.map((row) => ({
 
 export const buildAdminUserRows = (rows = []) => rows.map((row) => ({
     id: `user-${row.id}`,
-    user: row.display_name || row.username || row.email || `user:${row.id}`,
-    role: row.role || '-',
+    sourceId: row.id,
+    userEmail: row.user_email || '',
+    username: row.username || '',
+    displayName: row.display_name || '',
+    user: row.display_name || row.username || row.user_email || `user:${row.id}`,
+    role: row.role_text || '-',
+    roleText: row.role_text || '',
     addresses: t('addressCount', { count: row.address_count || 0 }),
-    auth: row.oauth_provider || t('authLocal'),
-    status: row.enabled === false ? t('userDisabled') : t('userEnabled'),
-    last: formatDate(row.updated_at || row.created_at),
+    addressCount: row.address_count || 0,
+    created: formatDate(row.created_at),
+    updated: formatDate(row.updated_at || row.created_at),
 }))
+
+export const buildAdminUserRail = (user, boundAddresses = []) => user ? ({
+    title: t('userRailTitle'),
+    subtitle: user.userEmail || user.user,
+    tags: user.roleText ? [user.roleText] : [t('noRoleTag')],
+    kv: [
+        [t('kvEmail'), user.userEmail || '-'],
+        [t('kvUsername'), user.username || '-'],
+        [t('kvDisplayName'), user.displayName || '-'],
+        [t('kvRole'), user.roleText || t('noRoleText')],
+        [t('kvAddresses'), t('addressCount', { count: user.addressCount })],
+        [t('kvCreated'), user.created || '-'],
+        [t('kvUpdated'), user.updated || '-'],
+    ],
+    boundAddresses: boundAddresses || [],
+    actions: [
+        { label: t('actionResetPassword'), modal: 'reset-password', primary: true },
+        { label: t('actionChangeRole'), modal: 'edit-role' },
+        { label: t('actionManageAddresses'), modal: 'user-addresses' },
+        { label: t('actionDeleteUser'), action: 'delete-user', danger: true },
+    ],
+}) : null
 
 export const buildAdminAuditRows = (auditEvents = [], accessEvents = []) => [
     ...auditEvents.map((row) => ({

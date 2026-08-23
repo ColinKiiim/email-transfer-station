@@ -35,7 +35,16 @@ export const createAdminApi = (fetcher, { requestIdFactory = createAdminRequestI
     listAccessPackages: () => fetcher('/api/admin/access_packages?limit=50&offset=0'),
     listAuditEvents: () => fetcher('/api/admin/audit_events?limit=20&offset=0'),
     listAccessEvents: () => fetcher('/api/admin/access_events?limit=20&offset=0'),
-    listUsers: () => fetcher('/api/admin/users?limit=20&offset=0'),
+    listUsers: ({ limit = 20, offset = 0, query } = {}) => {
+        const params = new URLSearchParams()
+        params.set('limit', String(limit))
+        params.set('offset', String(offset))
+        const trimmed = typeof query === 'string' ? query.trim() : ''
+        if (trimmed) params.set('query', trimmed)
+        return fetcher(`/api/admin/users?${params.toString()}`)
+    },
+    listUserRoles: () => fetcher('/api/admin/user_roles'),
+    listUserBoundAddresses: (userId) => fetcher(`/api/admin/users/bind_address/${pathId(userId)}`),
     getWorkerConfig: () => fetcher('/api/admin/worker/configs'),
     getDbVersion: () => fetcher('/api/admin/db_version'),
     getMailWebhook: () => fetcher('/api/admin/mail_webhook/settings'),
@@ -44,6 +53,35 @@ export const createAdminApi = (fetcher, { requestIdFactory = createAdminRequestI
     getAiSettings: () => fetcher('/api/admin/ai_extract/settings'),
     listSenderAccess: () => fetcher('/api/admin/address_sender?limit=20&offset=0'),
     listSendBox: () => fetcher('/api/admin/sendbox?limit=10&offset=0'),
+
+    createUser: ({ email, passwordHash, username, displayName }) => fetcher('/api/admin/users', writeOptions('POST', {
+        email: typeof email === 'string' ? email.trim() : '',
+        password: passwordHash,
+        username: typeof username === 'string' && username.trim() ? username.trim() : undefined,
+        display_name: typeof displayName === 'string' && displayName.trim() ? displayName.trim() : undefined,
+    })),
+    deleteUser: (id) => fetcher(`/api/admin/users/${pathId(id)}`, writeOptions('DELETE', { confirm: true })),
+    resetUserPassword: (id, passwordHash) => fetcher(`/api/admin/users/${pathId(id)}/reset_password`, writeOptions('POST', {
+        password: passwordHash,
+        confirm: true,
+    })),
+    setUserRole: (userId, roleText) => fetcher('/api/admin/user_roles', writeOptions('POST', {
+        user_id: userId,
+        role_text: roleText || undefined,
+        confirm: true,
+    })),
+    bindUserAddress: ({ userId, addressId, address }) => fetcher('/api/admin/users/bind_address', writeOptions('POST', {
+        user_id: userId,
+        address_id: addressId || undefined,
+        address: address || undefined,
+        confirm: true,
+    })),
+    unbindUserAddress: ({ userId, addressId, address }) => fetcher('/api/admin/users/bind_address', writeOptions('DELETE', {
+        user_id: userId,
+        address_id: addressId || undefined,
+        address: address || undefined,
+        confirm: true,
+    })),
 
     markMailRead: (id) => fetcher(`/api/admin/mails/${pathId(id)}/read_state`, writeOptions('PATCH', { read: true })),
     deleteMail: (id) => fetcher(`/api/admin/mails/${pathId(id)}`, writeOptions('DELETE', { confirm: true })),
@@ -130,6 +168,7 @@ export const normalizeAdminSnapshot = (raw, errors = []) => ({
     auditEvents: resultRows(raw.auditEvents),
     accessEvents: resultRows(raw.accessEvents),
     users: resultRows(raw.users),
+    userTotalCount: finiteNumber(raw.users?.count),
     workerConfig: raw.workerConfig ?? null,
     dbVersion: raw.dbVersion ?? null,
     mailWebhook: raw.mailWebhook ?? null,

@@ -3,6 +3,7 @@ import { Jwt } from "hono/utils/jwt";
 
 import { queueAccessEvent, queueAuditEvent } from "./audit";
 import i18n from "./i18n";
+import { validateUserJwtPayload } from "./user_identity";
 import { getBooleanValue } from "./utils";
 
 export const ADMIN_SESSION_ISSUER = "email-transfer-station";
@@ -15,6 +16,8 @@ const CONFIRMED_POST_PATHS = [
     /^\/api\/admin\/address\/[^/]+\/credential$/,
     /^\/api\/admin\/address\/[^/]+\/(?:reset_password|rotate_credential)$/,
     /^\/api\/admin\/users\/[^/]+\/reset_password$/,
+    /^\/api\/admin\/user_roles$/,
+    /^\/api\/admin\/users\/bind_address$/,
     /^\/api\/admin\/cleanup$/,
     /^\/api\/admin\/db_(?:initialize|migration)$/,
     /^\/api\/admin\/domains\/[^/]+\/(?:verify\/start|cloudflare\/setup)$/,
@@ -116,6 +119,27 @@ const resolveAdminActor = async (c: Context<HonoCustomType>): Promise<AdminAuthR
                 };
             }
             if (payload.user_role !== c.env.ADMIN_USER_ROLE) {
+                return {
+                    failureReason: "user_role_not_admin",
+                    failureMessage: msgs.UserRoleIsNotAdminMsg,
+                    deniedActorType: "user",
+                    deniedActorId: payload.user_id as number | undefined,
+                    deniedActorLabel: payload.user_email as string | undefined,
+                };
+            }
+            if (!await validateUserJwtPayload(c, payload as Partial<UserPayload>)) {
+                return {
+                    failureReason: "invalid_user_access_token",
+                    failureMessage: msgs.UserAcceesTokenExpiredMsg,
+                    deniedActorType: "user",
+                    deniedActorId: payload.user_id as number | undefined,
+                    deniedActorLabel: payload.user_email as string | undefined,
+                };
+            }
+            const currentRole = await c.env.DB.prepare(
+                `SELECT role_text FROM user_roles WHERE user_id = ?`
+            ).bind(payload.user_id).first<string | undefined | null>("role_text");
+            if (currentRole !== c.env.ADMIN_USER_ROLE) {
                 return {
                     failureReason: "user_role_not_admin",
                     failureMessage: msgs.UserRoleIsNotAdminMsg,
