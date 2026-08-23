@@ -76,7 +76,7 @@ test.describe('Passkey Browser Flow', () => {
       await expect(page.getByText(TEST_USER_EMAIL)).toBeVisible({ timeout: 15_000 });
 
       // === Step 2: Open the current account-security rail item ===
-      await page.getByRole('button', { name: 'Account Security' }).click();
+      await page.getByRole('button', { name: /Account Security|Account Settings/i }).click();
 
       // === Step 3: Create a passkey ===
       await page.getByRole('button', { name: 'Create Passkey' }).click();

@@ -152,10 +152,12 @@ defineExpose({
                     <h2>{{ model.currentRail.title }}</h2>
                     <p>{{ model.currentRail.subtitle }}</p>
                 </div>
-                <button v-if="model.currentMail" type="button" class="btn danger"
-                    :disabled="!!model.actionBusy" @click="actions.deleteCurrentMail">
-                    {{ t('delete') }}
-                </button>
+                <div class="mail-reader-actions">
+                    <button v-if="model.currentMail" type="button" class="btn danger"
+                        :disabled="!!model.actionBusy" @click="actions.deleteCurrentMail">
+                        {{ t('delete') }}
+                    </button>
+                </div>
             </div>
             <div class="inner-pad detail-pane-body">
                 <AdminEmptyState v-if="model.currentRail.empty" class="reader-empty"
