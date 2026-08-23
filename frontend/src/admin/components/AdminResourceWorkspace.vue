@@ -206,10 +206,22 @@ const addressDomainStats = computed(() => {
                     <h2>{{ panel.title }}</h2>
                     <p v-if="panel.note">{{ panel.note }}</p>
                 </div>
-                <div v-if="panel.kind === 'users'" class="panel-head-actions">
-                    <button class="btn small primary" type="button" :disabled="!!model.actionBusy"
-                        @click="actions.openActionModal('new-user')">
+                <div class="panel-head-actions">
+                    <button v-if="panel.kind === 'identity' && panel.id === 'addresses'" class="btn small primary" type="button"
+                        :disabled="!!model.actionBusy" @click="actions.openActionModal('new-address')">
+                        + {{ t('newAddress') }}
+                    </button>
+                    <button v-if="panel.kind === 'users'" class="btn small primary" type="button"
+                        :disabled="!!model.actionBusy" @click="actions.openActionModal('new-user')">
                         + {{ t('newUser') }}
+                    </button>
+                    <button v-if="panel.kind === 'routing' && panel.id === 'domains'" class="btn small primary" type="button"
+                        :disabled="!!model.actionBusy" @click="actions.handleAction('new-domain')">
+                        + {{ t('newDomain') }}
+                    </button>
+                    <button v-if="panel.kind === 'ops'" class="btn small" type="button"
+                        :disabled="!!model.actionBusy" @click="actions.handleAction('health-check')">
+                        {{ t('healthCheck') }}
                     </button>
                 </div>
             </div>

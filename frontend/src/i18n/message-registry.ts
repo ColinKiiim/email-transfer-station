@@ -2672,9 +2672,21 @@ export const MESSAGE_REGISTRY = {
       "en": "Fixed credential links",
       "zh": "固定凭证链接"
     },
+    "newAddress": {
+      "en": "New address",
+      "zh": "新增地址"
+    },
     "newUser": {
       "en": "New user",
       "zh": "新增用户"
+    },
+    "newDomain": {
+      "en": "New domain",
+      "zh": "新增域名"
+    },
+    "healthCheck": {
+      "en": "Health check",
+      "zh": "健康检查"
     },
     "resetPassword": {
       "en": "Reset password",

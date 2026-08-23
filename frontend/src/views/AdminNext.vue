@@ -762,22 +762,6 @@ const toolbarActions = computed(() => {
         { label: t('actionRefreshKeepSelection'), icon: 'refresh', action: 'refresh' },
         { label: t('actionBulkDelete'), icon: 'check', action: 'delete', danger: true },
     ]
-    if (view === 'identity') return [
-        { label: t('actionNewAddress'), icon: 'plus', modal: 'new-address', primary: true },
-    ]
-    if (view === 'users') return [
-        { label: t('actionNewUser'), icon: 'plus', modal: 'new-user', primary: true },
-    ]
-    if (view === 'routing') return [
-        { label: t('actionNewDomain'), icon: 'plus', action: 'new-domain' },
-    ]
-    if (view === 'delivery') return [
-        { label: t('actionRefreshChannels'), icon: 'refresh', action: 'refresh' },
-    ]
-    if (view === 'access') return []
-    if (view === 'ops') return [
-        { label: t('actionHealthCheck'), icon: 'check', action: 'health-check' },
-    ]
     return []
 })
 

@@ -444,7 +444,7 @@ describe('AdminNext behavior baseline', () => {
         }]
         const { wrapper } = await mountAdmin({ path: '/admin?view=identity' })
 
-        const createButton = wrapper.findAll('.toolbar button').find((button) => button.text().includes('新增地址'))
+        const createButton = wrapper.findAll('.panel-head-actions button, .toolbar button').find((button) => button.text().includes('新增地址'))
         expect(createButton).toBeTruthy()
         await createButton.trigger('click')
         await wrapper.get('[data-testid="address-name"]').setValue('team')
@@ -478,7 +478,7 @@ describe('AdminNext behavior baseline', () => {
             config_version: 7,
         }]
         const { wrapper } = await mountAdmin({ path: '/admin?view=identity' })
-        const createButton = wrapper.findAll('.toolbar button').find((button) => button.text().includes('新增地址'))
+        const createButton = wrapper.findAll('.panel-head-actions button, .toolbar button').find((button) => button.text().includes('新增地址'))
         createButton.element.focus()
 
         await createButton.trigger('click')
