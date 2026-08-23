@@ -725,6 +725,7 @@ const {
     bindAddressToUser,
     unbindAddressFromUser,
     handleAction,
+    handleAddressRowAction,
     handleDomainRowAction,
     handleUserRowAction,
 } = useAdminConsoleActions({
@@ -759,12 +760,6 @@ const toolbarActions = computed(() => {
     ]
     if (view === 'identity') return [
         { label: t('actionNewAddress'), icon: 'plus', modal: 'new-address', primary: true },
-        { label: t('actionCopyCurrentAddress'), icon: 'copy', action: 'copy' },
-        { label: t('actionShowCredential'), icon: 'lock', action: 'show-credential' },
-        { label: t('actionRotateCredential'), icon: 'refresh', action: 'rotate' },
-        { label: t('actionRevokeAccessPackage'), icon: 'lock', action: 'revoke' },
-        { label: t('actionClearInbox'), icon: 'check', action: 'clear-inbox', danger: true },
-        { label: t('actionDeleteAddress'), icon: 'check', action: 'delete-address', danger: true },
     ]
     if (view === 'routing') return [
         { label: t('actionNewDomain'), icon: 'plus', action: 'new-domain' },
@@ -948,6 +943,7 @@ const workspaceActions = {
     openMailFromAddress,
     copyText,
     openSharePackage,
+    handleAddressRowAction,
     handleDomainRowAction,
     handleUserRowAction,
 }

@@ -2692,6 +2692,26 @@ export const MESSAGE_REGISTRY = {
       "en": "Delete",
       "zh": "删除"
     },
+    "showCredential": {
+      "en": "Credentials",
+      "zh": "凭证"
+    },
+    "rotateCredential": {
+      "en": "Rotate",
+      "zh": "轮换"
+    },
+    "revokeAccess": {
+      "en": "Revoke shares",
+      "zh": "撤销"
+    },
+    "clearInbox": {
+      "en": "Clear inbox",
+      "zh": "清空"
+    },
+    "deleteAddress": {
+      "en": "Delete address",
+      "zh": "删除地址"
+    },
     "recentActivity": {
       "en": "Recent Activity Stream",
       "zh": "最近处理与审计流水"

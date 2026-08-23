@@ -260,14 +260,30 @@ const recentMails = computed(() => {
                                 </div>
 
                                 <div v-else-if="column.type === 'addressActions'" class="row-actions address-actions cell-actions" @click.stop>
-                                    <button class="btn-action primary" type="button" @click="actions.openMailFromAddress(row.address)">
+                                    <button class="btn-action primary" type="button" @click="actions.openMailFromAddress(row.address)" :title="t('viewMail')">
                                         {{ t('viewMail') }}
                                     </button>
-                                    <button class="btn-action" type="button" @click="actions.copyText(row.address)">
+                                    <button class="btn-action" type="button" @click="actions.copyText(row.address)" :title="t('copy')">
                                         {{ t('copy') }}
                                     </button>
-                                    <button class="btn-action" type="button" @click="actions.openSharePackage(row)">
+                                    <button class="btn-action" type="button" :disabled="!row.sourceId || !!model.actionBusy"
+                                        @click="actions.handleAddressRowAction(row, 'show-credential')" :title="t('showCredential')">
+                                        {{ t('showCredential') }}
+                                    </button>
+                                    <button class="btn-action" type="button" :disabled="!row.sourceId || !!model.actionBusy"
+                                        @click="actions.handleAddressRowAction(row, 'rotate')" :title="t('rotateCredential')">
+                                        {{ t('rotateCredential') }}
+                                    </button>
+                                    <button class="btn-action" type="button" @click="actions.openSharePackage(row)" :title="t('share')">
                                         {{ t('share') }}
+                                    </button>
+                                    <button class="btn-action" type="button" :disabled="!row.sourceId || !row.mails || !!model.actionBusy"
+                                        @click="actions.handleAddressRowAction(row, 'clear-inbox')" :title="t('clearInbox')">
+                                        {{ t('clearInbox') }}
+                                    </button>
+                                    <button class="btn-action danger" type="button" :disabled="!row.sourceId || !!model.actionBusy"
+                                        @click="actions.handleAddressRowAction(row, 'delete-address')" :title="t('deleteAddress')">
+                                        {{ t('delete') }}
                                     </button>
                                 </div>
 

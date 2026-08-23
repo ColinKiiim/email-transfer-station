@@ -505,8 +505,8 @@ describe('AdminNext behavior baseline', () => {
         runtime.addresses = [{ id: 3, name: 'ops@example.test', credential_version: 2 }]
         const { wrapper } = await mountAdmin({ path: '/admin?view=identity' })
 
-        const revealButton = wrapper.findAll('.toolbar button')
-            .find((button) => button.text().includes('显示凭证'))
+        const revealButton = wrapper.findAll('.cell-actions button')
+            .find((button) => button.text().includes('凭证'))
         expect(revealButton).toBeTruthy()
         await revealButton.trigger('click')
         await settle()
@@ -556,8 +556,8 @@ describe('AdminNext behavior baseline', () => {
         }]
         let mounted = await mountAdmin({ path: '/admin?view=identity' })
 
-        const deleteAddressButton = mounted.wrapper.findAll('.toolbar button')
-            .find((button) => button.text().includes('删除地址'))
+        const deleteAddressButton = mounted.wrapper.findAll('.cell-actions button')
+            .find((button) => button.text() === '删除' || button.text().includes('删除'))
         expect(deleteAddressButton).toBeTruthy()
         await deleteAddressButton.trigger('click')
         await settle()

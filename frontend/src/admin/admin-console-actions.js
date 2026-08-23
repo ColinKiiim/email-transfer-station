@@ -1045,6 +1045,13 @@ export const useAdminConsoleActions = ({
         }
     }
 
+    const handleAddressRowAction = async (row, type) => {
+        if (!row) return
+        ui.selected.identity = row.id
+        await nextTick()
+        await handleAction(type)
+    }
+
     const handleDomainRowAction = async (row, type) => {
         if (!row) return
         ui.selected.routing = row.id
@@ -1093,6 +1100,7 @@ export const useAdminConsoleActions = ({
         unbindAddressFromUser,
         loadUserBoundAddresses,
         handleAction,
+        handleAddressRowAction,
         handleDomainRowAction,
         handleUserRowAction,
     }
