@@ -1530,7 +1530,7 @@ export const MESSAGE_REGISTRY = {
     },
     "identity": {
       "en": "Addresses",
-      "zh": "地址身份"
+      "zh": "邮箱地址"
     },
     "routing": {
       "en": "Domains & routing",
@@ -1539,6 +1539,10 @@ export const MESSAGE_REGISTRY = {
     "delivery": {
       "en": "Delivery & alerts",
       "zh": "出站与通知"
+    },
+    "users": {
+      "en": "Users & Roles",
+      "zh": "用户与角色"
     },
     "access": {
       "en": "Access governance",

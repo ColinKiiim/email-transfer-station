@@ -16,6 +16,7 @@ export const VIEW_META = {
     identity: { kicker: 'address ledger and credentials' },
     routing: { kicker: 'domains and ingress routes' },
     delivery: { kicker: 'send access and notifications' },
+    users: { kicker: 'user accounts and roles' },
     access: { kicker: 'share packages and audit' },
     ops: { kicker: 'worker, d1, kv and policies' },
 }
@@ -40,6 +41,7 @@ export const NAV_GROUPS = [
     {
         labelKey: 'groupGovernance',
         items: [
+            { id: 'users', badgeKey: 'users', icon: 'users' },
             { id: 'access', badgeKey: 'access', icon: 'access' },
             { id: 'ops', badgeKey: 'ops', icon: 'ops' },
         ],
@@ -55,6 +57,12 @@ export const ICON_SHAPES = {
         { tag: 'path', attrs: { d: 'M4 12h16M12 4c2 2.2 3 4.8 3 8s-1 5.8-3 8M12 4c-2 2.2-3 4.8-3 8s1 5.8 3 8' } },
     ],
     delivery: [{ tag: 'path', attrs: { d: 'M4 12 20 4l-5 16-3-7z' } }],
+    users: [
+        { tag: 'path', attrs: { d: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2' } },
+        { tag: 'circle', attrs: { cx: '9', cy: '7', r: '4' } },
+        { tag: 'path', attrs: { d: 'M22 21v-2a4 4 0 0 0-3-3.87' } },
+        { tag: 'path', attrs: { d: 'M16 3.13a4 4 0 0 1 0 7.75' } },
+    ],
     access: [{ tag: 'path', attrs: { d: 'M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6z' } }, { tag: 'path', attrs: { d: 'm9 12 2 2 4-5' } }],
     ops: [{ tag: 'circle', attrs: { cx: '12', cy: '12', r: '3' } }, { tag: 'path', attrs: { d: 'M19 12a7.7 7.7 0 0 0-.1-1l2-1.5-2-3.4-2.4 1a7.2 7.2 0 0 0-1.8-1L14.4 3h-4.8l-.3 3.1a7.2 7.2 0 0 0-1.8 1l-2.4-1-2 3.4 2 1.5a7.7 7.7 0 0 0 0 2l-2 1.5 2 3.4 2.4-1a7.2 7.2 0 0 0 1.8 1l.3 3.1h4.8l.3-3.1a7.2 7.2 0 0 0 1.8-1l2.4 1 2-3.4-2-1.5c.1-.3.1-.7.1-1z' } }],
     menu: [{ tag: 'path', attrs: { d: 'M4 7h16M4 12h16M4 17h16' } }],

@@ -582,6 +582,10 @@ const activePanels = computed(() => {
     if (view === 'identity') {
         return [
             { id: 'addresses', title: t('panelAddressLedger'), columns: tableSpecs.addresses, rows: filterRows(addressRows.value), kind: 'identity' },
+        ]
+    }
+    if (view === 'users') {
+        return [
             { id: 'users', title: t('panelUsersAndRoles'), columns: tableSpecs.users, rows: filterRows(userRows.value), kind: 'users' },
         ]
     }
@@ -760,6 +764,9 @@ const toolbarActions = computed(() => {
     ]
     if (view === 'identity') return [
         { label: t('actionNewAddress'), icon: 'plus', modal: 'new-address', primary: true },
+    ]
+    if (view === 'users') return [
+        { label: t('actionNewUser'), icon: 'plus', modal: 'new-user', primary: true },
     ]
     if (view === 'routing') return [
         { label: t('actionNewDomain'), icon: 'plus', action: 'new-domain' },
@@ -946,6 +953,14 @@ const workspaceActions = {
     handleAddressRowAction,
     handleDomainRowAction,
     handleUserRowAction,
+    setFilterDomain: (domain) => {
+        ui.domain = domain
+        if (activeView.value === 'flow') {
+            setMailDomain(domain)
+        } else {
+            replaceRouteQuery({ domain: domain === 'all' ? undefined : domain })
+        }
+    },
 }
 
 const overlayActions = {

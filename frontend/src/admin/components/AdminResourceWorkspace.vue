@@ -16,6 +16,20 @@ const { t } = useScopedI18n('admin.resource')
 const recentMails = computed(() => {
     return (props.model.mailRows || []).slice(0, 6)
 })
+
+const addressDomainStats = computed(() => {
+    const counts = {}
+    for (const row of props.model.addressRows || []) {
+        const domain = row.domain || (row.address?.includes('@') ? row.address.split('@')[1] : '')
+        if (domain) {
+            counts[domain] = (counts[domain] || 0) + 1
+        }
+    }
+    return Object.keys(counts).sort().map((domain) => ({
+        domain,
+        count: counts[domain],
+    }))
+})
 </script>
 
 <template>
@@ -199,6 +213,22 @@ const recentMails = computed(() => {
                     </button>
                 </div>
             </div>
+
+            <!-- Domain Quick Filter Tabs for Addresses -->
+            <div v-if="panel.id === 'addresses' && addressDomainStats.length > 0" class="domain-filter-bar">
+                <button type="button" class="domain-filter-pill"
+                    :class="{ 'is-active': !model.ui.domain || model.ui.domain === 'all' }"
+                    @click="actions.setFilterDomain('all')">
+                    全部 ({{ model.addressRows.length }})
+                </button>
+                <button v-for="domainOpt in addressDomainStats" :key="domainOpt.domain"
+                    type="button" class="domain-filter-pill"
+                    :class="{ 'is-active': model.ui.domain === domainOpt.domain }"
+                    @click="actions.setFilterDomain(domainOpt.domain)">
+                    @{{ domainOpt.domain }} ({{ domainOpt.count }})
+                </button>
+            </div>
+
             <div class="table-wrap">
                 <table>
                     <caption class="sr-only">{{ t('tableCaption', { title: panel.title }) }}</caption>
