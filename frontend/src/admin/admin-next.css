@@ -1226,20 +1226,67 @@ body:has(.admin-next) .n-message-container {
     padding: 12px 8px;
 }
 
+.admin-next-host .mail-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+}
+
+.admin-next-host .mail-filter-chips {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.admin-next-host .filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    border-radius: 9999px;
+    background: var(--surface-soft);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 120ms ease;
+}
+
+.admin-next-host .filter-chip:hover {
+    background: color-mix(in oklch, var(--accent-soft) 30%, var(--surface-soft));
+    color: var(--fg);
+    border-color: color-mix(in oklch, var(--accent) 40%, var(--border));
+}
+
+.admin-next-host .filter-chip.is-active {
+    background: rgba(59, 130, 246, 0.16);
+    color: #60a5fa;
+    border-color: rgba(59, 130, 246, 0.4);
+    font-weight: 600;
+}
+
 .admin-next-host .mail-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 10px;
-    align-items: start;
+    grid-template-columns: minmax(130px, 170px) minmax(0, 1fr) auto;
+    gap: 14px;
+    align-items: center;
     width: 100%;
-    min-height: 76px;
+    min-height: 46px;
     border: 0;
-    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
     border-radius: 0;
-    padding: 10px 8px;
+    padding: 10px 14px;
     background: var(--surface-sunken);
     color: var(--fg);
     text-align: left;
+    transition: background-color 100ms ease, box-shadow 100ms ease;
+    cursor: pointer;
 }
 
 .admin-next-host .mail-row.is-unread {
@@ -1248,78 +1295,91 @@ body:has(.admin-next) .n-message-container {
 
 .admin-next-host .mail-row:hover,
 .admin-next-host .mail-row.is-selected {
-    background: color-mix(in oklch, var(--accent-soft) 50%, var(--mix-bg));
+    background: color-mix(in oklch, var(--accent-soft) 40%, var(--mix-bg));
 }
 
 .admin-next-host .mail-row.exception {
     background: color-mix(in oklch, var(--warn-soft) 28%, var(--mix-bg));
 }
 
-.admin-next-host .mail-row.is-unread .mail-main strong {
-    color: var(--fg);
-    font-weight: 760;
+.admin-next-host .mail-sender {
+    overflow: hidden;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.admin-next-host .mail-row:not(.is-unread) .mail-main strong {
-    color: color-mix(in oklch, var(--fg) 82%, var(--mix-bg));
-    font-weight: 520;
+.admin-next-host .mail-row.is-unread .mail-sender {
+    color: #ffffff;
+    font-weight: 700;
+}
+
+.admin-next-host .mail-main {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.admin-next-host .mail-subject {
+    flex-shrink: 0;
+    max-width: 60%;
+    overflow: hidden;
+    color: color-mix(in oklch, var(--fg) 85%, var(--mix-bg));
+    font-size: 13px;
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.admin-next-host .mail-row.is-unread .mail-subject {
+    color: #ffffff;
+    font-weight: 700;
+}
+
+.admin-next-host .mail-snippet-sep {
+    color: var(--muted);
+    opacity: 0.6;
+    font-size: 12px;
+}
+
+.admin-next-host .mail-body-preview {
+    overflow: hidden;
+    color: var(--muted);
+    font-size: 12.5px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    opacity: 0.85;
 }
 
 .admin-next-host .mail-time {
     color: var(--muted);
     font-size: 12px;
-    line-height: 1.45;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
 }
 
-.admin-next-host .time-text {
-    display: inline-block;
-    color: var(--muted);
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-}
-
-.admin-next-host .mail-main {
-    display: grid;
-    gap: 2px;
-    min-width: 0;
-}
-
-.admin-next-host .mail-row-top {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 8px;
-    align-items: center;
-    min-width: 0;
-}
-
-.admin-next-host .mail-main strong {
-    display: block;
-    overflow: hidden;
-    line-height: 1.28;
-    overflow-wrap: anywhere;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.admin-next-host .mail-snippet,
-.admin-next-host .mail-main small {
-    min-width: 0;
-    overflow: hidden;
-    color: var(--muted);
-    font-size: 12px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+.admin-next-host .mail-row.is-unread .mail-time {
+    color: #ffffff;
+    font-weight: 650;
 }
 
 .admin-next-host .mail-meta {
-    display: grid;
-    justify-items: end;
-    gap: 5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: flex-end;
     color: var(--muted);
-    font-size: 12px;
-    white-space: nowrap;
+}
+
+.admin-next-host .attachment-indicator {
+    font-size: 13px;
+    opacity: 0.8;
 }
 
 .admin-next-host .queue-section {

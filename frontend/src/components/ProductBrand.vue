@@ -10,7 +10,7 @@ const props = defineProps({
 })
 
 const { openSettings } = useGlobalState()
-const displayTitle = computed(() => props.title || openSettings.value.title || 'Email Transfer Station')
+const displayTitle = computed(() => props.title || openSettings.value.title || 'ETS Mail')
 </script>
 
 <template>

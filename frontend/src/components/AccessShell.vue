@@ -159,21 +159,24 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
 }
 
 .access-shell.has-rail {
-  grid-template-columns: 232px minmax(0, 1fr);
+  grid-template-columns: 248px minmax(0, 1fr);
 }
 
 .access-sidebar {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   min-width: 0;
-  padding: 20px 12px;
+  padding: 12px 12px 16px;
   border-right: 1px solid var(--access-border);
   background: var(--ets-surface);
 }
 
 .brand-row {
-  min-height: 48px;
-  margin-bottom: 22px;
+  display: flex;
+  align-items: center;
+  height: 60px;
+  padding: 0 4px;
+  margin-bottom: 12px;
 }
 
 .rail-item svg {
@@ -186,11 +189,11 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
   stroke-linejoin: round;
 }
 
-
 .rail-nav {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   align-content: start;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
   overflow-y: auto;
 }
@@ -198,54 +201,63 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
 .rail-item {
   display: grid;
   grid-template-columns: 20px minmax(0, 1fr) auto;
-  gap: 10px;
+  gap: 12px;
   align-items: center;
-  min-height: 44px;
+  min-height: 38px;
+  height: 38px;
   width: 100%;
   border: 0;
-  border-radius: 8px;
-  padding: 0 10px;
+  border-radius: 9999px;
+  padding: 0 16px;
   background: transparent;
-  color: var(--ets-text);
+  color: var(--access-muted);
   font: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
   text-align: left;
   cursor: pointer;
-  transition-property: background-color, color, scale;
-  transition-duration: 160ms;
-  transition-timing-function: ease-out;
+  transition: all 120ms ease;
 }
 
 .rail-item:active {
-  scale: 0.96;
+  scale: 0.98;
 }
 
 .rail-item:hover {
-  background: var(--ets-hover);
-  color: var(--ets-on-brand-soft);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--access-text);
 }
 
 .rail-item.is-active {
-  background: var(--access-accent-soft);
-  color: var(--ets-on-brand-soft);
+  background: rgba(59, 130, 246, 0.16);
+  color: #60a5fa;
+  font-weight: 600;
+}
+
+.rail-item.is-active svg {
+  color: #60a5fa;
 }
 
 .rail-item span {
   overflow: hidden;
-  font-size: 13px;
-  font-weight: 650;
+  font-size: 13.5px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .rail-item b {
-  min-width: 26px;
-  border-radius: 999px;
-  padding: 2px 7px;
-  background: var(--access-accent);
-  color: var(--ets-brand-contrast);
+  min-width: 22px;
+  height: 20px;
+  border-radius: 9999px;
+  padding: 0 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(59, 130, 246, 0.22);
+  color: #93c5fd;
   font-size: 11px;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
-  text-align: center;
 }
 
 .rail-footer {
@@ -264,15 +276,15 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
 }
 
 .access-topbar {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 18px;
+  display: flex;
   align-items: center;
-  min-height: 74px;
-  padding: 16px 24px 12px;
+  justify-content: space-between;
+  gap: 18px;
+  height: 60px;
+  min-height: 60px;
+  padding: 0 24px;
   border-bottom: 1px solid var(--access-border);
   background: var(--ets-surface);
-  backdrop-filter: blur(18px);
 }
 
 .title-block {

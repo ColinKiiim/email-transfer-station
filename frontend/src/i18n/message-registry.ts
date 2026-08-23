@@ -690,11 +690,11 @@ export const MESSAGE_REGISTRY = {
     },
     "address_management": {
       "en": "My Addresses",
-      "zh": "我的邮箱地址"
+      "zh": "我的地址"
     },
     "bind_address": {
       "en": "Bind Mail Address",
-      "zh": "绑定邮箱地址"
+      "zh": "绑定地址"
     },
     "user_mail_box_tab": {
       "en": "Mail Box",
@@ -702,7 +702,7 @@ export const MESSAGE_REGISTRY = {
     },
     "user_settings": {
       "en": "Account Security",
-      "zh": "账号安全"
+      "zh": "账户设置"
     },
     "noRole": {
       "en": "No role",
