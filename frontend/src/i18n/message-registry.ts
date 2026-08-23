@@ -1522,35 +1522,35 @@ export const MESSAGE_REGISTRY = {
   "admin.nav": {
     "overview": {
       "en": "Overview",
-      "zh": "运行总控"
+      "zh": "总览"
     },
     "flow": {
-      "en": "Mail flow",
-      "zh": "收件流"
+      "en": "Inbox",
+      "zh": "收件箱"
     },
     "identity": {
       "en": "Addresses",
-      "zh": "邮箱地址"
+      "zh": "地址"
     },
     "routing": {
-      "en": "Domains & routing",
-      "zh": "域名与路由"
+      "en": "Domains",
+      "zh": "域名"
     },
     "delivery": {
-      "en": "Delivery & alerts",
-      "zh": "出站与通知"
+      "en": "Channels",
+      "zh": "通道"
     },
     "users": {
-      "en": "Users & Roles",
-      "zh": "用户与角色"
+      "en": "Users",
+      "zh": "用户"
     },
     "access": {
-      "en": "Access governance",
-      "zh": "访问治理"
+      "en": "Access",
+      "zh": "访问包"
     },
     "ops": {
       "en": "Operations",
-      "zh": "运行维护"
+      "zh": "系统维护"
     },
     "groupWorkbench": {
       "en": "Workbench",
@@ -1558,11 +1558,11 @@ export const MESSAGE_REGISTRY = {
     },
     "groupResource": {
       "en": "Resources",
-      "zh": "资源"
+      "zh": "资源管理"
     },
     "groupGovernance": {
       "en": "Governance",
-      "zh": "治理"
+      "zh": "系统治理"
     }
   },
   "admin.shell": {

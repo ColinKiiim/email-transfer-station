@@ -170,11 +170,11 @@ body:has(.admin-next) .n-message-container {
 }
 
 .admin-next-host .app {
-    --sidebar-width: 232px;
+    --sidebar-width: 248px;
 
     display: grid;
     grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-rows: 60px minmax(0, 1fr);
     justify-content: start;
     height: 100dvh;
     min-height: 0;
@@ -194,14 +194,16 @@ body:has(.admin-next) .n-message-container {
 }
 
 .admin-next-host .app-chrome {
-    z-index: 2;
+    z-index: 10;
     display: grid;
     grid-row: 1;
     grid-column: 1 / -1;
     grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+    height: 60px;
+    align-items: center;
     min-width: 0;
     background: var(--surface);
-    box-shadow: 0 1px 0 var(--border);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .admin-next-host button,
@@ -263,101 +265,102 @@ body:has(.admin-next) .n-message-container {
 }
 
 .admin-next-host .brand {
-    display: grid;
-    grid-template-columns: 40px minmax(0, 1fr);
-    gap: 10px;
+    display: flex;
     align-items: center;
-    width: 208px;
-    min-height: 44px;
-    margin: 18px 8px 6px 16px;
-    will-change: auto;
+    gap: 12px;
+    height: 100%;
+    padding: 0 16px;
 }
 
 .admin-next-host .admin-product-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     min-width: 0;
 }
 
-.admin-next-host .admin-product-brand .product-brand-copy {
-    gap: 0;
-}
-
 .admin-next-host .admin-product-brand .product-brand-copy strong {
-    display: -webkit-box;
-    overflow: hidden;
-    font-size: 13px;
-    line-height: 1.05;
-    white-space: normal;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-}
-
-.admin-next-host .admin-product-brand .product-brand-copy span {
-    font-size: 11px;
-    line-height: 1.1;
+    font-size: 17px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    color: var(--fg);
 }
 
 .admin-next-host .sidebar-toggle {
     display: grid;
-    width: 40px;
-    height: 40px;
-    min-height: 40px;
     place-items: center;
+    width: 38px;
+    height: 38px;
+    min-height: 38px;
     border: 0;
-    border-radius: var(--radius-sm);
+    border-radius: 9999px;
     background: transparent;
     color: var(--muted);
+    transition: all 120ms ease;
 }
 
 .admin-next-host .sidebar-toggle:hover {
-    background: var(--surface-soft);
+    background: rgba(255, 255, 255, 0.08);
     color: var(--fg);
-    box-shadow: var(--shadow-border);
 }
 
 .admin-next-host .nav-scroll {
     min-height: 0;
     overflow-x: hidden;
     overflow-y: auto;
-    padding-right: 3px;
+    padding: 6px 0;
 }
 
 .admin-next-host .nav-group {
-    display: grid;
-    gap: 6px;
-    margin-bottom: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-bottom: 16px;
 }
 
 .admin-next-host .nav-group-title {
-    padding: 0 10px;
+    padding: 6px 16px 4px;
     color: var(--muted);
     font-size: 11px;
-    font-weight: 760;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    opacity: 0.65;
 }
 
 .admin-next-host .nav-link {
     position: relative;
     display: grid;
-    grid-template-columns: 18px minmax(0, 1fr) auto;
-    gap: 10px;
+    grid-template-columns: 20px minmax(0, 1fr) auto;
+    gap: 12px;
     align-items: center;
     width: 100%;
-    min-height: 42px;
+    min-height: 38px;
+    height: 38px;
     border: 0;
-    border-radius: var(--radius);
-    padding: 8px 10px;
+    border-radius: 9999px;
+    padding: 0 16px;
     background: transparent;
     color: var(--muted);
+    font-size: 13.5px;
+    font-weight: 500;
     text-align: left;
+    transition: all 120ms ease;
 }
 
 .admin-next-host .nav-link.is-active {
-    background: var(--accent-soft);
-    color: color-mix(in oklch, var(--accent) 80%, var(--mix-fg));
+    background: rgba(59, 130, 246, 0.16);
+    color: #60a5fa;
+    font-weight: 600;
+}
+
+.admin-next-host .nav-link.is-active svg {
+    color: #60a5fa;
 }
 
 @media (hover: hover) {
     .admin-next-host .nav-link:hover:not(.is-active) {
-        background: var(--surface-soft);
+        background: rgba(255, 255, 255, 0.06);
         color: var(--fg);
     }
 }
@@ -371,32 +374,38 @@ body:has(.admin-next) .n-message-container {
 
 .admin-next-host .nav-badge {
     min-width: 22px;
-    border-radius: 999px;
-    padding: 1px 7px;
-    background: var(--accent);
-    color: var(--accent-contrast);
+    height: 20px;
+    border-radius: 9999px;
+    padding: 0 7px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(59, 130, 246, 0.22);
+    color: #93c5fd;
     font-size: 11px;
+    font-weight: 700;
     font-variant-numeric: tabular-nums;
-    text-align: center;
 }
 
 .admin-next-host .nav-dot {
     justify-self: end;
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: 7px;
     border-radius: 999px;
-    background: var(--warn);
-    box-shadow: 0 0 0 3px color-mix(in oklch, var(--warn) 16%, transparent);
+    background: #60a5fa;
+    box-shadow: 0 0 6px rgba(96, 165, 250, 0.6);
 }
 
 .admin-next-host .sidebar-foot {
-    display: grid;
-    gap: 6px;
-    border-radius: var(--radius);
-    padding: 10px;
-    background: var(--surface-soft);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
 }
 
 .admin-next-host .is-sidebar-collapsed .sidebar {
@@ -486,18 +495,20 @@ body:has(.admin-next) .n-message-container {
 }
 
 .admin-next-host .topbar {
-    display: block;
-    min-height: 52px;
-    padding: 8px 24px;
-    background: var(--surface);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    height: 100%;
+    padding: 0 24px 0 16px;
+    background: transparent;
+    border-bottom: none;
 }
 
 .admin-next-host .topbar-controls {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
+    gap: 20px;
+    width: 100%;
     min-width: 0;
 }
 
@@ -534,45 +545,74 @@ body:has(.admin-next) .n-message-container {
 }
 
 .admin-next-host .searchbox {
-    display: grid;
-    grid-template-columns: 16px minmax(0, 1fr) auto;
-    gap: 9px;
+    display: flex;
     align-items: center;
-    min-height: 38px;
-    max-width: 480px;
+    gap: 12px;
+    height: 44px;
+    max-width: 640px;
     width: 100%;
-    border-radius: var(--radius);
-    padding: 0 12px;
-    background: rgba(255, 255, 255, 0.03);
+    border-radius: 24px;
+    padding: 0 18px;
+    background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: none;
-    transition: all 120ms ease;
+    transition: all 150ms ease;
 }
 
 .admin-next-host .searchbox:focus-within {
-    background: rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.08);
     border-color: rgba(59, 130, 246, 0.5);
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
+.admin-next-host .searchbox svg {
+    width: 17px;
+    height: 17px;
+    color: var(--muted);
+    flex-shrink: 0;
+}
+
 .admin-next-host .searchbox .field {
-    min-height: 34px;
+    flex: 1;
+    height: 100%;
+    min-height: unset;
     padding: 0;
+    border: none;
     background: transparent;
+    color: var(--fg);
+    font-size: 14px;
     box-shadow: none;
-    overflow: hidden;
-    text-overflow: ellipsis;
+}
+
+.admin-next-host .searchbox .field:focus {
+    outline: none;
 }
 
 .admin-next-host .kbd {
-    border-radius: 4px;
-    padding: 1px 5px;
-    background: var(--surface-soft);
-    color: var(--subtle);
+    border-radius: 6px;
+    padding: 2px 6px;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--muted);
     font-size: 11px;
-    font-family: var(--ets-ui-font, inherit);
-    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    flex-shrink: 0;
 }
+
+.admin-next-host .top-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.admin-next-host .top-actions .btn {
+    min-height: 36px;
+    height: 36px;
+    border-radius: 9999px;
+    padding: 0 14px;
+    font-size: 13px;
+}
+
 
 .admin-next-host .top-actions,
 .admin-next-host .toolbar,

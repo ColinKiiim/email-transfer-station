@@ -49,7 +49,7 @@ defineExpose({
                             v-bind="shape.attrs" />
                     </svg>
                 </button>
-                <ProductBrand class="admin-product-brand" :context-label="t('contextLabel')" />
+                <ProductBrand class="admin-product-brand" title="ETS Mail" />
             </div>
 
             <header class="topbar">

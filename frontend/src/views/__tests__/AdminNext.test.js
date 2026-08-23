@@ -221,7 +221,7 @@ describe('AdminNext behavior baseline', () => {
         login.wrapper.unmount()
 
         const consoleView = await mountAdmin()
-        expect(consoleView.wrapper.get('.brand .product-brand').text()).toContain('管理控制台')
+        expect(consoleView.wrapper.get('.brand .product-brand').text()).toContain('ETS Mail')
         expect(consoleView.wrapper.findAll('.top-actions .surface-link').map((link) => link.attributes('href')))
             .toEqual(['/', '/user'])
         consoleView.wrapper.unmount()
@@ -267,7 +267,7 @@ describe('AdminNext behavior baseline', () => {
     it('keeps route query, selected view, mail, and detail mode in sync both ways', async () => {
         const { router, wrapper } = await mountAdmin({ path: '/admin?view=overview' })
 
-        await wrapper.get('button[aria-label="收件流"]').trigger('click')
+        await wrapper.get('button[aria-label="收件箱"]').trigger('click')
         await settle()
         expect(router.currentRoute.value.query.view).toBe('flow')
 
@@ -286,7 +286,7 @@ describe('AdminNext behavior baseline', () => {
         expect(wrapper.get('.searchbox input').element.value).toBe('invoice')
         expect(wrapper.get('.mail-row').attributes('aria-selected')).toBe('true')
 
-        await wrapper.get('button[aria-label="运行总控"]').trigger('click')
+        await wrapper.get('button[aria-label="总览"]').trigger('click')
         await settle()
         expect(router.currentRoute.value.query.view).toBe('overview')
         expect(router.currentRoute.value.query).not.toHaveProperty('mailId')
@@ -306,7 +306,7 @@ describe('AdminNext behavior baseline', () => {
 
         await mounted.router.push('/admin?view=overview')
         await settle()
-        expect(mounted.wrapper.get('h1').text()).toBe('运行总控')
+        expect(mounted.wrapper.get('h1').text()).toBe('总览')
 
         mounted.router.back()
         await settle()
@@ -316,7 +316,7 @@ describe('AdminNext behavior baseline', () => {
         mounted.router.forward()
         await settle()
         expect(mounted.router.currentRoute.value.query.view).toBe('overview')
-        expect(mounted.wrapper.get('h1').text()).toBe('运行总控')
+        expect(mounted.wrapper.get('h1').text()).toBe('总览')
         mounted.wrapper.unmount()
 
         const refreshed = await mountAdmin({ path: selectedPath })
