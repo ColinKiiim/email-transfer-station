@@ -1,18 +1,20 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 
 import MailContentRenderer from '../../components/MailContentRenderer.vue'
 import { formatNumber, statusClass } from '../admin-formatters'
 import AdminEmptyState from './AdminEmptyState.vue'
 
-defineProps({
+const props = defineProps({
     model: { type: Object, required: true },
     actions: { type: Object, required: true },
 })
 
 const { t } = useScopedI18n('admin.mailView')
 const mailList = ref(null)
+const showDomainMenu = ref(false)
+const domainDropdownRef = ref(null)
 
 const getSenderInitial = (sender) => {
     if (!sender) return '✉'
@@ -20,6 +22,31 @@ const getSenderInitial = (sender) => {
     const first = clean.charAt(0)
     return first.toUpperCase() || '✉'
 }
+
+const selectedDomainLabel = computed(() => {
+    if (!props.model.ui.domain || props.model.ui.domain === 'all') {
+        return `🌐 ${t('allDomains') || '全部域名'}`
+    }
+    return `🌐 ${props.model.ui.domain}`
+})
+
+const selectDomain = (domain) => {
+    props.actions.setMailDomain(domain)
+    showDomainMenu.value = false
+}
+
+const handleClickOutside = (e) => {
+    if (domainDropdownRef.value && !domainDropdownRef.value.contains(e.target)) {
+        showDomainMenu.value = false
+    }
+}
+
+onMounted(() => {
+    window.addEventListener('click', handleClickOutside)
+})
+onBeforeUnmount(() => {
+    window.removeEventListener('click', handleClickOutside)
+})
 
 defineExpose({
     scrollToTop: () => mailList.value?.scrollTo?.({ top: 0 }),
@@ -65,7 +92,6 @@ defineExpose({
                                 :aria-label="actions.isMailDomainCollapsed(domain.domain) ? t('expandDomain') : t('collapseDomain')"
                                 @click="actions.toggleMailDomain(domain.domain)"></button>
                             <button class="facet-row domain-row" type="button" @click="actions.setMailDomain(domain.domain)">
-
                                 <span>{{ domain.domain }}</span>
                                 <b>{{ formatNumber(domain.mails || 0) }}</b>
                             </button>
@@ -98,13 +124,26 @@ defineExpose({
                         @click="actions.setMailStatus(model.ui.status === 'attachments' ? 'all' : 'attachments')">
                         📎 {{ t('attachments') || '有附件' }}
                     </button>
-                    <select v-if="model.mailHierarchy?.domains?.length" class="filter-select"
-                        :value="model.ui.domain" @change="actions.setMailDomain($event.target.value)">
-                        <option value="all">🌐 {{ t('allDomains') || '全部域名' }}</option>
-                        <option v-for="d in model.mailHierarchy.domains" :key="d.domain" :value="d.domain">
-                            {{ d.domain }} ({{ d.mails || 0 }})
-                        </option>
-                    </select>
+                    <div v-if="model.mailHierarchy?.domains?.length" ref="domainDropdownRef" class="domain-filter-wrapper">
+                        <button type="button" class="filter-chip domain-chip" :class="{ 'is-active': model.ui.domain !== 'all' }"
+                            @click.stop="showDomainMenu = !showDomainMenu">
+                            {{ selectedDomainLabel }}
+                            <span class="dropdown-arrow">▼</span>
+                        </button>
+                        <div v-show="showDomainMenu" class="domain-dropdown-menu">
+                            <button type="button" class="domain-option" :class="{ 'is-selected': model.ui.domain === 'all' }"
+                                @click="selectDomain('all')">
+                                <span>🌐 {{ t('allDomains') || '全部域名' }}</span>
+                                <b>{{ formatNumber(model.mailHierarchy.queues[0]?.count ?? model.mailRows.length) }}</b>
+                            </button>
+                            <button v-for="d in model.mailHierarchy.domains" :key="d.domain" type="button"
+                                class="domain-option" :class="{ 'is-selected': model.ui.domain === d.domain }"
+                                @click="selectDomain(d.domain)">
+                                <span>{{ d.domain }}</span>
+                                <b>{{ formatNumber(d.mails || 0) }}</b>
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 <div class="panel-head-actions">
                     <span class="status neutral">{{ t('mailCount', { count: formatNumber(model.filteredMailRows.length) }) }}</span>
@@ -159,6 +198,12 @@ defineExpose({
         <aside class="mail-detail-panel panel" :aria-label="t('mailDetailLabel')">
             <div class="panel-head">
                 <div class="mail-detail-head-content">
+                    <div class="detail-back-bar">
+                        <button type="button" class="btn compact-btn detail-back-btn"
+                            @click="model.ui.flowMode = 'list'; actions.syncMailQueryToRoute({ mode: undefined })">
+                            ← {{ t('backToList') || '返回列表' }}
+                        </button>
+                    </div>
                     <h2>{{ model.currentMail?.subject || model.currentRail.title }}</h2>
                     <p v-if="model.currentRail.subtitle && !model.currentMail">{{ model.currentRail.subtitle }}</p>
                 </div>

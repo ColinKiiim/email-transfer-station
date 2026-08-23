@@ -921,7 +921,7 @@ body:has(.admin-next) .n-message-container {
 .admin-next-host .mail-workbench {
     position: relative;
     display: grid;
-    grid-template-columns: minmax(360px, var(--mail-list-width, 480px)) 4px minmax(420px, 1fr);
+    grid-template-columns: 1fr;
     gap: 0;
     align-items: stretch;
     height: 100%;
@@ -930,6 +930,19 @@ body:has(.admin-next) .n-message-container {
     border-radius: var(--radius);
     background: var(--bg);
     isolation: isolate;
+}
+
+.admin-next-host .mail-workbench.flow-mode-list {
+    grid-template-columns: 1fr;
+}
+
+.admin-next-host .mail-workbench.flow-mode-list .mail-detail-panel,
+.admin-next-host .mail-workbench.flow-mode-list .detail-resizer {
+    display: none !important;
+}
+
+.admin-next-host .mail-workbench.flow-mode-detail {
+    grid-template-columns: minmax(360px, var(--mail-list-width, 460px)) 4px minmax(480px, 1fr);
 }
 
 .admin-next-host .mail-facets,
@@ -941,25 +954,88 @@ body:has(.admin-next) .n-message-container {
     display: none !important;
 }
 
-.admin-next-host .filter-select {
+.admin-next-host .domain-filter-wrapper {
+    position: relative;
     display: inline-flex;
-    align-items: center;
-    height: 28px;
-    padding: 0 10px;
-    border-radius: 9999px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background: rgba(255, 255, 255, 0.04);
-    color: var(--fg);
-    font-size: 12px;
-    cursor: pointer;
-    outline: none;
-    transition: all 0.15s ease;
 }
 
-.admin-next-host .filter-select:hover,
-.admin-next-host .filter-select:focus {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.22);
+.admin-next-host .domain-chip {
+    gap: 6px;
+}
+
+.admin-next-host .dropdown-arrow {
+    font-size: 9px;
+    opacity: 0.7;
+    margin-left: 2px;
+}
+
+.admin-next-host .domain-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 1000;
+    min-width: 240px;
+    max-height: 320px;
+    overflow-y: auto;
+    border-radius: var(--radius);
+    padding: 6px;
+    background: #1e222b;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.admin-next-host .domain-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    border: 0;
+    background: transparent;
+    color: #e6edf3;
+    font-size: 13px;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.admin-next-host .domain-option:hover,
+.admin-next-host .domain-option:focus {
+    background: rgba(96, 165, 250, 0.16);
+    color: #ffffff;
+}
+
+.admin-next-host .domain-option.is-selected {
+    background: rgba(96, 165, 250, 0.25);
+    color: #60a5fa;
+    font-weight: 600;
+}
+
+.admin-next-host .domain-option b {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.45);
+    font-weight: normal;
+}
+
+.admin-next-host .detail-back-bar {
+    margin-bottom: 8px;
+}
+
+.admin-next-host .detail-back-btn {
+    padding: 4px 10px;
+    font-size: 12px;
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--fg);
+}
+
+.admin-next-host .detail-back-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .admin-next-host .mail-workbench > .panel {
@@ -1298,11 +1374,11 @@ body:has(.admin-next) .n-message-container {
 
 .admin-next-host .mail-row {
     display: grid;
-    grid-template-columns: minmax(130px, 170px) minmax(0, 1fr) auto;
-    gap: 14px;
+    grid-template-columns: minmax(140px, 220px) minmax(0, 1fr) auto;
+    gap: 16px;
     align-items: center;
     width: 100%;
-    min-height: 46px;
+    min-height: 48px;
     border: 0;
     border-bottom: 1px solid var(--border);
     border-radius: 0;
