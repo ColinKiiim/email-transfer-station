@@ -765,16 +765,16 @@ export const MESSAGE_REGISTRY = {
       "zh": "只读或受限删除"
     },
     "loginKicker": {
-      "en": "User portal",
-      "zh": "用户入口"
+      "en": "User Portal",
+      "zh": "用户中心"
     },
     "loginHeading": {
-      "en": "Sign in to enter the same new workbench",
-      "zh": "登录后进入同一套新工作台"
+      "en": "Sign in to ETS Mail",
+      "zh": "登录 ETS Mail"
     },
     "loginDescription": {
-      "en": "View your inbox, manage the addresses bound to your account, and maintain account security settings here.",
-      "zh": "在这里查看收件箱、管理你绑定的地址，并维护账户安全设置。"
+      "en": "Access your personal inbox, bound addresses, and security settings.",
+      "zh": "安全访问您的个人收件箱、绑定地址与账户安全设置。"
     },
     "localPreviewWarning": {
       "en": "This local preview has no complete public configuration. The sign-in form still works; production reads settings from the Worker.",
@@ -821,6 +821,10 @@ export const MESSAGE_REGISTRY = {
     "loginWithPasskey": {
       "en": "Login with Passkey",
       "zh": "使用 Passkey 登录"
+    },
+    "or": {
+      "en": "OR",
+      "zh": "或"
     },
     "password": {
       "en": "Password",

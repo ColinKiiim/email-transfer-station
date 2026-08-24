@@ -95,7 +95,7 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
       <header class="access-topbar">
         <div class="topbar-lead" :class="{ 'has-brand': !railItems.length }">
           <ProductBrand v-if="!railItems.length" :context-label="brandContext" />
-          <div class="title-block">
+          <div v-if="railItems.length" class="title-block">
             <p v-if="kicker" class="kicker">{{ kicker }}</p>
             <h1>{{ title }}</h1>
             <div class="identity-line">

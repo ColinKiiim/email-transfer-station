@@ -151,8 +151,7 @@ onMounted(async () => {
   } catch (error) {
     userOpenSettingsWarning.value = error.message || t('openSettingsUnavailable')
     userOpenSettings.value.fetched = true
-  }
-  if (userJwt.value && !userSettings.value.user_id) {
+  }  if (userJwt.value && !userSettings.value.user_id) {
     await api.getUserSettings(message)
   } else if (!userSettings.value.fetched) {
     userSettings.value.fetched = true
@@ -197,16 +196,23 @@ onMounted(async () => {
     </section>
 
     <section v-else-if="!isSignedIn" class="login-layout">
-      <div class="login-copy">
-        <span>{{ t('loginKicker') }}</span>
-        <h2>{{ t('loginHeading') }}</h2>
-        <p>{{ t('loginDescription') }}</p>
+      <div class="auth-card">
+        <div class="auth-card-header">
+          <div class="auth-brand-badge">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 6h16v12H4z" fill="none" stroke="currentColor" stroke-width="2" />
+              <path d="m4 7 8 6 8-6" fill="none" stroke="currentColor" stroke-width="2" />
+            </svg>
+          </div>
+          <h2>{{ t('loginHeading') }}</h2>
+          <p>{{ t('loginDescription') }}</p>
+        </div>
         <p v-if="userOpenSettingsWarning" class="inline-warning">
           {{ t('localPreviewWarning') }}
         </p>
-      </div>
-      <div class="login-panel">
-        <UserLogin />
+        <div class="login-panel">
+          <UserLogin />
+        </div>
       </div>
     </section>
 
@@ -252,8 +258,7 @@ onMounted(async () => {
 
 <style scoped>
 .user-rail-summary,
-.access-card,
-.login-layout {
+.access-card {
   min-width: 0;
   border-radius: 8px;
   background: var(--ets-surface);
@@ -268,8 +273,7 @@ onMounted(async () => {
 }
 
 .user-rail-summary span,
-.module-head span,
-.login-copy span {
+.module-head span {
   color: var(--ets-text-muted);
   font-size: 12px;
   font-weight: 650;
@@ -297,8 +301,7 @@ onMounted(async () => {
   margin-bottom: 14px;
 }
 
-.module-head h2,
-.login-copy h2 {
+.module-head h2 {
   margin: 3px 0 0;
   color: var(--ets-text-strong);
   font-size: 20px;
@@ -308,31 +311,64 @@ onMounted(async () => {
 }
 
 .login-layout {
-  display: grid;
-  grid-template-columns: minmax(240px, 0.8fr) minmax(320px, 520px);
-  gap: 18px;
-  align-items: start;
-  width: min(100%, 1040px);
-  margin-inline: auto;
-  padding: 22px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 120px);
+  padding: 24px 16px;
 }
 
-.login-copy {
-  padding: 8px 4px;
+.auth-card {
+  width: min(100%, 460px);
+  border-radius: 16px;
+  padding: 32px 28px;
+  background: var(--ets-surface);
+  border: 1px solid var(--ets-border);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.4);
 }
 
-.login-copy p {
-  max-width: 520px;
-  margin: 8px 0 0;
+.auth-card-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.auth-brand-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  color: #ffffff;
+  margin-bottom: 12px;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
+}
+
+.auth-brand-badge svg {
+  width: 24px;
+  height: 24px;
+}
+
+.auth-card-header h2 {
+  margin: 0;
+  color: var(--ets-text-strong);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.auth-card-header p {
+  margin: 6px 0 0;
   color: var(--ets-text-muted);
-  font-size: 13px;
-  line-height: 1.55;
-  text-wrap: pretty;
+  font-size: 13.5px;
+  line-height: 1.5;
 }
 
 .inline-warning {
   border-radius: 8px;
   padding: 10px 12px;
+  margin-bottom: 16px;
   background: var(--ets-warn-soft);
   color: var(--ets-warn) !important;
   font-size: 13px !important;
@@ -340,9 +376,8 @@ onMounted(async () => {
 
 .login-panel {
   min-width: 0;
-  border-radius: 8px;
-  padding: 16px;
-  background: var(--ets-surface-alt);
+  background: transparent;
+  padding: 0;
 }
 
 .login-panel :deep(.center) {
@@ -353,12 +388,5 @@ onMounted(async () => {
 .access-card :deep(.n-card),
 .login-panel :deep(.n-card) {
   background: transparent;
-}
-
-@media (max-width: 820px) {
-  .login-layout {
-    grid-template-columns: 1fr;
-    padding: 16px;
-  }
 }
 </style>
