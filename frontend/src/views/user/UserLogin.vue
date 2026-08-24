@@ -2,14 +2,12 @@
 import { useMessage } from 'naive-ui'
 import { onMounted, ref } from "vue";
 import { useScopedI18n } from '@/i18n/app'
-import { KeyFilled } from '@vicons/material'
 
 import { api } from '../../api';
 import { useGlobalState } from '../../store'
 import { hashPassword } from '../../utils';
 import { createOAuthAttempt } from '../../security/oauth-state';
 import { sanitizeOAuthIcon } from '../../security/safe-html';
-import { startAuthentication } from '@simplewebauthn/browser';
 
 import Turnstile from '../../components/Turnstile.vue';
 
@@ -122,8 +120,7 @@ const emailSignup = async () => {
                 password: await hashPassword(user.value.password),
                 code: user.value.code,
                 cf_token: showModal.value ? resetCfToken.value : signupCfToken.value
-            }),
-            message: message
+            })
         });
         if (res) {
             tabValue.value = "signin";
@@ -132,33 +129,6 @@ const emailSignup = async () => {
         showModal.value = false;
     } catch (error) {
         message.error(error.message || "register failed");
-    }
-};
-
-const passkeyLogin = async () => {
-    try {
-        const options = await api.fetch(`/user_api/passkey/authenticate_request`, {
-            method: 'POST',
-            body: JSON.stringify({
-                domain: location.hostname,
-            })
-        })
-        const credential = await startAuthentication({ optionsJSON: options })
-
-        // Send the result to the server and return the promise.
-        const res = await api.fetch(`/user_api/passkey/authenticate_response`, {
-            method: 'POST',
-            body: JSON.stringify({
-                origin: location.origin,
-                domain: location.hostname,
-                credential
-            })
-        })
-        userJwt.value = res.jwt;
-        location.reload();
-    } catch (e) {
-        console.error(e)
-        message.error(e.message)
     }
 };
 
@@ -205,17 +175,11 @@ onMounted(async () => {
                         </n-button>
                     </div>
 
-                    <div v-if="userOpenSettings.oauth2ClientIDs?.length || true" class="auth-separator">
+                    <div v-if="userOpenSettings.oauth2ClientIDs?.length" class="auth-separator">
                         <span>{{ t('or') || '或' }}</span>
                     </div>
 
-                    <div class="auth-alt-methods">
-                        <n-button @click="passkeyLogin" type="primary" block secondary size="large" class="passkey-btn" strong>
-                            <template #icon>
-                                <n-icon :component="KeyFilled" />
-                            </template>
-                            {{ t('loginWithPasskey') }}
-                        </n-button>
+                    <div v-if="userOpenSettings.oauth2ClientIDs?.length" class="auth-alt-methods">
                         <n-button @click="oauth2Login(item.clientID)" v-for="item in userOpenSettings.oauth2ClientIDs"
                             :key="item.clientID" block secondary size="large" class="oauth-btn" strong>
                             <template #icon v-if="item.icon">
@@ -353,7 +317,6 @@ onMounted(async () => {
     gap: 10px;
 }
 
-.passkey-btn,
 .oauth-btn {
     height: 40px;
     border-radius: 8px;
@@ -362,7 +325,6 @@ onMounted(async () => {
     border: 1px solid var(--ets-border);
 }
 
-.passkey-btn:hover,
 .oauth-btn:hover {
     background: rgba(255, 255, 255, 0.08);
 }
