@@ -1,4 +1,6 @@
-export const ADDRESS_PASSWORD_ITERATIONS = 600_000;
+// Cloudflare Workers rejects PBKDF2 iteration counts above 100,000.
+export const ADDRESS_PASSWORD_ITERATIONS = 100_000;
+const HISTORICAL_ADDRESS_PASSWORD_ITERATIONS = 600_000;
 
 const LEGACY_SHA256_RE = /^[0-9a-f]{64}$/;
 const BASE64URL_RE = /^[A-Za-z0-9_-]+$/;
@@ -16,6 +18,7 @@ export type AddressPasswordInput = {
 };
 
 type ParsedRecord = {
+    iterations: number;
     mode: AddressPasswordMode;
     salt: Uint8Array;
     digest: Uint8Array;
@@ -58,6 +61,7 @@ const sha256Hex = async (value: string): Promise<string> => {
 const derivePassword = async (
     value: string,
     salt: Uint8Array,
+    iterations: number,
 ): Promise<Uint8Array> => {
     const key = await crypto.subtle.importKey(
         "raw",
@@ -70,14 +74,14 @@ const derivePassword = async (
         name: "PBKDF2",
         hash: "SHA-256",
         salt,
-        iterations: ADDRESS_PASSWORD_ITERATIONS,
+        iterations,
     }, key, DIGEST_BYTES * 8);
     return new Uint8Array(bits);
 };
 
 const createPbkdf2Record = async (input: AddressPasswordInput): Promise<string> => {
     const salt = crypto.getRandomValues(new Uint8Array(SALT_BYTES));
-    const digest = await derivePassword(input.value, salt);
+    const digest = await derivePassword(input.value, salt, ADDRESS_PASSWORD_ITERATIONS);
     return [
         "pbkdf2-sha256",
         ADDRESS_PASSWORD_ITERATIONS,
@@ -89,9 +93,11 @@ const createPbkdf2Record = async (input: AddressPasswordInput): Promise<string> 
 
 const parsePbkdf2Record = (value: string): ParsedRecord | null => {
     const [algorithm, iterations, mode, encodedSalt, encodedDigest, extra] = value.split("$");
+    const parsedIterations = Number(iterations);
     if (extra !== undefined
         || algorithm !== "pbkdf2-sha256"
-        || Number(iterations) !== ADDRESS_PASSWORD_ITERATIONS
+        || (parsedIterations !== ADDRESS_PASSWORD_ITERATIONS
+            && parsedIterations !== HISTORICAL_ADDRESS_PASSWORD_ITERATIONS)
         || (mode !== "plain" && mode !== "sha256")
         || encodedSalt?.length !== SALT_BASE64URL_LENGTH
         || encodedDigest?.length !== DIGEST_BASE64URL_LENGTH) {
@@ -100,7 +106,7 @@ const parsePbkdf2Record = (value: string): ParsedRecord | null => {
     const salt = base64UrlToBytes(encodedSalt || "");
     const digest = base64UrlToBytes(encodedDigest || "");
     if (salt?.length !== SALT_BYTES || digest?.length !== DIGEST_BYTES) return null;
-    return { mode, salt, digest };
+    return { iterations: parsedIterations, mode, salt, digest };
 };
 
 export const normalizeAddressPasswordInput = (
@@ -172,7 +178,7 @@ export const verifyAddressPassword = async (
     const material = record.mode === "sha256" && input.mode === "plain"
         ? await sha256Hex(input.value)
         : input.value;
-    const digest = await derivePassword(material, record.salt);
+    const digest = await derivePassword(material, record.salt, record.iterations);
     const valid = constantTimeEqual(record.digest, digest);
     if (!valid) return { valid: false, storedMode: record.mode };
     return {
