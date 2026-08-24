@@ -262,14 +262,16 @@ onMounted(async () => {
   min-width: 0;
   border-radius: 8px;
   background: var(--ets-surface);
+  border: 1px solid var(--ets-border);
   box-shadow: var(--ets-shadow-card);
 }
 
 .user-rail-summary {
   display: grid;
-  gap: 3px;
+  gap: 4px;
   padding: 12px;
   background: var(--ets-surface-alt);
+  border: 1px solid var(--ets-border);
 }
 
 .user-rail-summary span,

@@ -201,14 +201,14 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
 .rail-item {
   display: grid;
   grid-template-columns: 20px minmax(0, 1fr) auto;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
   min-height: 38px;
   height: 38px;
   width: 100%;
   border: 0;
-  border-radius: 9999px;
-  padding: 0 16px;
+  border-radius: 8px;
+  padding: 0 12px;
   background: transparent;
   color: var(--access-muted);
   font: inherit;
@@ -224,18 +224,18 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
 }
 
 .rail-item:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--access-text);
 }
 
 .rail-item.is-active {
-  background: rgba(59, 130, 246, 0.16);
-  color: #60a5fa;
+  background: var(--ets-brand-soft, rgba(59, 130, 246, 0.15));
+  color: var(--ets-brand, #3b82f6);
   font-weight: 600;
 }
 
 .rail-item.is-active svg {
-  color: #60a5fa;
+  color: var(--ets-brand, #3b82f6);
 }
 
 .rail-item span {
@@ -246,15 +246,15 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
 }
 
 .rail-item b {
-  min-width: 22px;
-  height: 20px;
-  border-radius: 9999px;
-  padding: 0 7px;
+  min-width: 20px;
+  height: 18px;
+  border-radius: 6px;
+  padding: 0 6px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(59, 130, 246, 0.22);
-  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.18);
+  color: var(--ets-brand, #3b82f6);
   font-size: 11px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -279,15 +279,19 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 18px;
+  gap: 16px;
   height: 60px;
   min-height: 60px;
   padding: 0 24px;
   border-bottom: 1px solid var(--access-border);
   background: var(--ets-surface);
+  box-sizing: border-box;
 }
 
 .title-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   min-width: 0;
 }
 
@@ -303,40 +307,33 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
 }
 
 .kicker {
-  margin: 0 0 2px;
-  color: var(--access-muted);
-  font-size: 12px;
-  line-height: 1.2;
-  text-transform: lowercase;
+  display: none;
 }
 
 .title-block h1 {
   margin: 0;
   overflow: hidden;
   color: var(--ets-text-strong);
-  font-size: 26px;
-  font-weight: 780;
-  line-height: 1.15;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.2;
   text-overflow: ellipsis;
-  text-wrap: balance;
+  white-space: nowrap;
 }
 
 .identity-line {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px 8px;
   align-items: center;
-  min-height: 22px;
-  margin-top: 6px;
+  gap: 8px;
   color: var(--access-muted);
   font-size: 12px;
 }
 
 .identity-label {
-  max-width: min(58vw, 560px);
+  max-width: min(40vw, 360px);
   overflow: hidden;
-  color: var(--ets-text);
-  font-weight: 650;
+  color: var(--ets-text-muted);
+  font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

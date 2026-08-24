@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { ref, h, onMounted, computed, watch } from 'vue';
 import { useScopedI18n } from '@/i18n/app'
 import { useRouter } from 'vue-router';
@@ -144,6 +144,7 @@ const columns = computed(() => [
     {
         title: t('actions'),
         key: 'actions',
+        align: 'right',
         render(row) {
             const actions = [
                 h(NPopconfirm,
@@ -270,5 +271,6 @@ onMounted(async () => {
     flex-wrap: wrap;
     gap: 6px;
     align-items: center;
+    justify-content: flex-end;
 }
 </style>

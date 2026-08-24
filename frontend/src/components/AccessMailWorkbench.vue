@@ -302,7 +302,7 @@ onBeforeUnmount(() => {
   <div class="access-mail-workbench">
     <section class="mail-command-surface">
       <div class="command-copy">
-        <h2>{{ title }}</h2>
+        <span class="command-section-label">{{ title }}</span>
         <div class="filter-chips-row">
           <button
             type="button"
@@ -310,9 +310,10 @@ onBeforeUnmount(() => {
             :class="{ 'is-active': localFilterKeyword === '__unread__' }"
             @click="localFilterKeyword = (localFilterKeyword === '__unread__' ? '' : '__unread__')"
           >
-            ✉️ {{ tw('unread') }} ({{ unreadCount }})
+            <span class="chip-dot"></span>
+            <span>{{ tw('unread') }} ({{ unreadCount }})</span>
           </button>
-          <div class="auto-sync-chip">
+          <div class="auto-sync-chip" :title="autoRefresh ? `自动同步开启（${autoRefreshInterval}s）` : '手动同步模式'">
             <n-switch v-model:value="autoRefresh" size="small" :round="true" />
             <span>{{ autoRefresh ? `${autoRefreshInterval}s` : tw('manualSync') }}</span>
           </div>
@@ -352,6 +353,7 @@ onBeforeUnmount(() => {
           :options="addressOptions"
           clearable
           filterable
+          size="small"
           :placeholder="tw('allAddresses')"
         />
         <n-input
@@ -359,9 +361,10 @@ onBeforeUnmount(() => {
           v-model:value="localFilterKeyword"
           class="keyword-filter"
           clearable
+          size="small"
           :placeholder="tw('searchCurrentPage')"
         />
-        <n-button :loading="isRefreshing" type="primary" @click="backFirstPageAndRefresh">
+        <n-button :loading="isRefreshing" type="primary" size="small" @click="backFirstPageAndRefresh">
           {{ tw('sync') }}
         </n-button>
       </div>
@@ -475,22 +478,31 @@ onBeforeUnmount(() => {
 }
 
 .mail-command-surface {
-  display: grid;
-  grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.6fr);
-  gap: 14px;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  min-width: 0;
+  gap: 16px;
+  min-height: 52px;
+  padding: 8px 16px;
   border-radius: 8px;
-  padding: 12px 16px;
   background: var(--ets-surface);
+  border: 1px solid var(--ets-border);
   box-shadow: var(--ets-shadow-card);
+  box-sizing: border-box;
 }
 
 .command-copy {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   flex-wrap: wrap;
+}
+
+.command-section-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ets-text);
+  white-space: nowrap;
 }
 
 .filter-chips-row {
@@ -505,9 +517,9 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 6px;
   height: 28px;
-  padding: 0 12px;
+  padding: 0 10px;
   border: 1px solid var(--ets-border);
-  border-radius: 9999px;
+  border-radius: 6px;
   background: var(--ets-surface-alt);
   color: var(--ets-text-muted);
   font-size: 12px;
@@ -516,14 +528,21 @@ onBeforeUnmount(() => {
   transition: all 120ms ease;
 }
 
+.user-filter-chip .chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ets-brand, #3b82f6);
+}
+
 .user-filter-chip:hover {
   background: var(--ets-hover);
   color: var(--ets-text);
 }
 
 .user-filter-chip.is-active {
-  background: rgba(59, 130, 246, 0.16);
-  color: #60a5fa;
+  background: var(--ets-brand-soft, rgba(59, 130, 246, 0.14));
+  color: var(--ets-brand, #3b82f6);
   border-color: rgba(59, 130, 246, 0.4);
   font-weight: 600;
 }
@@ -533,25 +552,12 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 6px;
   height: 28px;
-  padding: 0 10px;
-  border-radius: 9999px;
+  padding: 0 8px;
+  border-radius: 6px;
   background: var(--ets-surface-alt);
+  border: 1px solid var(--ets-border);
   color: var(--ets-text-muted);
   font-size: 12px;
-}
-
-.command-copy h2,
-.detail-head h2,
-.empty-detail h2 {
-  margin: 0;
-  color: var(--ets-text-strong);
-  font-weight: 760;
-  line-height: 1.2;
-  text-wrap: balance;
-}
-
-.command-copy h2 {
-  font-size: 17px;
 }
 
 .command-copy p,
@@ -565,20 +571,20 @@ onBeforeUnmount(() => {
 
 .command-controls {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
   justify-content: flex-end;
   min-width: 0;
 }
 
 .address-filter {
-  flex: 1 1 220px;
-  min-width: 180px;
+  width: 220px;
+  min-width: 160px;
 }
 
 .keyword-filter {
-  flex: 1 1 200px;
-  min-width: 150px;
+  width: 200px;
+  min-width: 140px;
 }
 
 .mail-workbench-grid {
@@ -587,7 +593,7 @@ onBeforeUnmount(() => {
   grid-template-areas: "list detail";
   gap: 12px;
   min-width: 0;
-  min-height: min(760px, calc(100dvh - 190px));
+  min-height: min(760px, calc(100dvh - 160px));
 }
 
 .mail-list-panel,
@@ -597,6 +603,7 @@ onBeforeUnmount(() => {
   min-width: 0;
   border-radius: 8px;
   background: var(--ets-surface);
+  border: 1px solid var(--ets-border);
   box-shadow: var(--ets-shadow-card);
 }
 
@@ -612,18 +619,28 @@ onBeforeUnmount(() => {
 }
 
 .panel-head {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  min-height: 48px;
-  padding: 8px 14px;
+  gap: 10px;
+  min-height: 46px;
+  padding: 6px 14px;
   border-bottom: 1px solid var(--ets-border);
+  background: var(--ets-surface);
+  box-sizing: border-box;
+}
+
+.panel-head span {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ets-text-muted);
 }
 
 .panel-head b {
   color: var(--ets-text);
   font-size: 13px;
+  font-weight: 700;
+  margin-left: 6px;
   font-variant-numeric: tabular-nums;
 }
 
