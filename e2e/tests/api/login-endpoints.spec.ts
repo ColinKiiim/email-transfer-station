@@ -103,13 +103,15 @@ test.describe('Turnstile Login Endpoints (ENABLE_GLOBAL_TURNSTILE_CHECK disabled
 
   test.describe('/api/address_login with cf_token', () => {
     test('address login with empty cf_token works when turnstile disabled', async ({ request }) => {
-      const { jwt, address } = await createTestAddress(request, 'addr-cf');
+      let { jwt, address } = await createTestAddress(request, 'addr-cf');
       try {
         // Set a password
-        await request.post(`${WORKER_URL}/api/address_change_password`, {
+        const changePwdRes = await request.post(`${WORKER_URL}/api/address_change_password`, {
           headers: { Authorization: `Bearer ${jwt}` },
           data: { new_password: 'addr-pass-123', password_format: 'plain' },
         });
+        expect(changePwdRes.ok()).toBe(true);
+        jwt = (await changePwdRes.json()).jwt;
 
         // Login with cf_token field present but empty
         const loginRes = await request.post(`${WORKER_URL}/api/address_login`, {
@@ -123,6 +125,7 @@ test.describe('Turnstile Login Endpoints (ENABLE_GLOBAL_TURNSTILE_CHECK disabled
         expect(loginRes.ok()).toBe(true);
         const body = await loginRes.json();
         expect(body.jwt).toBeTruthy();
+        jwt = body.jwt;
       } finally {
         await deleteAddress(request, jwt);
       }

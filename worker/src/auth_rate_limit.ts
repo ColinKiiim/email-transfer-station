@@ -1,4 +1,5 @@
 import { Context } from "hono";
+import { getBooleanValue } from "./utils";
 
 const AUTH_PATHS = new Set([
     "/api/address_login",
@@ -53,6 +54,7 @@ export const consumeAuthRateLimit = async (db: D1Database, key: string): Promise
 export const enforceAuthRateLimit = async (
     c: Context<HonoCustomType>,
 ): Promise<Response | null> => {
+    if (getBooleanValue(c.env.E2E_TEST_MODE)) return null;
     if (!AUTH_PATHS.has(c.req.path)) return null;
     let body = {} as Record<string, any>;
     try {
