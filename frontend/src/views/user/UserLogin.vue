@@ -162,7 +162,7 @@ onMounted(async () => {
                             placeholder="••••••••" size="large" @keyup.enter="emailLogin" />
                     </n-form-item-row>
                     <Turnstile ref="loginTurnstileRef" v-if="openSettings.enableGlobalTurnstileCheck" v-model:value="loginCfToken" />
-                    
+
                     <div class="auth-action-row">
                         <n-button @click="emailLogin" type="primary" block size="large" class="submit-btn" strong>
                             {{ t('login') }}
@@ -211,7 +211,7 @@ onMounted(async () => {
                         </n-input-group>
                     </n-form-item-row>
                     <Turnstile ref="signupTurnstileRef" v-if="!userOpenSettings.enableMailVerify" v-model:value="signupCfToken" />
-                    
+
                     <div class="auth-action-row">
                         <n-button @click="emailSignup" type="primary" block size="large" class="submit-btn" strong>
                             {{ t('register') }}
