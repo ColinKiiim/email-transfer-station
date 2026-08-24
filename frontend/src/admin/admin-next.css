@@ -2219,6 +2219,46 @@ body:has(.admin-next) .n-message-container {
     font-weight: 650;
 }
 
+.admin-next-host .field-password-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.admin-next-host .field-password-wrap .field {
+    padding-right: 38px;
+}
+
+.admin-next-host .field-password-toggle {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 0;
+    transition: color 120ms ease, background 120ms ease;
+}
+
+.admin-next-host .field-password-toggle:hover {
+    color: var(--fg);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.admin-next-host .field-password-toggle svg {
+    width: 16px;
+    height: 16px;
+}
+
 .admin-next-host .toast {
     position: fixed;
     right: 18px;
