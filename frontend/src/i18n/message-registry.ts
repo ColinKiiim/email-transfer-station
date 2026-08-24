@@ -1,4 +1,4 @@
-﻿export const MESSAGE_REGISTRY = {
+export const MESSAGE_REGISTRY = {
   "components.WebhookComponent": {
     "enable": {
       "en": "Enable",
@@ -37,6 +37,10 @@
     "autoRefresh": {
       "en": "Auto Refresh",
       "zh": "自动刷新"
+    },
+    "backToList": {
+      "en": "Back to list",
+      "zh": "返回列表"
     },
     "cancelMultiAction": {
       "en": "Cancel Multi Action",
@@ -189,6 +193,10 @@
     "parseFailed": {
       "en": "Unable to parse this message body. Download the .eml file to inspect the raw source.",
       "zh": "无法解析这封邮件正文。请下载 .eml 文件查看原始邮件。"
+    },
+    "recipient": {
+      "en": "To",
+      "zh": "收件人"
     },
     "reply": {
       "en": "Reply",
@@ -1356,6 +1364,18 @@
     }
   },
   "views.common.Appearance": {
+    "readingExperience": {
+      "en": "Reading Experience",
+      "zh": "阅读体验"
+    },
+    "syncAndRefresh": {
+      "en": "Refresh & Proportions",
+      "zh": "刷新与比例"
+    },
+    "layoutPreferences": {
+      "en": "Layout & Positioning",
+      "zh": "界面布局"
+    },
     "autoRefreshInterval": {
       "en": "Auto Refresh Interval(Sec)",
       "zh": "自动刷新间隔(秒)"
@@ -2681,6 +2701,82 @@
     "viewOps": {
       "en": "View operations",
       "zh": "查看运行维护"
+    },
+    "recentActivityDesc": {
+      "en": "Real-time inbound mail and delivery records",
+      "zh": "实时入站邮件与投递流水记录"
+    },
+    "systemHealthDesc": {
+      "en": "Cloudflare Workers, D1 & edge runtime specs",
+      "zh": "Cloudflare Workers, D1 & 边缘配置"
+    },
+    "tableTime": {
+      "en": "Time",
+      "zh": "时间"
+    },
+    "tableSender": {
+      "en": "Sender",
+      "zh": "发件人"
+    },
+    "tableRecipient": {
+      "en": "Recipient",
+      "zh": "收件地址"
+    },
+    "tableSubject": {
+      "en": "Subject",
+      "zh": "主题"
+    },
+    "tableStatus": {
+      "en": "Status",
+      "zh": "状态"
+    },
+    "noSubject": {
+      "en": "(No subject)",
+      "zh": "(无主题)"
+    },
+    "statusReceived": {
+      "en": "Received",
+      "zh": "已接收"
+    },
+    "workerStatus": {
+      "en": "Worker Status",
+      "zh": "Worker 状态"
+    },
+    "d1Database": {
+      "en": "D1 Database",
+      "zh": "D1 数据库"
+    },
+    "totalDomains": {
+      "en": "Total Domains",
+      "zh": "域名总量"
+    },
+    "totalAddresses": {
+      "en": "Total Addresses",
+      "zh": "地址总量"
+    },
+    "inboundNotify": {
+      "en": "Inbound Webhook",
+      "zh": "入站通知"
+    },
+    "statusEnabled": {
+      "en": "Enabled",
+      "zh": "已启用"
+    },
+    "statusDisabled": {
+      "en": "Disabled",
+      "zh": "未启用"
+    },
+    "lastSyncTime": {
+      "en": "Last Sync",
+      "zh": "最后同步时间"
+    },
+    "realtimeSync": {
+      "en": "Realtime",
+      "zh": "实时同步"
+    },
+    "allFilter": {
+      "en": "All",
+      "zh": "全部"
     },
     "tableCaption": {
       "en": "{title} data table",

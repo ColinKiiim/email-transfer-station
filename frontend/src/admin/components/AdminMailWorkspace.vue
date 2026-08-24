@@ -162,7 +162,7 @@ defineExpose({
                         <small v-if="row.body" class="mail-body-preview">{{ row.body }}</small>
                     </span>
                     <span class="mail-meta">
-                        <span v-if="row.attachmentCount > 0" class="attachment-indicator" title="附件">📎</span>
+                        <span v-if="row.attachmentCount > 0" class="attachment-indicator" :title="t('attachments') || '附件'">📎</span>
                         <span class="mail-time">{{ row.time }}</span>
                     </span>
                 </button>

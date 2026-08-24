@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 
@@ -106,7 +106,7 @@ const addressDomainStats = computed(() => {
                 <div class="panel-head">
                     <div>
                         <h2>{{ t('recentActivity') }}</h2>
-                        <p>实时入站邮件与投递流水记录</p>
+                        <p>{{ t('recentActivityDesc') }}</p>
                     </div>
                     <button class="btn small" type="button" @click="actions.setView('flow')">
                         {{ t('openFlow') }}
@@ -116,11 +116,11 @@ const addressDomainStats = computed(() => {
                     <table v-if="recentMails.length">
                         <thead>
                             <tr>
-                                <th>时间</th>
-                                <th>发件人</th>
-                                <th>收件地址</th>
-                                <th>主题</th>
-                                <th class="text-right">状态</th>
+                                <th>{{ t('tableTime') }}</th>
+                                <th>{{ t('tableSender') }}</th>
+                                <th>{{ t('tableRecipient') }}</th>
+                                <th>{{ t('tableSubject') }}</th>
+                                <th class="text-right">{{ t('tableStatus') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -129,11 +129,11 @@ const addressDomainStats = computed(() => {
                                 <td class="time-text">{{ mail.time }}</td>
                                 <td class="mono cell-truncate" :title="mail.sender">{{ mail.sender || '-' }}</td>
                                 <td><strong>{{ mail.to || '-' }}</strong></td>
-                                <td class="cell-truncate">{{ mail.subject || '(无主题)' }}</td>
+                                <td class="cell-truncate">{{ mail.subject || t('noSubject') }}</td>
                                 <td class="text-right">
                                     <span class="badge" :class="'badge-' + (statusClass(mail.resultTone || mail.result))">
                                         <span class="badge-dot" aria-hidden="true" />
-                                        <span>{{ mail.result || '已接收' }}</span>
+                                        <span>{{ mail.result || t('statusReceived') }}</span>
                                     </span>
                                 </td>
                             </tr>
@@ -149,13 +149,13 @@ const addressDomainStats = computed(() => {
                 <div class="panel-head">
                     <div>
                         <h2>{{ t('systemHealth') }}</h2>
-                        <p>Cloudflare Workers, D1 & 边缘配置</p>
+                        <p>{{ t('systemHealthDesc') }}</p>
                     </div>
                 </div>
                 <div class="inner-pad">
                     <dl class="kv-grid">
                         <div class="kv-item">
-                            <dt>Worker 状态</dt>
+                            <dt>{{ t('workerStatus') }}</dt>
                             <dd>
                                 <span class="badge badge-ok">
                                     <span class="badge-dot" />
@@ -164,7 +164,7 @@ const addressDomainStats = computed(() => {
                             </dd>
                         </div>
                         <div class="kv-item">
-                            <dt>D1 数据库</dt>
+                            <dt>{{ t('d1Database') }}</dt>
                             <dd>
                                 <span class="badge mono badge-ok">
                                     <span>DB_VERSION {{ model.dbVersionLabel }}</span>
@@ -172,24 +172,24 @@ const addressDomainStats = computed(() => {
                             </dd>
                         </div>
                         <div class="kv-item">
-                            <dt>域名总量</dt>
-                            <dd><strong>{{ model.domainRows.length }} 个</strong></dd>
+                            <dt>{{ t('totalDomains') }}</dt>
+                            <dd><strong>{{ model.domainRows.length }} {{ t('domainUnit') }}</strong></dd>
                         </div>
                         <div class="kv-item">
-                            <dt>地址总量</dt>
-                            <dd><strong>{{ model.addressRows.length }} 个</strong></dd>
+                            <dt>{{ t('totalAddresses') }}</dt>
+                            <dd><strong>{{ model.addressRows.length }} {{ t('addressUnit') }}</strong></dd>
                         </div>
                         <div class="kv-item">
-                            <dt>入站通知</dt>
+                            <dt>{{ t('inboundNotify') }}</dt>
                             <dd>
                                 <span class="badge" :class="model.mailWebhook?.enabled ? 'badge-ok' : 'badge-neutral'">
-                                    <span>{{ model.mailWebhook?.enabled ? '已启用' : '未启用' }}</span>
+                                    <span>{{ model.mailWebhook?.enabled ? t('statusEnabled') : t('statusDisabled') }}</span>
                                 </span>
                             </dd>
                         </div>
                         <div class="kv-item">
-                            <dt>最后同步时间</dt>
-                            <dd class="mono text-muted">{{ model.lastSynced || '实时同步' }}</dd>
+                            <dt>{{ t('lastSyncTime') }}</dt>
+                            <dd class="mono text-muted">{{ model.lastSynced || t('realtimeSync') }}</dd>
                         </div>
                     </dl>
                 </div>
@@ -207,7 +207,7 @@ const addressDomainStats = computed(() => {
                     <button type="button" class="domain-filter-pill"
                         :class="{ 'is-active': !model.ui.domain || model.ui.domain === 'all' }"
                         @click="actions.setFilterDomain('all')">
-                        全部 ({{ model.addressRows.length }})
+                        {{ t('allFilter') }} ({{ model.addressRows.length }})
                     </button>
                     <button v-for="domainOpt in addressDomainStats" :key="domainOpt.domain"
                         type="button" class="domain-filter-pill"
