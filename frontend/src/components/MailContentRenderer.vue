@@ -400,6 +400,8 @@ const handleSaveToS3 = async (filename, blob) => {
   flex: 1;
 }
 
+
+
 .mail-render-alert {
   margin-bottom: 10px;
 }
@@ -426,7 +428,7 @@ const handleSaveToS3 = async (filename, blob) => {
 }
 
 .dark-mode .mail-iframe {
-  background-color: #fff;
+  background-color: #181b22;
 }
 
 .mail-html {
@@ -463,6 +465,5 @@ const handleSaveToS3 = async (filename, blob) => {
   .mail-content {
     margin-top: 6px;
   }
-
 }
 </style>
