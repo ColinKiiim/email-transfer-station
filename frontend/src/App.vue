@@ -30,8 +30,8 @@ const isMobile = useIsMobile()
 const isShareOnlyRoute = computed(() => route.meta?.shareOnly === true)
 const isFullScreenRoute = computed(() => route.meta?.fullScreen === true)
 const showAppChrome = computed(() => !isShareOnlyRoute.value && !isFullScreenRoute.value)
-const showSideMargin = computed(() => showAppChrome.value && !isMobile.value && useSideMargin.value);
-const showAd = computed(() => showAppChrome.value && !isMobile.value && adClient && adSlot);
+const showAd = computed(() => showAppChrome.value && !isMobile.value && Boolean(adClient) && Boolean(adSlot));
+const showSideMargin = computed(() => showAppChrome.value && !isMobile.value && useSideMargin.value && showAd.value);
 const gridMaxCols = computed(() => showAd.value ? 8 : 12);
 
 watchEffect(() => {
@@ -144,6 +144,11 @@ body,
   font-family: var(--ets-ui-font);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: var(--ets-bg);
+  color: var(--ets-text);
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
 }
 
 :where(button, a, input, textarea, select, [tabindex]):focus-visible {
@@ -162,7 +167,9 @@ body,
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--ets-canvas, transparent);
+  background: var(--ets-bg);
+  color: var(--ets-text);
+  width: 100%;
 }
 
 .app-body {
