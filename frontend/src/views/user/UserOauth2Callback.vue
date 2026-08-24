@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { ref, onMounted } from 'vue';
 import { useScopedI18n } from '@/i18n/app'
 import { useRoute, useRouter } from 'vue-router';
@@ -82,7 +82,7 @@ onMounted(async () => {
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 80vh;
+    min-height: calc(100vh - 60px);
     padding: 24px 16px;
     box-sizing: border-box;
 }

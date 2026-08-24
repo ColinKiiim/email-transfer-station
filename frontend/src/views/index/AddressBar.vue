@@ -131,7 +131,7 @@ watch(
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: calc(100vh - 120px);
+    min-height: calc(100vh - 60px);
     padding: 24px 16px;
     box-sizing: border-box;
 }
