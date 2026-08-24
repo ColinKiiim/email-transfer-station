@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { onMounted, ref, h } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 import type { DropdownOption } from 'naive-ui'
@@ -234,10 +234,10 @@ onMounted(async () => {
                     ]' />
                 </n-form-item-row>
                 <n-form-item-row label="HEADERS">
-                    <n-input v-model:value="webhookSettings.headers" type="textarea" :autosize="{ minRows: 3 }" />
+                    <n-input v-model:value="webhookSettings.headers" type="textarea" class="code-textarea" :autosize="{ minRows: 3 }" />
                 </n-form-item-row>
                 <n-form-item-row label="BODY">
-                    <n-input v-model:value="webhookSettings.body" type="textarea" :autosize="{ minRows: 3 }" />
+                    <n-input v-model:value="webhookSettings.body" type="textarea" class="code-textarea" :autosize="{ minRows: 4 }" />
                 </n-form-item-row>
             </div>
         </n-card>
@@ -251,6 +251,12 @@ onMounted(async () => {
     text-align: left;
     place-items: center;
     justify-content: center;
+}
+
+.code-textarea :deep(textarea) {
+    font-family: var(--ets-font-mono, monospace) !important;
+    font-size: 12.5px;
+    line-height: 1.5;
 }
 
 .n-button {

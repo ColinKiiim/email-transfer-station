@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { ref } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 import { useGlobalState } from '../../store'
@@ -31,9 +31,14 @@ const logout = async () => {
         <n-modal v-model:show="showLogout" preset="dialog" :title="t('logout')">
             <p>{{ t('logoutConfirm') }}</p>
             <template #action>
-                <n-button :loading="loading" @click="logout" size="small" tertiary type="warning">
-                    {{ t('logout') }}
-                </n-button>
+                <n-space justify="end">
+                    <n-button @click="showLogout = false" size="small" tertiary>
+                        {{ t('cancel') || '取消' }}
+                    </n-button>
+                    <n-button :loading="loading" @click="logout" size="small" type="warning">
+                        {{ t('logout') }}
+                    </n-button>
+                </n-space>
             </template>
         </n-modal>
     </div>

@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 
@@ -299,7 +299,8 @@ const copyText = async (text) => {
   overflow-wrap: anywhere;
   border-radius: 6px;
   padding: 6px 8px;
-  background: var(--n-color-embedded);
+  background: var(--ets-surface-sunken, rgba(0, 0, 0, 0.15));
+  border: 1px solid var(--ets-border);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -322,7 +323,7 @@ const copyText = async (text) => {
   align-items: center;
   gap: 14px;
   margin-top: 16px;
-  border-top: 1px solid var(--n-border-color);
+  border-top: 1px solid var(--ets-border);
   padding-top: 14px;
 }
 
@@ -334,7 +335,7 @@ const copyText = async (text) => {
 
 .credential-security-tip {
   margin: 0;
-  color: var(--n-text-color-3);
+  color: var(--ets-text-muted);
   font-size: 12px;
   line-height: 1.5;
 }

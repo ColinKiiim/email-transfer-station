@@ -1,8 +1,9 @@
-<script setup>
+﻿<script setup>
 import '@wangeditor/editor/dist/css/style.css'
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
 import { useScopedI18n } from '@/i18n/app'
 import { onMounted, onBeforeUnmount, ref, shallowRef } from 'vue'
+import { useMessage } from 'naive-ui'
 import AdminContact from '../common/AdminContact.vue'
 import ShadowHtmlComponent from '../../components/ShadowHtmlComponent.vue'
 
@@ -14,7 +15,6 @@ const message = useMessage()
 const isPreview = ref(false)
 const editorRef = shallowRef()
 const sending = ref(false)
-
 
 const { settings, sendMailModel, indexTab, userSettings } = useGlobalState()
 
@@ -164,8 +164,7 @@ onMounted(async () => {
             <div v-if="!settings.send_balance || settings.send_balance <= 0">
                 <n-alert type="warning" :show-icon="false" :bordered="false">
                     {{ t('requestAccessTip') }}
-                    <n-button type="primary" tertiary @click="requestAccess" size="small">{{ t('requestAccess')
-                        }}</n-button>
+                    <n-button type="primary" tertiary @click="requestAccess" size="small">{{ t('requestAccess') }}</n-button>
                 </n-alert>
                 <AdminContact />
             </div>
@@ -204,13 +203,13 @@ onMounted(async () => {
                             </n-button>
                         </n-form-item>
                         <n-form-item :label="t('content')" label-placement="top">
-                            <n-card :bordered="false" embedded v-if="isPreview">
+                            <div v-if="isPreview" class="sendmail-preview-wrap">
                                 <ShadowHtmlComponent :htmlContent="sendMailModel.content || ''" />
-                            </n-card>
-                            <div v-else-if="sendMailModel.contentType == 'rich'" style="border: 1px solid #ccc">
-                                <Toolbar style="border-bottom: 1px solid #ccc" :defaultConfig="toolbarConfig"
+                            </div>
+                            <div v-else-if="sendMailModel.contentType == 'rich'" class="wangeditor-container">
+                                <Toolbar class="wangeditor-toolbar" :defaultConfig="toolbarConfig"
                                     :editor="editorRef" mode="default" />
-                                <Editor style="height: 500px; overflow-y: hidden;" v-model="sendMailModel.content"
+                                <Editor class="wangeditor-editor" style="height: 500px; overflow-y: hidden;" v-model="sendMailModel.content"
                                     :defaultConfig="editorConfig" mode="default" @onCreated="handleCreated" />
                             </div>
                             <n-input v-else type="textarea" v-model:value="sendMailModel.content" :autosize="{
@@ -227,6 +226,49 @@ onMounted(async () => {
 <style scoped>
 .n-card {
     max-width: 800px;
+    width: 100%;
+}
+
+.wangeditor-container {
+    border: 1px solid var(--ets-border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--ets-surface);
+    width: 100%;
+}
+
+.wangeditor-toolbar {
+    border-bottom: 1px solid var(--ets-border);
+    background: var(--ets-surface-alt) !important;
+}
+
+.wangeditor-toolbar :deep(.w-e-bar) {
+    background: var(--ets-surface-alt) !important;
+    color: var(--ets-text) !important;
+}
+
+.wangeditor-toolbar :deep(.w-e-bar-item button) {
+    color: var(--ets-text) !important;
+}
+
+.wangeditor-editor {
+    background: var(--ets-surface) !important;
+    color: var(--ets-text) !important;
+}
+
+.wangeditor-editor :deep(.w-e-text-container) {
+    background: var(--ets-surface) !important;
+    color: var(--ets-text) !important;
+}
+
+.sendmail-preview-wrap {
+    border: 1px solid var(--ets-border);
+    border-radius: 8px;
+    padding: 16px;
+    background: var(--ets-surface-sunken);
+    min-height: 200px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .n-button {

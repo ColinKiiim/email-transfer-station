@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { ref, h, onMounted, computed, watch } from 'vue';
 import { useScopedI18n } from '@/i18n/app'
 import { useRouter } from 'vue-router';
@@ -252,6 +252,9 @@ onMounted(async () => {
 .address-table-scroll {
     max-width: 100%;
     overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid var(--ets-border);
+    -webkit-overflow-scrolling: touch;
 }
 
 .portal-tip {

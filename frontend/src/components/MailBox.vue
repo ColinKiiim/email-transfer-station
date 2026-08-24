@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { watch, onMounted, ref, onBeforeUnmount, computed } from "vue";
 import { useMessage } from 'naive-ui'
 import { useScopedI18n } from '@/i18n/app'
@@ -416,7 +416,42 @@ onBeforeUnmount(() => {
             clearable />
         </n-space>
       </div>
-      <n-split class="left" direction="horizontal" :max="0.75" :min="0.25" :default-size="mailboxSplitSize"
+      <div v-if="!curMail" class="desktop-fullwidth-stream" style="overflow: auto; min-height: 60vh; max-height: 100vh;">
+        <n-list hoverable clickable>
+          <n-list-item v-for="row in data" v-bind:key="row.id" @click="() => clickRow(row)"
+            :class="mailItemClass(row)">
+            <template #prefix v-if="multiActionMode">
+              <n-checkbox v-model:checked="row.checked" />
+            </template>
+            <div class="mail-list-row">
+              <div class="mail-row-header">
+                <strong class="mail-row-title">{{ row.subject }}</strong>
+                <time class="mail-row-date">{{ utcToLocalDate(row.created_at, useUTCDate) }}</time>
+              </div>
+              <div class="mail-row-address-line">
+                <span v-if="row.unread" class="mail-row-pill unread-pill">{{ t('unread') }}</span>
+                <span class="mail-row-pill">ID {{ row.id }}</span>
+                <span class="mail-row-address">
+                  {{ showEMailTo ? "FROM: " + mailPrimaryAddress(row) : mailPrimaryAddress(row) }}
+                </span>
+                <span v-if="mailSecondaryAddress(row)" class="mail-row-address muted-address">
+                  TO: {{ mailSecondaryAddress(row) }}
+                </span>
+              </div>
+              <p v-if="mailPreview(row)" class="mail-row-snippet">{{ mailPreview(row) }}</p>
+              <AiExtractInfo :metadata="row.metadata" compact />
+            </div>
+          </n-list-item>
+        </n-list>
+        <div v-if="count === 0" style="padding: 48px 16px; text-align: center;">
+          <n-result status="info" :title="t('emptyInbox')">
+            <template #icon>
+              <n-icon :component="InboxRound" :size="80" />
+            </template>
+          </n-result>
+        </div>
+      </div>
+      <n-split v-else class="left" direction="horizontal" :max="0.75" :min="0.25" :default-size="mailboxSplitSize"
         :on-update:size="onSpiltSizeChange">
         <template #1>
           <div style="overflow: auto; min-height: 60vh; max-height: 100vh;">
@@ -449,38 +484,36 @@ onBeforeUnmount(() => {
           </div>
         </template>
         <template #2>
-          <div v-if="curMail" style="margin: 8px;">
-            <n-flex justify="space-between">
-              <n-button @click="prevMail" :disabled="!canGoPrevMail" text size="small">
-                <template #icon>
-                  <n-icon>
-                    <ArrowBackIosNewFilled />
-                  </n-icon>
-                </template>
-                {{ t('prevMail') }}
+          <div style="margin: 8px;">
+            <n-flex justify="space-between" align="center">
+              <n-button @click="curMail = null" size="small" tertiary type="primary">
+                ← {{ t('backToList') || '返回列表' }}
               </n-button>
-              <n-button @click="nextMail" :disabled="!canGoNextMail" text size="small" icon-placement="right">
-                <template #icon>
-                  <n-icon>
-                    <ArrowForwardIosFilled />
-                  </n-icon>
-                </template>
-                {{ t('nextMail') }}
-              </n-button>
+              <n-space>
+                <n-button @click="prevMail" :disabled="!canGoPrevMail" text size="small">
+                  <template #icon>
+                    <n-icon>
+                      <ArrowBackIosNewFilled />
+                    </n-icon>
+                  </template>
+                  {{ t('prevMail') }}
+                </n-button>
+                <n-button @click="nextMail" :disabled="!canGoNextMail" text size="small" icon-placement="right">
+                  <template #icon>
+                    <n-icon>
+                      <ArrowForwardIosFilled />
+                    </n-icon>
+                  </template>
+                  {{ t('nextMail') }}
+                </n-button>
+              </n-space>
             </n-flex>
           </div>
-          <n-card :bordered="false" embedded v-if="curMail" class="mail-item" :title="curMail.subject"
+          <n-card :bordered="false" embedded class="mail-item" :title="curMail.subject"
             style="overflow: auto; max-height: 100vh;">
             <MailContentRenderer :mail="curMail" :showEMailTo="showEMailTo"
               :enableUserDeleteEmail="enableUserDeleteEmail" :showReply="showReply" :showSaveS3="showSaveS3"
               :onDelete="deleteMail" :onReply="replyMail" :onForward="forwardMail" :onSaveToS3="saveToS3Proxy" />
-          </n-card>
-          <n-card :bordered="false" embedded class="mail-item" v-else>
-            <n-result status="info" :title="count === 0 ? t('emptyInbox') : t('pleaseSelectMail')">
-              <template #icon>
-                <n-icon :component="InboxRound" :size="100" />
-              </template>
-            </n-result>
           </n-card>
         </template>
       </n-split>

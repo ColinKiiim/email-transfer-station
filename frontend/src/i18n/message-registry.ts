@@ -1,4 +1,4 @@
-export const MESSAGE_REGISTRY = {
+﻿export const MESSAGE_REGISTRY = {
   "components.WebhookComponent": {
     "enable": {
       "en": "Enable",
@@ -1341,6 +1341,20 @@ export const MESSAGE_REGISTRY = {
       "zh": "解绑邮箱地址"
     }
   },
+  "views.common.About": {
+    "title": {
+      "en": "Email Transfer Station",
+      "zh": "Email Transfer Station"
+    },
+    "description": {
+      "en": "Private mailbox transfer and token-based inbox sharing.",
+      "zh": "私有邮箱中转与基于令牌的收件流共享平台。"
+    },
+    "announcement": {
+      "en": "Site Announcement",
+      "zh": "站点公告"
+    }
+  },
   "views.common.Appearance": {
     "autoRefreshInterval": {
       "en": "Auto Refresh Interval(Sec)",
@@ -2639,6 +2653,34 @@ export const MESSAGE_REGISTRY = {
     "opsDesc": {
       "en": "Review Worker, D1, KV, DB version, and admin API status.",
       "zh": "查看 Worker、D1、KV、DB 版本和后台接口状态。"
+    },
+    "mailUnit": {
+      "en": "messages",
+      "zh": "封邮件"
+    },
+    "domainUnit": {
+      "en": "domains",
+      "zh": "个域名"
+    },
+    "addressUnit": {
+      "en": "addresses",
+      "zh": "个地址"
+    },
+    "dbVersionUnit": {
+      "en": "DB Version",
+      "zh": "DB 版本"
+    },
+    "manageDomains": {
+      "en": "Manage domain routing",
+      "zh": "管理域名路由"
+    },
+    "manageAddressesOverview": {
+      "en": "Manage addresses & users",
+      "zh": "管理地址与用户"
+    },
+    "viewOps": {
+      "en": "View operations",
+      "zh": "查看运行维护"
     },
     "tableCaption": {
       "en": "{title} data table",

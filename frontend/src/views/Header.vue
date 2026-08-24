@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 import { useHead } from '@unhead/vue'
@@ -73,23 +73,9 @@ useHead({
     ]
 });
 
-const logoClickCount = ref(0);
-const logoClick = async () => {
-    if (route.path.includes("admin")) {
-        logoClickCount.value = 0;
-        return;
-    }
-    if (logoClickCount.value >= 5) {
-        logoClickCount.value = 0;
-        message.info("Change to admin Page");
-        loading.value = true;
-        await router.push(getRouterPathWithLang('/admin', locale.value));
-        loading.value = false;
-    } else {
-        logoClickCount.value++;
-    }
-    if (logoClickCount.value > 0) {
-        message.info(`Click ${5 - logoClickCount.value + 1} times to enter the admin page`);
+const onLogoClick = async () => {
+    if (route.path !== '/' && route.path !== `/${locale.value}/` && route.path !== `/${locale.value}`) {
+        await router.push(getRouterPathWithLang('/', locale.value));
     }
 }
 
@@ -104,7 +90,7 @@ onMounted(async () => {
     <div>
         <header class="app-topbar">
             <button type="button" class="header-brand-button" :aria-label="openSettings.title || PRODUCT_TITLE"
-                @click="logoClick">
+                @click="onLogoClick">
                 <ProductBrand class="header-product-brand" compact :context-label="t('mailboxContext') || '邮箱访问'" />
             </button>
             <div class="header-top-actions">

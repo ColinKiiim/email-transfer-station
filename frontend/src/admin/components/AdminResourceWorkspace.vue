@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 
@@ -45,7 +45,7 @@ const addressDomainStats = computed(() => {
                 </div>
                 <div class="card-main">
                     <strong class="card-value">{{ formatNumber(model.mailRows.length) }}</strong>
-                    <span class="card-unit">封邮件</span>
+                    <span class="card-unit">{{ t('mailUnit') }}</span>
                 </div>
                 <p class="card-desc">{{ t('flowDesc', { count: formatNumber(model.mailRows.length) }) }}</p>
                 <div class="card-action">
@@ -59,11 +59,11 @@ const addressDomainStats = computed(() => {
                 </div>
                 <div class="card-main">
                     <strong class="card-value">{{ formatNumber(model.domainRows.length) }}</strong>
-                    <span class="card-unit">个域名</span>
+                    <span class="card-unit">{{ t('domainUnit') }}</span>
                 </div>
                 <p class="card-desc">{{ t('routingDesc') }}</p>
                 <div class="card-action">
-                    <span>管理域名路由 &rarr;</span>
+                    <span>{{ t('manageDomains') }} &rarr;</span>
                 </div>
             </button>
 
@@ -73,11 +73,11 @@ const addressDomainStats = computed(() => {
                 </div>
                 <div class="card-main">
                     <strong class="card-value">{{ formatNumber(model.addressRows.length) }}</strong>
-                    <span class="card-unit">个地址</span>
+                    <span class="card-unit">{{ t('addressUnit') }}</span>
                 </div>
                 <p class="card-desc">{{ t('identityDesc') }}</p>
                 <div class="card-action">
-                    <span>管理地址与用户 &rarr;</span>
+                    <span>{{ t('manageAddressesOverview') }} &rarr;</span>
                 </div>
             </button>
 
@@ -91,11 +91,11 @@ const addressDomainStats = computed(() => {
                 </div>
                 <div class="card-main">
                     <strong class="card-value mono">{{ model.dbVersionLabel }}</strong>
-                    <span class="card-unit">DB 版本</span>
+                    <span class="card-unit">{{ t('dbVersionUnit') }}</span>
                 </div>
                 <p class="card-desc">{{ t('opsDesc') }}</p>
                 <div class="card-action">
-                    <span>查看运行维护 &rarr;</span>
+                    <span>{{ t('viewOps') }} &rarr;</span>
                 </div>
             </button>
         </div>

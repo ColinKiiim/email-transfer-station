@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 import { useRouter } from 'vue-router'
@@ -27,9 +27,11 @@ onMounted(async () => {
 
 <template>
     <div>
-        <n-card :bordered="false" embedded v-if="!userSettings.fetched">
-            <n-skeleton style="height: 50vh" />
-        </n-card>
+        <div v-if="!userSettings.fetched" class="center">
+            <n-card :bordered="false" embedded style="max-width: 600px; width: 100%;">
+                <n-skeleton text :repeat="4" />
+            </n-card>
+        </div>
         <div v-else-if="userSettings.user_email">
             <n-alert type="success" :show-icon="false" :bordered="false">
                 <div class="user-summary">
@@ -50,12 +52,12 @@ onMounted(async () => {
             </n-alert>
         </div>
         <div v-else class="center">
-            <n-card :bordered="false" embedded style="max-width: 600px;">
+            <div style="max-width: 460px; width: 100%;">
                 <n-alert v-if="userJwt" type="warning" :show-icon="false" :bordered="false" closable>
                     <span>{{ t('fetchUserSettingsError') }}</span>
                 </n-alert>
                 <UserLogin />
-            </n-card>
+            </div>
         </div>
     </div>
 </template>
