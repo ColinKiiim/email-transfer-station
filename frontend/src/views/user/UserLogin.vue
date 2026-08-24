@@ -151,7 +151,7 @@ onMounted(async () => {
 
 <template>
     <div class="user-auth-wrapper">
-        <n-tabs v-model:value="tabValue" size="large" v-if="userOpenSettings.fetched" justify-content="space-evenly" class="auth-tabs">
+        <n-tabs v-model:value="tabValue" size="large" justify-content="space-evenly" class="auth-tabs">
             <n-tab-pane name="signin" :tab="t('login')">
                 <n-form class="auth-form">
                     <n-form-item-row :label="t('email')" required>

@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { ref, onMounted, computed, nextTick, watch } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 import { useRouter } from 'vue-router'
@@ -277,7 +277,7 @@ onMounted(async () => {
         <n-alert v-if="userSettings.user_email" :show-icon="false" :bordered="false" closable>
             <span>{{ t('bindUserInfo') }}</span>
         </n-alert>
-        <div v-if="openSettings.fetched">
+        <div>
             <div class="login-tab-list" role="tablist" :aria-label="loginAndBindTag">
                 <button v-for="(tab, index) in availableTabs" :id="`login-tab-${tab.value}`" :key="tab.value"
                     type="button" role="tab" class="login-tab" :class="{ active: tabValue === tab.value }"

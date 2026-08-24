@@ -191,11 +191,7 @@ onMounted(async () => {
       </div>
     </template>
 
-    <section v-if="!userSettings.fetched || !userOpenSettings.fetched" class="access-card">
-      <n-skeleton text :repeat="8" />
-    </section>
-
-    <section v-else-if="!isSignedIn" class="login-layout">
+    <section v-if="!isSignedIn" class="login-layout">
       <div class="auth-card">
         <div class="auth-card-header">
           <div class="auth-brand-badge">
@@ -214,6 +210,10 @@ onMounted(async () => {
           <UserLogin />
         </div>
       </div>
+    </section>
+
+    <section v-else-if="!userSettings.fetched || !userOpenSettings.fetched" class="access-card">
+      <n-skeleton text :repeat="8" />
     </section>
 
     <AccessMailWorkbench
