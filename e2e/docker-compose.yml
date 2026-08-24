@@ -111,6 +111,7 @@ services:
       PROXY_URL: http://worker:8787
       PORT: "8025"
       IMAP_PORT: "11143"
+      ALLOW_INSECURE_AUTH: "true"
     depends_on:
       worker:
         condition: service_healthy
