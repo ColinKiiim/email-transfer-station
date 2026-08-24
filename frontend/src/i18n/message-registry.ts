@@ -1298,9 +1298,17 @@ export const MESSAGE_REGISTRY = {
       "en": "Mail address credential is invalid or account not exist, it may be network connection issue, please try again later.",
       "zh": "邮箱地址凭证无效或邮箱地址不存在，也可能是网络连接异常，请稍后再尝试"
     },
+    "mailboxAccess": {
+      "en": "Mailbox Access",
+      "zh": "邮箱访问"
+    },
+    "mailboxAccessDesc": {
+      "en": "Enter your address credential or account password to open mailbox.",
+      "zh": "输入地址凭据或账号密码查看收件箱。"
+    },
     "userLogin": {
       "en": "User Login",
-      "zh": "用户登录"
+      "zh": "用户中心登录"
     }
   },
   "views.index.LocalAddress": {

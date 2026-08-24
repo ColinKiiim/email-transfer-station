@@ -290,13 +290,13 @@ onMounted(async () => {
             <section v-if="tabValue === 'signin'" id="login-panel-signin" role="tabpanel"
                 aria-labelledby="login-tab-signin" class="login-tab-panel">
                 <n-form>
-                    <div v-if="loginMethod === 'password'">
+                           <div v-if="loginMethod === 'password'">
                         <n-form-item-row :label="t('email')" :label-props="{ for: 'address-login-email' }" required>
-                            <n-input v-model:value="loginAddress"
+                            <n-input v-model:value="loginAddress" placeholder="name@domain.com" size="large"
                                 :input-props="{ id: 'address-login-email', autocomplete: 'username' }" />
                         </n-form-item-row>
                         <n-form-item-row :label="t('password')" :label-props="{ for: 'address-login-password' }" required>
-                            <n-input v-model:value="loginPassword" type="password" show-password-on="click"
+                            <n-input v-model:value="loginPassword" type="password" show-password-on="click" placeholder="••••••••" size="large"
                                 :input-props="{ id: 'address-login-password', autocomplete: 'current-password' }"
                                 @keyup.enter="login" />
                         </n-form-item-row>
@@ -304,7 +304,7 @@ onMounted(async () => {
 
                     <div v-else>
                         <n-form-item-row :label="t('credential')" :label-props="{ for: 'address-login-credential' }" required>
-                            <n-input v-model:value="credential" type="textarea" :autosize="{ minRows: 3 }"
+                            <n-input v-model:value="credential" type="textarea" :autosize="{ minRows: 3 }" placeholder="ey..."
                                 :input-props="{ id: 'address-login-credential', autocomplete: 'off' }" />
                         </n-form-item-row>
                     </div>
@@ -320,13 +320,13 @@ onMounted(async () => {
                         </n-button>
                     </div>
 
-                    <n-button @click="login" :loading="loading" type="primary" block secondary strong>
+                    <n-button @click="login" :loading="loading" type="primary" block size="large" class="main-submit-btn" strong>
                         <template #icon>
                             <n-icon :component="EmailOutlined" />
                         </template>
                         {{ loginAndBindTag }}
                     </n-button>
-                    <n-button v-if="showNewAddressTab" @click="tabValue = 'register'" block secondary strong>
+                    <n-button v-if="showNewAddressTab" @click="tabValue = 'register'" block secondary size="large" class="alt-action-btn" strong>
                         <template #icon>
                             <n-icon :component="NewLabelOutlined" />
                         </template>
@@ -368,7 +368,7 @@ onMounted(async () => {
                             </p>
                         </n-form-item-row>
                         <Turnstile v-model:value="cfToken" />
-                        <n-button type="primary" block secondary strong @click="newEmail" :loading="loading">
+                        <n-button type="primary" block size="large" class="main-submit-btn" strong @click="newEmail" :loading="loading">
                             <template #icon>
                                 <n-icon :component="NewLabelOutlined" />
                             </template>
@@ -377,7 +377,7 @@ onMounted(async () => {
                     </n-form>
                 </n-spin>
             </section>
-            <section v-else id="login-panel-help" role="tabpanel" aria-labelledby="login-tab-help"
+            <section v-else-if="tabValue === 'help'" id="login-panel-help" role="tabpanel" aria-labelledby="login-tab-help"
                 class="login-tab-panel">
                 <n-alert :show-icon="false" :bordered="false">
                     <span>{{ showNewAddressTab ? t('pleaseGetNewEmail') : t('pleaseUseExistingCredential') }}</span>
@@ -388,7 +388,6 @@ onMounted(async () => {
     </div>
 </template>
 
-
 <style scoped>
 .n-alert {
     margin-top: 10px;
@@ -396,35 +395,40 @@ onMounted(async () => {
     text-align: center;
 }
 
-.n-form .n-button {
-    margin-top: 10px;
-}
-
 .login-tab-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
-    gap: 4px;
-    margin-bottom: 16px;
-    border-bottom: 1px solid var(--ets-border);
+    display: flex;
+    gap: 6px;
+    margin-bottom: 20px;
+    padding: 4px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--ets-border);
 }
 
 .login-tab {
-    min-height: 40px;
+    flex: 1;
+    min-height: 36px;
     border: 0;
-    border-bottom: 2px solid transparent;
+    border-radius: 7px;
     background: transparent;
-    color: inherit;
+    color: var(--ets-text-muted);
     font: inherit;
+    font-size: 13.5px;
+    font-weight: 500;
     cursor: pointer;
+    transition: all 140ms ease;
 }
 
 .login-tab:hover {
-    background: var(--ets-hover);
+    color: var(--ets-text);
+    background: rgba(255, 255, 255, 0.04);
 }
 
 .login-tab.active {
-    border-bottom-color: var(--ets-brand);
-    color: var(--ets-brand);
+    background: #3b82f6;
+    color: #ffffff;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.35);
 }
 
 .login-tab-panel {
@@ -433,11 +437,28 @@ onMounted(async () => {
 
 .switch-login-button {
     display: flex;
-    justify-content: center;
-    margin: 10px 0;
+    justify-content: flex-end;
+    margin: 4px 0 10px;
 }
 
 .n-form {
     text-align: left;
+}
+
+.main-submit-btn {
+    height: 42px;
+    font-size: 15px;
+    font-weight: 700;
+    border-radius: 8px;
+    margin-top: 10px;
+}
+
+.alt-action-btn {
+    height: 40px;
+    font-size: 14px;
+    border-radius: 8px;
+    margin-top: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--ets-border);
 }
 </style>

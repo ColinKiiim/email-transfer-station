@@ -44,6 +44,12 @@ defineExpose({
         </header>
         <div class="login-shell">
             <form class="login-card" @submit.prevent="emit('submit')">
+                <div class="auth-brand-badge">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 2 3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z" fill="none" stroke="currentColor" stroke-width="2" />
+                        <path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-width="2" />
+                    </svg>
+                </div>
                 <div class="login-copy">
                     <h1 id="admin-auth-title">{{ t('title') }}</h1>
                     <p>{{ t('description') }}</p>
@@ -52,11 +58,11 @@ defineExpose({
                     <label class="form-field full">
                         <span>{{ t('account') }}</span>
                         <input v-model="account" class="field" type="text" autocomplete="username"
-                            autocapitalize="none" spellcheck="false" />
+                            autocapitalize="none" spellcheck="false" placeholder="admin" />
                     </label>
                     <label class="form-field full">
                         <span>{{ t('password') }}</span>
-                        <input v-model="password" class="field" type="password" autocomplete="current-password" />
+                        <input v-model="password" class="field" type="password" autocomplete="current-password" placeholder="••••••••" />
                     </label>
                 </div>
                 <Turnstile ref="turnstile" v-if="openSettings.enableGlobalTurnstileCheck" v-model:value="cfToken" />

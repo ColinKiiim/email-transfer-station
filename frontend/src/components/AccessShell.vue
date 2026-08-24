@@ -386,8 +386,16 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
 .access-view {
   min-width: 0;
   min-height: 0;
-  overflow: auto;
+  overflow-y: auto;
   padding: 16px 24px 24px;
+}
+
+.access-shell:not(.has-rail) .access-view {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 @media (max-width: 900px) {

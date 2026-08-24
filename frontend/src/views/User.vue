@@ -314,8 +314,10 @@ onMounted(async () => {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: calc(100vh - 120px);
-  padding: 24px 16px;
+  width: 100%;
+  height: 100%;
+  padding: 20px 16px;
+  box-sizing: border-box;
 }
 
 .auth-card {

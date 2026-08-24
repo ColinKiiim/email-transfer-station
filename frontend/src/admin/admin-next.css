@@ -101,22 +101,25 @@ body:has(.admin-next) .n-message-container {
 }
 
 .admin-next-host .login-page {
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
-    align-items: start;
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
     min-height: 100dvh;
-    padding: 0;
     background:
-        linear-gradient(180deg, var(--surface), var(--bg) 72%),
+        linear-gradient(180deg, var(--surface-alt), var(--bg)),
         var(--bg);
-    overflow: auto;
+    overflow: hidden;
 }
 
 .admin-next-host .login-shell {
-    align-self: start;
-    justify-self: center;
-    width: min(calc(100% - 40px), 420px);
-    margin: clamp(48px, 8vh, 88px) 0 32px;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 0;
+    padding: 20px 16px;
+    box-sizing: border-box;
 }
 
 .admin-next-host .login-topbar {
@@ -125,8 +128,9 @@ body:has(.admin-next) .n-message-container {
     justify-content: space-between;
     gap: 20px;
     width: 100%;
-    min-height: 68px;
-    padding: 12px 24px;
+    height: 60px;
+    min-height: 60px;
+    padding: 0 24px;
     background: var(--surface);
     box-shadow: 0 1px 0 var(--border);
 }
@@ -140,32 +144,62 @@ body:has(.admin-next) .n-message-container {
 .admin-next-host .login-card {
     display: grid;
     gap: 20px;
-    padding: 28px;
+    width: min(100%, 460px);
+    padding: 32px 28px;
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 10px;
-    box-shadow: var(--shadow-border);
+    border-radius: 16px;
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.4);
+    text-align: center;
+}
+
+.admin-next-host .login-card .auth-brand-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 4px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #3b82f6, #6366f1);
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
+}
+
+.admin-next-host .login-card .auth-brand-badge svg {
+    width: 24px;
+    height: 24px;
 }
 
 .admin-next-host .login-copy {
     display: grid;
-    gap: 8px;
+    gap: 6px;
 }
 
 .admin-next-host .login-copy h1 {
     margin: 0;
-    font-size: 26px;
-    line-height: 1.18;
-    letter-spacing: 0;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--text-strong, #ffffff);
 }
 
 .admin-next-host .login-copy p {
     margin: 0;
     color: var(--muted);
+    font-size: 13.5px;
+}
+
+.admin-next-host .login-card .form-grid {
+    text-align: left;
 }
 
 .admin-next-host .login-submit {
     width: 100%;
+    height: 42px;
+    font-size: 15px;
+    font-weight: 700;
+    border-radius: 8px;
     justify-content: center;
 }
 
