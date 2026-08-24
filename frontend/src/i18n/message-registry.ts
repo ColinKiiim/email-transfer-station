@@ -570,6 +570,10 @@ export const MESSAGE_REGISTRY = {
       "en": "Actions",
       "zh": "操作"
     },
+    "cancel": {
+      "en": "Cancel",
+      "zh": "取消"
+    },
     "createPasskey": {
       "en": "Create Passkey",
       "zh": "创建 Passkey"
@@ -624,6 +628,10 @@ export const MESSAGE_REGISTRY = {
     }
   },
   "views.Header": {
+    "admin": {
+      "en": "Admin",
+      "zh": "管理"
+    },
     "mailboxContext": {
       "en": "Mailbox access",
       "zh": "邮箱访问"
@@ -972,6 +980,10 @@ export const MESSAGE_REGISTRY = {
     }
   },
   "views.index.AccountSettings": {
+    "cancel": {
+      "en": "Cancel",
+      "zh": "取消"
+    },
     "changePassword": {
       "en": "Change Password",
       "zh": "修改密码"
@@ -1313,6 +1325,10 @@ export const MESSAGE_REGISTRY = {
     "mailboxAccessDesc": {
       "en": "Enter your address credential or account password to open mailbox.",
       "zh": "输入地址凭据或账号密码查看收件箱。"
+    },
+    "or": {
+      "en": "OR",
+      "zh": "或"
     },
     "userLogin": {
       "en": "User Login",
@@ -3290,6 +3306,22 @@ export const MESSAGE_REGISTRY = {
       "en": "New address identity",
       "zh": "新增地址身份"
     },
+    "modalNewUser": {
+      "en": "New user",
+      "zh": "新建用户"
+    },
+    "modalResetPassword": {
+      "en": "Reset password",
+      "zh": "重置密码"
+    },
+    "modalEditRole": {
+      "en": "Change role",
+      "zh": "变更角色"
+    },
+    "modalUserAddresses": {
+      "en": "Bound addresses",
+      "zh": "关联地址"
+    },
     "modalGenerateAccessPackage": {
       "en": "Generate access package",
       "zh": "生成访问包"
@@ -3305,6 +3337,18 @@ export const MESSAGE_REGISTRY = {
     "modalSubmitAddress": {
       "en": "Create address",
       "zh": "创建地址"
+    },
+    "modalSubmitUser": {
+      "en": "Create user",
+      "zh": "创建用户"
+    },
+    "modalSubmitResetPassword": {
+      "en": "Save password",
+      "zh": "保存密码"
+    },
+    "modalSubmitRole": {
+      "en": "Save role",
+      "zh": "保存角色"
     },
     "railEmptyTitle": {
       "en": "Details",
