@@ -1,8 +1,19 @@
 import { describe, expect, it } from "vitest";
 
-import { consumeAuthRateLimit, getAuthRateLimitKeys } from "../auth_rate_limit";
+import { consumeAuthRateLimit, enforceAuthRateLimit, getAuthRateLimitKeys } from "../auth_rate_limit";
 
 describe("authentication rate-limit keys", () => {
+    it("does not consume production auth limits in E2E mode", async () => {
+        const context = {
+            env: {
+                E2E_TEST_MODE: true,
+                DB: { prepare: () => { throw new Error("rate limit DB should not be called"); } },
+            },
+        } as unknown as Parameters<typeof enforceAuthRateLimit>[0];
+
+        expect(await enforceAuthRateLimit(context)).toBeNull();
+    });
+
     it("shares an IP bucket while isolating account buckets without storing identifiers", async () => {
         const first = await getAuthRateLimitKeys(
             "/user_api/login",

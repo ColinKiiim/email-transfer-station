@@ -3,7 +3,7 @@ import { WORKER_URL, createTestAddress, deleteAddress, hashPassword } from '../.
 
 test.describe('Address Password Login', () => {
   test('set password then login with it', async ({ request }) => {
-    const { jwt, address } = await createTestAddress(request, 'pwd-login');
+    let { jwt, address } = await createTestAddress(request, 'pwd-login');
     const password = 'test-password-123';
 
     try {
@@ -15,6 +15,7 @@ test.describe('Address Password Login', () => {
       expect(changePwdRes.ok()).toBe(true);
       const changePwdBody = await changePwdRes.json();
       expect(changePwdBody.success).toBe(true);
+      jwt = changePwdBody.jwt;
 
       // Login with the correct password
       const loginRes = await request.post(`${WORKER_URL}/api/address_login`, {
@@ -24,6 +25,7 @@ test.describe('Address Password Login', () => {
       const loginBody = await loginRes.json();
       expect(loginBody.jwt).toBeTruthy();
       expect(loginBody.address).toBe(address);
+      jwt = loginBody.jwt;
 
       // The new JWT should work — verify by fetching settings
       const settingsRes = await request.get(`${WORKER_URL}/api/settings`, {
@@ -36,7 +38,7 @@ test.describe('Address Password Login', () => {
   });
 
   test('login with wrong password returns 401', async ({ request }) => {
-    const { jwt, address } = await createTestAddress(request, 'pwd-wrong');
+    let { jwt, address } = await createTestAddress(request, 'pwd-wrong');
     const password = 'correct-password';
 
     try {
@@ -48,6 +50,7 @@ test.describe('Address Password Login', () => {
       expect(changePwdRes.ok()).toBe(true);
       const changePwdBody = await changePwdRes.json();
       expect(changePwdBody.success).toBe(true);
+      jwt = changePwdBody.jwt;
 
       // Login with wrong password
       const loginRes = await request.post(`${WORKER_URL}/api/address_login`, {
@@ -60,7 +63,7 @@ test.describe('Address Password Login', () => {
   });
 
   test('legacy SHA-256 reset upgrades after a plaintext login', async ({ request }) => {
-    const { jwt, address, address_id } = await createTestAddress(request, 'pwd-admin-reset');
+    let { jwt, address, address_id } = await createTestAddress(request, 'pwd-admin-reset');
     const plainPassword = `admin-reset-${Date.now()}`;
     const passwordHash = hashPassword(plainPassword);
 
@@ -75,6 +78,7 @@ test.describe('Address Password Login', () => {
         data: { email: address, password: plainPassword, password_format: 'plain' },
       });
       expect(plaintextLoginRes.ok()).toBe(true);
+      jwt = (await plaintextLoginRes.json()).jwt;
 
       const loginRes = await request.post(`${WORKER_URL}/api/address_login`, {
         data: { email: address, password: passwordHash, password_format: 'sha256' },
@@ -86,7 +90,7 @@ test.describe('Address Password Login', () => {
   });
 
   test('admin address list does not expose stored password hash', async ({ request }) => {
-    const { jwt, address } = await createTestAddress(request, 'pwd-list-hidden');
+    let { jwt, address } = await createTestAddress(request, 'pwd-list-hidden');
     const password = 'list-hidden-password';
 
     try {
@@ -95,6 +99,7 @@ test.describe('Address Password Login', () => {
         data: { new_password: password, password_format: 'plain' },
       });
       expect(changePwdRes.ok()).toBe(true);
+      jwt = (await changePwdRes.json()).jwt;
 
       const listRes = await request.get(
         `${WORKER_URL}/api/admin/address?limit=10&offset=0&query=${encodeURIComponent(address)}`
@@ -112,7 +117,7 @@ test.describe('Address Password Login', () => {
   test('user bind address list does not expose stored password hash', async ({ request }) => {
     const userEmail = `pwd-bind-hidden-${Date.now()}@test.example.com`;
     const userPasswordHash = hashPassword('bind-hidden-user-password');
-    const { jwt, address } = await createTestAddress(request, 'pwd-bind-hidden');
+    let { jwt, address } = await createTestAddress(request, 'pwd-bind-hidden');
     const addressPassword = 'bind-hidden-address-password';
 
     try {
@@ -140,6 +145,7 @@ test.describe('Address Password Login', () => {
         data: { new_password: addressPassword, password_format: 'plain' },
       });
       expect(changePwdRes.ok()).toBe(true);
+      jwt = (await changePwdRes.json()).jwt;
 
       const bindRes = await request.post(`${WORKER_URL}/user_api/bind_address`, {
         headers: {
