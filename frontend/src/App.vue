@@ -15,7 +15,7 @@ import { DEFAULT_LOCALE, isSupportedLocale } from './i18n/utils'
 import { naiveDarkOverrides, naiveLightOverrides } from './styles/naive-theme'
 
 const {
-  isDark, loading, useSideMargin, telegramApp, isTelegram
+  isDark, useSideMargin, telegramApp, isTelegram
 } = useGlobalState()
 const adClient = import.meta.env.VITE_GOOGLE_AD_CLIENT;
 const adSlot = import.meta.env.VITE_GOOGLE_AD_SLOT;
@@ -33,7 +33,6 @@ const showAppChrome = computed(() => !isShareOnlyRoute.value && !isFullScreenRou
 const showSideMargin = computed(() => showAppChrome.value && !isMobile.value && useSideMargin.value);
 const showAd = computed(() => showAppChrome.value && !isMobile.value && adClient && adSlot);
 const gridMaxCols = computed(() => showAd.value ? 8 : 12);
-const showGlobalLoading = computed(() => loading.value && !isFullScreenRoute.value);
 
 watchEffect(() => {
   if (typeof document === 'undefined') return
@@ -75,7 +74,6 @@ onMounted(async () => {
     (window.adsbygoogle = window.adsbygoogle || []).push({});
   }
 
-
   // check if telegram is enabled
   const enableTelegram = import.meta.env.VITE_IS_TELEGRAM;
   if (
@@ -100,40 +98,37 @@ onMounted(async () => {
   <n-config-provider :locale="localeConfig.locale" :date-locale="localeConfig.dateLocale" :theme="theme"
     :theme-overrides="themeOverrides">
     <n-global-style />
-    <n-spin description="loading..." :show="showGlobalLoading">
-      <n-notification-provider container-style="margin-top: 60px;">
-        <n-message-provider container-style="margin-top: 20px;">
-          <n-grid x-gap="12" :cols="gridMaxCols">
-            <n-gi v-if="showSideMargin" span="1">
-              <div class="side" v-if="showAd">
-                <ins class="adsbygoogle" style="display:block" :data-ad-client="adClient" :data-ad-slot="adSlot"
-                  data-ad-format="auto" data-full-width-responsive="true"></ins>
-              </div>
-            </n-gi>
-            <n-gi :span="!showSideMargin ? gridMaxCols : (gridMaxCols - 2)">
-              <div class="main" :class="{ 'main-fullscreen': isFullScreenRoute }">
-                <n-space vertical>
-                  <n-layout style="min-height: 80vh;">
-                    <Header v-if="showAppChrome" />
-                    <router-view></router-view>
-                  </n-layout>
-                </n-space>
-              </div>
-            </n-gi>
-            <n-gi v-if="showSideMargin" span="1">
-              <div class="side" v-if="showAd">
-                <ins class="adsbygoogle" style="display:block" :data-ad-client="adClient" :data-ad-slot="adSlot"
-                  data-ad-format="auto" data-full-width-responsive="true"></ins>
-              </div>
-            </n-gi>
-          </n-grid>
-          <n-back-top />
-        </n-message-provider>
-      </n-notification-provider>
-    </n-spin>
+    <n-notification-provider container-style="margin-top: 60px;">
+      <n-message-provider container-style="margin-top: 20px;">
+        <n-grid x-gap="12" :cols="gridMaxCols">
+          <n-gi v-if="showSideMargin" span="1">
+            <div class="side" v-if="showAd">
+              <ins class="adsbygoogle" style="display:block" :data-ad-client="adClient" :data-ad-slot="adSlot"
+                data-ad-format="auto" data-full-width-responsive="true"></ins>
+            </div>
+          </n-gi>
+          <n-gi :span="!showSideMargin ? gridMaxCols : (gridMaxCols - 2)">
+            <div class="main" :class="{ 'main-fullscreen': isFullScreenRoute }">
+              <n-space vertical>
+                <n-layout style="min-height: 80vh;">
+                  <Header v-if="showAppChrome" />
+                  <router-view></router-view>
+                </n-layout>
+              </n-space>
+            </div>
+          </n-gi>
+          <n-gi v-if="showSideMargin" span="1">
+            <div class="side" v-if="showAd">
+              <ins class="adsbygoogle" style="display:block" :data-ad-client="adClient" :data-ad-slot="adSlot"
+                data-ad-format="auto" data-full-width-responsive="true"></ins>
+            </div>
+          </n-gi>
+        </n-grid>
+        <n-back-top />
+      </n-message-provider>
+    </n-notification-provider>
   </n-config-provider>
 </template>
-
 
 <style>
 :root {

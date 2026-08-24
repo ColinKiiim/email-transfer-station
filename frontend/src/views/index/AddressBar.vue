@@ -41,9 +41,11 @@ watch(
 
 <template>
     <div>
-        <n-card :bordered="false" embedded v-if="!settings.fetched">
-            <n-skeleton style="height: 50vh" />
-        </n-card>
+        <div v-if="!settings.fetched && jwt" class="center">
+            <n-card :bordered="false" embedded style="max-width: 600px; width: 100%;">
+                <n-skeleton text :repeat="4" />
+            </n-card>
+        </div>
         <div v-else-if="settings.address">
             <n-alert type="info" :show-icon="false" :bordered="false">
                 <AddressSelect>

@@ -105,9 +105,7 @@ body:has(.admin-next) .n-message-container {
     flex-direction: column;
     height: 100dvh;
     min-height: 100dvh;
-    background:
-        linear-gradient(180deg, var(--surface-alt), var(--bg)),
-        var(--bg);
+    background: var(--bg);
     overflow: hidden;
 }
 
@@ -132,7 +130,8 @@ body:has(.admin-next) .n-message-container {
     min-height: 60px;
     padding: 0 24px;
     background: var(--surface);
-    box-shadow: 0 1px 0 var(--border);
+    border-bottom: 1px solid var(--border);
+    box-sizing: border-box;
 }
 
 .admin-next-host .login-top-actions {
@@ -142,7 +141,8 @@ body:has(.admin-next) .n-message-container {
 }
 
 .admin-next-host .login-card {
-    display: grid;
+    display: flex;
+    flex-direction: column;
     gap: 20px;
     width: min(100%, 460px);
     padding: 32px 28px;
@@ -151,6 +151,7 @@ body:has(.admin-next) .n-message-container {
     border-radius: 16px;
     box-shadow: 0 20px 48px rgba(0, 0, 0, 0.4);
     text-align: center;
+    box-sizing: border-box;
 }
 
 .admin-next-host .login-card .auth-brand-badge {
@@ -159,7 +160,7 @@ body:has(.admin-next) .n-message-container {
     justify-content: center;
     width: 48px;
     height: 48px;
-    margin: 0 auto 4px;
+    margin: 0 auto;
     border-radius: 12px;
     background: linear-gradient(135deg, #3b82f6, #6366f1);
     color: #ffffff;
@@ -172,7 +173,8 @@ body:has(.admin-next) .n-message-container {
 }
 
 .admin-next-host .login-copy {
-    display: grid;
+    display: flex;
+    flex-direction: column;
     gap: 6px;
 }
 
@@ -181,17 +183,55 @@ body:has(.admin-next) .n-message-container {
     font-size: 22px;
     font-weight: 700;
     letter-spacing: -0.01em;
-    color: var(--text-strong, #ffffff);
+    color: var(--fg);
 }
 
 .admin-next-host .login-copy p {
     margin: 0;
     color: var(--muted);
     font-size: 13.5px;
+    line-height: 1.5;
 }
 
 .admin-next-host .login-card .form-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
     text-align: left;
+}
+
+.admin-next-host .login-card .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.admin-next-host .login-card .form-field span {
+    color: var(--fg);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.admin-next-host .login-card .field {
+    width: 100%;
+    min-height: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border);
+    color: var(--fg);
+    padding: 0 12px;
+    font-size: 14px;
+    box-sizing: border-box;
+    box-shadow: none;
+    transition: all 120ms ease;
+}
+
+.admin-next-host .login-card .field:focus {
+    border-color: var(--accent);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+    background: rgba(255, 255, 255, 0.06);
 }
 
 .admin-next-host .login-submit {
@@ -200,7 +240,17 @@ body:has(.admin-next) .n-message-container {
     font-size: 15px;
     font-weight: 700;
     border-radius: 8px;
-    justify-content: center;
+    background: var(--accent);
+    color: #ffffff;
+    border: 0;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.35);
+    margin-top: 6px;
+    transition: all 120ms ease;
+}
+
+.admin-next-host .login-submit:hover:not(:disabled) {
+    background: color-mix(in oklch, var(--accent) 90%, white);
 }
 
 .admin-next-host .app {
