@@ -9,16 +9,16 @@ describe("user password storage", () => {
         const second = await createUserPasswordRecord(clientVerifier);
 
         expect(first).not.toBe(second);
-        expect(first).toMatch(/^pbkdf2-sha256\$600000\$sha256\$/);
+        expect(first).toMatch(/^pbkdf2-sha256\$100000\$sha256\$/);
         await expect(verifyUserPasswordRecord(first, clientVerifier)).resolves.toMatchObject({ valid: true });
         await expect(verifyUserPasswordRecord(first, "b".repeat(64))).resolves.toEqual({ valid: false });
 
         const digestUpgrade = await verifyUserPasswordRecord(clientVerifier, clientVerifier);
         expect(digestUpgrade.valid).toBe(true);
-        expect(digestUpgrade.upgradedRecord).toMatch(/^pbkdf2-sha256\$/);
+        expect(digestUpgrade.upgradedRecord).toMatch(/^pbkdf2-sha256\$100000\$sha256\$/);
 
         const rawUpgrade = await verifyUserPasswordRecord("legacy-client-value", "legacy-client-value");
         expect(rawUpgrade.valid).toBe(true);
-        expect(rawUpgrade.upgradedRecord).toMatch(/^pbkdf2-sha256\$/);
+        expect(rawUpgrade.upgradedRecord).toMatch(/^pbkdf2-sha256\$100000\$plain\$/);
     }, 30_000);
 });
