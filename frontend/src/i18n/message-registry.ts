@@ -2248,6 +2248,14 @@ export const MESSAGE_REGISTRY = {
     }
   },
   "admin.mail": {
+    "unknownSender": {
+      "en": "(Unknown sender)",
+      "zh": "(未知发件人)"
+    },
+    "noSubject": {
+      "en": "(No subject)",
+      "zh": "(无主题)"
+    },
     "unknownAddress": {
       "en": "Unknown address",
       "zh": "未知地址"

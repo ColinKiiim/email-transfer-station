@@ -26,6 +26,16 @@ const surfaceItems = computed(() => [
     { id: 'user', label: t('userView'), to: getRouterPathWithLang('/user', locale.value) },
 ])
 
+const searchShortcut = computed(() => {
+    if (typeof navigator !== 'undefined') {
+        const platform = navigator.platform || navigator.userAgent || ''
+        if (/Mac/i.test(platform)) {
+            return '⌘K'
+        }
+    }
+    return 'Ctrl+K'
+})
+
 const shapeList = (name) => iconShapes[name] || iconShapes.check
 const searchInput = ref(null)
 
@@ -64,7 +74,7 @@ defineExpose({
                         <input ref="searchInput" v-model="model.ui.query" class="field"
                             :placeholder="t('searchPlaceholder')"
                             @input="actions.updateSearch" />
-                        <span class="kbd">⌘K</span>
+                        <span class="kbd">{{ searchShortcut }}</span>
                     </label>
 
                     <div class="top-actions">

@@ -2840,7 +2840,7 @@ body:has(.admin-next) .n-message-container {
     flex-direction: column;
     gap: 8px;
     min-height: 154px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--border);
     border-radius: 12px;
     padding: 16px 18px;
     background: var(--surface);
@@ -2860,11 +2860,31 @@ body:has(.admin-next) .n-message-container {
 .admin-next-host .overview-card.card-flow {
     background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9));
     border-color: rgba(59, 130, 246, 0.3);
+    color: #f8fafc;
 }
 
 .admin-next-host .overview-card.card-flow:hover {
     border-color: rgba(59, 130, 246, 0.7);
     box-shadow: 0 8px 24px rgba(37, 99, 235, 0.2), 0 0 0 1px rgba(59, 130, 246, 0.3);
+}
+
+.admin-next-host .overview-card.card-flow .card-kicker,
+.admin-next-host .overview-card.card-flow .card-unit,
+.admin-next-host .overview-card.card-flow .card-desc {
+    color: #94a3b8;
+}
+
+.admin-next-host .overview-card.card-flow .card-badge:not(.is-unread) {
+    background: rgba(255, 255, 255, 0.08);
+    color: #94a3b8;
+}
+
+.admin-next-host .overview-card.card-flow .card-value {
+    color: #f8fafc;
+}
+
+.admin-next-host .overview-card.card-flow .card-action {
+    color: #38bdf8;
 }
 
 .admin-next-host .card-top {
@@ -2908,7 +2928,7 @@ body:has(.admin-next) .n-message-container {
     font-weight: 700;
     line-height: 1.1;
     font-variant-numeric: tabular-nums;
-    color: #f8fafc;
+    color: var(--fg);
 }
 
 .admin-next-host .card-unit {
@@ -2928,7 +2948,7 @@ body:has(.admin-next) .n-message-container {
     margin-top: 8px;
     font-size: 12px;
     font-weight: 600;
-    color: #38bdf8;
+    color: var(--accent);
     display: flex;
     align-items: center;
     gap: 4px;
