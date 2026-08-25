@@ -420,6 +420,7 @@ onBeforeUnmount(() => {
                                 <li v-for="item in model.userBoundAddresses" :key="item.id || item.address || item.name" class="bound-address-item">
                                     <span class="bound-addr-name">{{ item.name || item.address || item.display_label || `ID #${item.id}` }}</span>
                                     <button class="btn small danger" type="button" :disabled="!!model.actionBusy"
+                                        :aria-label="t('unbind')"
                                         @click.stop="actions.unbindAddressFromUser(model.currentUser, item)">
                                         {{ t('unbind') }}
                                     </button>
@@ -447,7 +448,7 @@ onBeforeUnmount(() => {
                     <button class="btn" type="button" @click="actions.closeActionModal">{{ t('savedSecurely') }}</button>
                 </template>
                 <template v-else-if="model.actionModal === 'user-addresses'">
-                    <button class="btn primary" type="button" @click="actions.closeActionModal">{{ t('close') }}</button>
+                    <button class="btn primary" data-testid="user-addresses-close" type="button" @click="actions.closeActionModal">{{ t('close') }}</button>
                 </template>
                 <template v-else>
                     <button class="btn" type="button" :disabled="!!model.actionBusy"

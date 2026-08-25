@@ -774,6 +774,13 @@ body:has(.admin-next) .n-message-container {
     white-space: nowrap;
 }
 
+.admin-next-host .btn.small {
+    min-height: 32px;
+    height: 32px;
+    padding: 0 10px;
+    font-size: 12px;
+}
+
 .admin-next-host .toolbar .btn.icon-only {
     width: 40px;
     min-width: 40px;
@@ -1928,6 +1935,14 @@ body:has(.admin-next) .n-message-container {
 
 .admin-next-host .panel.split {
     grid-column: span 6;
+    min-height: 0;
+}
+
+.admin-next-host .panel-destinations .table-wrap,
+.admin-next-host .panel-routing-check .timeline {
+    min-height: 0;
+    max-height: 400px;
+    overflow-y: auto;
 }
 
 .admin-next-host .panel.third {
@@ -2153,6 +2168,53 @@ body:has(.admin-next) .n-message-container {
     color: var(--muted);
 }
 
+.admin-next-host #delivery-channels {
+    scroll-margin-top: 16px;
+}
+
+.admin-next-host .delivery-empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+}
+
+.admin-next-host .delivery-empty-state .n-empty {
+    color: var(--muted);
+}
+
+.admin-next-host .delivery-empty-state .empty-guide-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--accent);
+    text-decoration: none;
+    transition: color var(--ets-motion-fast) var(--ets-motion-ease);
+}
+
+.admin-next-host .delivery-empty-state .empty-guide-link:hover {
+    color: var(--accent-hover, var(--ets-brand-hover));
+    text-decoration: underline;
+}
+
+.admin-next-host .delivery-empty-state .empty-guide-link:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: var(--radius-xs);
+}
+
+.admin-next-host .ops-action-hint {
+    display: inline-block;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+    user-select: text;
+}
+
 .admin-next-host .rail {
     min-width: 0;
     overflow: auto;
@@ -2207,6 +2269,15 @@ body:has(.admin-next) .n-message-container {
     box-shadow: 0 1px 0 var(--border);
 }
 
+.admin-next-host .modal-actions {
+    flex-wrap: wrap;
+    box-shadow: 0 -1px 0 var(--border);
+}
+
+.admin-next-host .modal-actions > :only-child {
+    margin-left: auto;
+}
+
 .admin-next-host .modal-head h2 {
     margin: 0;
     font-size: 16px;
@@ -2243,6 +2314,86 @@ body:has(.admin-next) .n-message-container {
     color: var(--muted);
     font-size: 12px;
     font-weight: 650;
+}
+
+.admin-next-host .user-addresses-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.admin-next-host .bound-addresses-section,
+.admin-next-host .bind-new-address-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.admin-next-host .bound-addresses-section h4,
+.admin-next-host .bind-new-address-section h4 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 650;
+    color: var(--muted);
+}
+
+.admin-next-host .bound-addresses-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.admin-next-host .bound-address-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 12px;
+    background: var(--surface-soft);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+}
+
+.admin-next-host .bound-addr-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.4;
+    color: var(--fg);
+}
+
+.admin-next-host .bound-address-item .btn {
+    flex-shrink: 0;
+}
+
+.admin-next-host .bind-form-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.admin-next-host .bind-form-row .field {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.admin-next-host .bind-form-row .btn {
+    flex-shrink: 0;
+}
+
+.admin-next-host .bound-addresses-section .loading-text,
+.admin-next-host .bound-addresses-section .empty-note {
+    color: var(--muted);
+    font-size: 13px;
+    padding: 6px 0;
 }
 
 .admin-next-host .field-password-wrap {
@@ -2812,7 +2963,6 @@ body:has(.admin-next) .n-message-container {
         grid-template-columns: 1fr;
     }
 
-    .admin-next-host .overview-grid,
     .admin-next-host .overview-sections {
         grid-template-columns: 1fr;
     }
@@ -2833,6 +2983,18 @@ body:has(.admin-next) .n-message-container {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 14px;
     width: 100%;
+}
+
+@media (max-width: 1400px) {
+    .admin-next-host .overview-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 900px) {
+    .admin-next-host .overview-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .admin-next-host .overview-card {
@@ -3061,6 +3223,72 @@ body:has(.admin-next) .n-message-container {
     cursor: not-allowed;
     opacity: 0.35;
     transform: none;
+}
+
+.admin-next-host .action-dropdown {
+    position: relative;
+    display: inline-flex;
+}
+
+.admin-next-host .btn-action-more {
+    gap: 4px;
+}
+
+.admin-next-host .action-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    z-index: 100;
+    min-width: 140px;
+    padding: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-pop);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.admin-next-host .action-menu-item {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 28px;
+    padding: 0 8px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--fg);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 120ms ease, color 120ms ease;
+}
+
+.admin-next-host .action-menu-item:hover:not(:disabled),
+.admin-next-host .action-menu-item:focus:not(:disabled) {
+    background: var(--accent-soft);
+    color: color-mix(in oklch, var(--accent) 82%, var(--mix-fg));
+    outline: none;
+}
+
+.admin-next-host .action-menu-item.danger {
+    color: var(--danger);
+}
+
+.admin-next-host .action-menu-item.danger:hover:not(:disabled),
+.admin-next-host .action-menu-item.danger:focus:not(:disabled) {
+    background: var(--danger-soft);
+    color: color-mix(in oklch, var(--danger) 82%, var(--mix-fg));
+}
+
+.admin-next-host .action-menu-item:disabled {
+    cursor: not-allowed;
+    opacity: 0.35;
 }
 
 .admin-next-host .badge {

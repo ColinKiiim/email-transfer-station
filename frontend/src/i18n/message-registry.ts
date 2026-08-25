@@ -2838,6 +2838,14 @@ export const MESSAGE_REGISTRY = {
       "en": "Copy",
       "zh": "复制"
     },
+    "more": {
+      "en": "More",
+      "zh": "更多"
+    },
+    "moreActions": {
+      "en": "More actions",
+      "zh": "更多操作"
+    },
     "share": {
       "en": "Share",
       "zh": "分享"
@@ -2861,6 +2869,18 @@ export const MESSAGE_REGISTRY = {
     "disable": {
       "en": "Disable",
       "zh": "停用"
+    },
+    "emptySenderDesc": {
+      "en": "No address-level sending permissions configured. Check outbound channels above.",
+      "zh": "暂无地址级发送记录，可通过发信通道配置出站权限"
+    },
+    "emptySendboxDesc": {
+      "en": "No outbound messages in the sendbox yet. Sent mail will be recorded here.",
+      "zh": "暂无外发邮件记录，通过发信通道发送的邮件将显示在此处"
+    },
+    "configureChannelsLink": {
+      "en": "Configure outbound channels",
+      "zh": "配置发信通道"
     },
     "clearFilters": {
       "en": "Clear filters",

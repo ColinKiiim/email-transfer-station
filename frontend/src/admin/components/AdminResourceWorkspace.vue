@@ -1,8 +1,9 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 
 import { cellText, formatNumber, statusClass } from '../admin-formatters'
+import { NEmpty } from 'naive-ui'
 import AdminEmptyState from './AdminEmptyState.vue'
 
 const props = defineProps({
@@ -12,6 +13,54 @@ const props = defineProps({
 
 const { t: tCol } = useScopedI18n('admin.column')
 const { t } = useScopedI18n('admin.resource')
+
+const activeMenuAddressId = ref(null)
+const activeMenuDomainId = ref(null)
+
+const toggleAddressMenu = (addressId) => {
+    activeMenuDomainId.value = null
+    activeMenuAddressId.value = activeMenuAddressId.value === addressId ? null : addressId
+}
+
+const closeAddressMenu = () => {
+    activeMenuAddressId.value = null
+}
+
+const toggleDomainMenu = (domainId) => {
+    activeMenuAddressId.value = null
+    activeMenuDomainId.value = activeMenuDomainId.value === domainId ? null : domainId
+}
+
+const closeDomainMenu = () => {
+    activeMenuDomainId.value = null
+}
+
+const closeAllMenus = () => {
+    activeMenuAddressId.value = null
+    activeMenuDomainId.value = null
+}
+
+const handleDocumentClick = (event) => {
+    if ((activeMenuAddressId.value !== null || activeMenuDomainId.value !== null) && !event.target?.closest?.('.action-dropdown')) {
+        closeAllMenus()
+    }
+}
+
+const handleDocumentKeydown = (event) => {
+    if (event.key === 'Escape' && (activeMenuAddressId.value !== null || activeMenuDomainId.value !== null)) {
+        closeAllMenus()
+    }
+}
+
+onMounted(() => {
+    window.addEventListener('click', handleDocumentClick)
+    window.addEventListener('keydown', handleDocumentKeydown)
+})
+
+onBeforeUnmount(() => {
+    window.removeEventListener('click', handleDocumentClick)
+    window.removeEventListener('keydown', handleDocumentKeydown)
+})
 
 const recentMails = computed(() => {
     return (props.model.mailRows || []).slice(0, 6)
@@ -30,6 +79,14 @@ const addressDomainStats = computed(() => {
         count: counts[domain],
     }))
 })
+
+const scrollToChannels = (event) => {
+    const el = document.getElementById('delivery-channels')
+    if (el) {
+        event?.preventDefault?.()
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+}
 </script>
 
 <template>
@@ -200,6 +257,7 @@ const addressDomainStats = computed(() => {
     <!-- Regular Resource View Grid -->
     <div v-else class="view-grid">
         <section v-for="panel in model.activePanels" :key="panel.id" class="panel"
+            :id="model.activeView === 'delivery' && panel.id === 'channels' ? 'delivery-channels' : undefined"
             :class="[panel.layout, `panel-${panel.id}`]">
             <div class="panel-head" :class="{ 'panel-head-filter': panel.id === 'addresses' }">
                 <!-- Addresses View: Direct Domain Filter Pills on the left -->
@@ -305,31 +363,63 @@ const addressDomainStats = computed(() => {
                                 </div>
 
                                 <div v-else-if="column.type === 'addressActions'" class="row-actions address-actions cell-actions" @click.stop>
-                                    <button class="btn-action primary" type="button" @click="actions.openMailFromAddress(row.address)" :title="t('viewMail')">
+                                    <button class="btn-action primary" type="button" @click="actions.openMailFromAddress(row.address)"
+                                        :title="t('viewMail')" :aria-label="t('viewMail')">
                                         {{ t('viewMail') }}
                                     </button>
-                                    <button class="btn-action" type="button" @click="actions.copyText(row.address)" :title="t('copy')">
+                                    <button class="btn-action" type="button" @click="actions.copyText(row.address)"
+                                        :title="t('copy')" :aria-label="t('copy')">
                                         {{ t('copy') }}
                                     </button>
-                                    <button class="btn-action" type="button" :disabled="!row.sourceId || !!model.actionBusy"
-                                        @click="actions.handleAddressRowAction(row, 'show-credential')" :title="t('showCredential')">
-                                        {{ t('showCredential') }}
-                                    </button>
-                                    <button class="btn-action" type="button" :disabled="!row.sourceId || !!model.actionBusy"
-                                        @click="actions.handleAddressRowAction(row, 'rotate')" :title="t('rotateCredential')">
-                                        {{ t('rotateCredential') }}
-                                    </button>
-                                    <button class="btn-action" type="button" @click="actions.openSharePackage(row)" :title="t('share')">
-                                        {{ t('share') }}
-                                    </button>
-                                    <button class="btn-action" type="button" :disabled="!row.sourceId || !row.mails || !!model.actionBusy"
-                                        @click="actions.handleAddressRowAction(row, 'clear-inbox')" :title="t('clearInbox')">
-                                        {{ t('clearInbox') }}
-                                    </button>
-                                    <button class="btn-action danger" type="button" :disabled="!row.sourceId || !!model.actionBusy"
-                                        @click="actions.handleAddressRowAction(row, 'delete-address')" :title="t('deleteAddress')">
-                                        {{ t('delete') }}
-                                    </button>
+                                    <div class="action-dropdown" :class="{ 'is-open': activeMenuAddressId === row.id }">
+                                        <button class="btn-action btn-action-more" type="button"
+                                            :aria-expanded="activeMenuAddressId === row.id ? 'true' : 'false'"
+                                            aria-haspopup="menu"
+                                            :aria-label="t('moreActions')"
+                                            :title="t('moreActions')"
+                                            @click.stop="toggleAddressMenu(row.id)">
+                                            {{ t('more') }}
+                                            <span class="dropdown-arrow" aria-hidden="true">▾</span>
+                                        </button>
+                                        <div v-show="activeMenuAddressId === row.id" class="action-dropdown-menu" role="menu"
+                                            :aria-label="t('moreActions')">
+                                            <button class="action-menu-item" role="menuitem" type="button"
+                                                :disabled="!row.sourceId || !!model.actionBusy"
+                                                :title="t('showCredential')"
+                                                :aria-label="t('showCredential')"
+                                                @click="actions.handleAddressRowAction(row, 'show-credential'); closeAddressMenu()">
+                                                {{ t('showCredential') }}
+                                            </button>
+                                            <button class="action-menu-item" role="menuitem" type="button"
+                                                :disabled="!row.sourceId || !!model.actionBusy"
+                                                :title="t('rotateCredential')"
+                                                :aria-label="t('rotateCredential')"
+                                                @click="actions.handleAddressRowAction(row, 'rotate'); closeAddressMenu()">
+                                                {{ t('rotateCredential') }}
+                                            </button>
+                                            <button class="action-menu-item" role="menuitem" type="button"
+                                                :disabled="!row.sourceId || !!model.actionBusy"
+                                                :title="t('share')"
+                                                :aria-label="t('share')"
+                                                @click="actions.openSharePackage(row); closeAddressMenu()">
+                                                {{ t('share') }}
+                                            </button>
+                                            <button class="action-menu-item" role="menuitem" type="button"
+                                                :disabled="!row.sourceId || !row.mails || !!model.actionBusy"
+                                                :title="t('clearInbox')"
+                                                :aria-label="t('clearInbox')"
+                                                @click="actions.handleAddressRowAction(row, 'clear-inbox'); closeAddressMenu()">
+                                                {{ t('clearInbox') }}
+                                            </button>
+                                            <button class="action-menu-item danger" role="menuitem" type="button"
+                                                :disabled="!row.sourceId || !!model.actionBusy"
+                                                :title="t('deleteAddress')"
+                                                :aria-label="t('deleteAddress')"
+                                                @click="actions.handleAddressRowAction(row, 'delete-address'); closeAddressMenu()">
+                                                {{ t('delete') }}
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div v-else-if="column.type === 'shareActions'" class="row-actions share-actions cell-actions" @click.stop>
@@ -339,29 +429,55 @@ const addressDomainStats = computed(() => {
                                 </div>
 
                                 <div v-else-if="column.type === 'domainActions'" class="row-actions domain-actions cell-actions" @click.stop>
-                                    <button v-if="row.receiveMode === 'cloudflare_email'" class="btn-action primary" type="button"
-                                        :disabled="!row.sourceId || !!model.actionBusy"
-                                        @click="actions.handleDomainRowAction(row, 'cloudflare-setup')">
-                                        {{ t('autoSetup') }}
-                                    </button>
-                                    <button class="btn-action" type="button" :disabled="!row.sourceId || !!model.actionBusy"
-                                        @click="actions.handleDomainRowAction(row, 'verify-start')">
-                                        {{ t('startVerify') }}
-                                    </button>
-                                    <button class="btn-action" type="button"
-                                        :disabled="!row.sourceId || !row.verificationAddress || !!model.actionBusy"
-                                        @click="actions.handleDomainRowAction(row, 'verify-check')">
-                                        {{ t('checkVerify') }}
-                                    </button>
-                                    <button class="btn-action" type="button" :disabled="!row.sourceId || !!model.actionBusy"
-                                        @click="actions.handleDomainRowAction(row, 'verify')">
-                                        {{ t('checkRouting') }}
-                                    </button>
-                                    <button v-if="row.isEnabled" class="btn-action danger" type="button"
-                                        :disabled="!row.sourceId || !!model.actionBusy"
-                                        @click="actions.handleDomainRowAction(row, 'domain-disable')">
-                                        {{ t('disable') }}
-                                    </button>
+                                    <div class="action-dropdown" :class="{ 'is-open': activeMenuDomainId === row.id }">
+                                        <button class="btn-action btn-action-more" type="button"
+                                            :aria-expanded="activeMenuDomainId === row.id ? 'true' : 'false'"
+                                            aria-haspopup="menu"
+                                            :aria-label="t('moreActions')"
+                                            :title="t('moreActions')"
+                                            @click.stop="toggleDomainMenu(row.id)">
+                                            {{ t('more') }}
+                                            <span class="dropdown-arrow" aria-hidden="true">▾</span>
+                                        </button>
+                                        <div v-show="activeMenuDomainId === row.id" class="action-dropdown-menu" role="menu"
+                                            :aria-label="t('moreActions')">
+                                            <button v-if="row.receiveMode === 'cloudflare_email'" class="action-menu-item" role="menuitem" type="button"
+                                                :disabled="!row.sourceId || !!model.actionBusy"
+                                                :title="t('autoSetup')"
+                                                :aria-label="t('autoSetup')"
+                                                @click="actions.handleDomainRowAction(row, 'cloudflare-setup'); closeDomainMenu()">
+                                                {{ t('autoSetup') }}
+                                            </button>
+                                            <button class="action-menu-item" role="menuitem" type="button"
+                                                :disabled="!row.sourceId || !!model.actionBusy"
+                                                :title="t('startVerify')"
+                                                :aria-label="t('startVerify')"
+                                                @click="actions.handleDomainRowAction(row, 'verify-start'); closeDomainMenu()">
+                                                {{ t('startVerify') }}
+                                            </button>
+                                            <button class="action-menu-item" role="menuitem" type="button"
+                                                :disabled="!row.sourceId || !row.verificationAddress || !!model.actionBusy"
+                                                :title="t('checkVerify')"
+                                                :aria-label="t('checkVerify')"
+                                                @click="actions.handleDomainRowAction(row, 'verify-check'); closeDomainMenu()">
+                                                {{ t('checkVerify') }}
+                                            </button>
+                                            <button class="action-menu-item" role="menuitem" type="button"
+                                                :disabled="!row.sourceId || !!model.actionBusy"
+                                                :title="t('checkRouting')"
+                                                :aria-label="t('checkRouting')"
+                                                @click="actions.handleDomainRowAction(row, 'verify'); closeDomainMenu()">
+                                                {{ t('checkRouting') }}
+                                            </button>
+                                            <button v-if="row.isEnabled" class="action-menu-item danger" role="menuitem" type="button"
+                                                :disabled="!row.sourceId || !!model.actionBusy"
+                                                :title="t('disable')"
+                                                :aria-label="t('disable')"
+                                                @click="actions.handleDomainRowAction(row, 'domain-disable'); closeDomainMenu()">
+                                                {{ t('disable') }}
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <strong v-else-if="column.type === 'strong'">{{ cellText(row, column.key) }}</strong>
@@ -371,13 +487,27 @@ const addressDomainStats = computed(() => {
                                 <span v-else-if="column.type === 'number'">
                                     {{ Number.isFinite(Number(row[column.key])) ? formatNumber(row[column.key]) : '-' }}
                                 </span>
+                                <span v-else-if="panel.kind === 'ops' && column.key === 'action'" class="ops-action-hint">
+                                    {{ cellText(row, column.key) }}
+                                </span>
                                 <span v-else>{{ cellText(row, column.key) }}</span>
                             </td>
                         </tr>
                         <tr v-if="panel.rows.length === 0">
                             <td :colspan="panel.columns.length">
-                                <AdminEmptyState :action-label="model.hasActiveFilters ? t('clearFilters') : ''"
+                                <AdminEmptyState v-if="model.hasActiveFilters" :action-label="t('clearFilters')"
                                     @action="actions.handleAction('reset-filters')" />
+                                <div v-else-if="model.activeView === 'delivery' && (panel.id === 'sender' || panel.id === 'sendbox')"
+                                    class="delivery-empty-state" role="status">
+                                    <NEmpty :description="panel.id === 'sender' ? t('emptySenderDesc') : t('emptySendboxDesc')" size="small">
+                                        <template #extra>
+                                            <a href="#delivery-channels" class="empty-guide-link" @click="scrollToChannels">
+                                                {{ t('configureChannelsLink') }} &rarr;
+                                            </a>
+                                        </template>
+                                    </NEmpty>
+                                </div>
+                                <AdminEmptyState v-else />
                             </td>
                         </tr>
                     </tbody>
@@ -385,7 +515,7 @@ const addressDomainStats = computed(() => {
             </div>
         </section>
 
-        <section v-if="model.activeView === 'routing'" class="panel split">
+        <section v-if="model.activeView === 'routing'" class="panel split panel-routing-check">
             <div class="panel-head">
                 <div>
                     <h2>{{ t('configCheck') }}</h2>
