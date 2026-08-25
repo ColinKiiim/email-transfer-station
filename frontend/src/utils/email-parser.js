@@ -82,6 +82,7 @@ function stripZeroWidthAndControlChars(str) {
     return str
         .replace(/[\u200B-\u200F\u202A-\u202E\uFEFF]/g, '')
         .replace(/\u00A0/g, ' ')
+        // eslint-disable-next-line no-control-regex -- intentional C0/DEL control character sanitization for preview text
         .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ' ');
 }
 
