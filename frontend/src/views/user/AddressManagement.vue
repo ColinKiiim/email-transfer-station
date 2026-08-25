@@ -147,20 +147,13 @@ const columns = computed(() => [
         align: 'right',
         render(row) {
             const actions = [
-                h(NPopconfirm,
+                h(NButton,
                     {
-                        onPositiveClick: () => changeMailAddress(row.id)
+                        tertiary: true,
+                        type: "primary",
+                        onClick: () => changeMailAddress(row.id)
                     },
-                    {
-                        trigger: () => h(NButton,
-                            {
-                                tertiary: true,
-                                type: "primary",
-                            },
-                            { default: () => t('changeMailAddress') }
-                        ),
-                        default: () => `${t('changeMailAddress')}?`
-                    }
+                    { default: () => t('changeMailAddress') }
                 ),
             ];
             if (canTransferAddress.value) {

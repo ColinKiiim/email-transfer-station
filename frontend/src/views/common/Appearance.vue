@@ -84,7 +84,7 @@ const { t } = useScopedI18n('views.common.Appearance')
     display: flex;
     flex-direction: column;
     gap: 16px;
-    max-width: 800px;
+    max-width: min(100%, 1080px);
     width: 100%;
 }
 

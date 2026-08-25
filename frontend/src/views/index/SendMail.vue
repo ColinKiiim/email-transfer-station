@@ -225,7 +225,7 @@ onMounted(async () => {
 
 <style scoped>
 .n-card {
-    max-width: 800px;
+    max-width: min(100%, 1080px);
     width: 100%;
 }
 
