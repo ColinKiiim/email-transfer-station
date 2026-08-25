@@ -300,10 +300,9 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
 }
 
 .topbar-lead.has-brand {
-  display: grid;
-  grid-template-columns: minmax(180px, 232px) minmax(0, 1fr);
-  gap: 24px;
+  display: flex;
   align-items: center;
+  min-width: 0;
 }
 
 .kicker {
@@ -339,16 +338,21 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
 }
 
 .identity-meta {
-  overflow-wrap: anywhere;
+  white-space: nowrap;
 }
 
 .status-pill {
+  display: inline-flex;
+  align-items: center;
   border-radius: 999px;
   padding: 3px 8px;
   background: var(--ets-brand-soft);
   color: var(--ets-on-brand-soft);
   font-size: 11px;
   font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .tone-success {
@@ -371,6 +375,7 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
   flex-wrap: wrap;
   gap: 8px;
   justify-content: flex-end;
+  align-items: center;
   min-width: 0;
 }
 
@@ -437,23 +442,75 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
   }
 
   .access-topbar {
-    grid-template-columns: 1fr;
-    gap: 10px;
+    height: auto;
     min-height: 0;
-    padding: 14px 16px 10px;
+    padding: 12px 16px;
+    gap: 10px;
+  }
+
+  .access-shell.has-rail .access-topbar {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .access-shell:not(.has-rail) .access-topbar {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    min-height: 56px;
+  }
+
+  .topbar-lead {
+    width: 100%;
+  }
+
+  .access-shell:not(.has-rail) .topbar-lead {
+    width: auto;
+    flex: 1 1 auto;
   }
 
   .topbar-lead.has-brand {
-    grid-template-columns: 1fr;
-    gap: 12px;
+    display: flex;
+    align-items: center;
+    min-width: 0;
   }
 
-  .top-actions {
-    justify-content: flex-start;
+  .title-block {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    min-width: 0;
+    width: 100%;
   }
 
   .title-block h1 {
-    font-size: 22px;
+    font-size: 16px;
+    line-height: 1.25;
+  }
+
+  .identity-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 8px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .access-shell.has-rail .top-actions {
+    justify-content: flex-start;
+    align-items: center;
+    width: 100%;
+  }
+
+  .access-shell:not(.has-rail) .top-actions {
+    justify-content: flex-end;
+    align-items: center;
+    flex-shrink: 0;
   }
 
   .access-commandbar,
@@ -484,12 +541,21 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
     flex: 1 1 calc(50% - 6px);
     grid-template-columns: 20px minmax(0, 1fr) auto;
     min-width: 0;
+    min-height: 40px;
+    height: 40px;
   }
 
   .identity-label {
     max-width: 100%;
-    white-space: normal;
-    overflow-wrap: anywhere;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--ets-text);
+    font-weight: 600;
+  }
+
+  .top-actions {
+    gap: 6px;
   }
 }
 </style>

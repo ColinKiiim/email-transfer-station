@@ -866,6 +866,7 @@ const workspaceModel = computed(() => ({
     addressRows: addressRows.value,
     blockingLoadErrors: blockingLoadErrors.value,
     workerStatusLabel: workerStatusLabel.value,
+    dbVersionLabel: dbVersionLabel.value,
     activePanels: activePanels.value,
     routingActivationRows: routingActivationRows.value,
 }))

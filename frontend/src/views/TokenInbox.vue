@@ -202,6 +202,7 @@ onMounted(resolveToken)
   gap: 10px;
   width: min(720px, 100%);
   padding: 22px;
+  box-sizing: border-box;
 }
 
 .token-state-card h2 {
