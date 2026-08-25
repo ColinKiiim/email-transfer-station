@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useScopedI18n } from '@/i18n/app'
 import { useMessage } from 'naive-ui'
@@ -11,8 +11,6 @@ import { useGlobalState } from '../store';
 import { sanitizeMailHtml } from '../security/safe-html';
 
 const { preferShowTextMail, useIframeShowMail, useUTCDate, isDark } = useGlobalState();
-
-
 
 const { t } = useScopedI18n('components.MailContentRenderer')
 const message = useMessage()
@@ -42,7 +40,6 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
-  // 回调函数 props
   onDelete: {
     type: Function,
     default: () => { }
@@ -61,15 +58,13 @@ const props = defineProps({
   }
 })
 
-/*
- * `getDownloadEmlUrl` mints a Blob object URL of the entire raw message. It used
- * to be called straight from the template binding, so every re-render — every
- * selection change, filter keystroke and auto-refresh tick — allocated another
- * copy of the full MIME source and never released it. Object URLs live until the
- * document unloads, so a long-lived admin session grew without bound.
- *
- * Derive it once per message instead, and revoke the previous one.
- */
+const getSenderInitial = (sender) => {
+  if (!sender) return '✉'
+  const clean = String(sender).replace(/^["'<]|["'>]$/g, '').trim()
+  const first = clean.charAt(0)
+  return first.toUpperCase() || '✉'
+}
+
 const downloadUrl = ref('')
 watch(
   () => props.mail?.raw,
@@ -79,9 +74,6 @@ watch(
   },
   { immediate: true },
 )
-onBeforeUnmount(() => {
-  if (downloadUrl.value) URL.revokeObjectURL(downloadUrl.value)
-});
 
 const showTextMail = ref(preferShowTextMail.value);
 const showAttachments = ref(false);
@@ -89,13 +81,37 @@ const curAttachments = ref([]);
 const attachmentLoding = ref(false);
 const showFullscreen = ref(false);
 
+const handleFullscreenKeydown = (event) => {
+  if (event.key === 'Escape' || event.key === 'Esc') {
+    showFullscreen.value = false;
+  }
+};
+
+watch(showFullscreen, (isOpen) => {
+  if (typeof window === 'undefined') return;
+  if (isOpen) {
+    window.addEventListener('keydown', handleFullscreenKeydown);
+  } else {
+    window.removeEventListener('keydown', handleFullscreenKeydown);
+  }
+});
+
+onBeforeUnmount(() => {
+  if (downloadUrl.value) URL.revokeObjectURL(downloadUrl.value);
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('keydown', handleFullscreenKeydown);
+  }
+});
+
 const safeMessage = computed(() => sanitizeMailHtml(props.mail.message));
-const iframeRenderGuardStyle = `<style>
+const iframeRenderGuardStyle = computed(() => `<style>
   html, body {
     margin: 0;
     max-width: 100%;
-    background-color: #fff;
-    color: #202124;
+    background-color: ${isDark.value ? '#1e2129' : '#ffffff'};
+    color: ${isDark.value ? '#e6edf3' : '#202124'};
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.6;
   }
   *, *::before, *::after {
     box-sizing: border-box;
@@ -113,12 +129,13 @@ const iframeRenderGuardStyle = `<style>
     overflow-wrap: break-word;
   }
   a {
+    color: ${isDark.value ? '#60a5fa' : '#2563eb'};
     max-width: 100%;
     overflow-wrap: break-word;
     word-break: normal;
   }
-</style>`;
-const iframeMessage = computed(() => `${safeMessage.value}${iframeRenderGuardStyle}`);
+</style>`);
+const iframeMessage = computed(() => `${safeMessage.value}${iframeRenderGuardStyle.value}`);
 const hasHtmlMessage = computed(() => !!props.mail.messageIsHtml && safeMessage.value.trim().length > 0);
 const textMessage = computed(() => String(
   props.mail.text || (!props.mail.messageIsHtml ? props.mail.message : '') || ''
@@ -159,7 +176,6 @@ const handleForward = () => {
   props.onForward();
 };
 
-
 const handleSaveToS3 = async (filename, blob) => {
   attachmentLoding.value = true;
   try {
@@ -168,87 +184,89 @@ const handleSaveToS3 = async (filename, blob) => {
     attachmentLoding.value = false;
   }
 };
-
 </script>
 
 <template>
   <div class="mail-content-renderer">
-    <!-- 邮件信息标签 -->
-    <n-space v-if="showMetaBar" class="mail-meta-bar">
-      <n-tag type="info" class="mail-meta-chip">
-        ID: {{ mail.id }}
-      </n-tag>
-      <n-tag type="info" class="mail-meta-chip">
-        {{ utcToLocalDate(mail.created_at, useUTCDate) }}
-      </n-tag>
-      <n-tag type="info" class="mail-meta-chip mail-meta-address">
-        FROM: {{ mail.source }}
-      </n-tag>
-      <span v-if="showEMailTo" class="mail-meta-recipient">
-        <n-tag type="info" class="mail-meta-chip mail-meta-address">
-          TO: {{ mail.address }}
-        </n-tag>
-        <button type="button" class="mail-copy-button" :aria-label="t('copyRecipient')"
-          :title="t('copyRecipient')" @click.stop="copyRecipientAddress">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M8 8h11v11H8z" />
-            <path d="M5 16H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h11a1 1 0 0 1 1 1v1" />
-          </svg>
-        </button>
-      </span>
+    <!-- Gmail-Style Sender Card & Action Toolbar -->
+    <div v-if="showMetaBar" class="mail-header-card">
+      <div class="mail-sender-profile">
+        <div class="sender-avatar">
+          {{ getSenderInitial(mail.source) }}
+        </div>
+        <div class="sender-details">
+          <div class="sender-headline">
+            <strong class="sender-name">{{ mail.source }}</strong>
+            <time class="sender-timestamp">{{ utcToLocalDate(mail.created_at, useUTCDate) }}</time>
+            <span class="mail-id-tag">#{{ mail.id }}</span>
+          </div>
+          <div v-if="showEMailTo" class="recipient-line">
+            <span class="recipient-label">{{ t('recipient') || '收件人' }}:</span>
+            <span class="recipient-address">{{ mail.address }}</span>
+            <button type="button" class="mail-copy-button" :aria-label="t('copyRecipient')"
+              :title="t('copyRecipient')" @click.stop="copyRecipientAddress">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
 
-      <!-- 操作按钮 -->
-      <n-popconfirm v-if="enableUserDeleteEmail" @positive-click="handleDelete">
-        <template #trigger>
-          <n-button tertiary type="error" size="small">{{ t('delete') }}</n-button>
-        </template>
-        {{ t('deleteMailTip') }}
-      </n-popconfirm>
+      <!-- Action Toolbar -->
+      <div class="mail-action-toolbar">
+        <div class="action-group-main">
+          <n-button v-if="showReply" size="small" tertiary type="primary" @click="handleReply">
+            <template #icon>
+              <n-icon :component="ReplyFilled" />
+            </template>
+            {{ t('reply') }}
+          </n-button>
+          <n-button v-if="showReply" size="small" tertiary type="primary" @click="handleForward">
+            <template #icon>
+              <n-icon :component="ForwardFilled" />
+            </template>
+            {{ t('forward') }}
+          </n-button>
+          <n-button v-if="mail.attachments && mail.attachments.length > 0" size="small" tertiary type="info"
+            @click="handleViewAttachments">
+            📎 {{ t('attachments') }} ({{ mail.attachments.length }})
+          </n-button>
+          <n-button tag="a" target="_blank" tertiary type="info" size="small" :download="mail.id + '.eml'"
+            :href="downloadUrl">
+            <template #icon>
+              <n-icon :component="CloudDownloadRound" />
+            </template>
+            {{ t('downloadMail') }}
+          </n-button>
+        </div>
 
-      <n-button v-if="mail.attachments && mail.attachments.length > 0" size="small" tertiary type="info"
-        @click="handleViewAttachments">
-        {{ t('attachments') }}
-      </n-button>
-
-      <n-button tag="a" target="_blank" tertiary type="info" size="small" :download="mail.id + '.eml'"
-        :href="downloadUrl">
-        <template #icon>
-          <n-icon :component="CloudDownloadRound" />
-        </template>
-        {{ t('downloadMail') }}
-      </n-button>
-
-      <n-button v-if="showReply" size="small" tertiary type="info" @click="handleReply">
-        <template #icon>
-          <n-icon :component="ReplyFilled" />
-        </template>
-        {{ t('reply') }}
-      </n-button>
-
-      <n-button v-if="showReply" size="small" tertiary type="info" @click="handleForward">
-        <template #icon>
-          <n-icon :component="ForwardFilled" />
-        </template>
-        {{ t('forward') }}
-      </n-button>
-
-      <n-button v-if="hasHtmlMessage && textMessage" size="small" tertiary type="info"
-        @click="showTextMail = !showTextMail">
-        {{ showTextMail ? t('showHtmlMail') : t('showTextMail') }}
-      </n-button>
-
-      <n-button size="small" tertiary type="info" @click="showFullscreen = true">
-        <template #icon>
-          <n-icon :component="FullscreenRound" />
-        </template>
-        {{ t('fullscreen') }}
-      </n-button>
-    </n-space>
+        <div class="action-group-secondary">
+          <n-button v-if="hasHtmlMessage && textMessage" size="small" tertiary
+            @click="showTextMail = !showTextMail">
+            {{ showTextMail ? t('showHtmlMail') : t('showTextMail') }}
+          </n-button>
+          <n-button size="small" tertiary @click="showFullscreen = true">
+            <template #icon>
+              <n-icon :component="FullscreenRound" />
+            </template>
+            {{ t('fullscreen') }}
+          </n-button>
+          <n-popconfirm v-if="enableUserDeleteEmail" @positive-click="handleDelete">
+            <template #trigger>
+              <n-button tertiary type="error" size="small">{{ t('delete') }}</n-button>
+            </template>
+            {{ t('deleteMailTip') }}
+          </n-popconfirm>
+        </div>
+      </div>
+    </div>
 
     <!-- AI 提取信息 -->
-    <AiExtractInfo v-if="showMetaBar" :metadata="mail.metadata" />
+    <AiExtractInfo :metadata="mail.metadata" />
 
-    <!-- 邮件内容 -->
+    <!-- 邮件正文 -->
     <div class="mail-content" :class="{ 'dark-mode': isDark }">
       <n-alert v-if="mail.parseFailed" type="warning" :bordered="false" class="mail-render-alert">
         {{ t('parseFailed') }}
@@ -261,18 +279,82 @@ const handleSaveToS3 = async (filename, blob) => {
     </div>
   </div>
 
-  <n-drawer v-model:show="showFullscreen" width="100%" placement="bottom"
-    style="height: 100vh;">
-    <n-drawer-content :title="mail.subject" closable>
-      <div class="fullscreen-mail-content" :class="{ 'dark-mode': isDark }">
-        <n-alert v-if="mail.parseFailed" type="warning" :bordered="false" class="mail-render-alert">
-          {{ t('parseFailed') }}
-        </n-alert>
-        <pre v-if="showPlainText" class="mail-text">{{ textMessage }}</pre>
-        <iframe v-else-if="useIframeShowMail" :srcdoc="iframeMessage" class="mail-iframe" sandbox=""
-          referrerpolicy="no-referrer">
-        </iframe>
-        <ShadowHtmlComponent v-else :key="mail.id" :htmlContent="safeMessage" :isDark="isDark" class="mail-html" />
+  <!-- 全屏抽屉 -->
+  <n-drawer v-model:show="showFullscreen" width="100%" placement="top" :trap-focus="false" :block-scroll="false"
+    :close-on-esc="true" @esc="showFullscreen = false" style="height: 100vh;">
+    <n-drawer-content :title="mail.subject" closable @close="showFullscreen = false">
+      <div class="fullscreen-drawer-body">
+        <div class="mail-header-card fullscreen-header-card">
+          <div class="mail-sender-profile">
+            <div class="sender-avatar">
+              {{ getSenderInitial(mail.source) }}
+            </div>
+            <div class="sender-details">
+              <div class="sender-headline">
+                <strong class="sender-name">{{ mail.source }}</strong>
+                <time class="sender-timestamp">{{ utcToLocalDate(mail.created_at, useUTCDate) }}</time>
+                <span class="mail-id-tag">#{{ mail.id }}</span>
+              </div>
+              <div v-if="showEMailTo" class="recipient-line">
+                <span class="recipient-label">{{ t('recipient') || '收件人' }}:</span>
+                <span class="recipient-address">{{ mail.address }}</span>
+                <button type="button" class="mail-copy-button" :aria-label="t('copyRecipient')"
+                  :title="t('copyRecipient')" @click.stop="copyRecipientAddress">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="mail-action-toolbar">
+            <div class="action-group-main">
+              <n-button v-if="showReply" size="small" tertiary type="primary" @click="handleReply">
+                <template #icon>
+                  <n-icon :component="ReplyFilled" />
+                </template>
+                {{ t('reply') }}
+              </n-button>
+              <n-button v-if="showReply" size="small" tertiary type="primary" @click="handleForward">
+                <template #icon>
+                  <n-icon :component="ForwardFilled" />
+                </template>
+                {{ t('forward') }}
+              </n-button>
+              <n-button v-if="mail.attachments && mail.attachments.length > 0" size="small" tertiary type="info"
+                @click="handleViewAttachments">
+                📎 {{ t('attachments') }} ({{ mail.attachments.length }})
+              </n-button>
+              <n-button tag="a" target="_blank" tertiary type="info" size="small" :download="mail.id + '.eml'"
+                :href="downloadUrl">
+                <template #icon>
+                  <n-icon :component="CloudDownloadRound" />
+                </template>
+                {{ t('downloadMail') }}
+              </n-button>
+            </div>
+
+            <div class="action-group-secondary">
+              <n-button v-if="hasHtmlMessage && textMessage" size="small" tertiary
+                @click="showTextMail = !showTextMail">
+                {{ showTextMail ? t('showHtmlMail') : t('showTextMail') }}
+              </n-button>
+            </div>
+          </div>
+        </div>
+
+        <div class="fullscreen-mail-content" :class="{ 'dark-mode': isDark }">
+          <n-alert v-if="mail.parseFailed" type="warning" :bordered="false" class="mail-render-alert">
+            {{ t('parseFailed') }}
+          </n-alert>
+          <pre v-if="showPlainText" class="mail-text">{{ textMessage }}</pre>
+          <iframe v-else-if="useIframeShowMail" :srcdoc="iframeMessage" class="mail-iframe" sandbox=""
+            referrerpolicy="no-referrer">
+          </iframe>
+          <ShadowHtmlComponent v-else :key="mail.id" :htmlContent="safeMessage" :isDark="isDark" class="mail-html" />
+        </div>
       </div>
     </n-drawer-content>
   </n-drawer>
@@ -314,72 +396,117 @@ const handleSaveToS3 = async (filename, blob) => {
 .mail-content-renderer {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
-.mail-meta-bar {
-  align-items: flex-start;
-  gap: 8px 10px !important;
-}
-
-.mail-meta-chip {
-  max-width: 100%;
-  font-variant-numeric: tabular-nums;
-}
-
-.mail-meta-chip :deep(.n-tag__content) {
-  min-width: 0;
-  max-width: 100%;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  line-height: 1.35;
-}
-
-.mail-meta-address {
-  flex: 1 1 260px;
-}
-
-.mail-meta-recipient {
+.mail-header-card {
   display: flex;
-  flex: 1 1 260px;
-  gap: 6px;
-  align-items: flex-start;
-  min-width: 0;
-  max-width: 100%;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--ets-surface-alt, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--ets-border);
+  border-radius: 10px;
 }
 
-.mail-meta-recipient .mail-meta-address {
+.mail-sender-profile {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.sender-avatar {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+}
+
+.sender-details {
+  flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sender-headline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sender-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ets-text, #e2e8f0);
+  word-break: break-all;
+}
+
+.sender-timestamp {
+  font-size: 12px;
+  color: var(--ets-text-muted, #94a3b8);
+}
+
+.mail-id-tag {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--ets-surface-sunken, rgba(0, 0, 0, 0.2));
+  color: var(--ets-text-muted, #94a3b8);
+  font-family: var(--ets-font-mono, monospace);
+}
+
+.recipient-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--ets-text-muted, #94a3b8);
+  flex-wrap: wrap;
+}
+
+.recipient-label {
+  font-weight: 500;
+}
+
+.recipient-address {
+  color: var(--ets-text, #cbd5e1);
+  word-break: break-all;
 }
 
 .mail-copy-button {
-  display: grid;
-  flex: 0 0 32px;
-  width: 32px;
-  height: 32px;
-  min-height: 32px;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
   border: 0;
-  border-radius: 6px;
+  border-radius: 4px;
   padding: 0;
   background: transparent;
-  color: var(--ets-text-muted);
+  color: var(--ets-text-muted, #94a3b8);
   cursor: pointer;
+  transition: all 120ms ease;
 }
 
 .mail-copy-button:hover {
-  background: var(--ets-surface-alt);
-  color: var(--ets-text);
-}
-
-.mail-copy-button:focus-visible {
-  outline: 2px solid var(--ets-focus-ring);
-  outline-offset: 2px;
+  background: var(--ets-surface, rgba(255, 255, 255, 0.08));
+  color: #60a5fa;
 }
 
 .mail-copy-button svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   fill: none;
   stroke: currentColor;
   stroke-linecap: round;
@@ -387,12 +514,26 @@ const handleSaveToS3 = async (filename, blob) => {
   stroke-width: 1.8;
 }
 
-.mail-content-renderer :deep(.n-button) {
-  min-height: 32px;
+.mail-action-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--ets-border);
+}
+
+.action-group-main,
+.action-group-secondary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .mail-content {
-  margin-top: 10px;
+  margin-top: 4px;
   flex: 1;
 }
 
@@ -402,12 +543,16 @@ const handleSaveToS3 = async (filename, blob) => {
 
 .mail-text {
   white-space: pre-wrap;
-  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-all;
   margin: 0;
-  padding: 0;
+  padding: 16px;
+  border-radius: 8px;
+  background: var(--ets-surface-sunken, rgba(0, 0, 0, 0.15));
+  border: 1px solid var(--ets-border);
   font-family: inherit;
   font-size: inherit;
-  line-height: inherit;
+  line-height: 1.6;
 }
 
 .dark-mode .mail-text {
@@ -422,7 +567,7 @@ const handleSaveToS3 = async (filename, blob) => {
 }
 
 .dark-mode .mail-iframe {
-  background-color: #fff;
+  background-color: #181b22;
 }
 
 .mail-html {
@@ -434,31 +579,34 @@ const handleSaveToS3 = async (filename, blob) => {
   text-align: center;
 }
 
+.fullscreen-drawer-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fullscreen-header-card {
+  margin-bottom: 4px;
+}
+
 .fullscreen-mail-content {
-  height: calc(100vh - 120px);
+  height: calc(100vh - 220px);
   overflow: auto;
 }
 
 .fullscreen-mail-content .mail-iframe {
-  min-height: calc(100vh - 120px);
+  min-height: calc(100vh - 220px);
 }
 
 @media (max-width: 640px) {
-  .mail-meta-bar {
-    gap: 7px !important;
+  .mail-action-toolbar {
+    flex-direction: column;
+    align-items: stretch;
   }
 
-  .mail-meta-address {
-    flex-basis: 100%;
+  .action-group-main,
+  .action-group-secondary {
+    justify-content: flex-start;
   }
-
-  .mail-meta-recipient {
-    flex-basis: 100%;
-  }
-
-  .mail-content {
-    margin-top: 6px;
-  }
-
 }
 </style>

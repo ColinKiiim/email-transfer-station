@@ -95,7 +95,7 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
       <header class="access-topbar">
         <div class="topbar-lead" :class="{ 'has-brand': !railItems.length }">
           <ProductBrand v-if="!railItems.length" :context-label="brandContext" />
-          <div class="title-block">
+          <div v-if="railItems.length" class="title-block">
             <p v-if="kicker" class="kicker">{{ kicker }}</p>
             <h1>{{ title }}</h1>
             <div class="identity-line">
@@ -159,21 +159,24 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
 }
 
 .access-shell.has-rail {
-  grid-template-columns: 232px minmax(0, 1fr);
+  grid-template-columns: 248px minmax(0, 1fr);
 }
 
 .access-sidebar {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   min-width: 0;
-  padding: 20px 12px;
+  padding: 12px 12px 16px;
   border-right: 1px solid var(--access-border);
   background: var(--ets-surface);
 }
 
 .brand-row {
-  min-height: 48px;
-  margin-bottom: 22px;
+  display: flex;
+  align-items: center;
+  height: 60px;
+  padding: 0 4px;
+  margin-bottom: 12px;
 }
 
 .rail-item svg {
@@ -186,11 +189,11 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
   stroke-linejoin: round;
 }
 
-
 .rail-nav {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   align-content: start;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
   overflow-y: auto;
 }
@@ -200,52 +203,61 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
   grid-template-columns: 20px minmax(0, 1fr) auto;
   gap: 10px;
   align-items: center;
-  min-height: 44px;
+  min-height: 38px;
+  height: 38px;
   width: 100%;
   border: 0;
   border-radius: 8px;
-  padding: 0 10px;
+  padding: 0 12px;
   background: transparent;
-  color: var(--ets-text);
+  color: var(--access-muted);
   font: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
   text-align: left;
   cursor: pointer;
-  transition-property: background-color, color, scale;
-  transition-duration: 160ms;
-  transition-timing-function: ease-out;
+  transition: all 120ms ease;
 }
 
 .rail-item:active {
-  scale: 0.96;
+  scale: 0.98;
 }
 
 .rail-item:hover {
-  background: var(--ets-hover);
-  color: var(--ets-on-brand-soft);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--access-text);
 }
 
 .rail-item.is-active {
-  background: var(--access-accent-soft);
-  color: var(--ets-on-brand-soft);
+  background: var(--ets-brand-soft, rgba(59, 130, 246, 0.15));
+  color: var(--ets-brand, #3b82f6);
+  font-weight: 600;
+}
+
+.rail-item.is-active svg {
+  color: var(--ets-brand, #3b82f6);
 }
 
 .rail-item span {
   overflow: hidden;
-  font-size: 13px;
-  font-weight: 650;
+  font-size: 13.5px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .rail-item b {
-  min-width: 26px;
-  border-radius: 999px;
-  padding: 2px 7px;
-  background: var(--access-accent);
-  color: var(--ets-brand-contrast);
+  min-width: 20px;
+  height: 18px;
+  border-radius: 6px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(59, 130, 246, 0.18);
+  color: var(--ets-brand, #3b82f6);
   font-size: 11px;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
-  text-align: center;
 }
 
 .rail-footer {
@@ -264,18 +276,22 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
 }
 
 .access-topbar {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 18px;
+  display: flex;
   align-items: center;
-  min-height: 74px;
-  padding: 16px 24px 12px;
+  justify-content: space-between;
+  gap: 16px;
+  height: 60px;
+  min-height: 60px;
+  padding: 0 24px;
   border-bottom: 1px solid var(--access-border);
   background: var(--ets-surface);
-  backdrop-filter: blur(18px);
+  box-sizing: border-box;
 }
 
 .title-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   min-width: 0;
 }
 
@@ -291,40 +307,33 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
 }
 
 .kicker {
-  margin: 0 0 2px;
-  color: var(--access-muted);
-  font-size: 12px;
-  line-height: 1.2;
-  text-transform: lowercase;
+  display: none;
 }
 
 .title-block h1 {
   margin: 0;
   overflow: hidden;
   color: var(--ets-text-strong);
-  font-size: 26px;
-  font-weight: 780;
-  line-height: 1.15;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.2;
   text-overflow: ellipsis;
-  text-wrap: balance;
+  white-space: nowrap;
 }
 
 .identity-line {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px 8px;
   align-items: center;
-  min-height: 22px;
-  margin-top: 6px;
+  gap: 8px;
   color: var(--access-muted);
   font-size: 12px;
 }
 
 .identity-label {
-  max-width: min(58vw, 560px);
+  max-width: min(40vw, 360px);
   overflow: hidden;
-  color: var(--ets-text);
-  font-weight: 650;
+  color: var(--ets-text-muted);
+  font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -374,8 +383,16 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
 .access-view {
   min-width: 0;
   min-height: 0;
-  overflow: auto;
+  overflow-y: auto;
   padding: 16px 24px 24px;
+}
+
+.access-shell:not(.has-rail) .access-view {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 @media (max-width: 900px) {

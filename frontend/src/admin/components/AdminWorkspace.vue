@@ -25,14 +25,6 @@ defineExpose({
 
 <template>
     <section class="view" :aria-busy="model.ui.syncing ? 'true' : 'false'" aria-live="polite">
-        <div v-if="model.activeView === 'overview'" class="state-band" :aria-label="t('runtimeState')">
-            <div v-for="card in model.stateCards" :key="card.label" class="state-card"
-                :class="{ warn: card.tone === 'warn', error: card.tone === 'danger' }">
-                <strong>{{ card.value }}</strong>
-                <span>{{ card.label }}</span>
-            </div>
-        </div>
-
         <div v-if="model.toolbarActions.length" class="toolbar">
             <button v-for="action in model.toolbarActions" :key="action.label" type="button" class="btn"
                 :class="{ primary: action.primary, danger: action.danger, 'icon-only': model.activeView === 'flow' && action.action === 'refresh' }"

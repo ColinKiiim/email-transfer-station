@@ -27,6 +27,9 @@ describe('admin API adapter', () => {
         await client.listMails({ limit: 25, offset: 50 })
         await client.getMail('mail/7')
         await client.listAddresses()
+        await client.listUsers({ limit: 10, offset: 20, query: ' alice@example.test ' })
+        await client.listUserRoles()
+        await client.listUserBoundAddresses(12)
 
         expect(fetcher.mock.calls).toEqual([
             ['/open_api/admin_login_settings'],
@@ -41,6 +44,9 @@ describe('admin API adapter', () => {
             ['/api/admin/mails?limit=25&offset=50&include_raw=false'],
             ['/api/admin/mails/mail%2F7'],
             ['/api/admin/address?limit=50&offset=0'],
+            ['/api/admin/users?limit=10&offset=20&query=alice%40example.test'],
+            ['/api/admin/user_roles'],
+            ['/api/admin/users/bind_address/12'],
         ])
     })
 
@@ -50,6 +56,13 @@ describe('admin API adapter', () => {
 
         await client.markMailRead('mail/7')
         await client.deleteMail(7)
+        await client.createUser({ email: ' alice@example.test ', passwordHash: 'hash-abc', username: 'alice', displayName: 'Alice' })
+        await client.deleteUser(12)
+        await client.resetUserPassword(12, 'hash-def')
+        await client.setUserRole(12, 'admin')
+        await client.setUserRole(12, '')
+        await client.bindUserAddress({ userId: 12, addressId: 3, address: 'qa@example.test' })
+        await client.unbindUserAddress({ userId: 12, addressId: 3, address: 'qa@example.test' })
         await client.createAddress({ name: 'qa', domain: 'example.test', enablePrefix: true, enableRandomSubdomain: false })
         await client.createShareToken(8, { label: 'readonly', expiresAt: '2026-07-16 10:00:00' })
         await client.deleteAddress(8, { credentialVersion: 2, mailCount: 3, sentCount: 4, shareCount: 1 })
@@ -75,6 +88,13 @@ describe('admin API adapter', () => {
         expect(fetcher.mock.calls).toEqual([
             ['/api/admin/mails/mail%2F7/read_state', write('PATCH', { read: true })],
             ['/api/admin/mails/7', write('DELETE', { confirm: true })],
+            ['/api/admin/users', write('POST', { email: 'alice@example.test', password: 'hash-abc', username: 'alice', display_name: 'Alice' })],
+            ['/api/admin/users/12', write('DELETE', { confirm: true })],
+            ['/api/admin/users/12/reset_password', write('POST', { password: 'hash-def', confirm: true })],
+            ['/api/admin/user_roles', write('POST', { user_id: 12, role_text: 'admin', confirm: true })],
+            ['/api/admin/user_roles', write('POST', { user_id: 12, role_text: undefined, confirm: true })],
+            ['/api/admin/users/bind_address', write('POST', { user_id: 12, address_id: 3, address: 'qa@example.test', confirm: true })],
+            ['/api/admin/users/bind_address', write('DELETE', { user_id: 12, address_id: 3, address: 'qa@example.test', confirm: true })],
             ['/api/admin/new_address', write('POST', { name: 'qa', domain: 'example.test', enablePrefix: true, enableRandomSubdomain: false })],
             ['/api/admin/address/8/share_tokens', write('POST', { label: 'readonly', scopes: ['read'], expires_at: '2026-07-16 10:00:00' })],
             ['/api/admin/delete_address/8', write('DELETE', {

@@ -70,7 +70,7 @@ test.describe('Admin console', () => {
       await expect(page.locator('.mail-row[aria-selected="true"]', { hasText: subject })).toBeVisible();
 
       page.once('dialog', (dialog) => dialog.accept());
-      await page.locator('.mail-reader-actions .danger').click();
+      await page.locator('.mail-reader-actions .danger, .mail-detail-panel .danger').click();
       await expect(page.locator('.toast')).toContainText('已删除 1 封生产邮件');
       await expect(page.locator('.mail-row', { hasText: subject })).toHaveCount(0);
 

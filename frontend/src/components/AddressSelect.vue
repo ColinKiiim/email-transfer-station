@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { onMounted, ref, watch } from 'vue'
 import { useLocalStorage } from '@vueuse/core'
 import { useScopedI18n } from '@/i18n/app'
@@ -234,6 +234,12 @@ watch([userJwt, isTelegram, () => settings.value.address], async () => {
     min-width: 220px;
     max-width: 420px;
     flex: 1 1 220px;
+}
+
+.address-select :deep(.n-base-selection-label) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .address-copy {

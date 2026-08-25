@@ -7,6 +7,13 @@ const apiMocks = vi.hoisted(() => ({
     checkCloudflareDomain: vi.fn(),
     createAddress: vi.fn(),
     deleteMail: vi.fn(),
+    createUser: vi.fn(),
+    deleteUser: vi.fn(),
+    resetUserPassword: vi.fn(),
+    setUserRole: vi.fn(),
+    bindUserAddress: vi.fn(),
+    unbindUserAddress: vi.fn(),
+    listUserBoundAddresses: vi.fn(),
 }))
 
 vi.mock('../admin-api', () => ({
@@ -35,9 +42,16 @@ const buildHarness = (overrides = {}) => {
         mails: 1,
         sent: 0,
     }
+    const user = {
+        id: 'user-10',
+        sourceId: 10,
+        user: 'admin@example.test',
+        roleText: 'admin',
+    }
     const filteredMailRows = ref([mail])
     const showToast = vi.fn()
     const refreshAll = vi.fn()
+    const refreshUsers = vi.fn()
     const replaceRouteQuery = vi.fn()
     const syncMailQueryToRoute = vi.fn()
     const ui = reactive({
@@ -46,12 +60,13 @@ const buildHarness = (overrides = {}) => {
         address: 'all',
         status: 'all',
         flowMode: 'detail',
-        selected: { flow: mail.id, identity: address.id, routing: domain.id },
+        selected: { flow: mail.id, identity: address.id, routing: domain.id, users: user.id },
     })
     const inputs = {
         activeView: ref('identity'),
         addressRows: ref([address]),
         currentAddress: ref(address),
+        currentUser: ref(user),
         currentDomain: ref(domain),
         currentMail: ref(mail),
         dbVersionLabel: ref('9'),
@@ -61,6 +76,7 @@ const buildHarness = (overrides = {}) => {
         openSettings: ref({ prefix: '', enableAddressPassword: false }),
         opsRows: ref([{ status: '可用' }, { status: '可用' }]),
         refreshAll,
+        refreshUsers,
         replaceRouteQuery,
         resetMailListScroll: vi.fn(),
         showAdminPage: ref(true),
@@ -76,7 +92,9 @@ const buildHarness = (overrides = {}) => {
         inputs,
         mail,
         domain,
+        user,
         refreshAll,
+        refreshUsers,
         replaceRouteQuery,
         showToast,
         syncMailQueryToRoute,
@@ -160,5 +178,112 @@ describe('admin console action controller', () => {
         expect(apiMocks.checkCloudflareDomain).toHaveBeenCalledWith(1)
         expect(harness.refreshAll).toHaveBeenCalledOnce()
         expect(harness.showToast).toHaveBeenCalledWith('Cloudflare 路由检查完成：1 条规则', 'success')
+    })
+
+    it('creates a user, hashes password, and immediately wipes plaintext password', async () => {
+        apiMocks.createUser.mockResolvedValue({ id: 11, email: 'new@example.test' })
+        const harness = buildHarness()
+        harness.actions.openActionModal('new-user')
+        harness.actions.userCreateForm.email = 'new@example.test'
+        harness.actions.userCreateForm.password = 'supersecret'
+        harness.actions.userCreateForm.username = 'newuser'
+        harness.actions.userCreateForm.displayName = 'New User'
+
+        await harness.actions.createUserAction()
+
+        expect(apiMocks.createUser).toHaveBeenCalledWith({
+            email: 'new@example.test',
+            passwordHash: expect.any(String),
+            username: 'newuser',
+            displayName: 'New User',
+        })
+        expect(harness.actions.userCreateForm.password).toBe('')
+        expect(harness.actions.actionModal.value).toBe('')
+        expect(harness.refreshUsers).toHaveBeenCalledOnce()
+        expect(harness.showToast).toHaveBeenCalledWith('已创建用户 new@example.test', 'success')
+    })
+
+    it('resets a user password with confirmation and clears password state', async () => {
+        vi.spyOn(window, 'confirm').mockReturnValue(true)
+        apiMocks.resetUserPassword.mockResolvedValue({ success: true })
+        const harness = buildHarness()
+        harness.actions.openActionModal('reset-password')
+        harness.actions.userResetPasswordForm.password = 'newpassword123'
+
+        await harness.actions.resetUserPasswordAction()
+
+        expect(apiMocks.resetUserPassword).toHaveBeenCalledWith(10, expect.any(String))
+        expect(harness.actions.userResetPasswordForm.password).toBe('')
+        expect(harness.actions.actionModal.value).toBe('')
+        expect(harness.showToast).toHaveBeenCalledWith('已重置用户 admin@example.test 的密码', 'success')
+    })
+
+    it('updates user role and handles conflict errors gracefully', async () => {
+        apiMocks.setUserRole.mockResolvedValue({ success: true })
+        const harness = buildHarness()
+        harness.actions.openActionModal('edit-role')
+        harness.actions.userRoleForm.roleText = 'viewer'
+
+        await harness.actions.updateUserRoleAction()
+
+        expect(apiMocks.setUserRole).toHaveBeenCalledWith(10, 'viewer')
+        expect(harness.actions.actionModal.value).toBe('')
+        expect(harness.refreshUsers).toHaveBeenCalledOnce()
+
+        // Error conflict handling
+        apiMocks.setUserRole.mockRejectedValue({
+            data: { error: 'admin_last_role_holder_protected' },
+            message: 'Conflict',
+        })
+        await harness.actions.updateUserRoleAction()
+        expect(harness.showToast).toHaveBeenCalledWith('无法降级或删除最后一名管理员', 'error')
+    })
+
+    it('deletes user after confirmation and handles self-deletion protection', async () => {
+        vi.spyOn(window, 'confirm').mockReturnValue(true)
+        apiMocks.deleteUser.mockResolvedValue({ success: true })
+        const harness = buildHarness()
+
+        await harness.actions.deleteUserAction(harness.user)
+
+        expect(apiMocks.deleteUser).toHaveBeenCalledWith(10)
+        expect(harness.ui.selected.users).toBe('')
+        expect(harness.refreshUsers).toHaveBeenCalledOnce()
+
+        // Actor protection handling
+        apiMocks.deleteUser.mockRejectedValue({
+            data: { error: 'admin_current_actor_protected' },
+            message: 'Conflict',
+        })
+        await harness.actions.deleteUserAction(harness.user)
+        expect(harness.showToast).toHaveBeenCalledWith('无法对当前登录的管理员账号执行此操作', 'error')
+    })
+
+    it('binds and unbinds address to/from user', async () => {
+        vi.spyOn(window, 'confirm').mockReturnValue(true)
+        apiMocks.bindUserAddress.mockResolvedValue({ success: true })
+        apiMocks.unbindUserAddress.mockResolvedValue({ success: true })
+        apiMocks.listUserBoundAddresses.mockResolvedValue({ results: [{ id: 5, name: 'alias@example.test' }] })
+
+        const harness = buildHarness()
+        harness.actions.userAddressBindForm.address = 'alias@example.test'
+
+        await harness.actions.bindAddressToUser(harness.user)
+
+        expect(apiMocks.bindUserAddress).toHaveBeenCalledWith({
+            userId: 10,
+            addressId: undefined,
+            address: 'alias@example.test',
+        })
+        expect(harness.actions.userAddressBindForm.address).toBe('')
+        expect(harness.showToast).toHaveBeenCalledWith('已绑定地址到用户 admin@example.test', 'success')
+
+        await harness.actions.unbindAddressFromUser(harness.user, { id: 5, name: 'alias@example.test' })
+        expect(apiMocks.unbindUserAddress).toHaveBeenCalledWith({
+            userId: 10,
+            addressId: 5,
+            address: 'alias@example.test',
+        })
+        expect(harness.showToast).toHaveBeenCalledWith('已解绑用户 admin@example.test 的地址', 'success')
     })
 })

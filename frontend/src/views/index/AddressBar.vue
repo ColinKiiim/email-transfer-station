@@ -41,9 +41,11 @@ watch(
 
 <template>
     <div>
-        <n-card :bordered="false" embedded v-if="!settings.fetched">
-            <n-skeleton style="height: 50vh" />
-        </n-card>
+        <div v-if="!settings.fetched && jwt" class="center">
+            <n-card :bordered="false" embedded style="max-width: 600px; width: 100%;">
+                <n-skeleton text :repeat="4" />
+            </n-card>
+        </div>
         <div v-else-if="settings.address">
             <n-alert type="info" :show-icon="false" :bordered="false">
                 <AddressSelect>
@@ -65,20 +67,34 @@ watch(
                 <AddressManagement />
             </n-card>
         </div>
-        <div v-else class="center">
-            <n-card :bordered="false" embedded style="max-width: 600px;">
-                <n-alert v-if="jwt" type="warning" :show-icon="false" :bordered="false" closable>
+        <div v-else class="auth-center-shell">
+            <div class="auth-card">
+                <div class="auth-brand-badge">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M4 6h16v12H4z" fill="none" stroke="currentColor" stroke-width="2" />
+                        <path d="m4 7 8 6 8-6" fill="none" stroke="currentColor" stroke-width="2" />
+                    </svg>
+                </div>
+                <div class="auth-card-header">
+                    <h2>{{ t('mailboxAccess') }}</h2>
+                    <p>{{ t('mailboxAccessDesc') }}</p>
+                </div>
+                <n-alert v-if="jwt" type="warning" :show-icon="false" :bordered="false" closable style="margin-bottom: 14px;">
                     <span>{{ t('fetchAddressError') }}</span>
                 </n-alert>
                 <Login />
-                <n-divider />
-                <n-button v-if="showUserEntry" @click="onUserLogin" type="primary" block secondary strong>
-                    <template #icon>
-                        <n-icon :component="User" />
-                    </template>
-                    {{ t('userLogin') }}
-                </n-button>
-            </n-card>
+                <div v-if="showUserEntry" class="auth-user-portal-entry">
+                    <div class="auth-separator">
+                        <span>{{ t('or') || '或' }}</span>
+                    </div>
+                    <n-button @click="onUserLogin" type="primary" block secondary size="large" class="user-portal-btn" strong>
+                        <template #icon>
+                            <n-icon :component="User" />
+                        </template>
+                        {{ t('userLogin') }}
+                    </n-button>
+                </div>
+            </div>
         </div>
         <AddressCredentialModal v-model:show="showAddressCredential" :address="settings.address" :jwt="jwt"
             :address-password="addressPassword" />
@@ -98,10 +114,6 @@ watch(
     text-align: center;
 }
 
-.n-card {
-    margin-top: 10px;
-}
-
 .center {
     display: flex;
     text-align: left;
@@ -115,4 +127,88 @@ watch(
     white-space: nowrap;
 }
 
+.auth-center-shell {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: calc(100vh - 60px);
+    padding: 24px 16px;
+    box-sizing: border-box;
+}
+
+.auth-card {
+    width: min(100%, 460px);
+    border-radius: 16px;
+    padding: 32px 28px;
+    background: var(--ets-surface);
+    border: 1px solid var(--ets-border);
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.4);
+    text-align: center;
+}
+
+.auth-brand-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #3b82f6, #6366f1);
+    color: #ffffff;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
+}
+
+.auth-brand-badge svg {
+    width: 24px;
+    height: 24px;
+}
+
+.auth-card-header h2 {
+    margin: 0;
+    color: var(--ets-text-strong);
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.auth-card-header p {
+    margin: 6px 0 16px;
+    color: var(--ets-text-muted);
+    font-size: 13.5px;
+    line-height: 1.5;
+}
+
+.auth-separator {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 18px 0 12px;
+    color: var(--ets-text-muted);
+    font-size: 12px;
+}
+
+.auth-separator::before,
+.auth-separator::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid var(--ets-border);
+}
+
+.auth-separator span {
+    padding: 0 12px;
+    opacity: 0.6;
+}
+
+.user-portal-btn {
+    height: 40px;
+    border-radius: 8px;
+    font-size: 14px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--ets-border);
+}
+
+.user-portal-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
 </style>

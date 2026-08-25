@@ -15,7 +15,7 @@ import { DEFAULT_LOCALE, isSupportedLocale } from './i18n/utils'
 import { naiveDarkOverrides, naiveLightOverrides } from './styles/naive-theme'
 
 const {
-  isDark, loading, useSideMargin, telegramApp, isTelegram
+  isDark, useSideMargin, telegramApp, isTelegram
 } = useGlobalState()
 const adClient = import.meta.env.VITE_GOOGLE_AD_CLIENT;
 const adSlot = import.meta.env.VITE_GOOGLE_AD_SLOT;
@@ -30,10 +30,9 @@ const isMobile = useIsMobile()
 const isShareOnlyRoute = computed(() => route.meta?.shareOnly === true)
 const isFullScreenRoute = computed(() => route.meta?.fullScreen === true)
 const showAppChrome = computed(() => !isShareOnlyRoute.value && !isFullScreenRoute.value)
-const showSideMargin = computed(() => showAppChrome.value && !isMobile.value && useSideMargin.value);
-const showAd = computed(() => showAppChrome.value && !isMobile.value && adClient && adSlot);
+const showAd = computed(() => showAppChrome.value && !isMobile.value && Boolean(adClient) && Boolean(adSlot));
+const showSideMargin = computed(() => showAppChrome.value && !isMobile.value && useSideMargin.value && showAd.value);
 const gridMaxCols = computed(() => showAd.value ? 8 : 12);
-const showGlobalLoading = computed(() => loading.value && !isFullScreenRoute.value);
 
 watchEffect(() => {
   if (typeof document === 'undefined') return
@@ -75,7 +74,6 @@ onMounted(async () => {
     (window.adsbygoogle = window.adsbygoogle || []).push({});
   }
 
-
   // check if telegram is enabled
   const enableTelegram = import.meta.env.VITE_IS_TELEGRAM;
   if (
@@ -100,40 +98,40 @@ onMounted(async () => {
   <n-config-provider :locale="localeConfig.locale" :date-locale="localeConfig.dateLocale" :theme="theme"
     :theme-overrides="themeOverrides">
     <n-global-style />
-    <n-spin description="loading..." :show="showGlobalLoading">
-      <n-notification-provider container-style="margin-top: 60px;">
-        <n-message-provider container-style="margin-top: 20px;">
-          <n-grid x-gap="12" :cols="gridMaxCols">
-            <n-gi v-if="showSideMargin" span="1">
-              <div class="side" v-if="showAd">
-                <ins class="adsbygoogle" style="display:block" :data-ad-client="adClient" :data-ad-slot="adSlot"
-                  data-ad-format="auto" data-full-width-responsive="true"></ins>
-              </div>
-            </n-gi>
-            <n-gi :span="!showSideMargin ? gridMaxCols : (gridMaxCols - 2)">
-              <div class="main" :class="{ 'main-fullscreen': isFullScreenRoute }">
-                <n-space vertical>
-                  <n-layout style="min-height: 80vh;">
-                    <Header v-if="showAppChrome" />
-                    <router-view></router-view>
-                  </n-layout>
-                </n-space>
-              </div>
-            </n-gi>
-            <n-gi v-if="showSideMargin" span="1">
-              <div class="side" v-if="showAd">
-                <ins class="adsbygoogle" style="display:block" :data-ad-client="adClient" :data-ad-slot="adSlot"
-                  data-ad-format="auto" data-full-width-responsive="true"></ins>
-              </div>
-            </n-gi>
-          </n-grid>
-          <n-back-top />
-        </n-message-provider>
-      </n-notification-provider>
-    </n-spin>
+    <n-notification-provider container-style="margin-top: 60px;">
+      <n-message-provider container-style="margin-top: 20px;">
+        <div class="app-root" :class="{ 'app-root-fullscreen': isFullScreenRoute }">
+          <Header v-if="showAppChrome" />
+          <div class="app-body">
+            <n-grid v-if="showSideMargin" x-gap="12" :cols="gridMaxCols" class="app-grid">
+              <n-gi span="1">
+                <div class="side" v-if="showAd">
+                  <ins class="adsbygoogle" style="display:block" :data-ad-client="adClient" :data-ad-slot="adSlot"
+                    data-ad-format="auto" data-full-width-responsive="true"></ins>
+                </div>
+              </n-gi>
+              <n-gi :span="gridMaxCols - 2">
+                <main class="main" :class="{ 'main-fullscreen': isFullScreenRoute }">
+                  <router-view></router-view>
+                </main>
+              </n-gi>
+              <n-gi span="1">
+                <div class="side" v-if="showAd">
+                  <ins class="adsbygoogle" style="display:block" :data-ad-client="adClient" :data-ad-slot="adSlot"
+                    data-ad-format="auto" data-full-width-responsive="true"></ins>
+                </div>
+              </n-gi>
+            </n-grid>
+            <main v-else class="main" :class="{ 'main-fullscreen': isFullScreenRoute }">
+              <router-view></router-view>
+            </main>
+          </div>
+        </div>
+        <n-back-top />
+      </n-message-provider>
+    </n-notification-provider>
   </n-config-provider>
 </template>
-
 
 <style>
 :root {
@@ -146,11 +144,48 @@ body,
   font-family: var(--ets-ui-font);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: var(--ets-bg);
+  color: var(--ets-text);
+  height: 100dvh;
+  min-height: 100dvh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
 :where(button, a, input, textarea, select, [tabindex]):focus-visible {
   outline: 2px solid var(--ets-focus-ring);
   outline-offset: 2px;
+}
+
+* {
+  scrollbar-color: color-mix(in oklch, var(--ets-text-muted) 55%, transparent) transparent;
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--ets-scrollbar-track, transparent);
+}
+
+*::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: var(--ets-radius-pill, 999px);
+  background: var(--ets-scrollbar-thumb, color-mix(in oklch, var(--ets-text-muted) 48%, transparent));
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--ets-scrollbar-thumb-hover, color-mix(in oklch, var(--ets-text-muted) 68%, transparent));
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 .n-switch {
@@ -160,28 +195,54 @@ body,
 </style>
 
 <style scoped>
+.app-root {
+  height: 100dvh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--ets-bg);
+  color: var(--ets-text);
+  width: 100%;
+  overflow: hidden;
+}
+
+.app-body {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.app-grid {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  flex: 1;
+}
+
 .side {
-  height: 100vh;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .main {
-  height: 100vh;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
   text-align: center;
+  box-sizing: border-box;
 }
 
 .main-fullscreen {
   text-align: left;
-}
-
-.n-grid {
   height: 100%;
-}
-
-.n-gi {
-  height: 100%;
-}
-
-.n-space {
-  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 </style>

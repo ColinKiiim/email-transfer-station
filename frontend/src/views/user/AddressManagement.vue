@@ -144,22 +144,16 @@ const columns = computed(() => [
     {
         title: t('actions'),
         key: 'actions',
+        align: 'right',
         render(row) {
             const actions = [
-                h(NPopconfirm,
+                h(NButton,
                     {
-                        onPositiveClick: () => changeMailAddress(row.id)
+                        tertiary: true,
+                        type: "primary",
+                        onClick: () => changeMailAddress(row.id)
                     },
-                    {
-                        trigger: () => h(NButton,
-                            {
-                                tertiary: true,
-                                type: "primary",
-                            },
-                            { default: () => t('changeMailAddress') }
-                        ),
-                        default: () => `${t('changeMailAddress')}?`
-                    }
+                    { default: () => t('changeMailAddress') }
                 ),
             ];
             if (canTransferAddress.value) {
@@ -252,6 +246,9 @@ onMounted(async () => {
 .address-table-scroll {
     max-width: 100%;
     overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid var(--ets-border);
+    -webkit-overflow-scrolling: touch;
 }
 
 .portal-tip {
@@ -267,5 +264,6 @@ onMounted(async () => {
     flex-wrap: wrap;
     gap: 6px;
     align-items: center;
+    justify-content: flex-end;
 }
 </style>

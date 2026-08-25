@@ -61,6 +61,27 @@ describe('admin mail-flow model', () => {
         })
     })
 
+    it('uses sender aliases and localized placeholders for incomplete rows', () => {
+        const [fromRow] = normalizeAdminMailRows([{
+            id: 11,
+            from: 'alias@example.test',
+            address: 'ops@example.test',
+        }])
+        const [emptyRow] = normalizeAdminMailRows([{
+            id: 12,
+            address: 'ops@example.test',
+        }])
+
+        expect(fromRow).toMatchObject({
+            sender: 'alias@example.test',
+            subject: '(无主题)',
+        })
+        expect(emptyRow).toMatchObject({
+            sender: '(未知发件人)',
+            subject: '(无主题)',
+        })
+    })
+
     it('applies structured query, scope, and status filters', () => {
         const rows = normalizeAdminMailRows([
             rawMail(1),

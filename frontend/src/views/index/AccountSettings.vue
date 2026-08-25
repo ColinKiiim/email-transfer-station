@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { ref } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 import { useRouter } from 'vue-router'
@@ -128,36 +128,56 @@ const changePassword = async () => {
         <n-modal v-model:show="showLogout" preset="dialog" :title="t('logout')">
             <p>{{ t('logoutConfirm') }}</p>
             <template #action>
-                <n-button :loading="loading" @click="logout" size="small" tertiary type="warning">
-                    {{ t('logout') }}
-                </n-button>
+                <n-space justify="end">
+                    <n-button @click="showLogout = false" size="small" tertiary>
+                        {{ t('cancel') || '取消' }}
+                    </n-button>
+                    <n-button :loading="loading" @click="logout" size="small" type="warning">
+                        {{ t('logout') }}
+                    </n-button>
+                </n-space>
             </template>
         </n-modal>
         <n-modal v-model:show="showDeleteAccount" preset="dialog" :title="t('deleteAccount')">
             <p>{{ t('deleteAccountConfirm') }}</p>
             <template #action>
-                <n-button :loading="loading" @click="deleteAccount" size="small" tertiary type="error">
-                    {{ t('deleteAccount') }}
-                </n-button>
+                <n-space justify="end">
+                    <n-button @click="showDeleteAccount = false" size="small" tertiary>
+                        {{ t('cancel') || '取消' }}
+                    </n-button>
+                    <n-button :loading="loading" @click="deleteAccount" size="small" type="error">
+                        {{ t('deleteAccount') }}
+                    </n-button>
+                </n-space>
             </template>
         </n-modal>
         <n-modal v-model:show="showClearInbox" preset="dialog" :title="t('clearInbox')">
             <p>{{ t('clearInboxConfirm') }}</p>
             <template #action>
-                <n-button :loading="loading" @click="clearInbox" size="small" tertiary type="warning">
-                    {{ t('clearInbox') }}
-                </n-button>
+                <n-space justify="end">
+                    <n-button @click="showClearInbox = false" size="small" tertiary>
+                        {{ t('cancel') || '取消' }}
+                    </n-button>
+                    <n-button :loading="loading" @click="clearInbox" size="small" type="warning">
+                        {{ t('clearInbox') }}
+                    </n-button>
+                </n-space>
             </template>
         </n-modal>
         <n-modal v-model:show="showClearSentItems" preset="dialog" :title="t('clearSentItems')">
             <p>{{ t('clearSentItemsConfirm') }}</p>
             <template #action>
-                <n-button :loading="loading" @click="clearSentItems" size="small" tertiary type="warning">
-                    {{ t('clearSentItems') }}
-                </n-button>
+                <n-space justify="end">
+                    <n-button @click="showClearSentItems = false" size="small" tertiary>
+                        {{ t('cancel') || '取消' }}
+                    </n-button>
+                    <n-button :loading="loading" @click="clearSentItems" size="small" type="warning">
+                        {{ t('clearSentItems') }}
+                    </n-button>
+                </n-space>
             </template>
         </n-modal>
-        
+
         <n-modal v-model:show="showChangePassword" preset="dialog" :title="t('changePassword')">
             <n-form :model="{ newPassword, confirmPassword }">
                 <n-form-item :label="t('newPassword')">

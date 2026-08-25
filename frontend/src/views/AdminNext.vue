@@ -24,6 +24,7 @@ import {
     buildAdminExceptionRail,
     buildAdminProcessingRows,
     buildAdminShareRows,
+    buildAdminUserRail,
     buildAdminUserRows,
 } from '../admin/admin-identity-access'
 import {
@@ -330,6 +331,15 @@ const refreshAll = async () => {
     }
 }
 
+const refreshUsers = async () => {
+    try {
+        const users = await adminApi.listUsers({ limit: 100 })
+        live.users = Array.isArray(users?.results) ? users.results : (Array.isArray(users) ? users : [])
+    } catch (error) {
+        recordLoadError('users', error)
+    }
+}
+
 const {
     authFunc,
     cfToken,
@@ -564,15 +574,19 @@ const activePanels = computed(() => {
     }
     if (view === 'flow') {
         return [
-            { id: 'mails', title: t('panelMailRecords'), columns: tableSpecs.mails, rows: filterRows(mailRows.value), kind: 'flow', layout: 'split' },
-            { id: 'unknown', title: t('panelExceptionQueue'), columns: tableSpecs.risks, rows: filterRows(unknownRows.value), kind: 'access', layout: 'split' },
+            { id: 'mails', title: t('panelMailRecords'), columns: tableSpecs.mails, rows: filterRows(mailRows.value), kind: 'flow' },
+            { id: 'unknown', title: t('panelExceptionQueue'), columns: tableSpecs.risks, rows: filterRows(unknownRows.value), kind: 'access' },
             { id: 'logs', title: t('panelProcessingLogs'), columns: tableSpecs.logs, rows: filterRows(processingRows.value), kind: 'logs' },
         ]
     }
     if (view === 'identity') {
         return [
             { id: 'addresses', title: t('panelAddressLedger'), columns: tableSpecs.addresses, rows: filterRows(addressRows.value), kind: 'identity' },
-            { id: 'users', title: t('panelUsersAndRoles'), columns: tableSpecs.users, rows: filterRows(userRows.value), kind: 'users', layout: 'third' },
+        ]
+    }
+    if (view === 'users') {
+        return [
+            { id: 'users', title: t('panelUsersAndRoles'), columns: tableSpecs.users, rows: filterRows(userRows.value), kind: 'users' },
         ]
     }
     if (view === 'routing') {
@@ -584,13 +598,13 @@ const activePanels = computed(() => {
     if (view === 'delivery') {
         return [
             { id: 'channels', title: t('panelOutboundChannels'), columns: tableSpecs.notifications, rows: filterRows(notificationRows.value), kind: 'delivery' },
-            { id: 'sender', title: t('panelAddressLevelSending'), columns: tableSpecs.sender, rows: filterRows(senderAccessRows.value), kind: 'delivery', layout: 'third' },
-            { id: 'sendbox', title: t('panelSendBox'), columns: tableSpecs.mails, rows: filterRows(sendBoxRows.value), kind: 'delivery', layout: 'third' },
+            { id: 'sender', title: t('panelAddressLevelSending'), columns: tableSpecs.sender, rows: filterRows(senderAccessRows.value), kind: 'delivery', layout: 'split' },
+            { id: 'sendbox', title: t('panelSendBox'), columns: tableSpecs.mails, rows: filterRows(sendBoxRows.value), kind: 'delivery', layout: 'split' },
         ]
     }
     if (view === 'access') {
         return [
-            { id: 'shares', title: t('panelAccessPackages'), columns: tableSpecs.shares, rows: filterRows(shareRows.value), kind: 'access', layout: 'split' },
+            { id: 'shares', title: t('panelAccessPackages'), columns: tableSpecs.shares, rows: filterRows(shareRows.value), kind: 'access' },
             { id: 'audit', title: t('panelAuditAndAccessLogs'), columns: tableSpecs.audit, rows: filterRows(auditRows.value), kind: 'audit' },
         ]
     }
@@ -627,7 +641,7 @@ const selectRow = (kind, id) => {
     if (activeView.value === 'flow' && (kind === 'flow' || kind === 'exception')) {
         ui.detailKind = kind
         detailOpen.value = false
-    } else if (['flow', 'exception', 'identity', 'routing', 'delivery', 'ops'].includes(kind)) {
+    } else if (['flow', 'exception', 'identity', 'users', 'routing', 'delivery', 'ops'].includes(kind)) {
         ui.detailKind = kind
         detailOpen.value = true
     }
@@ -678,6 +692,7 @@ const markAdminMailRead = async (row) => {
 
 const currentException = computed(() => unknownRows.value.find((row) => row.id === ui.selected.exception) || unknownRows.value[0])
 const currentAddress = computed(() => addressRows.value.find((row) => row.id === ui.selected.identity) || addressRows.value[0])
+const currentUser = computed(() => userRows.value.find((row) => row.id === ui.selected.users) || userRows.value[0])
 const currentDomain = computed(() => domainRows.value.find((row) => row.id === ui.selected.routing) || domainRows.value[0])
 const currentNotification = computed(() => notificationRows.value.find((row) => row.id === ui.selected.delivery) || notificationRows.value[0])
 
@@ -688,6 +703,13 @@ const {
     addressDomainOptions,
     selectedAddressDomain,
     shareCreateForm,
+    userCreateForm,
+    userResetPasswordForm,
+    userRoleForm,
+    userAddressBindForm,
+    userBoundAddresses,
+    userBoundAddressesLoading,
+    userRolesList,
     oneTimeResult,
     domainActivationOpen,
     domainActivationBusy,
@@ -700,12 +722,21 @@ const {
     createAddressIdentity,
     createSharePackage,
     createAndActivateDomain,
+    createUserAction,
+    resetUserPasswordAction,
+    updateUserRoleAction,
+    deleteUserAction,
+    bindAddressToUser,
+    unbindAddressFromUser,
     handleAction,
+    handleAddressRowAction,
     handleDomainRowAction,
+    handleUserRowAction,
 } = useAdminConsoleActions({
     activeView,
     addressRows,
     currentAddress,
+    currentUser,
     currentDomain,
     currentMail,
     dbVersionLabel,
@@ -715,6 +746,7 @@ const {
     openSettings,
     opsRows,
     refreshAll,
+    refreshUsers,
     replaceRouteQuery,
     resetMailListScroll,
     showAdminPage,
@@ -730,25 +762,6 @@ const toolbarActions = computed(() => {
         { label: t('actionRefreshKeepSelection'), icon: 'refresh', action: 'refresh' },
         { label: t('actionBulkDelete'), icon: 'check', action: 'delete', danger: true },
     ]
-    if (view === 'identity') return [
-        { label: t('actionNewAddress'), icon: 'plus', modal: 'new-address', primary: true },
-        { label: t('actionCopyCurrentAddress'), icon: 'copy', action: 'copy' },
-        { label: t('actionShowCredential'), icon: 'lock', action: 'show-credential' },
-        { label: t('actionRotateCredential'), icon: 'refresh', action: 'rotate' },
-        { label: t('actionRevokeAccessPackage'), icon: 'lock', action: 'revoke' },
-        { label: t('actionClearInbox'), icon: 'check', action: 'clear-inbox', danger: true },
-        { label: t('actionDeleteAddress'), icon: 'check', action: 'delete-address', danger: true },
-    ]
-    if (view === 'routing') return [
-        { label: t('actionNewDomain'), icon: 'plus', action: 'new-domain' },
-    ]
-    if (view === 'delivery') return [
-        { label: t('actionRefreshChannels'), icon: 'refresh', action: 'refresh' },
-    ]
-    if (view === 'access') return []
-    if (view === 'ops') return [
-        { label: t('actionHealthCheck'), icon: 'check', action: 'health-check' },
-    ]
     return []
 })
 
@@ -756,11 +769,21 @@ const modalTitle = computed(() => {
     const titles = {
         'new-address': t('modalNewAddressIdentity'),
         'share-package': t('modalGenerateAccessPackage'),
+        'new-user': t('modalNewUser'),
+        'reset-password': t('modalResetPassword'),
+        'edit-role': t('modalEditRole'),
+        'user-addresses': t('modalUserAddresses'),
     }
     return actionModal.value === 'one-time-result' ? oneTimeResult.title : titles[actionModal.value] || t('modalFallbackTitle')
 })
 
-const modalPrimaryLabel = computed(() => actionModal.value === 'share-package' ? t('modalSubmitAccessPackage') : t('modalSubmitAddress'))
+const modalPrimaryLabel = computed(() => {
+    if (actionModal.value === 'share-package') return t('modalSubmitAccessPackage')
+    if (actionModal.value === 'new-user') return t('modalSubmitUser')
+    if (actionModal.value === 'reset-password') return t('modalSubmitResetPassword')
+    if (actionModal.value === 'edit-role') return t('modalSubmitRole')
+    return t('modalSubmitAddress')
+})
 
 const submitActionModal = async () => {
     if (actionModal.value === 'share-package') {
@@ -769,6 +792,19 @@ const submitActionModal = async () => {
     }
     if (actionModal.value === 'new-address' || actionModal.value === 'quick-create') {
         await createAddressIdentity()
+        return
+    }
+    if (actionModal.value === 'new-user') {
+        await createUserAction()
+        return
+    }
+    if (actionModal.value === 'reset-password') {
+        await resetUserPasswordAction()
+        return
+    }
+    if (actionModal.value === 'edit-role') {
+        await updateUserRoleAction()
+        return
     }
 }
 
@@ -777,6 +813,7 @@ const currentRail = computed(() => {
     if (context === 'flow') return buildAdminMailRail(currentDisplayMail.value || currentMail.value)
     if (context === 'exception') return buildAdminExceptionRail(currentException.value)
     if (context === 'identity') return buildAdminAddressRail(currentAddress.value)
+    if (context === 'users') return buildAdminUserRail(currentUser.value)
     if (context === 'routing') return buildAdminDomainRail(currentDomain.value)
     if (context === 'delivery') return buildAdminNotificationRail(currentNotification.value)
     if (context === 'ops') return buildAdminOpsRail(opsRows.value)
@@ -848,6 +885,14 @@ const overlayModel = computed(() => ({
     openSettings: openSettings.value,
     selectedAddressDomain: selectedAddressDomain.value,
     currentAddress: currentAddress.value,
+    currentUser: currentUser.value,
+    userCreateForm,
+    userResetPasswordForm,
+    userRoleForm,
+    userAddressBindForm,
+    userBoundAddresses: userBoundAddresses.value,
+    userBoundAddressesLoading: userBoundAddressesLoading.value,
+    userRolesList: userRolesList.value,
     shareCreateForm,
     modalPrimaryLabel: modalPrimaryLabel.value,
 }))
@@ -889,7 +934,17 @@ const workspaceActions = {
     openMailFromAddress,
     copyText,
     openSharePackage,
+    handleAddressRowAction,
     handleDomainRowAction,
+    handleUserRowAction,
+    setFilterDomain: (domain) => {
+        ui.domain = domain
+        if (activeView.value === 'flow') {
+            setMailDomain(domain)
+        } else {
+            replaceRouteQuery({ domain: domain === 'all' ? undefined : domain })
+        }
+    },
 }
 
 const overlayActions = {
@@ -902,6 +957,8 @@ const overlayActions = {
     closeActionModal,
     submitActionModal,
     copyText,
+    bindAddressToUser,
+    unbindAddressFromUser,
 }
 
 watch(pageTitle, (title) => {

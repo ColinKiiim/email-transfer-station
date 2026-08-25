@@ -1,11 +1,12 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useMessage } from 'naive-ui'
 import { useScopedI18n } from '@/i18n/app'
 import { CloudDownloadRound, InboxRound } from '@vicons/material'
 
 import { useGlobalState } from '../store'
 import { utcToLocalDate } from '../utils'
-import { processItem, revokeMailObjectUrls, revokeObjectUrl } from '../utils/email-parser'
+import { processItem, revokeMailObjectUrls, revokeObjectUrl, stripHtmlForPreview } from '../utils/email-parser'
 import MailContentRenderer from './MailContentRenderer.vue'
 import AiExtractInfo from './AiExtractInfo.vue'
 
@@ -94,6 +95,9 @@ const selectedAddress = computed({
 const data = computed(() => {
   const keyword = localFilterKeyword.value.trim().toLowerCase()
   if (!keyword) return rawData.value
+  if (keyword === '__unread__') {
+    return rawData.value.filter((mail) => mail.unread)
+  }
   return rawData.value.filter((mail) => [
     mail.subject || '',
     mail.text || '',
@@ -104,7 +108,7 @@ const data = computed(() => {
 })
 
 const selectedCount = computed(() => data.value.filter((item) => item.checked).length)
-const unreadCount = computed(() => data.value.filter((item) => item.unread).length)
+const unreadCount = computed(() => rawData.value.filter((item) => item.unread).length)
 const rangeLabel = computed(() => {
   if (!count.value) return '0 / 0'
   const start = (page.value - 1) * pageSize.value + 1
@@ -113,8 +117,7 @@ const rangeLabel = computed(() => {
 })
 
 const compactWhitespace = (value) => String(value || '').replace(/\s+/g, ' ').trim()
-const stripHtmlForPreview = (value) => compactWhitespace(String(value || '').replace(/<[^>]*>/g, ' '))
-const mailPreview = (row) => stripHtmlForPreview(row.text || row.message || '').slice(0, 180)
+const mailPreview = (row) => stripHtmlForPreview(row.text || row.message || '', 180)
 const mailPrimaryAddress = (row) => compactWhitespace(row.source)
 const mailSecondaryAddress = (row) => props.showEMailTo ? compactWhitespace(row.address) : ''
 
@@ -302,8 +305,44 @@ onBeforeUnmount(() => {
   <div class="access-mail-workbench">
     <section class="mail-command-surface">
       <div class="command-copy">
-        <h2>{{ title }}</h2>
-        <p>{{ description || tw('searchHint') }}</p>
+        <span class="command-section-label">{{ title }}</span>
+        <div class="filter-chips-row">
+          <button
+            type="button"
+            class="user-filter-chip"
+            :class="{ 'is-active': localFilterKeyword === '__unread__' }"
+            @click="localFilterKeyword = (localFilterKeyword === '__unread__' ? '' : '__unread__')"
+          >
+            <span class="chip-dot"></span>
+            <span>{{ tw('unread') }} ({{ unreadCount }})</span>
+          </button>
+          <n-button v-if="!multiActionMode" size="tiny" tertiary @click="multiActionModeClick(true)">
+            {{ t('multiAction') }}
+          </n-button>
+          <template v-else>
+            <n-button size="tiny" tertiary @click="multiActionModeClick(false)">
+              {{ t('cancelMultiAction') }}
+            </n-button>
+            <n-button size="tiny" tertiary @click="multiActionSelectAll(true)">
+              {{ t('selectAll') }}
+            </n-button>
+            <n-button size="tiny" tertiary @click="multiActionSelectAll(false)">
+              {{ t('unselectAll') }}
+            </n-button>
+            <n-popconfirm v-if="enableUserDeleteEmail" @positive-click="multiActionDeleteMail">
+              <template #trigger>
+                <n-button size="tiny" tertiary type="error" :disabled="selectedCount === 0">{{ t('delete') }}</n-button>
+              </template>
+              {{ t('deleteMailTip') }}
+            </n-popconfirm>
+            <n-button size="tiny" tertiary type="info" :disabled="selectedCount === 0" @click="multiActionDownload">
+              <template #icon>
+                <n-icon :component="CloudDownloadRound" />
+              </template>
+              {{ t('downloadMail') }}
+            </n-button>
+          </template>
+        </div>
       </div>
       <div class="command-controls">
         <n-select
@@ -313,66 +352,38 @@ onBeforeUnmount(() => {
           :options="addressOptions"
           clearable
           filterable
+          size="small"
           :placeholder="tw('allAddresses')"
         />
         <n-input
+          v-if="localFilterKeyword !== '__unread__'"
           v-model:value="localFilterKeyword"
           class="keyword-filter"
           clearable
+          size="small"
           :placeholder="tw('searchCurrentPage')"
         />
-        <n-button :loading="isRefreshing" type="primary" @click="backFirstPageAndRefresh">
+        <div
+          class="auto-sync-chip"
+          :title="autoRefresh ? tw('autoSyncCountdown', { seconds: autoRefreshInterval }) : tw('autoSyncOff')"
+          :aria-label="autoRefresh ? tw('autoSyncCountdown', { seconds: autoRefreshInterval }) : tw('autoSyncOff')"
+        >
+          <n-switch v-model:value="autoRefresh" size="small" :round="true" :aria-label="tw('autoSync')" />
+          <span class="auto-sync-label">{{ autoRefresh ? `${autoRefreshInterval}s` : tw('autoSync') }}</span>
+        </div>
+        <n-button
+          :loading="isRefreshing"
+          type="primary"
+          size="small"
+          :aria-label="tw('sync')"
+          @click="backFirstPageAndRefresh"
+        >
           {{ tw('sync') }}
         </n-button>
       </div>
     </section>
 
     <section class="mail-workbench-grid">
-      <aside class="mail-facets">
-        <div class="facet-card">
-          <span>{{ tw('currentPage') }}</span>
-          <strong>{{ data.length }}</strong>
-          <p>{{ rangeLabel }}</p>
-        </div>
-        <div class="facet-card">
-          <span>{{ tw('unread') }}</span>
-          <strong>{{ unreadCount }}</strong>
-          <p>{{ autoRefresh ? tw('autoSyncCountdown', { seconds: autoRefreshInterval }) : tw('manualSync') }}</p>
-        </div>
-        <div class="facet-actions">
-          <n-switch v-model:value="autoRefresh" size="small" :round="false">
-            <template #checked>{{ tw('autoSync') }}</template>
-            <template #unchecked>{{ tw('manualSync') }}</template>
-          </n-switch>
-          <n-button v-if="!multiActionMode" tertiary @click="multiActionModeClick(true)">
-            {{ t('multiAction') }}
-          </n-button>
-          <template v-else>
-            <n-button tertiary @click="multiActionModeClick(false)">
-              {{ t('cancelMultiAction') }}
-            </n-button>
-            <n-button tertiary @click="multiActionSelectAll(true)">
-              {{ t('selectAll') }}
-            </n-button>
-            <n-button tertiary @click="multiActionSelectAll(false)">
-              {{ t('unselectAll') }}
-            </n-button>
-            <n-popconfirm v-if="enableUserDeleteEmail" @positive-click="multiActionDeleteMail">
-              <template #trigger>
-                <n-button tertiary type="error" :disabled="selectedCount === 0">{{ t('delete') }}</n-button>
-              </template>
-              {{ t('deleteMailTip') }}
-            </n-popconfirm>
-            <n-button tertiary type="info" :disabled="selectedCount === 0" @click="multiActionDownload">
-              <template #icon>
-                <n-icon :component="CloudDownloadRound" />
-              </template>
-              {{ t('downloadMail') }}
-            </n-button>
-          </template>
-        </div>
-      </aside>
-
       <section class="mail-list-panel">
         <div class="panel-head">
           <div>
@@ -395,23 +406,25 @@ onBeforeUnmount(() => {
             :key="row.id"
             type="button"
             class="mail-row"
-            :class="[mailItemClass(row), { 'has-checkbox': multiActionMode }]"
+            :class="[mailItemClass(row), { 'is-unread': row.unread, 'has-checkbox': multiActionMode }]"
             @click="clickRow(row)"
           >
-            <n-checkbox v-if="multiActionMode" v-model:checked="row.checked" @click.stop />
-            <span v-if="row.unread" class="unread-dot" :aria-label="tw('unread')" />
-            <div class="mail-row-body">
-              <div class="mail-row-head">
-                <strong>{{ row.subject }}</strong>
-                <time>{{ utcToLocalDate(row.created_at, useUTCDate) }}</time>
+            <n-checkbox
+              v-if="multiActionMode"
+              v-model:checked="row.checked"
+              class="mail-row-checkbox"
+              @click.stop
+            />
+            <div class="mail-row-content">
+              <div class="mail-row-header">
+                <span class="user-mail-sender" :title="mailPrimaryAddress(row)">{{ mailPrimaryAddress(row) }}</span>
+                <time class="user-mail-time">{{ utcToLocalDate(row.created_at, useUTCDate) }}</time>
               </div>
-              <div class="mail-row-meta">
-                <span class="mail-pill">ID {{ row.id }}</span>
-                <span>{{ showEMailTo ? `FROM: ${mailPrimaryAddress(row)}` : mailPrimaryAddress(row) }}</span>
-                <span v-if="mailSecondaryAddress(row)">TO: {{ mailSecondaryAddress(row) }}</span>
+              <div class="mail-row-main">
+                <strong class="user-mail-subject" :title="row.subject">{{ row.subject }}</strong>
+                <span v-if="mailPreview(row)" class="user-mail-sep">-</span>
+                <span v-if="mailPreview(row)" class="user-mail-preview">{{ mailPreview(row) }}</span>
               </div>
-              <p v-if="mailPreview(row)">{{ mailPreview(row) }}</p>
-              <AiExtractInfo :metadata="row.metadata" compact />
             </div>
           </button>
 
@@ -487,29 +500,88 @@ onBeforeUnmount(() => {
 }
 
 .mail-command-surface {
-  display: grid;
-  grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.6fr);
-  gap: 14px;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  min-width: 0;
+  gap: 16px;
+  min-height: 52px;
+  padding: 8px 16px;
   border-radius: 8px;
-  padding: 14px;
   background: var(--ets-surface);
+  border: 1px solid var(--ets-border);
   box-shadow: var(--ets-shadow-card);
+  box-sizing: border-box;
 }
 
-.command-copy h2,
-.detail-head h2,
-.empty-detail h2 {
-  margin: 0;
-  color: var(--ets-text-strong);
-  font-weight: 760;
-  line-height: 1.2;
-  text-wrap: balance;
+.command-copy {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
-.command-copy h2 {
-  font-size: 18px;
+.command-section-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ets-text);
+  white-space: nowrap;
+}
+
+.filter-chips-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.user-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--ets-border);
+  border-radius: 6px;
+  background: var(--ets-surface-alt);
+  color: var(--ets-text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.user-filter-chip .chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ets-brand, #3b82f6);
+}
+
+.user-filter-chip:hover {
+  background: var(--ets-hover);
+  color: var(--ets-text);
+}
+
+.user-filter-chip.is-active {
+  background: var(--ets-brand-soft, rgba(59, 130, 246, 0.14));
+  color: var(--ets-brand, #3b82f6);
+  border-color: rgba(59, 130, 246, 0.4);
+  font-weight: 600;
+}
+
+.auto-sync-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: var(--ets-surface-alt);
+  border: 1px solid var(--ets-border);
+  color: var(--ets-text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .command-copy p,
@@ -523,32 +595,32 @@ onBeforeUnmount(() => {
 
 .command-controls {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
   justify-content: flex-end;
   min-width: 0;
+  flex-wrap: wrap;
 }
 
 .address-filter {
-  flex: 1 1 220px;
-  min-width: 180px;
+  width: 220px;
+  min-width: 160px;
 }
 
 .keyword-filter {
-  flex: 1 1 240px;
-  min-width: 180px;
+  width: 200px;
+  min-width: 140px;
 }
 
 .mail-workbench-grid {
   display: grid;
-  grid-template-columns: minmax(180px, 220px) minmax(320px, 0.92fr) minmax(460px, 1.38fr);
-  grid-template-areas: "facets list detail";
+  grid-template-columns: minmax(360px, 0.95fr) minmax(460px, 1.45fr);
+  grid-template-areas: "list detail";
   gap: 12px;
   min-width: 0;
-  min-height: min(760px, calc(100dvh - 190px));
+  min-height: min(760px, calc(100dvh - 160px));
 }
 
-.mail-facets,
 .mail-list-panel,
 .mail-detail-panel,
 .detail-card,
@@ -556,53 +628,8 @@ onBeforeUnmount(() => {
   min-width: 0;
   border-radius: 8px;
   background: var(--ets-surface);
+  border: 1px solid var(--ets-border);
   box-shadow: var(--ets-shadow-card);
-}
-
-.mail-facets {
-  grid-area: facets;
-  display: grid;
-  align-content: start;
-  gap: 10px;
-  padding: 12px;
-}
-
-.facet-card {
-  border-radius: 7px;
-  padding: 12px;
-  background: var(--ets-surface-alt);
-}
-
-.facet-card span,
-.panel-head span,
-.detail-head span {
-  display: block;
-  color: var(--ets-text-muted);
-  font-size: 12px;
-  font-weight: 650;
-}
-
-.facet-card strong {
-  display: block;
-  margin-top: 4px;
-  color: var(--ets-text);
-  font-size: 25px;
-  font-weight: 780;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-
-.facet-card p {
-  margin: 6px 0 0;
-  color: var(--ets-text-muted);
-  font-size: 12px;
-}
-
-.facet-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
 }
 
 .mail-list-panel,
@@ -616,27 +643,29 @@ onBeforeUnmount(() => {
   grid-template-rows: minmax(0, 1fr);
 }
 
-.mail-list-panel {
-  grid-area: list;
-}
-
-.mail-detail-panel {
-  grid-area: detail;
-}
-
 .panel-head {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  min-height: 54px;
-  padding: 10px 12px;
+  gap: 10px;
+  min-height: 46px;
+  padding: 6px 14px;
   border-bottom: 1px solid var(--ets-border);
+  background: var(--ets-surface);
+  box-sizing: border-box;
+}
+
+.panel-head span {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ets-text-muted);
 }
 
 .panel-head b {
   color: var(--ets-text);
   font-size: 13px;
+  font-weight: 700;
+  margin-left: 6px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -646,32 +675,22 @@ onBeforeUnmount(() => {
 }
 
 .mail-row {
-  display: grid;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
   position: relative;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 8px;
-  align-items: start;
   width: 100%;
+  min-height: 54px;
   border: 0;
   border-bottom: 1px solid var(--ets-border);
-  padding: 12px 12px 12px 24px;
+  padding: 10px 14px;
   background: transparent;
   color: inherit;
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition-property: background-color, box-shadow, scale;
-  transition-duration: 150ms;
-  transition-timing-function: ease-out;
-}
-
-.mail-row.has-checkbox {
-  grid-template-columns: auto 8px minmax(0, 1fr);
-  padding-left: 10px;
-}
-
-.mail-row:not(.has-checkbox) .mail-row-body {
-  grid-column: 1;
+  transition: all 120ms ease;
+  box-sizing: border-box;
 }
 
 .mail-row:active {
@@ -687,99 +706,99 @@ onBeforeUnmount(() => {
   box-shadow: inset 3px 0 0 var(--ets-brand);
 }
 
-.mail-row:not(.is-unread) .unread-dot {
-  visibility: hidden;
+.mail-row-checkbox {
+  margin-top: 2px;
+  flex-shrink: 0;
 }
 
-.unread-dot {
-  position: absolute;
-  top: 18px;
-  left: 10px;
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: var(--ets-brand);
-}
-
-.mail-row.has-checkbox .unread-dot {
-  position: static;
-  margin-top: 5px;
-}
-
-.mail-row-body {
-  min-width: 0;
-}
-
-.mail-row-head {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
-  align-items: start;
-}
-
-.mail-row-head strong {
-  overflow: hidden;
-  display: -webkit-box;
-  color: var(--ets-text);
-  font-size: 14px;
-  font-weight: 650;
-  line-height: 1.35;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  text-wrap: pretty;
-}
-
-.mail-row.is-unread .mail-row-head strong {
-  font-weight: 780;
-}
-
-.mail-row-head time {
-  color: var(--ets-text-muted);
-  font-size: 12px;
-  line-height: 1.4;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-.mail-row-meta {
+.mail-row-content {
   display: flex;
-  flex-wrap: wrap;
-  gap: 5px 8px;
+  flex-direction: column;
+  gap: 4px;
   min-width: 0;
-  margin-top: 6px;
-  color: var(--ets-text-muted);
-  font-size: 12px;
-  line-height: 1.35;
+  flex: 1;
+  overflow: hidden;
 }
 
-.mail-row-meta span:not(.mail-pill) {
-  max-width: 100%;
+.mail-row-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.user-mail-sender {
   overflow: hidden;
+  color: var(--ets-text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
+}
+
+.mail-row.is-unread .user-mail-sender {
+  color: var(--ets-text-strong);
+  font-weight: 700;
+}
+
+.user-mail-time {
+  flex-shrink: 0;
+  color: var(--ets-text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.mail-row.is-unread .user-mail-time {
+  color: var(--ets-text-strong);
+  font-weight: 650;
+}
+
+.mail-row-main {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.user-mail-subject {
+  flex-shrink: 0;
+  max-width: 60%;
+  overflow: hidden;
+  color: var(--ets-text);
+  font-size: 13px;
+  font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.mail-pill {
-  flex: 0 0 auto;
-  border-radius: 999px;
-  padding: 1px 7px;
-  background: var(--ets-brand-soft);
-  color: var(--ets-on-brand-soft);
-  font-size: 11px;
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
+.mail-row.is-unread .user-mail-subject {
+  color: var(--ets-text-strong);
+  font-weight: 700;
 }
 
-.mail-row p {
-  overflow: hidden;
-  display: -webkit-box;
-  margin: 6px 0 0;
+.user-mail-sep {
+  flex-shrink: 0;
   color: var(--ets-text-muted);
+  opacity: 0.6;
   font-size: 12px;
-  line-height: 1.45;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  text-wrap: pretty;
+}
+
+.user-mail-preview {
+  overflow: hidden;
+  color: var(--ets-text-muted);
+  font-size: 12.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.85;
+  min-width: 0;
+  flex: 1;
 }
 
 .empty-list {
@@ -787,7 +806,6 @@ onBeforeUnmount(() => {
 }
 
 .detail-card {
-  min-height: 0;
   overflow: auto;
   border-radius: 8px;
   box-shadow: none;
@@ -835,14 +853,6 @@ onBeforeUnmount(() => {
     min-height: 0;
   }
 
-  .mail-facets {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .facet-actions {
-    grid-column: 1 / -1;
-  }
-
   .mail-detail-panel {
     order: 2;
   }
@@ -868,26 +878,12 @@ onBeforeUnmount(() => {
     flex-basis: 100%;
   }
 
-  .mail-facets {
-    grid-template-columns: 1fr;
-  }
-
   .mail-row {
     padding-right: 10px;
   }
 
-  .mail-row-head {
-    grid-template-columns: 1fr;
-    gap: 3px;
-  }
-
-  .mail-row-head time {
-    order: -1;
-  }
-
-  .mail-row-meta span:not(.mail-pill) {
-    white-space: normal;
-    overflow-wrap: anywhere;
+  .user-mail-subject {
+    max-width: 50%;
   }
 
   .detail-card :deep(.mail-content-renderer) {

@@ -7,6 +7,7 @@ import {
     buildAdminExceptionRail,
     buildAdminProcessingRows,
     buildAdminShareRows,
+    buildAdminUserRail,
     buildAdminUserRows,
 } from '../admin-identity-access'
 import {
@@ -143,11 +144,50 @@ describe('admin identity and access view models', () => {
         }])[0]).toMatchObject({
             id: 'pkg-5',
             label: '访问包 #5',
+            scopes: 'read,download',
+            scopeLabel: '只读, download',
+            status: 'active',
+            statusLabel: '有效',
+            statusLabelTone: 'ok',
             expires: '2026-07-16 01:02:03',
             path: '/i/:token',
+            pathLabel: '临时分享链接',
         })
-        expect(buildAdminUserRows([{ id: 2, username: 'operator', role: 'admin', address_count: 3 }])[0])
-            .toMatchObject({ id: 'user-2', user: 'operator', role: 'admin', addresses: '3 个地址', status: '启用' })
+        expect(buildAdminShareRows([{
+            id: 6,
+            address: 'owner@example.test',
+            status: 'revoked',
+        }])[0]).toMatchObject({
+            id: 'pkg-6',
+            scopes: 'read',
+            scopeLabel: '只读',
+            status: 'revoked',
+            statusLabel: '已失效',
+            statusLabelTone: 'danger',
+            path: '/i/:token',
+            pathLabel: '临时分享链接',
+        })
+        expect(buildAdminUserRows([{
+            id: 2,
+            username: 'operator',
+            user_email: 'operator@example.test',
+            display_name: 'Operator Name',
+            role_text: 'admin',
+            address_count: 3,
+            created_at: '2026-07-15T10:00:00Z',
+            updated_at: '2026-07-16T10:00:00Z',
+        }])[0]).toMatchObject({
+            id: 'user-2',
+            sourceId: 2,
+            user: 'Operator Name',
+            userEmail: 'operator@example.test',
+            username: 'operator',
+            displayName: 'Operator Name',
+            role: 'admin',
+            roleText: 'admin',
+            addresses: '3 个地址',
+            addressCount: 3,
+        })
 
         const audit = buildAdminAuditRows(
             [{ id: 1, created_at: '2026-07-15T10:00:00Z', actor_label: 'admin', action: 'create', resource_label: 'address', status: 'success' }],
@@ -186,6 +226,26 @@ describe('admin identity and access view models', () => {
         })
         expect(buildAdminAddressRail(null)).toBeNull()
         expect(buildAdminExceptionRail(null)).toBeNull()
+        expect(buildAdminUserRail(null)).toBeNull()
+
+        const userRow = buildAdminUserRows([{
+            id: 2,
+            username: 'operator',
+            user_email: 'operator@example.test',
+            role_text: 'admin',
+            address_count: 1,
+        }])[0]
+        expect(buildAdminUserRail(userRow)).toMatchObject({
+            title: '用户详情',
+            subtitle: 'operator@example.test',
+            tags: ['admin'],
+            actions: expect.arrayContaining([
+                expect.objectContaining({ modal: 'reset-password', primary: true }),
+                expect.objectContaining({ modal: 'edit-role' }),
+                expect.objectContaining({ modal: 'user-addresses' }),
+                expect.objectContaining({ action: 'delete-user', danger: true }),
+            ]),
+        })
     })
 })
 

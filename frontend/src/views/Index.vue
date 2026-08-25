@@ -1,5 +1,5 @@
 <script setup>
-import { defineAsyncComponent, watch } from 'vue'
+import { computed, defineAsyncComponent, watch } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 import { useRoute } from 'vue-router'
 
@@ -24,6 +24,8 @@ const { loading, settings, openSettings, indexTab, globalTabplacement, useSimple
 const message = useMessage()
 const route = useRoute()
 const isMobile = useIsMobile()
+
+const isLeftPlacement = computed(() => !isMobile.value && globalTabplacement.value === 'left' && Boolean(settings.value.address))
 
 const SendMail = defineAsyncComponent(() => {
   loading.value = true;
@@ -100,22 +102,33 @@ watch(
 </script>
 
 <template>
-  <div>
-    <div v-if="useSimpleIndex">
+  <div class="index-layout" :class="{ 'index-left-layout': isLeftPlacement }">
+    <div v-if="useSimpleIndex" class="index-simple-wrapper">
       <SimpleIndex />
     </div>
-    <div v-else>
-      <AddressBar />
-      <n-tabs v-if="settings.address" type="card" v-model:value="indexTab" :placement="globalTabplacement">
+    <div v-else class="index-workbench-wrapper">
+      <AddressBar class="index-address-bar" />
+      <n-tabs v-if="settings.address" type="card" v-model:value="indexTab" :placement="globalTabplacement" class="index-tabs">
         <template #prefix v-if="!isMobile">
-          <n-button @click="useSimpleIndex = true" tertiary size="small">
-            <template #icon>
-              <n-icon>
-                <FullscreenExitOutlined />
-              </n-icon>
+          <n-tooltip trigger="hover">
+            <template #trigger>
+              <n-button
+                @click="useSimpleIndex = true"
+                quaternary
+                circle
+                size="small"
+                :aria-label="t('enterSimpleMode')"
+                class="index-simple-btn"
+              >
+                <template #icon>
+                  <n-icon>
+                    <FullscreenExitOutlined />
+                  </n-icon>
+                </template>
+              </n-button>
             </template>
             {{ t('enterSimpleMode') }}
-          </n-button>
+          </n-tooltip>
         </template>
         <n-tab-pane name="mailbox" :tab="t('mailbox')">
           <div v-if="showMailIdQuery" style="margin-bottom: 10px;">
@@ -160,3 +173,77 @@ watch(
     </div>
   </div>
 </template>
+
+<style scoped>
+.index-layout {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.index-workbench-wrapper {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.index-left-layout {
+  text-align: left;
+}
+
+.index-left-layout .index-workbench-wrapper {
+  display: grid;
+  grid-template-columns: minmax(180px, auto) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.index-left-layout .index-tabs {
+  display: contents;
+}
+
+.index-left-layout :deep(.n-tabs-nav--left) {
+  grid-column: 1;
+  grid-row: 1 / -1;
+  background: var(--ets-surface);
+  border-right: 1px solid var(--ets-border);
+  padding: 12px 10px 16px 10px;
+  box-sizing: border-box;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.index-left-layout :deep(.n-tabs-nav__prefix) {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.index-left-layout :deep(.n-tabs-tab) {
+  width: 100%;
+  justify-content: flex-start;
+  box-sizing: border-box;
+}
+
+.index-left-layout .index-address-bar {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  padding: 0 16px;
+  box-sizing: border-box;
+}
+
+.index-left-layout :deep(.n-tab-pane) {
+  grid-column: 2;
+  grid-row: 2;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto;
+  padding: 0 16px 16px 16px;
+  box-sizing: border-box;
+}
+</style>

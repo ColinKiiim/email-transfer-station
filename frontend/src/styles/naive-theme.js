@@ -13,6 +13,7 @@
  */
 
 const LIGHT = {
+    bg: '#f3f6fb',
     brand: '#0f6cbd',
     brandHover: '#115ea3',
     brandPressed: '#0c4a80',
@@ -30,6 +31,7 @@ const LIGHT = {
 }
 
 const DARK = {
+    bg: '#16181c',
     brand: '#479ef5',
     brandHover: '#62abf5',
     brandPressed: '#2886de',
@@ -48,6 +50,7 @@ const DARK = {
 
 const build = (p) => ({
     common: {
+        bodyColor: p.bg,
         primaryColor: p.brand,
         primaryColorHover: p.brandHover,
         primaryColorPressed: p.brandPressed,

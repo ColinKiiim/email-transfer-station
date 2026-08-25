@@ -39,8 +39,18 @@ describe("address password migration", () => {
         const second = await createAddressPasswordRecord(input, true);
 
         expect(first).not.toBe(second);
-        expect(first).toMatch(new RegExp(`^pbkdf2-sha256\\$${ADDRESS_PASSWORD_ITERATIONS}\\$plain\\$`));
+        expect(first).toMatch(/^pbkdf2-sha256\$100000\$plain\$/);
         expect(inspectAddressPasswordRecord(first)).toEqual({ mode: "plain" });
+    }, 15_000);
+
+    it("keeps historical iteration records parseable and verifies at their recorded cost", async () => {
+        const historical = "pbkdf2-sha256$600000$plain$AAECAwQFBgcICQoLDA0ODw$"
+            + "sPpmB44VUuc9AijdDeIaLYOMvMvV-r-_i_xtPnTYUGA";
+        const input = normalizeAddressPasswordInput("historical-password", "plain");
+
+        expect(inspectAddressPasswordRecord(historical)).toEqual({ mode: "plain" });
+        await expect(verifyAddressPassword(historical, input, false))
+            .resolves.toMatchObject({ valid: true, storedMode: "plain" });
     }, 15_000);
 
     it("upgrades a legacy record directly after a plaintext login", async () => {

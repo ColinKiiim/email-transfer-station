@@ -1,5 +1,5 @@
-<script setup lang="ts">
-import { onMounted, ref, h } from 'vue'
+﻿<script setup lang="ts">
+import { onMounted, ref } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 import type { DropdownOption } from 'naive-ui'
 
@@ -150,15 +150,17 @@ const presetDropdownOptions: DropdownOption[] = presets.map((preset, index) => (
     key: index,
 }))
 
+const selectedPreset = ref<WebhookPreset | null>(null)
+
 const handlePresetSelect = (key: number) => {
     const preset = presets[key]
     if (!preset) {
         message.error('Invalid preset')
         return
     }
+    selectedPreset.value = preset
     Object.assign(webhookSettings.value, preset.settings)
     message.success(t('fillInDemoTip'))
-    window.open(preset.doc, '_blank', 'noopener,noreferrer')
 }
 
 const webhookSettings = ref<WebhookSettings>(new WebhookSettings())
@@ -208,18 +210,21 @@ onMounted(async () => {
 <template>
     <div class="center">
         <n-card :bordered="false" embedded v-if="enableWebhook" style="max-width: 800px; overflow: auto;">
-            <n-flex justify="end">
+            <n-flex justify="end" align="center">
+                <n-a
+                    v-if="selectedPreset?.doc"
+                    :href="selectedPreset.doc"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="preset-doc-link"
+                >
+                    {{ t('viewDoc') }}
+                </n-a>
                 <n-dropdown :options="presetDropdownOptions" @select="handlePresetSelect">
                     <n-button secondary>
                         {{ t('presets') }}
                     </n-button>
                 </n-dropdown>
-                <n-button v-if="webhookSettings.enabled" @click="testSettings" secondary>
-                    {{ t('test') }}
-                </n-button>
-                <n-button @click="saveSettings" type="primary">
-                    {{ t('save') }}
-                </n-button>
             </n-flex>
             <n-form-item-row :label="t('enable')">
                 <n-switch v-model:value="webhookSettings.enabled" :round="false" />
@@ -234,12 +239,20 @@ onMounted(async () => {
                     ]' />
                 </n-form-item-row>
                 <n-form-item-row label="HEADERS">
-                    <n-input v-model:value="webhookSettings.headers" type="textarea" :autosize="{ minRows: 3 }" />
+                    <n-input v-model:value="webhookSettings.headers" type="textarea" class="code-textarea" :autosize="{ minRows: 3 }" />
                 </n-form-item-row>
                 <n-form-item-row label="BODY">
-                    <n-input v-model:value="webhookSettings.body" type="textarea" :autosize="{ minRows: 3 }" />
+                    <n-input v-model:value="webhookSettings.body" type="textarea" class="code-textarea" :autosize="{ minRows: 4 }" />
                 </n-form-item-row>
             </div>
+            <n-flex justify="end" class="action-row">
+                <n-button v-if="webhookSettings.enabled" @click="testSettings" secondary>
+                    {{ t('test') }}
+                </n-button>
+                <n-button @click="saveSettings" type="primary">
+                    {{ t('save') }}
+                </n-button>
+            </n-flex>
         </n-card>
         <n-result v-else status="404" :title="t('notEnabled')" />
     </div>
@@ -253,7 +266,23 @@ onMounted(async () => {
     justify-content: center;
 }
 
+.code-textarea :deep(textarea) {
+    font-family: var(--ets-font-mono, monospace) !important;
+    font-size: 12.5px;
+    line-height: 1.5;
+}
+
 .n-button {
     margin-top: 10px;
+}
+
+.preset-doc-link {
+    margin-top: 10px;
+    font-size: 13px;
+    text-decoration: none;
+}
+
+.action-row {
+    margin-top: 16px;
 }
 </style>

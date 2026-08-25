@@ -1,3 +1,4 @@
+import { Jwt } from "hono/utils/jwt";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { issueAdminSession } from "../admin_security";
@@ -15,6 +16,7 @@ class FakeStatement {
     constructor(
         private readonly sql: string,
         private readonly queries: QueryRecord[],
+        private readonly mockResolver?: (sql: string, bindings: unknown[], column?: string) => unknown,
     ) {}
 
     bind(...values: unknown[]) {
@@ -29,6 +31,10 @@ class FakeStatement {
 
     async first<T>(column?: string) {
         this.queries.push({ sql: this.sql, bindings: this.bindings, operation: "first" });
+        if (this.mockResolver) {
+            const res = this.mockResolver(this.sql, this.bindings, column);
+            if (res !== undefined) return res as T;
+        }
         if (column === "count") return 0 as T;
         return null;
     }
@@ -39,19 +45,21 @@ class FakeStatement {
     }
 }
 
-const makeHarness = () => {
+const makeHarness = (mockResolver?: (sql: string, bindings: unknown[], column?: string) => unknown) => {
     const queries: QueryRecord[] = [];
     const pending: Promise<unknown>[] = [];
     const db = {
-        prepare: (sql: string) => new FakeStatement(sql, queries),
+        prepare: (sql: string) => new FakeStatement(sql, queries, mockResolver),
         batch: (statements: FakeStatement[]) => Promise.all(statements.map((statement) => statement.run())),
     } as unknown as D1Database;
     const env = {
         ADMIN_PASSWORDS: ["fixture-admin-password"],
+        ADMIN_USER_ROLE: "admin",
         DEFAULT_DOMAINS: ["example.test"],
         DEFAULT_LANG: "en",
         DOMAINS: ["example.test"],
         JWT_SECRET: "fixture-jwt-secret",
+        USER_ROLES: [{ role: "admin" }, { role: "member" }],
         DB: db,
     } as unknown as Bindings;
     const executionContext = {
@@ -201,5 +209,130 @@ describe("admin API route behavior baseline", () => {
 
         expect(response.status).toBe(404);
         await Promise.allSettled(harness.pending);
+    });
+
+    it("accepts a valid role-based admin access token and rejects deleted/rotated/demoted tokens", async () => {
+        const signRoleToken = (overrides: Record<string, unknown> = {}) => Jwt.sign({
+            user_email: "role-admin@example.test",
+            user_id: 10,
+            user_generation: "gen-active",
+            user_role: "admin",
+            iat: Math.floor(Date.now() / 1000),
+            exp: Math.floor(Date.now() / 1000) + 3600,
+            ...overrides,
+        }, harness.env.JWT_SECRET, "HS256");
+
+        // 1. Valid token, matching user and matching role
+        const validHarness = makeHarness((sql) => {
+            if (/FROM users WHERE id/i.test(sql)) {
+                return { user_email: "role-admin@example.test", user_info: JSON.stringify({ authGeneration: "gen-active" }) };
+            }
+            if (/FROM user_roles WHERE user_id/i.test(sql)) {
+                return "admin";
+            }
+            return undefined;
+        });
+        const validToken = await signRoleToken();
+        const validRes = await worker.fetch(
+            request("/api/admin/mails?limit=10&offset=0", {
+                headers: { "x-user-access-token": validToken },
+            }),
+            validHarness.env,
+            validHarness.executionContext,
+        );
+        expect(validRes.status).toBe(200);
+
+        // 2. User absent in DB
+        const missingUserHarness = makeHarness(() => null);
+        const missingUserRes = await worker.fetch(
+            request("/api/admin/mails?limit=10&offset=0", {
+                headers: { "x-user-access-token": validToken },
+            }),
+            missingUserHarness.env,
+            missingUserHarness.executionContext,
+        );
+        expect(missingUserRes.status).toBe(401);
+
+        // 3. User authGeneration rotated (stale token)
+        const rotatedHarness = makeHarness((sql) => {
+            if (/FROM users WHERE id/i.test(sql)) {
+                return { user_email: "role-admin@example.test", user_info: JSON.stringify({ authGeneration: "gen-new" }) };
+            }
+            if (/FROM user_roles WHERE user_id/i.test(sql)) {
+                return "admin";
+            }
+            return undefined;
+        });
+        const rotatedRes = await worker.fetch(
+            request("/api/admin/mails?limit=10&offset=0", {
+                headers: { "x-user-access-token": validToken },
+            }),
+            rotatedHarness.env,
+            rotatedHarness.executionContext,
+        );
+        expect(rotatedRes.status).toBe(401);
+
+        // 4. Role changed/demoted in DB
+        const demotedHarness = makeHarness((sql) => {
+            if (/FROM users WHERE id/i.test(sql)) {
+                return { user_email: "role-admin@example.test", user_info: JSON.stringify({ authGeneration: "gen-active" }) };
+            }
+            if (/FROM user_roles WHERE user_id/i.test(sql)) {
+                return "member";
+            }
+            return undefined;
+        });
+        const demotedRes = await worker.fetch(
+            request("/api/admin/mails?limit=10&offset=0", {
+                headers: { "x-user-access-token": validToken },
+            }),
+            demotedHarness.env,
+            demotedHarness.executionContext,
+        );
+        expect(demotedRes.status).toBe(401);
+    });
+
+    it("requires confirmation for role updates and address bindings", async () => {
+        const session = await issueAdminSession("fixture-admin", harness.env.JWT_SECRET);
+
+        // POST /api/admin/user_roles without confirm
+        const roleRes = await worker.fetch(
+            request("/api/admin/user_roles", {
+                method: "POST",
+                headers: { "content-type": "application/json", "x-admin-auth": session },
+                body: JSON.stringify({ user_id: 10, role_text: "admin" }),
+            }),
+            harness.env,
+            harness.executionContext,
+        );
+        expect(roleRes.status).toBe(409);
+        expect(await roleRes.json()).toEqual({ error: "admin_write_confirmation_required" });
+
+        // POST /api/admin/users/bind_address without confirm
+        const bindRes = await worker.fetch(
+            request("/api/admin/users/bind_address", {
+                method: "POST",
+                headers: { "content-type": "application/json", "x-admin-auth": session },
+                body: JSON.stringify({ user_id: 10, address_id: 5 }),
+            }),
+            harness.env,
+            harness.executionContext,
+        );
+        expect(bindRes.status).toBe(409);
+        expect(await bindRes.json()).toEqual({ error: "admin_write_confirmation_required" });
+    });
+
+    it("rejects password reset for a nonexistent user", async () => {
+        const session = await issueAdminSession("fixture-admin", harness.env.JWT_SECRET);
+        const resetRes = await worker.fetch(
+            request("/api/admin/users/99/reset_password", {
+                method: "POST",
+                headers: { "content-type": "application/json", "x-admin-auth": session },
+                body: JSON.stringify({ password: "new-verifier-hash", confirm: true }),
+            }),
+            harness.env,
+            harness.executionContext,
+        );
+        expect(resetRes.status).toBe(400);
     });
 });

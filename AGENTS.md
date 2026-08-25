@@ -31,6 +31,7 @@ These contracts describe the codebase; they do not authorize push, deploy, migra
 - Preserve unrelated work and never commit runtime secrets, real Wrangler config, `.env*`, browser auth state, or mailbox contents.
 - Use Conventional Commits and update both changelogs for user-visible product changes.
 - Update public docs only when their behavior/config/API facts change.
+- Before delivering UI changes, verify against `docs/UI_SPECIFICATION.md` checklist.
 
 ## Local validation
 

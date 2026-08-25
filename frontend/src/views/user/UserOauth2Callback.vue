@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue';
 import { useScopedI18n } from '@/i18n/app'
 import { useRoute, useRouter } from 'vue-router';
+import { useMessage } from 'naive-ui';
 
 import { useGlobalState } from '../../store'
 import { api } from '../../api';
@@ -59,15 +60,48 @@ onMounted(async () => {
 </script>
 
 <template>
-    <n-card :bordered="false" embedded>
-        <n-result
-            :status="resultStatus"
-            :title="resultStatus === 'error' ? t('loginFailed') : resultStatus === 'success' ? t('success') : t('logging')"
-            :description="errorInfo"
-        >
-            <template v-if="resultStatus === 'error'" #footer>
-                <n-button type="primary" @click="backToLogin">{{ t('backToLogin') }}</n-button>
-            </template>
-        </n-result>
-    </n-card>
+    <div class="oauth-callback-shell">
+        <div class="oauth-callback-card">
+            <n-result
+                :status="resultStatus"
+                :title="resultStatus === 'error' ? t('loginFailed') : resultStatus === 'success' ? t('success') : t('logging')"
+                :description="errorInfo"
+            >
+                <template v-if="resultStatus === 'error'" #footer>
+                    <n-button type="primary" size="large" strong class="back-btn" @click="backToLogin">
+                        {{ t('backToLogin') }}
+                    </n-button>
+                </template>
+            </n-result>
+        </div>
+    </div>
 </template>
+
+<style scoped>
+.oauth-callback-shell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 60px);
+    padding: 24px 16px;
+    box-sizing: border-box;
+}
+
+.oauth-callback-card {
+    width: min(100%, 460px);
+    border-radius: 16px;
+    padding: 36px 28px;
+    background: var(--ets-surface);
+    border: 1px solid var(--ets-border);
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.4);
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.back-btn {
+    height: 42px;
+    font-size: 15px;
+    border-radius: 8px;
+    min-width: 160px;
+}
+</style>

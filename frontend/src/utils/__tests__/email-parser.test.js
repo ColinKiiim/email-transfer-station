@@ -4,7 +4,7 @@ import { mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import ShadowHtmlComponent from '../../components/ShadowHtmlComponent.vue'
-import { processItem, revokeMailObjectUrls } from '../email-parser'
+import { processItem, revokeMailObjectUrls, stripHtmlForPreview } from '../email-parser'
 
 const badgeMail = `MIME-Version: 1.0\r
 From: sender@example.test\r
@@ -83,5 +83,51 @@ describe('mail parser inline media', () => {
             'blob:https://mail.example/1',
             'blob:https://mail.example/2',
         ])
+    })
+})
+
+describe('stripHtmlForPreview', () => {
+    it('decodes common HTML entities and strips zero-width/control formatting characters', () => {
+        const raw = '<div style="display:none">&nbsp;&zwnj;&nbsp;&zwnj;&zwj;</div>' +
+            '<p>Hello &amp; welcome to &ldquo;ETS&rdquo; &#128512;! &lt;email&gt; &quot;quote&quot; &#39;apostrophe&#39;.</p>'
+        const preview = stripHtmlForPreview(raw)
+        expect(preview).toBe('Hello & welcome to "ETS" 😀! <email> "quote" \'apostrophe\'.')
+    })
+
+    it('removes zero-width spaces and non-breaking spaces safely', () => {
+        const raw = 'Special\u200BOffer\u200C: \uFEFF50%\u00A0Off\u200DToday'
+        const preview = stripHtmlForPreview(raw)
+        expect(preview).toBe('SpecialOffer: 50% OffToday')
+    })
+
+    it('strips script, style, and comments without leaking style rules into preview', () => {
+        const raw = '<!-- Header comment --><style>body { background: red; }</style><script>alert(1)</script><p>Clean body text</p>'
+        const preview = stripHtmlForPreview(raw)
+        expect(preview).toBe('Clean body text')
+    })
+
+    it('bounds preview length and handles empty or falsy inputs', () => {
+        expect(stripHtmlForPreview(null)).toBe('')
+        expect(stripHtmlForPreview(undefined)).toBe('')
+        expect(stripHtmlForPreview('')).toBe('')
+        const longText = 'A'.repeat(300)
+        expect(stripHtmlForPreview(longText, 50)).toBe('A'.repeat(50))
+        expect(stripHtmlForPreview(longText).length).toBe(180)
+    })
+
+    it('preserves full message body in processItem while previewing cleanly', async () => {
+        const mailRaw = `MIME-Version: 1.0\r
+From: test@example.test\r
+Subject: Entity test\r
+Content-Type: text/html; charset=utf-8\r
+\r
+<html><body><div style="display:none">&nbsp;&zwnj;&nbsp;&zwnj;</div><p>Actual message body &amp; content</p></body></html>`
+        const item = await processItem({ raw: mailRaw, source: '', id: 'entity-test' })
+        // Full message body in item remains intact
+        expect(item.message).toContain('&nbsp;&zwnj;')
+        expect(item.message).toContain('&amp;')
+        // Preview generated from it is cleaned and decoded
+        const preview = stripHtmlForPreview(item.text || item.message || '', 180)
+        expect(preview).toBe('Actual message body & content')
     })
 })

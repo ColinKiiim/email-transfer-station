@@ -26,6 +26,16 @@ const surfaceItems = computed(() => [
     { id: 'user', label: t('userView'), to: getRouterPathWithLang('/user', locale.value) },
 ])
 
+const searchShortcut = computed(() => {
+    if (typeof navigator !== 'undefined') {
+        const platform = navigator.platform || navigator.userAgent || ''
+        if (/Mac/i.test(platform)) {
+            return '⌘K'
+        }
+    }
+    return 'Ctrl+K'
+})
+
 const shapeList = (name) => iconShapes[name] || iconShapes.check
 const searchInput = ref(null)
 
@@ -49,23 +59,13 @@ defineExpose({
                             v-bind="shape.attrs" />
                     </svg>
                 </button>
-                <ProductBrand class="admin-product-brand" :context-label="t('contextLabel')" />
+                <ProductBrand class="admin-product-brand" title="ETS Mail" />
             </div>
 
             <header class="topbar">
-                <div class="page-title">
-                    <p>{{ t('contextLabel') }}</p>
-                    <h1>{{ tNav(model.activeView) }}</h1>
-                </div>
+                <h1 class="sr-only">{{ tNav(model.activeView) }}</h1>
 
                 <div class="topbar-controls">
-                    <select v-model="model.ui.domain" class="select domain-select" :aria-label="t('domainScope')"
-                        @change="actions.changeDomain">
-                        <option v-for="domain in model.domainOptions" :key="domain" :value="domain">
-                            {{ domain === 'all' ? t('allDomains') : domain }}
-                        </option>
-                    </select>
-
                     <label class="searchbox">
                         <svg viewBox="0 0 24 24">
                             <component :is="shape.tag" v-for="(shape, index) in shapeList('search')" :key="index"
@@ -74,7 +74,7 @@ defineExpose({
                         <input ref="searchInput" v-model="model.ui.query" class="field"
                             :placeholder="t('searchPlaceholder')"
                             @input="actions.updateSearch" />
-                        <span class="kbd">⌘K</span>
+                        <span class="kbd">{{ searchShortcut }}</span>
                     </label>
 
                     <div class="top-actions">

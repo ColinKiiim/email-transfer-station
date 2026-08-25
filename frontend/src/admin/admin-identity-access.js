@@ -27,27 +27,99 @@ export const buildAdminAddressRows = (rows = [], enableAddressPassword = false) 
     }
 })
 
-export const buildAdminShareRows = (rows = []) => rows.map((row) => ({
-    id: `pkg-${row.id}`,
-    sourceId: row.id,
-    label: row.label || t('sharePackageLabel', { id: row.id }),
-    address: row.address,
-    scopes: row.scopes || 'read',
-    status: row.status || 'active',
-    expires: formatDate(row.expires_at),
-    last: formatDate(row.last_used_at),
-    path: '/i/:token',
-}))
+const SHARE_SCOPE_MAP = {
+    read: 'shareScopeRead',
+}
+
+const SHARE_STATUS_MAP = {
+    active: { labelKey: 'shareStatusActive', tone: 'ok' },
+    revoked: { labelKey: 'shareStatusRevoked', tone: 'danger' },
+    expired: { labelKey: 'shareStatusExpired', tone: 'warn' },
+}
+
+export const formatShareScopes = (scopes = 'read') => {
+    if (!scopes) return t('shareScopeRead')
+    const list = Array.isArray(scopes)
+        ? scopes
+        : String(scopes).split(',').map((item) => item.trim()).filter(Boolean)
+    if (!list.length) return t('shareScopeRead')
+    return list.map((scope) => {
+        const key = SHARE_SCOPE_MAP[scope]
+        return key ? t(key) : scope
+    }).join(', ')
+}
+
+export const formatShareStatus = (status = 'active') => {
+    const matched = SHARE_STATUS_MAP[status]
+    if (matched) {
+        return {
+            label: t(matched.labelKey),
+            tone: matched.tone,
+        }
+    }
+    return {
+        label: status || '-',
+        tone: 'neutral',
+    }
+}
+
+export const buildAdminShareRows = (rows = []) => rows.map((row) => {
+    const rawScopes = row.scopes || 'read'
+    const rawStatus = row.status || 'active'
+    const statusMeta = formatShareStatus(rawStatus)
+    return {
+        id: `pkg-${row.id}`,
+        sourceId: row.id,
+        label: row.label || t('sharePackageLabel', { id: row.id }),
+        address: row.address,
+        scopes: rawScopes,
+        scopeLabel: formatShareScopes(rawScopes),
+        status: rawStatus,
+        statusLabel: statusMeta.label,
+        statusLabelTone: statusMeta.tone,
+        expires: formatDate(row.expires_at),
+        last: formatDate(row.last_used_at),
+        path: '/i/:token',
+        pathLabel: t('sharePathLabel'),
+    }
+})
 
 export const buildAdminUserRows = (rows = []) => rows.map((row) => ({
     id: `user-${row.id}`,
-    user: row.display_name || row.username || row.email || `user:${row.id}`,
-    role: row.role || '-',
+    sourceId: row.id,
+    userEmail: row.user_email || '',
+    username: row.username || '',
+    displayName: row.display_name || '',
+    user: row.display_name || row.username || row.user_email || `user:${row.id}`,
+    role: row.role_text || '-',
+    roleText: row.role_text || '',
     addresses: t('addressCount', { count: row.address_count || 0 }),
-    auth: row.oauth_provider || t('authLocal'),
-    status: row.enabled === false ? t('userDisabled') : t('userEnabled'),
-    last: formatDate(row.updated_at || row.created_at),
+    addressCount: row.address_count || 0,
+    created: formatDate(row.created_at),
+    updated: formatDate(row.updated_at || row.created_at),
 }))
+
+export const buildAdminUserRail = (user, boundAddresses = []) => user ? ({
+    title: t('userRailTitle'),
+    subtitle: user.userEmail || user.user,
+    tags: user.roleText ? [user.roleText] : [t('noRoleTag')],
+    kv: [
+        [t('kvEmail'), user.userEmail || '-'],
+        [t('kvUsername'), user.username || '-'],
+        [t('kvDisplayName'), user.displayName || '-'],
+        [t('kvRole'), user.roleText || t('noRoleText')],
+        [t('kvAddresses'), t('addressCount', { count: user.addressCount })],
+        [t('kvCreated'), user.created || '-'],
+        [t('kvUpdated'), user.updated || '-'],
+    ],
+    boundAddresses: boundAddresses || [],
+    actions: [
+        { label: t('actionResetPassword'), modal: 'reset-password', primary: true },
+        { label: t('actionChangeRole'), modal: 'edit-role' },
+        { label: t('actionManageAddresses'), modal: 'user-addresses' },
+        { label: t('actionDeleteUser'), action: 'delete-user', danger: true },
+    ],
+}) : null
 
 export const buildAdminAuditRows = (auditEvents = [], accessEvents = []) => [
     ...auditEvents.map((row) => ({

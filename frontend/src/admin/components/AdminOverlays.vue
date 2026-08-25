@@ -12,10 +12,18 @@ const props = defineProps({
 
 const { t } = useScopedI18n('admin.overlay')
 
+const showNewUserPassword = ref(false)
+const showResetPassword = ref(false)
+
 const detailDialog = ref(null)
 const domainDialog = ref(null)
 const actionDialog = ref(null)
 let previousFocus = null
+
+watch(() => props.model.actionModal, () => {
+    showNewUserPassword.value = false
+    showResetPassword.value = false
+})
 
 const activeOverlay = computed(() => {
     if (props.model.actionModal) return `action:${props.model.actionModal}`
@@ -301,12 +309,146 @@ onBeforeUnmount(() => {
                         </label>
                     </div>
                 </template>
+                <template v-else-if="model.actionModal === 'new-user'">
+                    <div id="action-modal-description" class="notice modal-notice">
+                        <strong>{{ t('modalNewUser') }}</strong>
+                        <span>{{ t('modalNewUserNote') }}</span>
+                    </div>
+                    <div class="form-grid">
+                        <label class="form-field full">
+                            <span>{{ t('email') }}</span>
+                            <input v-model="model.userCreateForm.email" data-testid="user-email" data-autofocus
+                                class="field" type="email" placeholder="user@example.com" autocomplete="off" required />
+                        </label>
+                        <label class="form-field full">
+                            <span>{{ t('password') }}</span>
+                            <div class="field-password-wrap">
+                                <input v-model="model.userCreateForm.password" data-testid="user-password"
+                                    class="field" :type="showNewUserPassword ? 'text' : 'password'" placeholder="••••••••" autocomplete="new-password" required />
+                                <button type="button" class="field-password-toggle" :aria-label="showNewUserPassword ? 'Hide password' : 'Show password'" @click="showNewUserPassword = !showNewUserPassword">
+                                    <svg v-if="showNewUserPassword" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                                        <line x1="1" y1="1" x2="23" y2="23" />
+                                    </svg>
+                                    <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                        <circle cx="12" cy="12" r="3" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </label>
+                        <label class="form-field">
+                            <span>{{ t('username') }}</span>
+                            <input v-model="model.userCreateForm.username" data-testid="user-username"
+                                class="field" :placeholder="t('optionalPlaceholder')" autocomplete="off" />
+                        </label>
+                        <label class="form-field">
+                            <span>{{ t('displayName') }}</span>
+                            <input v-model="model.userCreateForm.displayName" data-testid="user-display-name"
+                                class="field" :placeholder="t('optionalPlaceholder')" autocomplete="off" />
+                        </label>
+                    </div>
+                </template>
+                <template v-else-if="model.actionModal === 'reset-password'">
+                    <div id="action-modal-description" class="notice modal-notice">
+                        <strong>{{ t('modalResetPassword') }}</strong>
+                        <span>{{ t('modalResetPasswordNote') }}</span>
+                    </div>
+                    <div class="form-grid">
+                        <label class="form-field full">
+                            <span>{{ t('user') }}</span>
+                            <input class="field" :value="model.currentUser?.user || '-'" readonly />
+                        </label>
+                        <label class="form-field full">
+                            <span>{{ t('newPassword') }}</span>
+                            <div class="field-password-wrap">
+                                <input v-model="model.userResetPasswordForm.password" data-testid="user-new-password" data-autofocus
+                                    class="field" :type="showResetPassword ? 'text' : 'password'" placeholder="••••••••" autocomplete="new-password" required />
+                                <button type="button" class="field-password-toggle" :aria-label="showResetPassword ? 'Hide password' : 'Show password'" @click="showResetPassword = !showResetPassword">
+                                    <svg v-if="showResetPassword" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                                        <line x1="1" y1="1" x2="23" y2="23" />
+                                    </svg>
+                                    <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                        <circle cx="12" cy="12" r="3" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </label>
+                    </div>
+                </template>
+                <template v-else-if="model.actionModal === 'edit-role'">
+                    <div id="action-modal-description" class="notice modal-notice">
+                        <strong>{{ t('modalEditRole') }}</strong>
+                        <span>{{ t('modalEditRoleNote') }}</span>
+                    </div>
+                    <div class="form-grid">
+                        <label class="form-field full">
+                            <span>{{ t('user') }}</span>
+                            <input class="field" :value="model.currentUser?.user || '-'" readonly />
+                        </label>
+                        <label class="form-field full">
+                            <span>{{ t('role') }}</span>
+                            <select v-model="model.userRoleForm.roleText" data-testid="user-role-select" data-autofocus class="select">
+                                <option value="">{{ t('noRoleOption') }}</option>
+                                <option v-for="roleItem in model.userRolesList" :key="typeof roleItem === 'string' ? roleItem : (roleItem.role_text || roleItem.name || roleItem.id)"
+                                    :value="typeof roleItem === 'string' ? roleItem : (roleItem.role_text || roleItem.name || roleItem.role)">
+                                    {{ typeof roleItem === 'string' ? roleItem : (roleItem.role_text || roleItem.name || roleItem.role) }}
+                                </option>
+                            </select>
+                        </label>
+                    </div>
+                </template>
+                <template v-else-if="model.actionModal === 'user-addresses'">
+                    <div id="action-modal-description" class="notice modal-notice">
+                        <strong>{{ t('modalUserAddresses') }}</strong>
+                        <span>{{ t('modalUserAddressesNote') }}</span>
+                    </div>
+                    <div class="user-addresses-wrap">
+                        <div class="form-field full">
+                            <span>{{ t('user') }}</span>
+                            <input class="field" :value="model.currentUser?.user || '-'" readonly />
+                        </div>
+                        <div class="bound-addresses-section">
+                            <h4>{{ t('boundAddresses') }}</h4>
+                            <div v-if="model.userBoundAddressesLoading" class="loading-text">{{ t('running') }}...</div>
+                            <div v-else-if="!model.userBoundAddresses || model.userBoundAddresses.length === 0" class="empty-note">
+                                {{ t('noBoundAddresses') }}
+                            </div>
+                            <ul v-else class="bound-addresses-list">
+                                <li v-for="item in model.userBoundAddresses" :key="item.id || item.address || item.name" class="bound-address-item">
+                                    <span class="bound-addr-name">{{ item.name || item.address || item.display_label || `ID #${item.id}` }}</span>
+                                    <button class="btn small danger" type="button" :disabled="!!model.actionBusy"
+                                        :aria-label="t('unbind')"
+                                        @click.stop="actions.unbindAddressFromUser(model.currentUser, item)">
+                                        {{ t('unbind') }}
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="bind-new-address-section">
+                            <h4>{{ t('bindNewAddress') }}</h4>
+                            <div class="bind-form-row">
+                                <input v-model="model.userAddressBindForm.address" data-testid="bind-address-input"
+                                    class="field" :placeholder="t('addressNameOrId')" />
+                                <button class="btn primary small" type="button" :disabled="!model.userAddressBindForm.address || !!model.actionBusy"
+                                    @click.stop="actions.bindAddressToUser(model.currentUser)">
+                                    {{ t('bind') }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
             </div>
             <div class="modal-actions">
                 <template v-if="model.actionModal === 'one-time-result'">
                     <button class="btn primary" type="button" :disabled="!model.oneTimeResult.value"
                         @click="actions.copyText(model.oneTimeResult.value)">{{ t('copyResult') }}</button>
                     <button class="btn" type="button" @click="actions.closeActionModal">{{ t('savedSecurely') }}</button>
+                </template>
+                <template v-else-if="model.actionModal === 'user-addresses'">
+                    <button class="btn primary" data-testid="user-addresses-close" type="button" @click="actions.closeActionModal">{{ t('close') }}</button>
                 </template>
                 <template v-else>
                     <button class="btn" type="button" :disabled="!!model.actionBusy"

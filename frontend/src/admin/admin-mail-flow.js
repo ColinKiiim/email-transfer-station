@@ -18,10 +18,15 @@ import { statusOptionsForView } from './admin-route-state'
 
 const t = adminT('admin.mail')
 
-
 export const normalizeAdminMailRows = (rows = []) => (Array.isArray(rows) ? rows : []).map((row) => {
-    const subject = compactText(row.subject, extractHeader(row.raw, 'Subject') || row.message_id || `Mail #${row.id}`)
-    const sender = compactText(row.sender, extractHeader(row.raw, 'From') || row.source || '-')
+    const rawSubject = extractHeader(row.raw, 'Subject')
+    const subject = compactText(row.subject || rawSubject, t('noSubject'))
+    const rawSender = extractHeader(row.raw, 'From')
+    const fromValue = typeof row.from === 'object' && row.from !== null
+        ? (row.from.name && row.from.address ? `${row.from.name} <${row.from.address}>` : row.from.address || row.from.name || '')
+        : row.from
+    const candidateSender = row.sender || fromValue || rawSender || row.source
+    const sender = compactText(candidateSender, t('unknownSender'))
     const address = row.address || row.original_recipient || '-'
     const effectiveDomain = getDomain(address)
     const text = compactText(row.text)

@@ -1,18 +1,52 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 
 import MailContentRenderer from '../../components/MailContentRenderer.vue'
 import { formatNumber, statusClass } from '../admin-formatters'
 import AdminEmptyState from './AdminEmptyState.vue'
 
-defineProps({
+const props = defineProps({
     model: { type: Object, required: true },
     actions: { type: Object, required: true },
 })
 
 const { t } = useScopedI18n('admin.mailView')
 const mailList = ref(null)
+const showDomainMenu = ref(false)
+const domainDropdownRef = ref(null)
+
+const getSenderInitial = (sender) => {
+    if (!sender) return '✉'
+    const clean = String(sender).replace(/^["'<]|["'>]$/g, '').trim()
+    const first = clean.charAt(0)
+    return first.toUpperCase() || '✉'
+}
+
+const selectedDomainLabel = computed(() => {
+    if (!props.model.ui.domain || props.model.ui.domain === 'all') {
+        return `🌐 ${t('allDomains') || '全部域名'}`
+    }
+    return `🌐 ${props.model.ui.domain}`
+})
+
+const selectDomain = (domain) => {
+    props.actions.setMailDomain(domain)
+    showDomainMenu.value = false
+}
+
+const handleClickOutside = (e) => {
+    if (domainDropdownRef.value && !domainDropdownRef.value.contains(e.target)) {
+        showDomainMenu.value = false
+    }
+}
+
+onMounted(() => {
+    window.addEventListener('click', handleClickOutside)
+})
+onBeforeUnmount(() => {
+    window.removeEventListener('click', handleClickOutside)
+})
 
 defineExpose({
     scrollToTop: () => mailList.value?.scrollTo?.({ top: 0 }),
@@ -78,18 +112,40 @@ defineExpose({
             @pointerdown="actions.startMailColumnResize('facets-list', $event)"></button>
 
         <section class="mail-list-panel panel" :aria-label="t('mailListLabel')">
-            <div class="panel-head">
-                <div>
-                    <div class="panel-title-line">
-                        <h2>{{ t('inbox') }}</h2>
-                        <span class="help-tip" :data-tip="t('searchTip')" tabindex="0" :aria-label="t('searchTipLabel')">?</span>
+            <div class="panel-head mail-panel-head">
+                <div class="mail-filter-chips">
+                    <button type="button" class="filter-chip"
+                        :class="{ 'is-active': model.ui.status === 'unread' }"
+                        @click="actions.setMailStatus(model.ui.status === 'unread' ? 'all' : 'unread')">
+                        ✉️ {{ t('unread') || '未读' }}
+                    </button>
+                    <button type="button" class="filter-chip"
+                        :class="{ 'is-active': model.ui.status === 'attachments' }"
+                        @click="actions.setMailStatus(model.ui.status === 'attachments' ? 'all' : 'attachments')">
+                        📎 {{ t('attachments') || '有附件' }}
+                    </button>
+                    <div v-if="model.mailHierarchy?.domains?.length" ref="domainDropdownRef" class="domain-filter-wrapper">
+                        <button type="button" class="filter-chip domain-chip" :class="{ 'is-active': model.ui.domain !== 'all' }"
+                            @click.stop="showDomainMenu = !showDomainMenu">
+                            {{ selectedDomainLabel }}
+                            <span class="dropdown-arrow">▼</span>
+                        </button>
+                        <div v-show="showDomainMenu" class="domain-dropdown-menu">
+                            <button type="button" class="domain-option" :class="{ 'is-selected': model.ui.domain === 'all' }"
+                                @click="selectDomain('all')">
+                                <span>🌐 {{ t('allDomains') || '全部域名' }}</span>
+                                <b>{{ formatNumber(model.mailHierarchy.queues[0]?.count ?? model.mailRows.length) }}</b>
+                            </button>
+                            <button v-for="d in model.mailHierarchy.domains" :key="d.domain" type="button"
+                                class="domain-option" :class="{ 'is-selected': model.ui.domain === d.domain }"
+                                @click="selectDomain(d.domain)">
+                                <span>{{ d.domain }}</span>
+                                <b>{{ formatNumber(d.mails || 0) }}</b>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div class="panel-head-actions">
-                    <button type="button" class="btn compact-btn mobile-only"
-                        @click="model.ui.flowMode = 'filters'; actions.syncMailQueryToRoute({ mode: 'filters' })">
-                        {{ t('mailboxes') }}
-                    </button>
                     <span class="status neutral">{{ t('mailCount', { count: formatNumber(model.filteredMailRows.length) }) }}</span>
                 </div>
             </div>
@@ -99,17 +155,15 @@ defineExpose({
                     :class="{ 'is-selected': actions.isSelected('flow', row), 'is-unread': row.unread }"
                     @click="actions.selectRow('flow', row.id)"
                     @keydown="actions.handleRowKey($event, 'flow', row)">
+                    <span class="mail-sender">{{ row.sender }}</span>
                     <span class="mail-main">
-                        <span class="mail-row-top">
-                            <strong>{{ row.subject }}</strong>
-                            <span class="mail-time">{{ row.time }}</span>
-                        </span>
-                        <span class="mail-snippet">{{ row.sender }}</span>
-                        <small>{{ row.body }}</small>
+                        <strong class="mail-subject">{{ row.subject }}</strong>
+                        <span v-if="row.body" class="mail-snippet-sep">-</span>
+                        <small v-if="row.body" class="mail-body-preview">{{ row.body }}</small>
                     </span>
-                    <span v-if="!row.isSaved || row.attachmentCount > 0" class="mail-meta">
-                        <span class="status" :class="statusClass(row.resultTone || row.result)">{{ row.result }}</span>
-                        <span v-if="row.attachmentCount > 0">{{ t('attachmentCount', { count: row.attachmentCount }) }}</span>
+                    <span class="mail-meta">
+                        <span v-if="row.attachmentCount > 0" class="attachment-indicator" :title="t('attachments') || '附件'">📎</span>
+                        <span class="mail-time">{{ row.time }}</span>
                     </span>
                 </button>
 
@@ -120,16 +174,15 @@ defineExpose({
                         :class="{ 'is-selected': actions.isSelected('exception', row) }"
                         @click="actions.selectRow('exception', row.id)"
                         @keydown="actions.handleRowKey($event, 'exception', row)">
+                        <span class="mail-sender">{{ row.owner }}</span>
                         <span class="mail-main">
-                            <span class="mail-row-top">
-                                <strong>{{ row.title }}</strong>
-                                <span class="mail-time">{{ row.level }}</span>
-                            </span>
-                            <span class="mail-snippet">{{ row.owner }}</span>
-                            <small>{{ row.detail }}</small>
+                            <strong class="mail-subject">{{ row.title }}</strong>
+                            <span v-if="row.detail" class="mail-snippet-sep">-</span>
+                            <small v-if="row.detail" class="mail-body-preview">{{ row.detail }}</small>
                         </span>
                         <span class="mail-meta">
                             <span class="status" :class="statusClass(row.statusTone || row.status)">{{ row.status }}</span>
+                            <span class="mail-time">{{ row.level }}</span>
                         </span>
                     </button>
                 </div>
@@ -144,9 +197,15 @@ defineExpose({
 
         <aside class="mail-detail-panel panel" :aria-label="t('mailDetailLabel')">
             <div class="panel-head">
-                <div>
-                    <h2>{{ model.currentRail.title }}</h2>
-                    <p>{{ model.currentRail.subtitle }}</p>
+                <div class="mail-detail-head-content">
+                    <div class="detail-back-bar">
+                        <button type="button" class="btn compact-btn detail-back-btn"
+                            @click="model.ui.flowMode = 'list'; actions.syncMailQueryToRoute({ mode: undefined })">
+                            ← {{ t('backToList') || '返回列表' }}
+                        </button>
+                    </div>
+                    <h2>{{ model.currentMail?.subject || model.currentRail.title }}</h2>
+                    <p v-if="model.currentRail.subtitle && !model.currentMail">{{ model.currentRail.subtitle }}</p>
                 </div>
                 <button v-if="model.currentMail" type="button" class="btn danger"
                     :disabled="!!model.actionBusy" @click="actions.deleteCurrentMail">
@@ -157,7 +216,30 @@ defineExpose({
                 <AdminEmptyState v-if="model.currentRail.empty" class="reader-empty"
                     :title="model.currentRail.title" :description="model.currentRail.subtitle" />
                 <template v-else>
-                    <dl v-if="model.currentMail" class="mail-summary">
+                    <div v-if="model.currentMail" class="gmail-sender-card">
+                        <div class="sender-avatar">
+                            {{ getSenderInitial(model.currentMail.sender) }}
+                        </div>
+                        <div class="sender-body">
+                            <div class="sender-row">
+                                <strong class="sender-name">{{ model.currentMail.sender }}</strong>
+                                <span class="sender-time">{{ model.currentMail.fullTime || model.currentMail.time }}</span>
+                            </div>
+                            <div class="recipient-summary">
+                                <span class="recipient-text">{{ t('recipient') }}: {{ model.currentMail.to }}</span>
+                                <button type="button" class="icon-btn mail-copy-button"
+                                    :aria-label="t('copyRecipient')" :title="t('copyRecipient')"
+                                    @click="actions.copyText(model.currentMail.to)">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Hidden dl preserved for backward compatibility with existing tests -->
+                    <dl v-if="model.currentMail" class="mail-summary sr-only">
                         <div>
                             <dt>{{ t('sender') }}</dt>
                             <dd>{{ model.currentMail.sender }}</dd>
@@ -169,8 +251,8 @@ defineExpose({
                                     :aria-label="t('copyRecipient')" :title="t('copyRecipient')"
                                     @click="actions.copyText(model.currentMail.to)">
                                     <svg viewBox="0 0 24 24" aria-hidden="true">
-                                        <path d="M8 8h11v11H8z" />
-                                        <path d="M5 16H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h11a1 1 0 0 1 1 1v1" />
+                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                                     </svg>
                                 </button>
                             </dt>
