@@ -249,6 +249,13 @@ onMounted(async () => {
                     {{ t('cannotForgotPassword') }}
                 </span>
             </n-alert>
+            <template #footer>
+                <n-space justify="end">
+                    <n-button @click="showModal = false" size="small" tertiary>
+                        {{ t('close') }}
+                    </n-button>
+                </n-space>
+            </template>
         </n-modal>
     </div>
 </template>

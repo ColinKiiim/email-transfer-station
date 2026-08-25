@@ -232,7 +232,7 @@ onMounted(async () => {
 
     <section v-else-if="userTab === 'address_management'" class="access-card">
       <div class="module-head">
-        <span>address ownership</span>
+        <span>{{ t('addressOwnership') }}</span>
         <h2>{{ t('address_management') }}</h2>
       </div>
       <AddressMangement />
@@ -240,7 +240,7 @@ onMounted(async () => {
 
     <section v-else-if="userTab === 'user_settings'" class="access-card">
       <div class="module-head">
-        <span>account security</span>
+        <span>{{ t('accountSecurity') }}</span>
         <h2>{{ t('user_settings') }}</h2>
       </div>
       <UserSettingsPage />
@@ -248,7 +248,7 @@ onMounted(async () => {
 
     <section v-else-if="canCreateOrBindAddress" class="access-card">
       <div class="module-head">
-        <span>address onboarding</span>
+        <span>{{ t('addressOnboarding') }}</span>
         <h2>{{ t('bind_address') }}</h2>
       </div>
       <BindAddress />

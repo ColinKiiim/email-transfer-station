@@ -458,6 +458,10 @@ export const MESSAGE_REGISTRY = {
       "en": "Shared mailbox access",
       "zh": "共享邮箱访问"
     },
+    "shareTokenLabel": {
+      "en": "Share token",
+      "zh": "分享令牌"
+    },
     "invalidToken": {
       "en": "Invalid or expired inbox link",
       "zh": "无效或已过期的收件箱链接"
@@ -484,7 +488,7 @@ export const MESSAGE_REGISTRY = {
     },
     "identityMeta": {
       "en": "Read-only access via share token",
-      "zh": "通过分享 token 只读访问"
+      "zh": "通过分享令牌只读访问"
     },
     "accessMode": {
       "en": "Access mode",
@@ -720,9 +724,17 @@ export const MESSAGE_REGISTRY = {
       "en": "My Addresses",
       "zh": "我的地址"
     },
+    "addressOwnership": {
+      "en": "Address ownership",
+      "zh": "地址归属"
+    },
     "bind_address": {
       "en": "Bind Mail Address",
       "zh": "绑定地址"
+    },
+    "addressOnboarding": {
+      "en": "Address onboarding",
+      "zh": "地址接入"
     },
     "user_mail_box_tab": {
       "en": "Mail Box",
@@ -731,7 +743,11 @@ export const MESSAGE_REGISTRY = {
     "user_settings": {
       "en": "Account Security",
       "zh": "账户设置"
-    },
+    },
+    "accountSecurity": {
+      "en": "Account security",
+      "zh": "账户安全"
+    },
     "noRole": {
       "en": "No role",
       "zh": "无角色"
@@ -829,6 +845,10 @@ export const MESSAGE_REGISTRY = {
     "cannotForgotPassword": {
       "en": "Mail verification is disabled or register is disabled, cannot reset password, please contact administrator",
       "zh": "未开启邮箱验证或未开启注册功能，无法重置密码，请联系管理员"
+    },
+    "close": {
+      "en": "Close",
+      "zh": "关闭"
     },
     "email": {
       "en": "Email",
@@ -2085,6 +2105,26 @@ export const MESSAGE_REGISTRY = {
     "sharePackageLabel": {
       "en": "Access package #{id}",
       "zh": "访问包 #{id}"
+    },
+    "shareScopeRead": {
+      "en": "Read-only",
+      "zh": "只读"
+    },
+    "shareStatusActive": {
+      "en": "Active",
+      "zh": "有效"
+    },
+    "shareStatusRevoked": {
+      "en": "Revoked",
+      "zh": "已失效"
+    },
+    "shareStatusExpired": {
+      "en": "Expired",
+      "zh": "已过期"
+    },
+    "sharePathLabel": {
+      "en": "Temporary share link",
+      "zh": "临时分享链接"
     },
     "addressCount": {
       "en": "{count} addresses",
@@ -3694,9 +3734,9 @@ export const MESSAGE_REGISTRY = {
       "en": "Auto sync",
       "zh": "自动同步"
     },
-    "manualSync": {
-      "en": "Manual sync",
-      "zh": "手动同步"
+    "autoSyncOff": {
+      "en": "Auto sync off",
+      "zh": "自动同步关闭"
     },
     "autoSyncCountdown": {
       "en": "Auto sync {seconds}s",

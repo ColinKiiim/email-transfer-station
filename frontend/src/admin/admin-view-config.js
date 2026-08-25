@@ -166,10 +166,10 @@ export const TABLE_SPECS = {
         { labelKey: 'note', key: 'note' },
     ],
     shares: [
-        { labelKey: 'label', type: 'entity', main: 'label', sub: 'path' },
+        { labelKey: 'label', type: 'entity', main: 'label', sub: 'pathLabel' },
         { labelKey: 'address', key: 'address' },
-        { labelKey: 'scopes', key: 'scopes' },
-        { labelKey: 'status', key: 'status', type: 'status' },
+        { labelKey: 'scopes', key: 'scopeLabel' },
+        { labelKey: 'status', key: 'statusLabel', type: 'status' },
         { labelKey: 'expires', key: 'expires', type: 'time' },
         { labelKey: 'lastUsed', key: 'last', type: 'time' },
         { labelKey: 'actions', key: 'actions', type: 'shareActions' },

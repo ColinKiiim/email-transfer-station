@@ -27,17 +27,62 @@ export const buildAdminAddressRows = (rows = [], enableAddressPassword = false) 
     }
 })
 
-export const buildAdminShareRows = (rows = []) => rows.map((row) => ({
-    id: `pkg-${row.id}`,
-    sourceId: row.id,
-    label: row.label || t('sharePackageLabel', { id: row.id }),
-    address: row.address,
-    scopes: row.scopes || 'read',
-    status: row.status || 'active',
-    expires: formatDate(row.expires_at),
-    last: formatDate(row.last_used_at),
-    path: '/i/:token',
-}))
+const SHARE_SCOPE_MAP = {
+    read: 'shareScopeRead',
+}
+
+const SHARE_STATUS_MAP = {
+    active: { labelKey: 'shareStatusActive', tone: 'ok' },
+    revoked: { labelKey: 'shareStatusRevoked', tone: 'danger' },
+    expired: { labelKey: 'shareStatusExpired', tone: 'warn' },
+}
+
+export const formatShareScopes = (scopes = 'read') => {
+    if (!scopes) return t('shareScopeRead')
+    const list = Array.isArray(scopes)
+        ? scopes
+        : String(scopes).split(',').map((item) => item.trim()).filter(Boolean)
+    if (!list.length) return t('shareScopeRead')
+    return list.map((scope) => {
+        const key = SHARE_SCOPE_MAP[scope]
+        return key ? t(key) : scope
+    }).join(', ')
+}
+
+export const formatShareStatus = (status = 'active') => {
+    const matched = SHARE_STATUS_MAP[status]
+    if (matched) {
+        return {
+            label: t(matched.labelKey),
+            tone: matched.tone,
+        }
+    }
+    return {
+        label: status || '-',
+        tone: 'neutral',
+    }
+}
+
+export const buildAdminShareRows = (rows = []) => rows.map((row) => {
+    const rawScopes = row.scopes || 'read'
+    const rawStatus = row.status || 'active'
+    const statusMeta = formatShareStatus(rawStatus)
+    return {
+        id: `pkg-${row.id}`,
+        sourceId: row.id,
+        label: row.label || t('sharePackageLabel', { id: row.id }),
+        address: row.address,
+        scopes: rawScopes,
+        scopeLabel: formatShareScopes(rawScopes),
+        status: rawStatus,
+        statusLabel: statusMeta.label,
+        statusLabelTone: statusMeta.tone,
+        expires: formatDate(row.expires_at),
+        last: formatDate(row.last_used_at),
+        path: '/i/:token',
+        pathLabel: t('sharePathLabel'),
+    }
+})
 
 export const buildAdminUserRows = (rows = []) => rows.map((row) => ({
     id: `user-${row.id}`,

@@ -340,12 +340,12 @@ onBeforeUnmount(() => {
                         <label class="form-field">
                             <span>{{ t('username') }}</span>
                             <input v-model="model.userCreateForm.username" data-testid="user-username"
-                                class="field" placeholder="username (optional)" autocomplete="off" />
+                                class="field" :placeholder="t('optionalPlaceholder')" autocomplete="off" />
                         </label>
                         <label class="form-field">
                             <span>{{ t('displayName') }}</span>
                             <input v-model="model.userCreateForm.displayName" data-testid="user-display-name"
-                                class="field" placeholder="Display Name (optional)" autocomplete="off" />
+                                class="field" :placeholder="t('optionalPlaceholder')" autocomplete="off" />
                         </label>
                     </div>
                 </template>

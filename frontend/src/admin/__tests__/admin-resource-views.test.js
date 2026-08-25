@@ -144,8 +144,28 @@ describe('admin identity and access view models', () => {
         }])[0]).toMatchObject({
             id: 'pkg-5',
             label: '访问包 #5',
+            scopes: 'read,download',
+            scopeLabel: '只读, download',
+            status: 'active',
+            statusLabel: '有效',
+            statusLabelTone: 'ok',
             expires: '2026-07-16 01:02:03',
             path: '/i/:token',
+            pathLabel: '临时分享链接',
+        })
+        expect(buildAdminShareRows([{
+            id: 6,
+            address: 'owner@example.test',
+            status: 'revoked',
+        }])[0]).toMatchObject({
+            id: 'pkg-6',
+            scopes: 'read',
+            scopeLabel: '只读',
+            status: 'revoked',
+            statusLabel: '已失效',
+            statusLabelTone: 'danger',
+            path: '/i/:token',
+            pathLabel: '临时分享链接',
         })
         expect(buildAdminUserRows([{
             id: 2,

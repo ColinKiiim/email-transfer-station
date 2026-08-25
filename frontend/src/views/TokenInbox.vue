@@ -114,7 +114,7 @@ onMounted(resolveToken)
     </section>
 
     <section v-else-if="errorText" class="token-state-card is-error">
-      <span>share token</span>
+      <span>{{ t('shareTokenLabel') }}</span>
       <h2>{{ t('invalidToken') }}</h2>
       <p>{{ errorText }}</p>
       <div class="token-next-steps">
