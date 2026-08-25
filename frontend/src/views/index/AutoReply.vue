@@ -58,9 +58,6 @@ onMounted(async () => {
 <template>
     <div class="center">
         <n-card :bordered="false" embedded v-if="settings.address" :title='t("settings")'>
-            <div class="right">
-                <n-button type="primary" @click="saveData">{{ t('save') }}</n-button>
-            </div>
             <div class="left">
                 <n-form-item :label="t('enableAutoReply')" label-placement="left">
                     <n-switch v-model:value="enableAutoReply" />
@@ -78,6 +75,9 @@ onMounted(async () => {
                 <n-form-item :label="t('autoReply')" label-placement="left">
                     <n-input :disabled="!enableAutoReply" type="textarea" v-model:value="autoReplyMessage" />
                 </n-form-item>
+                <n-flex justify="end" class="action-row">
+                    <n-button type="primary" @click="saveData">{{ t('save') }}</n-button>
+                </n-flex>
             </div>
         </n-card>
     </div>
@@ -106,9 +106,7 @@ onMounted(async () => {
     justify-content: left;
 }
 
-.right {
-    text-align: right;
-    place-items: right;
-    justify-content: right;
+.action-row {
+    margin-top: 12px;
 }
 </style>

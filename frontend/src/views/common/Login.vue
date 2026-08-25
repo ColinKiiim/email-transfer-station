@@ -239,6 +239,12 @@ const showNewAddressTab = computed(() => {
     return openSettings.value.enableUserCreateEmail;
 });
 
+const showAnonymousDisabledNotice = computed(() => {
+    if (userSettings.value.user_email) return false;
+    if (!openSettings.value.fetched) return false;
+    return !showNewAddressTab.value;
+});
+
 const availableTabs = computed(() => [
     { value: 'signin', label: loginAndBindTag.value },
     ...(showNewAddressTab.value ? [{ value: 'register', label: t('getNewEmail') }] : []),
@@ -276,6 +282,9 @@ onMounted(async () => {
     <div>
         <n-alert v-if="userSettings.user_email" :show-icon="false" :bordered="false" closable>
             <span>{{ t('bindUserInfo') }}</span>
+        </n-alert>
+        <n-alert v-else-if="showAnonymousDisabledNotice" :show-icon="false" :bordered="false">
+            <span>{{ t('anonymousDisabledNotice') }}</span>
         </n-alert>
         <div>
             <div class="login-tab-list" role="tablist" :aria-label="loginAndBindTag">

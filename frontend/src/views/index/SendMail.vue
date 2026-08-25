@@ -172,9 +172,6 @@ onMounted(async () => {
                 <n-alert type="info" :show-icon="false" :bordered="false" closable>
                     {{ t('send_balance') }}: {{ settings.send_balance }}
                 </n-alert>
-                <n-flex justify="end">
-                    <n-button type="primary" :loading="sending" :disabled="sending" @click="send">{{ t('send') }}</n-button>
-                </n-flex>
                 <div class="left">
                     <n-form :model="sendMailModel">
                         <n-form-item :label="t('fromName')" label-placement="top">
@@ -183,12 +180,14 @@ onMounted(async () => {
                                 <n-input :value="settings.address" disabled />
                             </n-input-group>
                         </n-form-item>
-                        <n-form-item :label="t('toName')" label-placement="top">
-                            <n-input-group>
+                        <div class="recipient-grid">
+                            <n-form-item :label="t('recipientName')" label-placement="top">
                                 <n-input v-model:value="sendMailModel.toName" />
+                            </n-form-item>
+                            <n-form-item :label="t('recipientEmail')" label-placement="top">
                                 <n-input v-model:value="sendMailModel.toMail" />
-                            </n-input-group>
-                        </n-form-item>
+                            </n-form-item>
+                        </div>
                         <n-form-item :label="t('subject')" label-placement="top">
                             <n-input v-model:value="sendMailModel.subject" />
                         </n-form-item>
@@ -216,6 +215,9 @@ onMounted(async () => {
                                 minRows: 3
                             }" />
                         </n-form-item>
+                        <n-flex justify="end" class="action-row">
+                            <n-button type="primary" :loading="sending" :disabled="sending" @click="send">{{ t('send') }}</n-button>
+                        </n-flex>
                     </n-form>
                 </div>
             </div>
@@ -291,5 +293,22 @@ onMounted(async () => {
 
 .n-alert {
     margin-bottom: 10px;
+}
+
+.recipient-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+@media (max-width: 640px) {
+    .recipient-grid {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+}
+
+.action-row {
+    margin-top: 16px;
 }
 </style>
