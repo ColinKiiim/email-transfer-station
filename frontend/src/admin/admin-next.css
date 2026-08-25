@@ -482,14 +482,39 @@ body:has(.admin-next) .n-message-container {
 
 .admin-next-host .sidebar-foot {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
     padding: 10px 14px;
     border-radius: 12px;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.06);
     color: var(--muted);
     font-size: 11px;
+    line-height: 1.4;
+    min-width: 0;
+}
+
+.admin-next-host .sidebar-foot .health-dot {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.admin-next-host .sidebar-foot .mono {
+    display: inline-block;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: color-mix(in oklch, var(--muted) 85%, transparent);
+    font-size: 10.5px;
 }
 
 .admin-next-host .is-sidebar-collapsed .sidebar {
@@ -559,6 +584,7 @@ body:has(.admin-next) .n-message-container {
 }
 
 .admin-next-host .health-dot::before {
+    flex-shrink: 0;
     width: 7px;
     height: 7px;
     border-radius: 999px;

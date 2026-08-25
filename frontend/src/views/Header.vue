@@ -87,7 +87,7 @@ onMounted(async () => {
 </script>
 
 <template>
-    <div>
+    <div class="header-container">
         <header class="app-topbar">
             <button type="button" class="header-brand-button" :aria-label="openSettings.title || PRODUCT_TITLE"
                 @click="onLogoClick">
@@ -113,7 +113,17 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+.header-container {
+    width: 100%;
+    height: 60px;
+    min-height: 60px;
+    flex-shrink: 0;
+}
+
 .app-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -121,6 +131,7 @@ onMounted(async () => {
     width: 100%;
     height: 60px;
     min-height: 60px;
+    flex-shrink: 0;
     padding: 0 24px;
     background: var(--ets-surface);
     border-bottom: 1px solid var(--ets-border);

@@ -146,14 +146,46 @@ body,
   -moz-osx-font-smoothing: grayscale;
   background: var(--ets-bg);
   color: var(--ets-text);
-  min-height: 100vh;
+  height: 100dvh;
+  min-height: 100dvh;
   margin: 0;
   padding: 0;
+  overflow: hidden;
 }
 
 :where(button, a, input, textarea, select, [tabindex]):focus-visible {
   outline: 2px solid var(--ets-focus-ring);
   outline-offset: 2px;
+}
+
+* {
+  scrollbar-color: color-mix(in oklch, var(--ets-text-muted) 55%, transparent) transparent;
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--ets-scrollbar-track, transparent);
+}
+
+*::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: var(--ets-radius-pill, 999px);
+  background: var(--ets-scrollbar-thumb, color-mix(in oklch, var(--ets-text-muted) 48%, transparent));
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--ets-scrollbar-thumb-hover, color-mix(in oklch, var(--ets-text-muted) 68%, transparent));
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 .n-switch {
@@ -164,38 +196,53 @@ body,
 
 <style scoped>
 .app-root {
-  min-height: 100vh;
+  height: 100dvh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   background: var(--ets-bg);
   color: var(--ets-text);
   width: 100%;
+  overflow: hidden;
 }
 
 .app-body {
   flex: 1;
   width: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   box-sizing: border-box;
 }
 
 .app-grid {
   width: 100%;
-  min-height: calc(100vh - 60px);
+  height: 100%;
+  min-height: 0;
+  flex: 1;
 }
 
 .side {
-  min-height: 100vh;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .main {
   width: 100%;
-  min-height: calc(100vh - 60px);
+  height: 100%;
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
   text-align: center;
   box-sizing: border-box;
 }
 
 .main-fullscreen {
   text-align: left;
-  min-height: 100vh;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 </style>

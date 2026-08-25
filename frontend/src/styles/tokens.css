@@ -115,6 +115,11 @@
     --ets-motion-fast: 120ms;
     --ets-motion-base: 180ms;
     --ets-motion-ease: cubic-bezier(0.33, 0, 0.13, 1);
+
+    /* Scrollbar */
+    --ets-scrollbar-thumb: color-mix(in oklch, var(--ets-text-muted) 48%, transparent);
+    --ets-scrollbar-thumb-hover: color-mix(in oklch, var(--ets-text-muted) 68%, transparent);
+    --ets-scrollbar-track: transparent;
 }
 
 html.dark {
