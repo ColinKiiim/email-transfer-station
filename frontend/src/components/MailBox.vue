@@ -5,7 +5,7 @@ import { useScopedI18n } from '@/i18n/app'
 import { useGlobalState } from '../store'
 import { CloudDownloadRound, ArrowBackIosNewFilled, ArrowForwardIosFilled, InboxRound } from '@vicons/material'
 import { useIsMobile } from '../utils/composables'
-import { processItem, revokeMailObjectUrls, revokeObjectUrl } from '../utils/email-parser'
+import { processItem, revokeMailObjectUrls, revokeObjectUrl, stripHtmlForPreview } from '../utils/email-parser'
 import { utcToLocalDate } from '../utils';
 import { buildReplyModel, buildForwardModel } from '../utils/mail-actions'
 import MailContentRenderer from "./MailContentRenderer.vue";
@@ -240,10 +240,8 @@ const mailItemClass = (row) => {
 
 const compactWhitespace = (value) => String(value || '').replace(/\s+/g, ' ').trim();
 
-const stripHtmlForPreview = (value) => compactWhitespace(String(value || '').replace(/<[^>]*>/g, ' '));
-
 const mailPreview = (row) => {
-  return stripHtmlForPreview(row.text || row.message || '').slice(0, 180);
+  return stripHtmlForPreview(row.text || row.message || '', 180);
 };
 
 const mailPrimaryAddress = (row) => compactWhitespace(row.source);
@@ -297,6 +295,34 @@ const multiActionSelectAll = (checked) => {
   data.value.forEach((item) => {
     item.checked = checked;
   });
+}
+
+const multiActionMarkRead = async (read = true) => {
+  try {
+    loading.value = true;
+    const selectedMails = data.value.filter((item) => item.checked);
+    if (selectedMails.length === 0) {
+      message.error(t('pleaseSelectMail'));
+      return;
+    }
+    for (const mail of selectedMails) {
+      const result = await props.updateMailReadState(mail.id, read);
+      if (read) {
+        mail.read_at = result?.read_at || mail.read_at || new Date().toISOString();
+        mail.is_read = true;
+        mail.unread = false;
+      } else {
+        mail.read_at = result?.read_at !== undefined ? result.read_at : null;
+        mail.is_read = false;
+        mail.unread = true;
+      }
+    }
+    message.success(t("success"));
+  } catch (error) {
+    message.error(error.message || "error");
+  } finally {
+    loading.value = false;
+  }
 }
 
 const multiActionDeleteMail = async () => {
@@ -381,6 +407,12 @@ onBeforeUnmount(() => {
           <n-button @click="multiActionSelectAll(false)" tertiary>
             {{ t('unselectAll') }}
           </n-button>
+          <n-button @click="multiActionMarkRead(true)" tertiary>
+            {{ t('markAsRead') }}
+          </n-button>
+          <n-button @click="multiActionMarkRead(false)" tertiary>
+            {{ t('markAsUnread') }}
+          </n-button>
           <n-popconfirm v-if="enableUserDeleteEmail" @positive-click="multiActionDeleteMail">
             <template #trigger>
               <n-button tertiary type="error">{{ t('delete') }}</n-button>
@@ -416,29 +448,32 @@ onBeforeUnmount(() => {
             clearable />
         </n-space>
       </div>
-      <div v-if="!curMail" class="desktop-fullwidth-stream" style="overflow: auto; min-height: 60vh; max-height: 100vh;">
+      <div v-if="!curMail" class="desktop-fullwidth-stream">
         <n-list hoverable clickable>
           <n-list-item v-for="row in data" v-bind:key="row.id" @click="() => clickRow(row)"
             :class="mailItemClass(row)">
             <template #prefix v-if="multiActionMode">
-              <n-checkbox v-model:checked="row.checked" />
+              <n-checkbox v-model:checked="row.checked" class="mail-select-checkbox" />
             </template>
             <div class="mail-list-row">
               <div class="mail-row-header">
-                <strong class="mail-row-title">{{ row.subject }}</strong>
+                <div class="mail-row-meta">
+                  <span v-if="row.unread" class="mail-row-pill unread-pill">{{ t('unread') }}</span>
+                  <span class="mail-row-pill">ID {{ row.id }}</span>
+                  <span class="mail-row-address">
+                    {{ showEMailTo ? "FROM: " + mailPrimaryAddress(row) : mailPrimaryAddress(row) }}
+                  </span>
+                  <span v-if="mailSecondaryAddress(row)" class="mail-row-address muted-address">
+                    TO: {{ mailSecondaryAddress(row) }}
+                  </span>
+                </div>
                 <time class="mail-row-date">{{ utcToLocalDate(row.created_at, useUTCDate) }}</time>
               </div>
-              <div class="mail-row-address-line">
-                <span v-if="row.unread" class="mail-row-pill unread-pill">{{ t('unread') }}</span>
-                <span class="mail-row-pill">ID {{ row.id }}</span>
-                <span class="mail-row-address">
-                  {{ showEMailTo ? "FROM: " + mailPrimaryAddress(row) : mailPrimaryAddress(row) }}
-                </span>
-                <span v-if="mailSecondaryAddress(row)" class="mail-row-address muted-address">
-                  TO: {{ mailSecondaryAddress(row) }}
-                </span>
+              <div class="mail-row-main">
+                <strong class="mail-row-title">{{ row.subject }}</strong>
+                <span v-if="mailPreview(row)" class="mail-row-sep">-</span>
+                <span v-if="mailPreview(row)" class="mail-row-snippet">{{ mailPreview(row) }}</span>
               </div>
-              <p v-if="mailPreview(row)" class="mail-row-snippet">{{ mailPreview(row) }}</p>
               <AiExtractInfo :metadata="row.metadata" compact />
             </div>
           </n-list-item>
@@ -454,29 +489,32 @@ onBeforeUnmount(() => {
       <n-split v-else class="left" direction="horizontal" :max="0.75" :min="0.25" :default-size="mailboxSplitSize"
         :on-update:size="onSpiltSizeChange">
         <template #1>
-          <div style="overflow: auto; min-height: 60vh; max-height: 100vh;">
+          <div class="desktop-mail-list-pane">
             <n-list hoverable clickable>
               <n-list-item v-for="row in data" v-bind:key="row.id" @click="() => clickRow(row)"
                 :class="mailItemClass(row)">
                 <template #prefix v-if="multiActionMode">
-                  <n-checkbox v-model:checked="row.checked" />
+                  <n-checkbox v-model:checked="row.checked" class="mail-select-checkbox" />
                 </template>
                 <div class="mail-list-row">
                   <div class="mail-row-header">
-                    <strong class="mail-row-title">{{ row.subject }}</strong>
+                    <div class="mail-row-meta">
+                      <span v-if="row.unread" class="mail-row-pill unread-pill">{{ t('unread') }}</span>
+                      <span class="mail-row-pill">ID {{ row.id }}</span>
+                      <span class="mail-row-address">
+                        {{ showEMailTo ? "FROM: " + mailPrimaryAddress(row) : mailPrimaryAddress(row) }}
+                      </span>
+                      <span v-if="mailSecondaryAddress(row)" class="mail-row-address muted-address">
+                        TO: {{ mailSecondaryAddress(row) }}
+                      </span>
+                    </div>
                     <time class="mail-row-date">{{ utcToLocalDate(row.created_at, useUTCDate) }}</time>
                   </div>
-                  <div class="mail-row-address-line">
-                    <span v-if="row.unread" class="mail-row-pill unread-pill">{{ t('unread') }}</span>
-                    <span class="mail-row-pill">ID {{ row.id }}</span>
-                    <span class="mail-row-address">
-                      {{ showEMailTo ? "FROM: " + mailPrimaryAddress(row) : mailPrimaryAddress(row) }}
-                    </span>
-                    <span v-if="mailSecondaryAddress(row)" class="mail-row-address muted-address">
-                      TO: {{ mailSecondaryAddress(row) }}
-                    </span>
+                  <div class="mail-row-main">
+                    <strong class="mail-row-title">{{ row.subject }}</strong>
+                    <span v-if="mailPreview(row)" class="mail-row-sep">-</span>
+                    <span v-if="mailPreview(row)" class="mail-row-snippet">{{ mailPreview(row) }}</span>
                   </div>
-                  <p v-if="mailPreview(row)" class="mail-row-snippet">{{ mailPreview(row) }}</p>
                   <AiExtractInfo :metadata="row.metadata" compact />
                 </div>
               </n-list-item>
@@ -543,20 +581,23 @@ onBeforeUnmount(() => {
             :class="mailItemClass(row)">
             <div class="mail-list-row">
               <div class="mail-row-header">
-                <strong class="mail-row-title">{{ row.subject }}</strong>
+                <div class="mail-row-meta">
+                  <span v-if="row.unread" class="mail-row-pill unread-pill">{{ t('unread') }}</span>
+                  <span class="mail-row-pill">ID {{ row.id }}</span>
+                  <span class="mail-row-address">
+                    {{ showEMailTo ? "FROM: " + mailPrimaryAddress(row) : mailPrimaryAddress(row) }}
+                  </span>
+                  <span v-if="mailSecondaryAddress(row)" class="mail-row-address muted-address">
+                    TO: {{ mailSecondaryAddress(row) }}
+                  </span>
+                </div>
                 <time class="mail-row-date">{{ utcToLocalDate(row.created_at, useUTCDate) }}</time>
               </div>
-              <div class="mail-row-address-line">
-                <span v-if="row.unread" class="mail-row-pill unread-pill">{{ t('unread') }}</span>
-                <span class="mail-row-pill">ID {{ row.id }}</span>
-                <span class="mail-row-address">
-                  {{ showEMailTo ? "FROM: " + mailPrimaryAddress(row) : mailPrimaryAddress(row) }}
-                </span>
-                <span v-if="mailSecondaryAddress(row)" class="mail-row-address muted-address">
-                  TO: {{ mailSecondaryAddress(row) }}
-                </span>
+              <div class="mail-row-main">
+                <strong class="mail-row-title">{{ row.subject }}</strong>
+                <span v-if="mailPreview(row)" class="mail-row-sep">-</span>
+                <span v-if="mailPreview(row)" class="mail-row-snippet">{{ mailPreview(row) }}</span>
               </div>
-              <p v-if="mailPreview(row)" class="mail-row-snippet">{{ mailPreview(row) }}</p>
               <AiExtractInfo :metadata="row.metadata" compact />
             </div>
           </n-list-item>
@@ -627,65 +668,60 @@ onBeforeUnmount(() => {
   padding: 0;
 }
 
+:deep(.mail-select-checkbox) {
+  --n-border: 1px solid var(--ets-border-strong);
+}
+
+:deep(.mail-select-checkbox:not(.n-checkbox--checked):not(:hover) .n-checkbox-box__border) {
+  border-color: var(--ets-border-strong);
+}
+
 .mail-list-row {
   width: 100%;
   min-width: 0;
-  padding: 13px 16px;
+  padding: 10px 14px;
 }
 
 .mail-row-header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: start;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
 }
 
-.mail-row-title {
+.mail-row-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 6px;
   min-width: 0;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  color: #111827;
-  font-size: 15px;
-  font-weight: 620;
-  line-height: 1.35;
-  text-wrap: pretty;
+  flex: 1 1 auto;
 }
 
 .mail-row-date {
-  color: #6b7280;
+  flex: 0 0 auto;
+  color: var(--ets-text-muted, #6b7280);
   font-size: 12px;
   line-height: 1.4;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 
-.mail-row-address-line {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px 8px;
-  min-width: 0;
-  margin-top: 6px;
-  color: #4b5563;
-  font-size: 12px;
-  line-height: 1.35;
-}
-
 .mail-row-pill {
   flex: 0 0 auto;
   border-radius: 999px;
   padding: 1px 7px;
-  background: #eef2ff;
-  color: #1d4ed8;
+  background: var(--ets-brand-soft, #eef2ff);
+  color: var(--ets-brand, #1d4ed8);
   font-size: 11px;
   font-weight: 560;
   font-variant-numeric: tabular-nums;
 }
 
 .unread-pill {
-  background: #fff7ed;
-  color: #c2410c;
+  background: var(--ets-warn-soft, #fff7ed);
+  color: var(--ets-warn, #c2410c);
 }
 
 .mail-row-address {
@@ -694,22 +730,54 @@ onBeforeUnmount(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--ets-text, #4b5563);
+  font-size: 12px;
+  line-height: 1.35;
+  font-weight: 500;
 }
 
 .muted-address {
-  color: #6b7280;
+  color: var(--ets-text-muted, #6b7280);
+  font-weight: 400;
+}
+
+.mail-row-main {
+  margin-top: 4px;
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+
+.mail-row-title {
+  color: var(--ets-text-strong, #111827);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.mail-row-sep {
+  margin: 0 5px;
+  color: var(--ets-text-muted, #6b7280);
+  opacity: 0.7;
 }
 
 .mail-row-snippet {
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  margin: 6px 0 0;
-  color: #6b7280;
-  font-size: 12px;
-  line-height: 1.45;
-  text-wrap: pretty;
+  color: var(--ets-text-muted, #6b7280);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.desktop-fullwidth-stream,
+.desktop-mail-list-pane {
+  overflow: auto;
+  min-height: 60vh;
+  max-height: 100vh;
+  min-width: min(100%, 320px);
 }
 
 .mobile-mailbox-toolbar {
@@ -730,6 +798,16 @@ onBeforeUnmount(() => {
   font-weight: 720;
 }
 
+.mail-unread .mail-row-address {
+  font-weight: 650;
+  color: var(--ets-text-strong, #111827);
+}
+
+.mail-unread .mail-row-date {
+  font-weight: 650;
+  color: var(--ets-text-strong, #111827);
+}
+
 pre {
   white-space: pre-wrap;
   word-wrap: break-word;
@@ -737,16 +815,16 @@ pre {
 
 @media (max-width: 640px) {
   .mail-list-row {
-    padding: 12px 14px;
+    padding: 10px 12px;
   }
 
   .mail-row-header {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 3px;
+    flex-wrap: wrap;
+    gap: 2px 8px;
   }
 
   .mail-row-date {
-    order: -1;
+    font-size: 11px;
   }
 
   .mail-row-address {

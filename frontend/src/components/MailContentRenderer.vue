@@ -74,15 +74,34 @@ watch(
   },
   { immediate: true },
 )
-onBeforeUnmount(() => {
-  if (downloadUrl.value) URL.revokeObjectURL(downloadUrl.value)
-});
 
 const showTextMail = ref(preferShowTextMail.value);
 const showAttachments = ref(false);
 const curAttachments = ref([]);
 const attachmentLoding = ref(false);
 const showFullscreen = ref(false);
+
+const handleFullscreenKeydown = (event) => {
+  if (event.key === 'Escape' || event.key === 'Esc') {
+    showFullscreen.value = false;
+  }
+};
+
+watch(showFullscreen, (isOpen) => {
+  if (typeof window === 'undefined') return;
+  if (isOpen) {
+    window.addEventListener('keydown', handleFullscreenKeydown);
+  } else {
+    window.removeEventListener('keydown', handleFullscreenKeydown);
+  }
+});
+
+onBeforeUnmount(() => {
+  if (downloadUrl.value) URL.revokeObjectURL(downloadUrl.value);
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('keydown', handleFullscreenKeydown);
+  }
+});
 
 const safeMessage = computed(() => sanitizeMailHtml(props.mail.message));
 const iframeRenderGuardStyle = computed(() => `<style>
@@ -262,17 +281,80 @@ const handleSaveToS3 = async (filename, blob) => {
 
   <!-- 全屏抽屉 -->
   <n-drawer v-model:show="showFullscreen" width="100%" placement="top" :trap-focus="false" :block-scroll="false"
-    style="height: 100vh;">
-    <n-drawer-content :title="mail.subject" closable>
-      <div class="fullscreen-mail-content" :class="{ 'dark-mode': isDark }">
-        <n-alert v-if="mail.parseFailed" type="warning" :bordered="false" class="mail-render-alert">
-          {{ t('parseFailed') }}
-        </n-alert>
-        <pre v-if="showPlainText" class="mail-text">{{ textMessage }}</pre>
-        <iframe v-else-if="useIframeShowMail" :srcdoc="iframeMessage" class="mail-iframe" sandbox=""
-          referrerpolicy="no-referrer">
-        </iframe>
-        <ShadowHtmlComponent v-else :key="mail.id" :htmlContent="safeMessage" :isDark="isDark" class="mail-html" />
+    :close-on-esc="true" @esc="showFullscreen = false" style="height: 100vh;">
+    <n-drawer-content :title="mail.subject" closable @close="showFullscreen = false">
+      <div class="fullscreen-drawer-body">
+        <div class="mail-header-card fullscreen-header-card">
+          <div class="mail-sender-profile">
+            <div class="sender-avatar">
+              {{ getSenderInitial(mail.source) }}
+            </div>
+            <div class="sender-details">
+              <div class="sender-headline">
+                <strong class="sender-name">{{ mail.source }}</strong>
+                <time class="sender-timestamp">{{ utcToLocalDate(mail.created_at, useUTCDate) }}</time>
+                <span class="mail-id-tag">#{{ mail.id }}</span>
+              </div>
+              <div v-if="showEMailTo" class="recipient-line">
+                <span class="recipient-label">{{ t('recipient') || '收件人' }}:</span>
+                <span class="recipient-address">{{ mail.address }}</span>
+                <button type="button" class="mail-copy-button" :aria-label="t('copyRecipient')"
+                  :title="t('copyRecipient')" @click.stop="copyRecipientAddress">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="mail-action-toolbar">
+            <div class="action-group-main">
+              <n-button v-if="showReply" size="small" tertiary type="primary" @click="handleReply">
+                <template #icon>
+                  <n-icon :component="ReplyFilled" />
+                </template>
+                {{ t('reply') }}
+              </n-button>
+              <n-button v-if="showReply" size="small" tertiary type="primary" @click="handleForward">
+                <template #icon>
+                  <n-icon :component="ForwardFilled" />
+                </template>
+                {{ t('forward') }}
+              </n-button>
+              <n-button v-if="mail.attachments && mail.attachments.length > 0" size="small" tertiary type="info"
+                @click="handleViewAttachments">
+                📎 {{ t('attachments') }} ({{ mail.attachments.length }})
+              </n-button>
+              <n-button tag="a" target="_blank" tertiary type="info" size="small" :download="mail.id + '.eml'"
+                :href="downloadUrl">
+                <template #icon>
+                  <n-icon :component="CloudDownloadRound" />
+                </template>
+                {{ t('downloadMail') }}
+              </n-button>
+            </div>
+
+            <div class="action-group-secondary">
+              <n-button v-if="hasHtmlMessage && textMessage" size="small" tertiary
+                @click="showTextMail = !showTextMail">
+                {{ showTextMail ? t('showHtmlMail') : t('showTextMail') }}
+              </n-button>
+            </div>
+          </div>
+        </div>
+
+        <div class="fullscreen-mail-content" :class="{ 'dark-mode': isDark }">
+          <n-alert v-if="mail.parseFailed" type="warning" :bordered="false" class="mail-render-alert">
+            {{ t('parseFailed') }}
+          </n-alert>
+          <pre v-if="showPlainText" class="mail-text">{{ textMessage }}</pre>
+          <iframe v-else-if="useIframeShowMail" :srcdoc="iframeMessage" class="mail-iframe" sandbox=""
+            referrerpolicy="no-referrer">
+          </iframe>
+          <ShadowHtmlComponent v-else :key="mail.id" :htmlContent="safeMessage" :isDark="isDark" class="mail-html" />
+        </div>
       </div>
     </n-drawer-content>
   </n-drawer>
@@ -461,7 +543,8 @@ const handleSaveToS3 = async (filename, blob) => {
 
 .mail-text {
   white-space: pre-wrap;
-  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-all;
   margin: 0;
   padding: 16px;
   border-radius: 8px;
@@ -496,13 +579,23 @@ const handleSaveToS3 = async (filename, blob) => {
   text-align: center;
 }
 
+.fullscreen-drawer-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fullscreen-header-card {
+  margin-bottom: 4px;
+}
+
 .fullscreen-mail-content {
-  height: calc(100vh - 120px);
+  height: calc(100vh - 220px);
   overflow: auto;
 }
 
 .fullscreen-mail-content .mail-iframe {
-  min-height: calc(100vh - 120px);
+  min-height: calc(100vh - 220px);
 }
 
 @media (max-width: 640px) {

@@ -70,6 +70,14 @@ export const MESSAGE_REGISTRY = {
       "en": "Filter current page",
       "zh": "过滤当前页"
     },
+    "markAsRead": {
+      "en": "Mark as Read",
+      "zh": "标记已读"
+    },
+    "markAsUnread": {
+      "en": "Mark as Unread",
+      "zh": "标记未读"
+    },
     "markReadFailed": {
       "en": "Unable to update read status",
       "zh": "无法更新已读状态"
