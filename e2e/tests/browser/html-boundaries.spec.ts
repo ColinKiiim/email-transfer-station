@@ -99,6 +99,7 @@ test.describe('Browser HTML trust boundaries', () => {
     await expect(providerButton).toBeVisible();
     await expect(page.locator('.n-button--loading')).toHaveCount(0);
     await expect(page.getByText('loading...', { exact: true })).toHaveCount(0);
+    await page.goto(`${FRONTEND_URL}/en/?jwt=html-boundary-token`);
     const mobileNotification = page.locator('.n-notification').filter({ hasText: 'Maintenance window' }).first();
     await expect(mobileNotification).toBeVisible();
     await expect.poll(() => mobileNotification.evaluate((element) => {

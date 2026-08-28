@@ -43,7 +43,7 @@ test.describe('Admin console', () => {
       });
       expect(seeded.ok()).toBe(true);
 
-      await page.goto('/admin?view=flow');
+      await page.goto('/zh/admin?view=flow');
       await expect(page.locator('.admin-next.app')).toBeVisible();
       const row = page.locator('.mail-row', { hasText: subject });
       await expect(row).toBeVisible();
