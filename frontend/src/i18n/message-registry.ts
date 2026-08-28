@@ -3215,6 +3215,50 @@ export const MESSAGE_REGISTRY = {
     "technicalInfo": {
       "en": "Technical details",
       "zh": "技术信息"
+    },
+    "selectAll": {
+      "en": "All",
+      "zh": "全部"
+    },
+    "selectNone": {
+      "en": "None",
+      "zh": "无"
+    },
+    "selectRead": {
+      "en": "Read",
+      "zh": "已读"
+    },
+    "selectUnread": {
+      "en": "Unread",
+      "zh": "未读"
+    },
+    "selectedCount": {
+      "en": "{count} selected",
+      "zh": "已选择 {count} 封"
+    },
+    "markAsRead": {
+      "en": "Mark as read",
+      "zh": "标为已读"
+    },
+    "markAsUnread": {
+      "en": "Mark as unread",
+      "zh": "标为未读"
+    },
+    "exportSelected": {
+      "en": "Export",
+      "zh": "导出"
+    },
+    "deleteSelected": {
+      "en": "Delete",
+      "zh": "删除"
+    },
+    "selectRow": {
+      "en": "Select: {subject}",
+      "zh": "选择：{subject}"
+    },
+    "selectionOptions": {
+      "en": "Selection options",
+      "zh": "选择选项"
     }
   },
   "admin.console": {
@@ -3803,6 +3847,34 @@ export const MESSAGE_REGISTRY = {
     "deletedMails": {
       "en": "Deleted {count} production messages",
       "zh": "已删除 {count} 封生产邮件"
+    },
+    "markedMailsRead": {
+      "en": "Marked {count} message(s) as read",
+      "zh": "已将 {count} 封邮件标为已读"
+    },
+    "markedMailsUnread": {
+      "en": "Marked {count} message(s) as unread",
+      "zh": "已将 {count} 封邮件标为未读"
+    },
+    "markReadPartialFailed": {
+      "en": "Read status update interrupted after {count} message(s)",
+      "zh": "更新已读状态在第 {count} 封邮件时中断"
+    },
+    "exportedMails": {
+      "en": "Exported {count} message(s)",
+      "zh": "已导出 {count} 封邮件"
+    },
+    "exportFailed": {
+      "en": "Export failed",
+      "zh": "导出失败"
+    },
+    "noMailsToExport": {
+      "en": "No messages to export",
+      "zh": "没有可导出的邮件"
+    },
+    "noMailsSelected": {
+      "en": "No messages selected",
+      "zh": "未选择任何邮件"
     },
     "deleteInterrupted": {
       "en": "Interrupted after deleting {count} messages",

@@ -15,6 +15,8 @@ const { t } = useScopedI18n('admin.mailView')
 const mailList = ref(null)
 const showDomainMenu = ref(false)
 const domainDropdownRef = ref(null)
+const showSelectMenu = ref(false)
+const selectDropdownRef = ref(null)
 
 const getSenderInitial = (sender) => {
     if (!sender) return '✉'
@@ -39,6 +41,22 @@ const handleClickOutside = (e) => {
     if (domainDropdownRef.value && !domainDropdownRef.value.contains(e.target)) {
         showDomainMenu.value = false
     }
+    if (selectDropdownRef.value && !selectDropdownRef.value.contains(e.target)) {
+        showSelectMenu.value = false
+    }
+}
+
+const handleSelectAllToggle = () => {
+    if (props.model.isAllVisibleSelected || props.model.isSomeVisibleSelected) {
+        props.actions.selectAllVisibleMails('none')
+    } else {
+        props.actions.selectAllVisibleMails('all')
+    }
+}
+
+const handleSelectOption = (mode) => {
+    props.actions.selectAllVisibleMails(mode)
+    showSelectMenu.value = false
 }
 
 onMounted(() => {
@@ -113,35 +131,96 @@ defineExpose({
 
         <section class="mail-list-panel panel" :aria-label="t('mailListLabel')">
             <div class="panel-head mail-panel-head">
-                <div class="mail-filter-chips">
-                    <button type="button" class="filter-chip"
-                        :class="{ 'is-active': model.ui.status === 'unread' }"
-                        @click="actions.setMailStatus(model.ui.status === 'unread' ? 'all' : 'unread')">
-                        ✉️ {{ t('unread') || '未读' }}
-                    </button>
-                    <button type="button" class="filter-chip"
-                        :class="{ 'is-active': model.ui.status === 'attachments' }"
-                        @click="actions.setMailStatus(model.ui.status === 'attachments' ? 'all' : 'attachments')">
-                        📎 {{ t('attachments') || '有附件' }}
-                    </button>
-                    <div v-if="model.mailHierarchy?.domains?.length" ref="domainDropdownRef" class="domain-filter-wrapper">
-                        <button type="button" class="filter-chip domain-chip" :class="{ 'is-active': model.ui.domain !== 'all' }"
-                            @click.stop="showDomainMenu = !showDomainMenu">
-                            {{ selectedDomainLabel }}
+                <div class="mail-header-controls">
+                    <div ref="selectDropdownRef" class="mail-select-all-wrapper">
+                        <label class="mail-select-all-trigger"
+                            :class="{ 'is-active': model.selectedMailCount > 0 }"
+                            @click.stop.prevent="handleSelectAllToggle">
+                            <input type="checkbox" class="mail-checkbox header-checkbox"
+                                :checked="model.isAllVisibleSelected"
+                                :indeterminate.prop="model.isSomeVisibleSelected"
+                                :aria-checked="model.isAllVisibleSelected ? 'true' : (model.isSomeVisibleSelected ? 'mixed' : 'false')"
+                                :aria-label="t('selectAll')"
+                                tabindex="0"
+                                @keydown.space.stop.prevent="handleSelectAllToggle"
+                                @keydown.enter.stop.prevent="handleSelectAllToggle" />
+                        </label>
+                        <button type="button" class="mail-select-all-arrow"
+                            :aria-label="t('selectionOptions')"
+                            :aria-expanded="showSelectMenu"
+                            @click.stop="showSelectMenu = !showSelectMenu">
                             <span class="dropdown-arrow">▼</span>
                         </button>
-                        <div v-show="showDomainMenu" class="domain-dropdown-menu">
-                            <button type="button" class="domain-option" :class="{ 'is-selected': model.ui.domain === 'all' }"
-                                @click="selectDomain('all')">
-                                <span>🌐 {{ t('allDomains') || '全部域名' }}</span>
-                                <b>{{ formatNumber(model.mailHierarchy.queues[0]?.count ?? model.mailRows.length) }}</b>
+                        <div v-show="showSelectMenu" class="mail-select-menu">
+                            <button type="button" class="select-option" @click="handleSelectOption('all')">
+                                {{ t('selectAll') }}
                             </button>
-                            <button v-for="d in model.mailHierarchy.domains" :key="d.domain" type="button"
-                                class="domain-option" :class="{ 'is-selected': model.ui.domain === d.domain }"
-                                @click="selectDomain(d.domain)">
-                                <span>{{ d.domain }}</span>
-                                <b>{{ formatNumber(d.mails || 0) }}</b>
+                            <button type="button" class="select-option" @click="handleSelectOption('none')">
+                                {{ t('selectNone') }}
                             </button>
+                            <button type="button" class="select-option" @click="handleSelectOption('read')">
+                                {{ t('selectRead') }}
+                            </button>
+                            <button type="button" class="select-option" @click="handleSelectOption('unread')">
+                                {{ t('selectUnread') }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div v-if="model.selectedMailCount > 0" class="mail-batch-bar" role="toolbar" :aria-label="t('selectionOptions')">
+                        <span class="batch-count">{{ t('selectedCount', { count: model.selectedMailCount }) }}</span>
+                        <button type="button" class="btn compact-btn batch-action-btn"
+                            :disabled="!!model.actionBusy"
+                            @click="actions.batchMarkRead(model.selectedMailRows, true)">
+                            {{ t('markAsRead') }}
+                        </button>
+                        <button type="button" class="btn compact-btn batch-action-btn"
+                            :disabled="!!model.actionBusy"
+                            @click="actions.batchMarkRead(model.selectedMailRows, false)">
+                            {{ t('markAsUnread') }}
+                        </button>
+                        <button type="button" class="btn compact-btn danger batch-action-btn"
+                            :disabled="!!model.actionBusy"
+                            @click="actions.batchDeleteMails(model.selectedMailRows)">
+                            {{ t('deleteSelected') }}
+                        </button>
+                        <button type="button" class="btn compact-btn batch-action-btn"
+                            :disabled="!!model.actionBusy"
+                            @click="actions.batchExportMails(model.selectedMailRows)">
+                            {{ t('exportSelected') }}
+                        </button>
+                    </div>
+
+                    <div v-else class="mail-filter-chips">
+                        <button type="button" class="filter-chip"
+                            :class="{ 'is-active': model.ui.status === 'unread' }"
+                            @click="actions.setMailStatus(model.ui.status === 'unread' ? 'all' : 'unread')">
+                            ✉️ {{ t('unread') || '未读' }}
+                        </button>
+                        <button type="button" class="filter-chip"
+                            :class="{ 'is-active': model.ui.status === 'attachments' }"
+                            @click="actions.setMailStatus(model.ui.status === 'attachments' ? 'all' : 'attachments')">
+                            📎 {{ t('attachments') || '有附件' }}
+                        </button>
+                        <div v-if="model.mailHierarchy?.domains?.length" ref="domainDropdownRef" class="domain-filter-wrapper">
+                            <button type="button" class="filter-chip domain-chip" :class="{ 'is-active': model.ui.domain !== 'all' }"
+                                @click.stop="showDomainMenu = !showDomainMenu">
+                                {{ selectedDomainLabel }}
+                                <span class="dropdown-arrow">▼</span>
+                            </button>
+                            <div v-show="showDomainMenu" class="domain-dropdown-menu">
+                                <button type="button" class="domain-option" :class="{ 'is-selected': model.ui.domain === 'all' }"
+                                    @click="selectDomain('all')">
+                                    <span>🌐 {{ t('allDomains') || '全部域名' }}</span>
+                                    <b>{{ formatNumber(model.mailHierarchy.queues[0]?.count ?? model.mailRows.length) }}</b>
+                                </button>
+                                <button v-for="d in model.mailHierarchy.domains" :key="d.domain" type="button"
+                                    class="domain-option" :class="{ 'is-selected': model.ui.domain === d.domain }"
+                                    @click="selectDomain(d.domain)">
+                                    <span>{{ d.domain }}</span>
+                                    <b>{{ formatNumber(d.mails || 0) }}</b>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -150,11 +229,19 @@ defineExpose({
                 </div>
             </div>
             <div ref="mailList" class="mail-list" role="listbox" :aria-label="t('mailRecordsLabel')">
-                <button v-for="row in model.filteredMailRows" :key="row.id" class="mail-row" type="button"
-                    role="option" :aria-selected="actions.isSelected('flow', row)"
-                    :class="{ 'is-selected': actions.isSelected('flow', row), 'is-unread': row.unread }"
+                <div v-for="row in model.filteredMailRows" :key="row.id" class="mail-row"
+                    role="option" :aria-selected="actions.isSelected('flow', row)" tabindex="0"
+                    :class="{ 'is-selected': actions.isSelected('flow', row), 'is-unread': row.unread, 'is-checked': actions.isMailSelected(row.id) }"
                     @click="actions.selectRow('flow', row.id)"
                     @keydown="actions.handleRowKey($event, 'flow', row)">
+                    <label class="mail-select-cell" @click.stop.prevent="actions.toggleMailSelection(row, { shiftKey: $event.shiftKey })">
+                        <input type="checkbox" class="mail-checkbox"
+                            :checked="actions.isMailSelected(row.id)"
+                            :aria-label="t('selectRow', { subject: row.subject })"
+                            tabindex="0"
+                            @keydown.space.stop.prevent="actions.toggleMailSelection(row, { shiftKey: false })"
+                            @keydown.enter.stop.prevent="actions.toggleMailSelection(row, { shiftKey: false })" />
+                    </label>
                     <span class="mail-sender" :title="row.sender">{{ row.senderDisplay || row.sender }}</span>
                     <span class="mail-main">
                         <strong class="mail-subject">{{ row.subject }}</strong>
@@ -165,7 +252,7 @@ defineExpose({
                         <span v-if="row.attachmentCount > 0" class="attachment-indicator" :title="t('attachments') || '附件'">📎</span>
                         <span class="mail-time">{{ row.time }}</span>
                     </span>
-                </button>
+                </div>
 
                 <div v-if="model.filteredUnknownRows.length" class="queue-section">
                     <div class="queue-title">{{ t('exceptionQueue') }}</div>

@@ -231,6 +231,94 @@ export const useAdminConsoleActions = ({
         await deleteMailRows(filteredMailRows.value, t('scopeFilteredMails'))
     }
 
+    const batchSetMailReadState = async (rows, read = true) => {
+        if (!showAdminPage.value) {
+            showWarning(t('signInBeforeAction', { action: read ? 'mark read' : 'mark unread' }))
+            return
+        }
+        const targets = rows.filter((row) => row?.sourceId)
+        if (targets.length === 0) {
+            showWarning(t('noMailsSelected'))
+            return
+        }
+        if (actionBusy.value) {
+            showWarning(t('busy'))
+            return
+        }
+        actionBusy.value = read ? 'batch-mark-read' : 'batch-mark-unread'
+        let updated = 0
+        let interrupted = false
+        try {
+            for (const target of targets) {
+                const result = await adminApi.setMailReadState(target.sourceId, read)
+                if (result?.success === false) {
+                    throw new Error(result?.error || t('markReadPartialFailed', { count: updated }))
+                }
+                const liveRow = live.mails.find((m) => String(m.id) === String(target.sourceId))
+                if (liveRow) {
+                    const priorUnread = liveRow.unread === true || liveRow.is_read === false || liveRow.read_at === null
+                    liveRow.is_read = read
+                    liveRow.unread = !read
+                    liveRow.read_at = read ? (result?.read_at || new Date().toISOString()) : null
+
+                    if (read && priorUnread) {
+                        if (Number.isFinite(Number(live.mailUnreadCount))) {
+                            live.mailUnreadCount = Math.max(0, Number(live.mailUnreadCount) - 1)
+                        }
+                    } else if (!read && !priorUnread) {
+                        if (Number.isFinite(Number(live.mailUnreadCount))) {
+                            live.mailUnreadCount = Number(live.mailUnreadCount) + 1
+                        }
+                    }
+                }
+                updated += 1
+            }
+            showSuccess(read ? t('markedMailsRead', { count: updated }) : t('markedMailsUnread', { count: updated }))
+        } catch (error) {
+            interrupted = true
+            showError(error?.message || t('markReadPartialFailed', { count: updated }))
+        } finally {
+            actionBusy.value = ''
+        }
+    }
+
+    const exportMailRows = async (rows) => {
+        const targets = rows.filter((row) => row?.sourceId)
+        if (targets.length === 0) {
+            showWarning(t('noMailsToExport'))
+            return
+        }
+        if (actionBusy.value) {
+            showWarning(t('busy'))
+            return
+        }
+        actionBusy.value = 'mail-export'
+        try {
+            const JSZipModule = await import('jszip')
+            const JSZip = JSZipModule.default || JSZipModule
+            const zip = new JSZip()
+            for (const target of targets) {
+                const detail = target.raw ? target : await adminApi.getMail(target.sourceId)
+                const rawContent = detail?.raw || detail?.message || ''
+                zip.file(`${target.sourceId}.eml`, rawContent)
+            }
+            const blob = await zip.generateAsync({ type: 'blob' })
+            const url = URL.createObjectURL(blob)
+            const link = document.createElement('a')
+            link.href = url
+            link.download = `admin-mails-${new Date().toISOString().replace(/[:.]/g, '-')}.zip`
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            setTimeout(() => URL.revokeObjectURL(url), 1000)
+            showSuccess(t('exportedMails', { count: targets.length }))
+        } catch (error) {
+            showError(error?.message || t('exportFailed'))
+        } finally {
+            actionBusy.value = ''
+        }
+    }
+
     const requireProductionWrite = (label) => {
         if (!showAdminPage.value) {
             showWarning(t('signInBeforeAction', { action: label }))
@@ -1099,6 +1187,9 @@ export const useAdminConsoleActions = ({
         bindAddressToUser,
         unbindAddressFromUser,
         loadUserBoundAddresses,
+        batchSetMailReadState,
+        deleteMailRows,
+        exportMailRows,
         handleAction,
         handleAddressRowAction,
         handleDomainRowAction,

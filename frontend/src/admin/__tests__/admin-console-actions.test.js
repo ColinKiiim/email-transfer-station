@@ -7,6 +7,8 @@ const apiMocks = vi.hoisted(() => ({
     checkCloudflareDomain: vi.fn(),
     createAddress: vi.fn(),
     deleteMail: vi.fn(),
+    getMail: vi.fn(),
+    setMailReadState: vi.fn(),
     createUser: vi.fn(),
     deleteUser: vi.fn(),
     resetUserPassword: vi.fn(),
@@ -72,7 +74,14 @@ const buildHarness = (overrides = {}) => {
         dbVersionLabel: ref('9'),
         domainRows: ref([domain]),
         filteredMailRows,
-        live: reactive({ domains: [{ id: 1, domain: 'example.test', config_version: 3 }] }),
+        live: reactive({
+            domains: [{ id: 1, domain: 'example.test', config_version: 3 }],
+            mails: [
+                { id: 7, is_read: false, unread: true, read_at: null },
+                { id: 8, is_read: true, unread: false, read_at: '2026-07-15 10:00:00' },
+            ],
+            mailUnreadCount: 1,
+        }),
         openSettings: ref({ prefix: '', enableAddressPassword: false }),
         opsRows: ref([{ status: '可用' }, { status: '可用' }]),
         refreshAll,
@@ -90,6 +99,7 @@ const buildHarness = (overrides = {}) => {
         actions: useAdminConsoleActions(inputs),
         filteredMailRows,
         inputs,
+        live: inputs.live,
         mail,
         domain,
         user,
@@ -285,5 +295,80 @@ describe('admin console action controller', () => {
             address: 'alias@example.test',
         })
         expect(harness.showToast).toHaveBeenCalledWith('已解绑用户 admin@example.test 的地址', 'success')
+    })
+
+    it('batch marks mails as read and decrements unread count', async () => {
+        apiMocks.setMailReadState.mockResolvedValue({ success: true, read_at: '2026-08-28 10:00:00' })
+        const harness = buildHarness()
+        const unreadRow = { id: 'mail-7', sourceId: 7 }
+
+        expect(harness.live.mailUnreadCount).toBe(1)
+        expect(harness.live.mails[0].unread).toBe(true)
+
+        await harness.actions.batchSetMailReadState([unreadRow], true)
+
+        expect(apiMocks.setMailReadState).toHaveBeenCalledWith(7, true)
+        expect(harness.live.mails[0].unread).toBe(false)
+        expect(harness.live.mails[0].is_read).toBe(true)
+        expect(harness.live.mailUnreadCount).toBe(0)
+        expect(harness.showToast).toHaveBeenCalledWith('已将 1 封邮件标为已读', 'success')
+    })
+
+    it('batch marks mails as unread and increments unread count', async () => {
+        apiMocks.setMailReadState.mockResolvedValue({ success: true })
+        const harness = buildHarness()
+        const readRow = { id: 'mail-8', sourceId: 8 }
+
+        expect(harness.live.mailUnreadCount).toBe(1)
+        expect(harness.live.mails[1].unread).toBe(false)
+
+        await harness.actions.batchSetMailReadState([readRow], false)
+
+        expect(apiMocks.setMailReadState).toHaveBeenCalledWith(8, false)
+        expect(harness.live.mails[1].unread).toBe(true)
+        expect(harness.live.mails[1].is_read).toBe(false)
+        expect(harness.live.mailUnreadCount).toBe(2)
+        expect(harness.showToast).toHaveBeenCalledWith('已将 1 封邮件标为未读', 'success')
+    })
+
+    it('handles batch mark read partial failures gracefully', async () => {
+        apiMocks.setMailReadState
+            .mockResolvedValueOnce({ success: true })
+            .mockRejectedValueOnce(new Error('Network drop'))
+        const harness = buildHarness()
+        const rows = [{ id: 'mail-7', sourceId: 7 }, { id: 'mail-8', sourceId: 8 }]
+
+        await harness.actions.batchSetMailReadState(rows, true)
+
+        expect(apiMocks.setMailReadState).toHaveBeenCalledTimes(2)
+        expect(harness.showToast).toHaveBeenCalledWith('Network drop', 'error')
+    })
+
+    it('exports mail rows into a zip archive and triggers download', async () => {
+        apiMocks.getMail.mockResolvedValue({
+            id: 7,
+            raw: 'From: test@example.test\r\nSubject: Hi\r\n\r\nHello world',
+        })
+        const createObjectURLMock = vi.fn().mockReturnValue('blob:fixture-url')
+        const revokeObjectURLMock = vi.fn()
+        Object.defineProperty(globalThis.URL, 'createObjectURL', {
+            value: createObjectURLMock,
+            writable: true,
+            configurable: true,
+        })
+        Object.defineProperty(globalThis.URL, 'revokeObjectURL', {
+            value: revokeObjectURLMock,
+            writable: true,
+            configurable: true,
+        })
+
+        const harness = buildHarness()
+        const rows = [{ id: 'mail-7', sourceId: 7 }]
+
+        await harness.actions.exportMailRows(rows)
+
+        expect(apiMocks.getMail).toHaveBeenCalledWith(7)
+        expect(createObjectURLMock).toHaveBeenCalledOnce()
+        expect(harness.showToast).toHaveBeenCalledWith('已导出 1 封邮件', 'success')
     })
 })

@@ -31,7 +31,8 @@ vi.mock('../../utils', async (importOriginal) => ({
     hashPassword: vi.fn(async () => 'hashed-password'),
 }))
 
-vi.mock('../../utils/email-parser', () => ({
+vi.mock('../../utils/email-parser', async (importOriginal) => ({
+    ...(await importOriginal()),
     getDownloadEmlUrl: () => '#',
     processItem: vi.fn(async (mail) => ({
         ...mail,

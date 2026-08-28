@@ -1489,10 +1489,137 @@ body:has(.admin-next) .n-message-container {
     font-weight: 600;
 }
 
+.admin-next-host .mail-header-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+}
+
+.admin-next-host .mail-select-all-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--surface-sunken);
+    border: 1px solid var(--border);
+    padding: 0 4px;
+    gap: 2px;
+}
+
+.admin-next-host .mail-select-all-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 24px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+}
+
+.admin-next-host .mail-select-all-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 24px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    color: var(--muted);
+    font-size: 9px;
+}
+
+.admin-next-host .mail-select-all-arrow:hover {
+    color: var(--fg);
+}
+
+.admin-next-host .mail-select-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 40;
+    min-width: 110px;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.admin-next-host .select-option {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 30px;
+    padding: 0 10px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--fg);
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+    transition: background 120ms ease;
+}
+
+.admin-next-host .select-option:hover {
+    background: color-mix(in oklch, var(--accent-soft) 40%, var(--mix-bg));
+}
+
+.admin-next-host .mail-batch-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    flex-wrap: wrap;
+}
+
+.admin-next-host .batch-count {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--fg);
+    padding: 0 4px;
+    white-space: nowrap;
+}
+
+.admin-next-host .batch-action-btn {
+    height: 28px;
+    padding: 0 8px;
+    font-size: 12px;
+    border-radius: 6px;
+}
+
+.admin-next-host .mail-select-cell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.admin-next-host .mail-checkbox {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    accent-color: var(--accent);
+    cursor: pointer;
+}
+
 .admin-next-host .mail-row {
     display: grid;
-    grid-template-columns: minmax(140px, 200px) minmax(0, 1fr) auto;
-    gap: 16px;
+    grid-template-columns: 20px minmax(140px, 200px) minmax(0, 1fr) auto;
+    gap: 14px;
     align-items: center;
     width: 100%;
     min-height: 52px;
@@ -1505,6 +1632,7 @@ body:has(.admin-next) .n-message-container {
     text-align: left;
     transition: background-color 100ms ease, box-shadow 100ms ease;
     cursor: pointer;
+    user-select: none;
 }
 
 .admin-next-host .mail-row.is-unread {
@@ -1520,11 +1648,16 @@ body:has(.admin-next) .n-message-container {
     background: color-mix(in oklch, var(--accent-soft) 50%, var(--mix-bg));
 }
 
+.admin-next-host .mail-row.is-checked {
+    background: color-mix(in oklch, var(--accent-soft) 30%, var(--mix-bg));
+}
+
 .admin-next-host .mail-row.is-unread.is-selected {
     box-shadow: inset 3.5px 0 0 var(--accent);
 }
 
 .admin-next-host .mail-row.exception {
+    grid-template-columns: minmax(140px, 200px) minmax(0, 1fr) auto;
     background: color-mix(in oklch, var(--warn-soft) 28%, var(--mix-bg));
 }
 
@@ -2907,6 +3040,10 @@ body:has(.admin-next) .n-message-container {
     }
 
     .admin-next-host .mail-row {
+        grid-template-columns: 20px minmax(0, 1fr);
+    }
+
+    .admin-next-host .mail-row.exception {
         grid-template-columns: 1fr;
     }
 

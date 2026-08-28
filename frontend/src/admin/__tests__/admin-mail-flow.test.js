@@ -270,4 +270,117 @@ describe('admin mail-flow model', () => {
         expect(ui.detailKind).toBe('')
         expect(syncRoute).toHaveBeenCalledWith({ mailId: undefined, mode: undefined })
     })
+
+    it('handles row selection toggle, shift range, select all options, and stale pruning', async () => {
+        const source = ref([
+            rawMail(1, { unread: true, is_read: false }),
+            rawMail(2, { unread: false, is_read: true }),
+            rawMail(3, { unread: true, is_read: false }),
+            rawMail(4, { unread: false, is_read: true }),
+        ])
+        const ui = reactive({
+            view: 'flow',
+            query: '',
+            domain: 'all',
+            address: 'all',
+            status: 'all',
+            flowMode: 'list',
+            detailKind: '',
+            mailRenderMode: 'html',
+            selected: { flow: '', exception: '' },
+        })
+        const scope = effectScope()
+        scopes.push(scope)
+        const flow = scope.run(() => useAdminMailFlow({
+            getMails: () => source.value,
+            getUnknownMails: () => [],
+            ui,
+            activeView: ref('flow'),
+            parseItem: vi.fn(),
+            loadMail: vi.fn(),
+            resetListScroll: vi.fn(),
+            syncRoute: vi.fn(),
+            replaceRouteQuery: vi.fn(),
+            persistView: vi.fn(),
+            onSelectionMissing: vi.fn(),
+            onParseError: vi.fn(),
+        }))
+
+        await nextTick()
+
+        // 1. Initial selection state
+        expect(flow.selectedMailCount.value).toBe(0)
+        expect(flow.isAllVisibleSelected.value).toBe(false)
+        expect(flow.isSomeVisibleSelected.value).toBe(false)
+
+        // 2. Toggle single selection
+        const row1 = flow.filteredMailRows.value[0]
+        flow.toggleMailSelection(row1)
+        expect(flow.isMailSelected('mail-1')).toBe(true)
+        expect(flow.selectedMailCount.value).toBe(1)
+        expect(flow.isSomeVisibleSelected.value).toBe(true)
+        expect(flow.isAllVisibleSelected.value).toBe(false)
+
+        // 3. Shift range selection from row1 to row3
+        const row3 = flow.filteredMailRows.value[2]
+        flow.toggleMailSelection(row3, { shiftKey: true })
+        expect(flow.isMailSelected('mail-1')).toBe(true)
+        expect(flow.isMailSelected('mail-2')).toBe(true)
+        expect(flow.isMailSelected('mail-3')).toBe(true)
+        expect(flow.isMailSelected('mail-4')).toBe(false)
+        expect(flow.selectedMailCount.value).toBe(3)
+
+        // 4. Select All
+        flow.selectAllVisibleMails('all')
+        expect(flow.selectedMailCount.value).toBe(4)
+        expect(flow.isAllVisibleSelected.value).toBe(true)
+        expect(flow.isSomeVisibleSelected.value).toBe(false)
+
+        // 5. Select None
+        flow.selectAllVisibleMails('none')
+        expect(flow.selectedMailCount.value).toBe(0)
+        expect(flow.isAllVisibleSelected.value).toBe(false)
+
+        // 6. Select Read
+        flow.selectAllVisibleMails('read')
+        expect(flow.selectedMailCount.value).toBe(2)
+        expect(flow.isMailSelected('mail-2')).toBe(true)
+        expect(flow.isMailSelected('mail-4')).toBe(true)
+        expect(flow.isMailSelected('mail-1')).toBe(false)
+
+        // 7. Select Unread
+        flow.selectAllVisibleMails('unread')
+        expect(flow.selectedMailCount.value).toBe(2)
+        expect(flow.isMailSelected('mail-1')).toBe(true)
+        expect(flow.isMailSelected('mail-3')).toBe(true)
+
+        // 8. Stale selection pruning on filter change
+        ui.status = 'unread'
+        await nextTick()
+        // Visible rows are mail-1 and mail-3
+        expect(flow.filteredMailRows.value.map((r) => r.id)).toEqual(['mail-1', 'mail-3'])
+        expect(flow.selectedMailCount.value).toBe(2)
+
+        // Select mail-1 only, then filter out to read
+        flow.clearMailSelection()
+        flow.toggleMailSelection(flow.filteredMailRows.value[0]) // mail-1
+        expect(flow.isMailSelected('mail-1')).toBe(true)
+
+        ui.status = 'read'
+        await nextTick()
+        // Visible rows are mail-2 and mail-4; mail-1 is pruned!
+        expect(flow.isMailSelected('mail-1')).toBe(false)
+        expect(flow.selectedMailCount.value).toBe(0)
+
+        // 9. Stale selection pruning on source update
+        ui.status = 'all'
+        await nextTick()
+        flow.toggleMailSelection(flow.filteredMailRows.value[0]) // mail-1
+        expect(flow.isMailSelected('mail-1')).toBe(true)
+
+        source.value = [rawMail(2), rawMail(3)]
+        await nextTick()
+        expect(flow.isMailSelected('mail-1')).toBe(false)
+        expect(flow.selectedMailCount.value).toBe(0)
+    })
 })
