@@ -62,7 +62,7 @@ defineExpose({
                     <strong>{{ t('queues') }}</strong>
                     <span class="help-tip" :data-tip="t('queueTip')" tabindex="0" :aria-label="t('helpTip')">?</span>
                     <button type="button" class="facet-mini-action mobile-only"
-                        @click="model.ui.flowMode = 'list'; actions.syncMailQueryToRoute({ mode: undefined })">
+                        @click="actions.backToMailList ? actions.backToMailList() : (model.ui.flowMode = 'list', model.ui.selected.flow = '', model.ui.detailKind = '', actions.syncMailQueryToRoute({ mailId: undefined, mode: undefined }))">
                         {{ t('backToList') }}
                     </button>
                 </div>
@@ -200,7 +200,7 @@ defineExpose({
                 <div class="mail-detail-head-content">
                     <div class="detail-back-bar">
                         <button type="button" class="btn compact-btn detail-back-btn"
-                            @click="model.ui.flowMode = 'list'; actions.syncMailQueryToRoute({ mode: undefined })">
+                            @click="actions.backToMailList ? actions.backToMailList() : (model.ui.flowMode = 'list', model.ui.selected.flow = '', model.ui.detailKind = '', actions.syncMailQueryToRoute({ mailId: undefined, mode: undefined }))">
                             ← {{ t('backToList') || '返回列表' }}
                         </button>
                     </div>

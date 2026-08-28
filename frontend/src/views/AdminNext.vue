@@ -377,6 +377,7 @@ const addressRows = computed(() => buildAdminAddressRows(
 ))
 
 const {
+    backToMailList,
     currentDisplayMail,
     currentMail,
     currentRendererMail,
@@ -912,6 +913,7 @@ const shellActions = {
 }
 
 const workspaceActions = {
+    backToMailList,
     openActionModal,
     handleAction,
     changeStatus: (value) => {

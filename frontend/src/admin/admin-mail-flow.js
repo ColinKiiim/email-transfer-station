@@ -374,6 +374,14 @@ export const useAdminMailFlow = ({
         syncRoute({ domain, address: undefined, status: undefined, mode: undefined })
     }
 
+    const backToMailList = () => {
+        ui.flowMode = 'list'
+        ui.selected.flow = ''
+        ui.detailKind = ''
+        resetListScroll()
+        syncRoute({ mailId: undefined, mode: undefined })
+    }
+
     watch(mailRows, (rows) => {
         if (!rows.length) {
             ui.selected.flow = ''
@@ -393,6 +401,7 @@ export const useAdminMailFlow = ({
     })
 
     return {
+        backToMailList,
         currentDisplayMail,
         currentMail,
         currentParsedMail,
