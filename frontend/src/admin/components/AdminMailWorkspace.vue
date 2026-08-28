@@ -59,6 +59,27 @@ const handleSelectOption = (mode) => {
     showSelectMenu.value = false
 }
 
+const rangeLabel = computed(() => {
+    const filteredCount = props.model.filteredMailRows?.length || 0
+    if (!filteredCount) {
+        return t('rangeEmpty') || '0 / 0'
+    }
+    const page = props.model.mailPage || 1
+    const pageSize = props.model.mailPageSize || 25
+    const start = (page - 1) * pageSize + 1
+    const end = Math.min(page * pageSize, filteredCount)
+    const loadedCount = props.model.mailRowCount ?? props.model.mailRows?.length ?? filteredCount
+    const totalCount = props.model.mailTotalCount
+
+    if (totalCount != null && totalCount > loadedCount) {
+        if (props.model.hasActiveFilters) {
+            return t('rangeLabelFilteredLoaded', { start, end, loadedMatches: filteredCount, total: totalCount })
+        }
+        return t('rangeLabelLoaded', { start, end, loaded: loadedCount, total: totalCount })
+    }
+    return t('rangeLabel', { start, end, total: filteredCount })
+})
+
 onMounted(() => {
     window.addEventListener('click', handleClickOutside)
 })
@@ -224,12 +245,43 @@ defineExpose({
                         </div>
                     </div>
                 </div>
-                <div class="panel-head-actions">
-                    <span class="status neutral">{{ t('mailCount', { count: formatNumber(model.filteredMailRows.length) }) }}</span>
+                <div class="panel-head-actions mail-head-actions">
+                    <span class="mail-range-indicator">{{ rangeLabel }}</span>
+                    <div class="mail-pagination-controls" role="group" :aria-label="t('mailListLabel')">
+                        <button type="button" class="mail-page-btn"
+                            :disabled="!model.canPrevPage || !!model.actionBusy"
+                            :aria-label="t('prevPage')"
+                            :title="t('prevPage')"
+                            @click="actions.prevMailPage">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M15 18l-6-6 6-6" />
+                            </svg>
+                        </button>
+                        <button type="button" class="mail-page-btn"
+                            :disabled="!model.canNextPage || !!model.actionBusy"
+                            :aria-label="t('nextPage')"
+                            :title="t('nextPage')"
+                            @click="actions.nextMailPage">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M9 18l6-6-6-6" />
+                            </svg>
+                        </button>
+                    </div>
+                    <button type="button" class="mail-view-toggle-btn"
+                        :class="{ 'is-active': model.ui.flowMode === 'detail' }"
+                        :aria-label="t('toggleSplitView')"
+                        :aria-pressed="model.ui.flowMode === 'detail' ? 'true' : 'false'"
+                        :title="model.ui.flowMode === 'detail' ? t('listView') : t('splitView')"
+                        @click="actions.toggleMailViewMode">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <rect x="3" y="4" width="18" height="16" rx="2" />
+                            <path d="M12 4v16" />
+                        </svg>
+                    </button>
                 </div>
             </div>
             <div ref="mailList" class="mail-list" role="list" :aria-label="t('mailRecordsLabel')">
-                <div v-for="row in model.filteredMailRows" :key="row.id" class="mail-row"
+                <div v-for="row in (model.visibleMailRows || model.filteredMailRows)" :key="row.id" class="mail-row"
                     role="listitem" :aria-current="actions.isSelected('flow', row) ? 'true' : undefined" tabindex="0"
                     :class="{ 'is-selected': actions.isSelected('flow', row), 'is-unread': row.unread, 'is-checked': actions.isMailSelected(row.id) }"
                     @click="actions.selectRow('flow', row.id)"

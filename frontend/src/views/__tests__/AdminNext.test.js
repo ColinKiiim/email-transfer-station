@@ -431,6 +431,44 @@ describe('AdminNext behavior baseline', () => {
         wrapper.unmount()
     })
 
+    it('renders mail range indicator, pagination controls, and split view toggle in flow view', async () => {
+        runtime.mails = [mail()]
+        const { wrapper, router } = await mountAdmin({ path: '/admin?view=flow' })
+
+        // Range indicator
+        expect(wrapper.get('.mail-range-indicator').text()).toBe('第 1-1 封，共 1 封')
+
+        // Prev and next buttons are disabled for single page
+        const prevBtn = wrapper.get('button.mail-page-btn[aria-label="上一页"]')
+        const nextBtn = wrapper.get('button.mail-page-btn[aria-label="下一页"]')
+        expect(prevBtn.element.disabled).toBe(true)
+        expect(nextBtn.element.disabled).toBe(true)
+
+        // Split view toggle button
+        const toggleBtn = wrapper.get('button.mail-view-toggle-btn')
+        expect(toggleBtn.attributes('aria-label')).toBe('切换拆分视图')
+        expect(toggleBtn.attributes('aria-pressed')).toBe('false')
+
+        // Click split view toggle -> switches to detail mode and updates route
+        await toggleBtn.trigger('click')
+        await settle()
+
+        expect(router.currentRoute.value.query.mode).toBe('detail')
+        expect(wrapper.get('.mail-workbench').classes()).toContain('flow-mode-detail')
+        expect(toggleBtn.attributes('aria-pressed')).toBe('true')
+        expect(toggleBtn.classes()).toContain('is-active')
+
+        // Click again -> returns to list mode
+        await toggleBtn.trigger('click')
+        await settle()
+
+        expect(router.currentRoute.value.query.mode).toBeUndefined()
+        expect(wrapper.get('.mail-workbench').classes()).toContain('flow-mode-list')
+        expect(toggleBtn.attributes('aria-pressed')).toBe('false')
+
+        wrapper.unmount()
+    })
+
     it('creates a production address and exposes its credentials exactly once', async () => {
         vi.spyOn(window, 'confirm').mockReturnValue(true)
         runtime.domains = [{

@@ -392,6 +392,41 @@ export const useAdminMailFlow = ({
         syncRoute({ mailId: undefined, mode: undefined })
     }
 
+    const mailPage = ref(1)
+    const mailPageSize = ref(25)
+
+    const totalMailPages = computed(() => Math.max(1, Math.ceil(filteredMailRows.value.length / mailPageSize.value)))
+
+    const visibleMailRows = computed(() => {
+        const start = (mailPage.value - 1) * mailPageSize.value
+        return filteredMailRows.value.slice(start, start + mailPageSize.value)
+    })
+
+    const canPrevMailPage = computed(() => mailPage.value > 1)
+    const canNextMailPage = computed(() => mailPage.value < totalMailPages.value)
+
+    const setMailPage = (page) => {
+        const target = Number(page) || 1
+        const clamped = Math.min(Math.max(1, target), totalMailPages.value)
+        if (clamped !== mailPage.value) {
+            mailPage.value = clamped
+            resetListScroll()
+        }
+    }
+
+    const prevMailPage = () => setMailPage(mailPage.value - 1)
+    const nextMailPage = () => setMailPage(mailPage.value + 1)
+
+    const toggleMailViewMode = () => {
+        if (ui.flowMode === 'detail') {
+            ui.flowMode = 'list'
+            syncRoute({ mode: undefined })
+        } else {
+            ui.flowMode = 'detail'
+            syncRoute({ mode: 'detail' })
+        }
+    }
+
     const selectedMailIds = ref(new Set())
     const lastSelectedMailId = ref('')
 
@@ -403,14 +438,14 @@ export const useAdminMailFlow = ({
         const isCurrentlySelected = next.has(row.id)
         const shouldSelect = !isCurrentlySelected
 
-        if (shiftKey && lastSelectedMailId.value && filteredMailRows.value.some((r) => r.id === lastSelectedMailId.value)) {
-            const lastIdx = filteredMailRows.value.findIndex((r) => r.id === lastSelectedMailId.value)
-            const currIdx = filteredMailRows.value.findIndex((r) => r.id === row.id)
+        if (shiftKey && lastSelectedMailId.value && visibleMailRows.value.some((r) => r.id === lastSelectedMailId.value)) {
+            const lastIdx = visibleMailRows.value.findIndex((r) => r.id === lastSelectedMailId.value)
+            const currIdx = visibleMailRows.value.findIndex((r) => r.id === row.id)
             if (lastIdx !== -1 && currIdx !== -1) {
                 const start = Math.min(lastIdx, currIdx)
                 const end = Math.max(lastIdx, currIdx)
                 for (let i = start; i <= end; i += 1) {
-                    const r = filteredMailRows.value[i]
+                    const r = visibleMailRows.value[i]
                     if (shouldSelect) {
                         next.add(r.id)
                     } else {
@@ -430,17 +465,27 @@ export const useAdminMailFlow = ({
     }
 
     const selectAllVisibleMails = (mode = 'all') => {
-        const next = new Set()
+        const next = new Set(selectedMailIds.value)
         if (mode === 'all') {
-            filteredMailRows.value.forEach((row) => next.add(row.id))
+            visibleMailRows.value.forEach((row) => next.add(row.id))
+        } else if (mode === 'none') {
+            visibleMailRows.value.forEach((row) => next.delete(row.id))
         } else if (mode === 'read') {
-            filteredMailRows.value
-                .filter((row) => row.is_read === true || row.unread === false)
-                .forEach((row) => next.add(row.id))
+            visibleMailRows.value.forEach((row) => {
+                if (row.is_read === true || row.unread === false) {
+                    next.add(row.id)
+                } else {
+                    next.delete(row.id)
+                }
+            })
         } else if (mode === 'unread') {
-            filteredMailRows.value
-                .filter((row) => row.unread === true)
-                .forEach((row) => next.add(row.id))
+            visibleMailRows.value.forEach((row) => {
+                if (row.unread === true) {
+                    next.add(row.id)
+                } else {
+                    next.delete(row.id)
+                }
+            })
         }
         selectedMailIds.value = next
         lastSelectedMailId.value = ''
@@ -455,12 +500,28 @@ export const useAdminMailFlow = ({
         filteredMailRows.value.filter((row) => selectedMailIds.value.has(row.id))
     ))
     const selectedMailCount = computed(() => selectedMailRows.value.length)
+
+    const selectedVisibleRows = computed(() => (
+        visibleMailRows.value.filter((row) => selectedMailIds.value.has(row.id))
+    ))
+    const selectedVisibleCount = computed(() => selectedVisibleRows.value.length)
+
     const isAllVisibleSelected = computed(() => (
-        filteredMailRows.value.length > 0 && selectedMailCount.value === filteredMailRows.value.length
+        visibleMailRows.value.length > 0 && selectedVisibleCount.value === visibleMailRows.value.length
     ))
     const isSomeVisibleSelected = computed(() => (
-        selectedMailCount.value > 0 && selectedMailCount.value < filteredMailRows.value.length
+        selectedVisibleCount.value > 0 && selectedVisibleCount.value < visibleMailRows.value.length
     ))
+
+    watch([() => ui.status, () => ui.domain, () => ui.address, () => ui.query], () => {
+        mailPage.value = 1
+    })
+
+    watch(totalMailPages, (maxPages) => {
+        if (mailPage.value > maxPages) {
+            mailPage.value = maxPages
+        }
+    })
 
     watch(filteredMailRows, (rows) => {
         if (!selectedMailIds.value.size) return
@@ -502,6 +563,8 @@ export const useAdminMailFlow = ({
 
     return {
         backToMailList,
+        canNextMailPage,
+        canPrevMailPage,
         clearMailSelection,
         currentDisplayMail,
         currentMail,
@@ -513,19 +576,29 @@ export const useAdminMailFlow = ({
         isAllVisibleSelected,
         isMailSelected,
         isSomeVisibleSelected,
+        mailPage,
+        mailPageSize,
         mailRows,
+        nextMailPage,
         openMailFromAddress,
         openMailFromDomain,
         parseAdminMailDetail,
+        prevMailPage,
         selectAllVisibleMails,
         selectedMailCount,
         selectedMailIds,
         selectedMailRows,
+        selectedVisibleCount,
+        selectedVisibleRows,
         setMailAddress,
         setMailDomain,
+        setMailPage,
         setMailStatus,
         toggleMailSelection,
+        toggleMailViewMode,
+        totalMailPages,
         unknownRows,
         updateMailSearch,
+        visibleMailRows,
     }
 }

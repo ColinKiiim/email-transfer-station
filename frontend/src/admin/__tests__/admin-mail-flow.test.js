@@ -383,4 +383,242 @@ describe('admin mail-flow model', () => {
         expect(flow.isMailSelected('mail-1')).toBe(false)
         expect(flow.selectedMailCount.value).toBe(0)
     })
+
+    it('paginates normalized rows, clamps pages on data updates, and resets on filter changes', async () => {
+        const generateMails = (count) => Array.from({ length: count }, (_, i) => rawMail(i + 1, {
+            subject: `Mail ${i + 1}`,
+            unread: i % 2 === 0,
+            is_read: i % 2 !== 0,
+        }))
+        const source = ref(generateMails(60)) // 60 mails -> 3 pages of 25 (25, 25, 10)
+        const ui = reactive({
+            view: 'flow',
+            query: '',
+            domain: 'all',
+            address: 'all',
+            status: 'all',
+            flowMode: 'list',
+            detailKind: '',
+            selected: { flow: '', exception: '' },
+        })
+        const syncRoute = vi.fn()
+        const resetListScroll = vi.fn()
+        const scope = effectScope()
+        scopes.push(scope)
+        const flow = scope.run(() => useAdminMailFlow({
+            getMails: () => source.value,
+            getUnknownMails: () => [],
+            ui,
+            activeView: ref('flow'),
+            parseItem: vi.fn(),
+            loadMail: vi.fn(),
+            resetListScroll,
+            syncRoute,
+            replaceRouteQuery: vi.fn(),
+            persistView: vi.fn(),
+            onSelectionMissing: vi.fn(),
+            onParseError: vi.fn(),
+        }))
+
+        await nextTick()
+
+        // Page 1: 25 items
+        expect(flow.mailPage.value).toBe(1)
+        expect(flow.mailPageSize.value).toBe(25)
+        expect(flow.totalMailPages.value).toBe(3)
+        expect(flow.canPrevMailPage.value).toBe(false)
+        expect(flow.canNextMailPage.value).toBe(true)
+        expect(flow.visibleMailRows.value.length).toBe(25)
+        expect(flow.visibleMailRows.value[0].id).toBe('mail-1')
+        expect(flow.visibleMailRows.value[24].id).toBe('mail-25')
+
+        // Navigate to Page 2
+        flow.nextMailPage()
+        expect(flow.mailPage.value).toBe(2)
+        expect(flow.canPrevMailPage.value).toBe(true)
+        expect(flow.canNextMailPage.value).toBe(true)
+        expect(flow.visibleMailRows.value.length).toBe(25)
+        expect(flow.visibleMailRows.value[0].id).toBe('mail-26')
+        expect(flow.visibleMailRows.value[24].id).toBe('mail-50')
+        expect(resetListScroll).toHaveBeenCalled()
+
+        // Navigate to Page 3
+        flow.nextMailPage()
+        expect(flow.mailPage.value).toBe(3)
+        expect(flow.canPrevMailPage.value).toBe(true)
+        expect(flow.canNextMailPage.value).toBe(false) // last page boundary!
+        expect(flow.visibleMailRows.value.length).toBe(10)
+        expect(flow.visibleMailRows.value[0].id).toBe('mail-51')
+        expect(flow.visibleMailRows.value[9].id).toBe('mail-60')
+
+        // Cannot go past last page
+        flow.nextMailPage()
+        expect(flow.mailPage.value).toBe(3)
+
+        // Navigate back to Page 2
+        flow.prevMailPage()
+        expect(flow.mailPage.value).toBe(2)
+
+        // Filter change (status) resets page to 1
+        ui.status = 'unread'
+        await nextTick()
+        expect(flow.mailPage.value).toBe(1)
+        // 30 unread mails -> 2 pages of 25 (25, 5)
+        expect(flow.totalMailPages.value).toBe(2)
+        expect(flow.visibleMailRows.value.length).toBe(25)
+
+        // Navigate to Page 2 of unread
+        flow.nextMailPage()
+        expect(flow.mailPage.value).toBe(2)
+
+        // Search query change resets page to 1
+        ui.query = 'Mail 1'
+        await nextTick()
+        expect(flow.mailPage.value).toBe(1)
+
+        // Reset query and status
+        ui.query = ''
+        ui.status = 'all'
+        await nextTick()
+        expect(flow.mailPage.value).toBe(1)
+
+        // Go to page 3, then data shrinks -> page is clamped
+        flow.setMailPage(3)
+        expect(flow.mailPage.value).toBe(3)
+        source.value = generateMails(20) // Only 20 items -> 1 page
+        await nextTick()
+        expect(flow.totalMailPages.value).toBe(1)
+        expect(flow.mailPage.value).toBe(1) // clamped to maxPages!
+    })
+
+    it('scopes Select All and Shift selection to current visible page across pagination', async () => {
+        const generateMails = (count) => Array.from({ length: count }, (_, i) => rawMail(i + 1, {
+            subject: `Mail ${i + 1}`,
+            unread: i < 30, // 1-30 unread, 31-50 read
+            is_read: i >= 30,
+        }))
+        const source = ref(generateMails(50)) // 2 pages of 25
+        const ui = reactive({
+            view: 'flow',
+            query: '',
+            domain: 'all',
+            address: 'all',
+            status: 'all',
+            flowMode: 'list',
+            detailKind: '',
+            selected: { flow: '', exception: '' },
+        })
+        const scope = effectScope()
+        scopes.push(scope)
+        const flow = scope.run(() => useAdminMailFlow({
+            getMails: () => source.value,
+            getUnknownMails: () => [],
+            ui,
+            activeView: ref('flow'),
+            parseItem: vi.fn(),
+            loadMail: vi.fn(),
+            resetListScroll: vi.fn(),
+            syncRoute: vi.fn(),
+            replaceRouteQuery: vi.fn(),
+            persistView: vi.fn(),
+            onSelectionMissing: vi.fn(),
+            onParseError: vi.fn(),
+        }))
+
+        await nextTick()
+
+        // 1. On Page 1, select all visible
+        expect(flow.mailPage.value).toBe(1)
+        flow.selectAllVisibleMails('all')
+        expect(flow.selectedVisibleCount.value).toBe(25)
+        expect(flow.selectedMailCount.value).toBe(25)
+        expect(flow.isAllVisibleSelected.value).toBe(true)
+        expect(flow.isSomeVisibleSelected.value).toBe(false)
+        expect(flow.isMailSelected('mail-1')).toBe(true)
+        expect(flow.isMailSelected('mail-25')).toBe(true)
+        expect(flow.isMailSelected('mail-26')).toBe(false)
+
+        // 2. Navigate to Page 2: visible selection indicators reflect Page 2 only
+        flow.nextMailPage()
+        expect(flow.mailPage.value).toBe(2)
+        expect(flow.selectedVisibleCount.value).toBe(0)
+        expect(flow.isAllVisibleSelected.value).toBe(false)
+        expect(flow.isSomeVisibleSelected.value).toBe(false)
+        // Total selected count is still 25 from Page 1
+        expect(flow.selectedMailCount.value).toBe(25)
+
+        // 3. Select unread on Page 2 (mails 26-30 are unread, 31-50 are read)
+        flow.selectAllVisibleMails('unread')
+        expect(flow.selectedVisibleCount.value).toBe(5)
+        expect(flow.isSomeVisibleSelected.value).toBe(true)
+        expect(flow.isAllVisibleSelected.value).toBe(false)
+        // Total selected is now 25 (from page 1) + 5 (from page 2) = 30
+        expect(flow.selectedMailCount.value).toBe(30)
+        expect(flow.isMailSelected('mail-26')).toBe(true)
+        expect(flow.isMailSelected('mail-30')).toBe(true)
+        expect(flow.isMailSelected('mail-31')).toBe(false)
+
+        // 4. Shift range selection on Page 2
+        // Select row 31, then shift-select row 33 -> selects rows 31, 32, 33 on page 2
+        const row31 = flow.visibleMailRows.value[5] // mail-31
+        const row33 = flow.visibleMailRows.value[7] // mail-33
+        flow.toggleMailSelection(row31)
+        flow.toggleMailSelection(row33, { shiftKey: true })
+        expect(flow.isMailSelected('mail-31')).toBe(true)
+        expect(flow.isMailSelected('mail-32')).toBe(true)
+        expect(flow.isMailSelected('mail-33')).toBe(true)
+
+        // 5. Select None on Page 2 removes Page 2 selections, Page 1 remains intact
+        flow.selectAllVisibleMails('none')
+        expect(flow.selectedVisibleCount.value).toBe(0)
+        expect(flow.isAllVisibleSelected.value).toBe(false)
+        expect(flow.selectedMailCount.value).toBe(25) // Page 1 mails still selected!
+
+        // Navigate back to Page 1
+        flow.prevMailPage()
+        expect(flow.selectedVisibleCount.value).toBe(25)
+        expect(flow.isAllVisibleSelected.value).toBe(true)
+    })
+
+    it('toggles list / split view mode and synchronizes route', () => {
+        const ui = reactive({
+            view: 'flow',
+            query: '',
+            domain: 'all',
+            address: 'all',
+            status: 'all',
+            flowMode: 'list',
+            detailKind: '',
+            selected: { flow: '', exception: '' },
+        })
+        const syncRoute = vi.fn()
+        const scope = effectScope()
+        scopes.push(scope)
+        const flow = scope.run(() => useAdminMailFlow({
+            getMails: () => [],
+            getUnknownMails: () => [],
+            ui,
+            activeView: ref('flow'),
+            parseItem: vi.fn(),
+            loadMail: vi.fn(),
+            resetListScroll: vi.fn(),
+            syncRoute,
+            replaceRouteQuery: vi.fn(),
+            persistView: vi.fn(),
+            onSelectionMissing: vi.fn(),
+            onParseError: vi.fn(),
+        }))
+
+        expect(ui.flowMode).toBe('list')
+
+        // Toggle to detail / split view
+        flow.toggleMailViewMode()
+        expect(ui.flowMode).toBe('detail')
+        expect(syncRoute).toHaveBeenCalledWith({ mode: 'detail' })
+
+        // Toggle back to list view
+        flow.toggleMailViewMode()
+        expect(ui.flowMode).toBe('list')
+        expect(syncRoute).toHaveBeenCalledWith({ mode: undefined })
+    })
 })

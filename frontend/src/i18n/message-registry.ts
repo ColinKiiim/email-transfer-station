@@ -3263,6 +3263,42 @@ export const MESSAGE_REGISTRY = {
     "rowActions": {
       "en": "Quick actions",
       "zh": "快捷操作"
+    },
+    "rangeLabel": {
+      "en": "{start}-{end} of {total}",
+      "zh": "第 {start}-{end} 封，共 {total} 封"
+    },
+    "rangeLabelLoaded": {
+      "en": "{start}-{end} of {loaded} (loaded) / {total} total",
+      "zh": "第 {start}-{end} 封 (已载 {loaded})，共 {total} 封"
+    },
+    "rangeLabelFilteredLoaded": {
+      "en": "{start}-{end} of {loadedMatches} loaded matches / {total} total",
+      "zh": "第 {start}-{end} 封（当前已载匹配 {loadedMatches} 封），数据库总数 {total} 封"
+    },
+    "rangeEmpty": {
+      "en": "0 of 0",
+      "zh": "第 0 封，共 0 封"
+    },
+    "prevPage": {
+      "en": "Previous page",
+      "zh": "上一页"
+    },
+    "nextPage": {
+      "en": "Next page",
+      "zh": "下一页"
+    },
+    "toggleSplitView": {
+      "en": "Toggle split view",
+      "zh": "切换拆分视图"
+    },
+    "splitView": {
+      "en": "Split view",
+      "zh": "拆分视图"
+    },
+    "listView": {
+      "en": "List view",
+      "zh": "列表视图"
     }
   },
   "admin.console": {

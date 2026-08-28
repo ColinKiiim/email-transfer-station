@@ -452,4 +452,214 @@ describe('AdminMailWorkspace selection controls and accessible DOM structure', (
 
         wrapper.unmount()
     })
+
+    it('renders accurate range indicators and dispatches pagination controls with boundary disabling', async () => {
+        // 1. Normal paginated state: page 1 of 2 (50 items total, 25 per page)
+        let model = createMockMailModel({
+            mailPage: 1,
+            mailPageSize: 25,
+            totalMailPages: 2,
+            canPrevPage: false,
+            canNextPage: true,
+            filteredMailRows: Array.from({ length: 50 }, (_, i) => ({
+                id: `mail-${i + 1}`,
+                sourceId: i + 1,
+                subject: `Invoice ${i + 1}`,
+                sender: 'Alice <alice@example.test>',
+                senderDisplay: 'Alice',
+                time: '10:00',
+                unread: true,
+            })),
+            mailRowCount: 50,
+            mailTotalCount: 50,
+        })
+        const actions = createMockMailActions({
+            prevMailPage: vi.fn(),
+            nextMailPage: vi.fn(),
+        })
+        let wrapper = mount(AdminMailWorkspace, {
+            props: { model, actions },
+            global: { plugins: [i18n] },
+        })
+
+        const rangeIndicator = wrapper.get('.mail-range-indicator')
+        expect(rangeIndicator.text()).toBe('第 1-25 封，共 50 封')
+
+        const prevBtn = wrapper.get('button.mail-page-btn[aria-label="上一页"]')
+        const nextBtn = wrapper.get('button.mail-page-btn[aria-label="下一页"]')
+
+        expect(prevBtn.attributes('title')).toBe('上一页')
+        expect(nextBtn.attributes('title')).toBe('下一页')
+        expect(prevBtn.element.disabled).toBe(true)
+        expect(nextBtn.element.disabled).toBe(false)
+
+        await nextBtn.trigger('click')
+        expect(actions.nextMailPage).toHaveBeenCalledTimes(1)
+
+        wrapper.unmount()
+
+        // 2. Background loading state: 25 loaded out of 330 in DB
+        model = createMockMailModel({
+            mailPage: 1,
+            mailPageSize: 25,
+            totalMailPages: 1,
+            canPrevPage: false,
+            canNextPage: false,
+            filteredMailRows: Array.from({ length: 25 }, (_, i) => ({
+                id: `mail-${i + 1}`,
+                sourceId: i + 1,
+                subject: `Invoice ${i + 1}`,
+                sender: 'Alice',
+                time: '10:00',
+                unread: false,
+            })),
+            mailRowCount: 25,
+            mailTotalCount: 330,
+            hasActiveFilters: false,
+        })
+        wrapper = mount(AdminMailWorkspace, {
+            props: { model, actions },
+            global: { plugins: [i18n] },
+        })
+        expect(wrapper.get('.mail-range-indicator').text()).toBe('第 1-25 封 (已载 25)，共 330 封')
+        expect(wrapper.get('button.mail-page-btn[aria-label="下一页"]').element.disabled).toBe(true)
+        wrapper.unmount()
+
+        // 3. Partial background loading with active filters: 25 loaded out of 330 in DB, 5 matched
+        model = createMockMailModel({
+            mailPage: 1,
+            mailPageSize: 25,
+            totalMailPages: 1,
+            canPrevPage: false,
+            canNextPage: false,
+            filteredMailRows: Array.from({ length: 5 }, (_, i) => ({
+                id: `mail-${i + 1}`,
+                sourceId: i + 1,
+                subject: `Filtered ${i + 1}`,
+                sender: 'Alice',
+                time: '10:00',
+                unread: true,
+            })),
+            mailRowCount: 25,
+            mailTotalCount: 330,
+            hasActiveFilters: true,
+        })
+        wrapper = mount(AdminMailWorkspace, {
+            props: { model, actions },
+            global: { plugins: [i18n] },
+        })
+        expect(wrapper.get('.mail-range-indicator').text()).toBe('第 1-5 封（当前已载匹配 5 封），数据库总数 330 封')
+        wrapper.unmount()
+
+        // 4. Fully loaded state with active filters: 330 loaded out of 330 in DB, 5 matched
+        model = createMockMailModel({
+            mailPage: 1,
+            mailPageSize: 25,
+            totalMailPages: 1,
+            canPrevPage: false,
+            canNextPage: false,
+            filteredMailRows: Array.from({ length: 5 }, (_, i) => ({
+                id: `mail-${i + 1}`,
+                sourceId: i + 1,
+                subject: `Filtered ${i + 1}`,
+                sender: 'Alice',
+                time: '10:00',
+                unread: true,
+            })),
+            mailRowCount: 330,
+            mailTotalCount: 330,
+            hasActiveFilters: true,
+        })
+        wrapper = mount(AdminMailWorkspace, {
+            props: { model, actions },
+            global: { plugins: [i18n] },
+        })
+        expect(wrapper.get('.mail-range-indicator').text()).toBe('第 1-5 封，共 5 封')
+        wrapper.unmount()
+
+        // 5. Empty state: 0 items
+        model = createMockMailModel({
+            mailPage: 1,
+            mailPageSize: 25,
+            totalMailPages: 1,
+            canPrevPage: false,
+            canNextPage: false,
+            filteredMailRows: [],
+            mailRowCount: 0,
+            mailTotalCount: 0,
+        })
+        wrapper = mount(AdminMailWorkspace, {
+            props: { model, actions },
+            global: { plugins: [i18n] },
+        })
+        expect(wrapper.get('.mail-range-indicator').text()).toBe('第 0 封，共 0 封')
+        expect(wrapper.get('button.mail-page-btn[aria-label="上一页"]').element.disabled).toBe(true)
+        expect(wrapper.get('button.mail-page-btn[aria-label="下一页"]').element.disabled).toBe(true)
+        wrapper.unmount()
+    })
+
+    it('renders view mode toggle with accessible attributes and dispatches toggle action', async () => {
+        // List mode (default)
+        let model = createMockMailModel({
+            ui: {
+                flowMode: 'list',
+                status: 'all',
+                domain: 'all',
+                address: 'all',
+                mailRenderMode: 'html',
+                selected: { flow: '', exception: '' },
+            },
+        })
+        const actions = createMockMailActions({
+            toggleMailViewMode: vi.fn(),
+        })
+        let wrapper = mount(AdminMailWorkspace, {
+            props: { model, actions },
+            global: { plugins: [i18n] },
+        })
+
+        let toggleBtn = wrapper.get('button.mail-view-toggle-btn')
+        expect(toggleBtn.attributes('aria-label')).toBe('切换拆分视图')
+        expect(toggleBtn.attributes('aria-pressed')).toBe('false')
+        expect(toggleBtn.attributes('title')).toBe('拆分视图')
+        expect(toggleBtn.classes()).not.toContain('is-active')
+
+        await toggleBtn.trigger('click')
+        expect(actions.toggleMailViewMode).toHaveBeenCalledTimes(1)
+        wrapper.unmount()
+
+        // Detail / Split view mode with no selected mail -> shows reader-empty state
+        model = createMockMailModel({
+            ui: {
+                flowMode: 'detail',
+                status: 'all',
+                domain: 'all',
+                address: 'all',
+                mailRenderMode: 'html',
+                selected: { flow: '', exception: '' },
+            },
+            currentMail: null,
+            currentRail: {
+                title: '选择一封邮件',
+                subtitle: '',
+                tags: [],
+                empty: true,
+            },
+        })
+        wrapper = mount(AdminMailWorkspace, {
+            props: { model, actions },
+            global: { plugins: [i18n] },
+        })
+
+        toggleBtn = wrapper.get('button.mail-view-toggle-btn')
+        expect(toggleBtn.attributes('aria-pressed')).toBe('true')
+        expect(toggleBtn.attributes('title')).toBe('列表视图')
+        expect(toggleBtn.classes()).toContain('is-active')
+
+        // Detail pane renders empty state without fabricating fake mail data
+        const emptyDetail = wrapper.get('.reader-empty')
+        expect(emptyDetail.text()).toContain('选择一封邮件')
+
+        wrapper.unmount()
+    })
 })

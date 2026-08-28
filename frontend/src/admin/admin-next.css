@@ -1453,6 +1453,80 @@ body:has(.admin-next) .n-message-container {
     border-bottom: 1px solid var(--border);
 }
 
+.admin-next-host .mail-head-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.admin-next-host .mail-range-indicator {
+    display: inline-flex;
+    align-items: center;
+    color: var(--muted);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    user-select: none;
+}
+
+.admin-next-host .mail-pagination-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.admin-next-host .mail-page-btn,
+.admin-next-host .mail-view-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    min-height: 28px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.admin-next-host .mail-page-btn svg,
+.admin-next-host .mail-view-toggle-btn svg {
+    width: 15px;
+    height: 15px;
+    stroke: currentColor;
+    stroke-width: 1.8;
+}
+
+.admin-next-host .mail-page-btn:hover:not(:disabled),
+.admin-next-host .mail-view-toggle-btn:hover:not(:disabled) {
+    background: color-mix(in oklch, var(--fg) 10%, transparent);
+    color: var(--fg);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.admin-next-host .mail-view-toggle-btn.is-active {
+    background: rgba(59, 130, 246, 0.16);
+    color: #60a5fa;
+    border-color: rgba(59, 130, 246, 0.35);
+}
+
+.admin-next-host .mail-page-btn:focus-visible,
+.admin-next-host .mail-view-toggle-btn:focus-visible {
+    outline: 2px solid var(--ets-focus-ring);
+    outline-offset: 1px;
+    color: var(--fg);
+}
+
+.admin-next-host .mail-page-btn:disabled,
+.admin-next-host .mail-view-toggle-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
 .admin-next-host .mail-filter-chips {
     display: flex;
     align-items: center;
@@ -3111,6 +3185,58 @@ body:has(.admin-next) .n-message-container {
         display: none;
     }
 
+    .admin-next-host .mail-panel-head {
+        flex-wrap: wrap;
+        gap: 8px 10px;
+        padding: 8px 10px;
+    }
+
+    .admin-next-host .mail-header-controls {
+        flex: 1 1 100%;
+        width: 100%;
+        min-width: 0;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .admin-next-host .mail-filter-chips {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .admin-next-host .mail-batch-bar {
+        flex-wrap: wrap;
+        gap: 6px;
+        width: 100%;
+    }
+
+    .admin-next-host .mail-head-actions {
+        display: flex;
+        flex: 1 1 100%;
+        width: 100%;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+    }
+
+    .admin-next-host .mail-range-indicator {
+        min-width: 0;
+        flex: 1 1 auto;
+        white-space: normal;
+        word-break: break-word;
+        font-size: 11px;
+        line-height: 1.35;
+    }
+
+    .admin-next-host .mail-pagination-controls {
+        flex-shrink: 0;
+    }
+
+    .admin-next-host .mail-view-toggle-btn {
+        flex-shrink: 0;
+    }
+
     .admin-next-host .facet-card {
         flex: none;
         min-width: 0;
@@ -3639,7 +3765,9 @@ body:has(.admin-next) .n-message-container {
     .admin-next-host button,
     .admin-next-host .toast,
     .admin-next-host .mail-time,
-    .admin-next-host .mail-row-actions {
+    .admin-next-host .mail-row-actions,
+    .admin-next-host .mail-page-btn,
+    .admin-next-host .mail-view-toggle-btn {
         transition-duration: 1ms;
     }
 }
