@@ -155,7 +155,7 @@ defineExpose({
                     :class="{ 'is-selected': actions.isSelected('flow', row), 'is-unread': row.unread }"
                     @click="actions.selectRow('flow', row.id)"
                     @keydown="actions.handleRowKey($event, 'flow', row)">
-                    <span class="mail-sender">{{ row.sender }}</span>
+                    <span class="mail-sender" :title="row.sender">{{ row.senderDisplay || row.sender }}</span>
                     <span class="mail-main">
                         <strong class="mail-subject">{{ row.subject }}</strong>
                         <span v-if="row.body" class="mail-snippet-sep">-</span>
@@ -174,7 +174,7 @@ defineExpose({
                         :class="{ 'is-selected': actions.isSelected('exception', row) }"
                         @click="actions.selectRow('exception', row.id)"
                         @keydown="actions.handleRowKey($event, 'exception', row)">
-                        <span class="mail-sender">{{ row.owner }}</span>
+                        <span class="mail-sender" :title="row.owner">{{ row.ownerDisplay || row.owner }}</span>
                         <span class="mail-main">
                             <strong class="mail-subject">{{ row.title }}</strong>
                             <span v-if="row.detail" class="mail-snippet-sep">-</span>

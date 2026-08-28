@@ -2,16 +2,17 @@ import { computed, reactive, ref, watch } from 'vue'
 
 import {
     adminMailCacheKey,
+    cleanMailPreview,
     compactRaw,
     compactText,
     extractHeader,
     formatAttachmentCount,
     formatDate,
+    formatSenderDisplay,
     formatShortDate,
     getDomain,
     mailRenderLabel,
     normalizedAttachments,
-    stripHtml,
 } from './admin-formatters'
 import { adminT } from './admin-i18n'
 import { statusOptionsForView } from './admin-route-state'
@@ -27,11 +28,12 @@ export const normalizeAdminMailRows = (rows = []) => (Array.isArray(rows) ? rows
         : row.from
     const candidateSender = row.sender || fromValue || rawSender || row.source
     const sender = compactText(candidateSender, t('unknownSender'))
+    const senderDisplay = formatSenderDisplay(sender) || sender
     const address = row.address || row.original_recipient || '-'
     const effectiveDomain = getDomain(address)
     const text = compactText(row.text)
     const html = String(row.html || row.message || '')
-    const body = text || compactText(stripHtml(html), compactRaw(row.raw))
+    const body = cleanMailPreview(text, html, compactRaw(row.raw))
     const attachments = normalizedAttachments(row.attachments)
     const attachmentCount = Number.isFinite(Number(row.attachment_count))
         ? Number(row.attachment_count)
@@ -54,6 +56,7 @@ export const normalizeAdminMailRows = (rows = []) => (Array.isArray(rows) ? rows
         fullTime: formatDate(row.created_at),
         created_at: row.created_at,
         sender,
+        senderDisplay,
         to: address,
         domain: effectiveDomain,
         originalDomain: row.original_domain || effectiveDomain,
@@ -89,19 +92,25 @@ export const normalizeAdminMailRows = (rows = []) => (Array.isArray(rows) ? rows
     }
 })
 
-export const normalizeUnknownMailRows = (rows = []) => (Array.isArray(rows) ? rows : []).map((row) => ({
-    id: `unknown-${row.id}`,
-    level: 'P2',
-    title: compactText(row.subject, extractHeader(row.raw, 'Subject') || t('unknownRecipientTitle', { id: row.id })),
-    owner: row.address || row.original_recipient || t('mailFlow'),
-    status: t('unknownAddress'),
-    statusKey: 'unknown',
-    statusTone: 'danger',
-    statusTokens: ['unknown'],
-    detail: compactText(row.text, compactText(stripHtml(row.html || row.message), compactRaw(row.raw))),
-    domain: getDomain(row.address || row.original_recipient),
-    originalDomain: row.original_domain || '',
-}))
+export const normalizeUnknownMailRows = (rows = []) => (Array.isArray(rows) ? rows : []).map((row) => {
+    const owner = row.address || row.original_recipient || t('mailFlow')
+    const ownerDisplay = formatSenderDisplay(owner) || owner
+    const html = String(row.html || row.message || '')
+    return {
+        id: `unknown-${row.id}`,
+        level: 'P2',
+        title: compactText(row.subject, extractHeader(row.raw, 'Subject') || t('unknownRecipientTitle', { id: row.id })),
+        owner,
+        ownerDisplay,
+        status: t('unknownAddress'),
+        statusKey: 'unknown',
+        statusTone: 'danger',
+        statusTokens: ['unknown'],
+        detail: cleanMailPreview(row.text, html, compactRaw(row.raw)),
+        domain: getDomain(row.address || row.original_recipient),
+        originalDomain: row.original_domain || '',
+    }
+})
 
 export const adminQueryTokens = (value) => String(value || '')
     .trim()
@@ -114,7 +123,7 @@ const matchesMailOperator = (row, token) => {
     if (!rest.length) return null
     const key = rawKey.trim()
     const value = rest.join(':').trim()
-    if (key === 'from') return String(row.sender || '').toLowerCase().includes(value)
+    if (key === 'from') return String(row.sender || '').toLowerCase().includes(value) || String(row.senderDisplay || '').toLowerCase().includes(value)
     if (key === 'to') return String(row.to || row.address || '').toLowerCase().includes(value)
     if (key === 'subject') return String(row.subject || '').toLowerCase().includes(value)
     if (key === 'has' && value === 'attachment') return Number(row.attachmentCount || 0) > 0
@@ -130,6 +139,7 @@ export const matchesAdminRow = (row, filters, view) => {
     const text = [
         row.subject,
         row.sender,
+        row.senderDisplay,
         row.to,
         row.address,
         row.domain,

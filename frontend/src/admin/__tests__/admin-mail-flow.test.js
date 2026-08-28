@@ -43,6 +43,7 @@ describe('admin mail-flow model', () => {
             id: 'mail-7',
             sourceId: 7,
             sender: 'Sender <sender@example.test>',
+            senderDisplay: 'Sender',
             to: 'ops@example.test',
             domain: 'example.test',
             subject: 'Invoice 7',
@@ -54,6 +55,7 @@ describe('admin mail-flow model', () => {
             id: 'unknown-9',
             title: 'Unknown fixture',
             owner: 'missing@example.test',
+            ownerDisplay: 'missing@example.test',
             domain: 'example.test',
             status: '未知地址',
             statusKey: 'unknown',
@@ -74,12 +76,31 @@ describe('admin mail-flow model', () => {
 
         expect(fromRow).toMatchObject({
             sender: 'alias@example.test',
+            senderDisplay: 'alias@example.test',
             subject: '(无主题)',
         })
         expect(emptyRow).toMatchObject({
             sender: '(未知发件人)',
+            senderDisplay: '(未知发件人)',
             subject: '(无主题)',
         })
+    })
+
+    it('cleans HTML entities and zero-width markers in normalized row body previews', () => {
+        const [row] = normalizeAdminMailRows([{
+            id: 15,
+            address: 'ops@example.test',
+            raw: 'Subject: Entities\r\n\r\nRaw fallback',
+            text: 'Hello &nbsp; &zwnj;world \u200B\uFEFF!',
+        }])
+        const [htmlRow] = normalizeAdminMailRows([{
+            id: 16,
+            address: 'ops@example.test',
+            html: '<p>Welcome &amp; <b>enjoy</b> &#8204;today!</p>',
+        }])
+
+        expect(row.body).toBe('Hello world !')
+        expect(htmlRow.body).toBe('Welcome & enjoy today!')
     })
 
     it('applies structured query, scope, and status filters', () => {
@@ -102,6 +123,12 @@ describe('admin mail-flow model', () => {
             address: 'all',
             status: 'unread',
         }, 'flow')).toEqual([rows[0]])
+        expect(filterAdminRows(rows, {
+            query: 'from:elsewhere',
+            domain: 'all',
+            address: 'all',
+            status: 'all',
+        }, 'flow')).toEqual([rows[1]])
         expect(filterAdminRows(rows, {
             query: 'is:read',
             domain: 'all',
