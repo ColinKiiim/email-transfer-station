@@ -6,7 +6,7 @@ import { CloudDownloadRound, InboxRound } from '@vicons/material'
 
 import { useGlobalState } from '../store'
 import { utcToLocalDate } from '../utils'
-import { processItem, revokeMailObjectUrls, revokeObjectUrl, stripHtmlForPreview } from '../utils/email-parser'
+import { formatSenderDisplay, processItem, revokeMailObjectUrls, revokeObjectUrl, stripHtmlForPreview } from '../utils/email-parser'
 import MailContentRenderer from './MailContentRenderer.vue'
 import AiExtractInfo from './AiExtractInfo.vue'
 
@@ -119,6 +119,7 @@ const rangeLabel = computed(() => {
 const compactWhitespace = (value) => String(value || '').replace(/\s+/g, ' ').trim()
 const mailPreview = (row) => stripHtmlForPreview(row.text || row.message || '', 180)
 const mailPrimaryAddress = (row) => compactWhitespace(row.source)
+const mailSenderDisplay = (row) => formatSenderDisplay(row.source) || mailPrimaryAddress(row)
 const mailSecondaryAddress = (row) => props.showEMailTo ? compactWhitespace(row.address) : ''
 
 const mailItemClass = (row) => [
@@ -154,7 +155,12 @@ const refresh = async ({ keepPage = true } = {}) => {
     }))
     revokeMailObjectUrls(rawData.value)
     rawData.value = nextData
-    count.value = Number.isFinite(Number(totalCount)) ? Number(totalCount) : rawData.value.length
+    const parsedTotal = Number.isFinite(Number(totalCount)) ? Number(totalCount) : null
+    if (page.value === 1) {
+      count.value = parsedTotal !== null ? parsedTotal : rawData.value.length
+    } else if (parsedTotal !== null && parsedTotal > 0) {
+      count.value = parsedTotal
+    }
     const selectedId = curMail.value?.id
     curMail.value = data.value.find((mail) => mail.id === selectedId) || data.value[0] || null
   } catch (error) {
@@ -417,7 +423,7 @@ onBeforeUnmount(() => {
             />
             <div class="mail-row-content">
               <div class="mail-row-header">
-                <span class="user-mail-sender" :title="mailPrimaryAddress(row)">{{ mailPrimaryAddress(row) }}</span>
+                <span class="user-mail-sender" :title="mailPrimaryAddress(row)">{{ mailSenderDisplay(row) }}</span>
                 <time class="user-mail-time">{{ utcToLocalDate(row.created_at, useUTCDate) }}</time>
               </div>
               <div class="mail-row-main">
@@ -863,8 +869,26 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 720px) {
-  .mail-command-surface,
-  .panel-head,
+  .mail-command-surface {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .panel-head {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+    padding: 8px 12px;
+    min-height: auto;
+  }
+
+  .panel-head :deep(.n-pagination) {
+    flex-wrap: wrap;
+    gap: 6px;
+    max-width: 100%;
+  }
+
   .detail-head {
     grid-template-columns: 1fr;
   }

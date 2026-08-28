@@ -1,4 +1,4 @@
-import { stripHtmlForPreview } from '../utils/email-parser'
+import { formatSenderDisplay, stripHtmlForPreview } from '../utils/email-parser'
 import { adminT } from './admin-i18n'
 
 const t = adminT('admin.format')
@@ -127,34 +127,7 @@ export const cleanMailPreview = (text, html, rawFallback = '', maxLength = 180) 
     return fallback || ''
 }
 
-export const formatSenderDisplay = (value) => {
-    if (!value) return ''
-    const text = String(value).trim()
-    if (!text) return ''
-
-    // RFC-5322 "Display Name" <address> or Display Name <address>
-    const match = text.match(/^(.+?)\s*<([^>]+)>$/)
-    if (match) {
-        let name = match[1].trim()
-        if ((name.startsWith('"') && name.endsWith('"')) || (name.startsWith("'") && name.endsWith("'"))) {
-            name = name.slice(1, -1).trim()
-        }
-        if (name) {
-            return name
-        }
-        const addr = match[2].trim()
-        if (addr) return addr
-    }
-
-    // Bare angle bracket form: <address>
-    const angleMatch = text.match(/^<([^>]+)>$/)
-    if (angleMatch) {
-        const addr = angleMatch[1].trim()
-        if (addr) return addr
-    }
-
-    return text
-}
+export { formatSenderDisplay }
 
 export const normalizedAttachments = (value) => {
     if (Array.isArray(value)) return value
