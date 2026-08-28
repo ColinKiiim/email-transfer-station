@@ -233,5 +233,14 @@ describe('admin mail-flow model', () => {
         await nextTick()
         expect(ui.selected.flow).toBe('')
         expect(onSelectionMissing).toHaveBeenCalledTimes(1)
+
+        ui.selected.flow = 'mail-2'
+        ui.flowMode = 'detail'
+        ui.detailKind = 'flow'
+        flow.backToMailList()
+        expect(ui.flowMode).toBe('list')
+        expect(ui.selected.flow).toBe('')
+        expect(ui.detailKind).toBe('')
+        expect(syncRoute).toHaveBeenCalledWith({ mailId: undefined, mode: undefined })
     })
 })

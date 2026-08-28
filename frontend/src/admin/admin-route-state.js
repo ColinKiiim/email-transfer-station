@@ -78,7 +78,7 @@ export const useAdminRouteState = ({ route, router, ui, detailOpen, storage }) =
         domain: ui.domain === 'all' ? undefined : ui.domain,
         address: ui.address === 'all' ? undefined : ui.address,
         status: ui.status === 'all' ? undefined : ui.status,
-        mailId: ui.selected.flow || undefined,
+        mailId: ui.flowMode === 'list' ? undefined : (ui.selected.flow || undefined),
         mode: ui.flowMode === 'list' ? undefined : ui.flowMode,
         ...extra,
     }, ['item'])
@@ -98,6 +98,11 @@ export const useAdminRouteState = ({ route, router, ui, detailOpen, storage }) =
         } else if (item.startsWith('mail-')) {
             ui.selected.flow = item
             ui.detailKind = 'flow'
+        } else {
+            ui.selected.flow = ''
+            ui.selected.exception = ''
+            ui.detailKind = ''
+            ui.flowMode = queryValue(route.query.mode, 'list')
         }
     }
 
