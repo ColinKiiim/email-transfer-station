@@ -1725,6 +1725,7 @@ body:has(.admin-next) .n-message-container {
     font-size: 12px;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
+    transition: opacity 120ms ease, visibility 120ms ease;
 }
 
 .admin-next-host .mail-row.is-unread .mail-time {
@@ -1733,16 +1734,92 @@ body:has(.admin-next) .n-message-container {
 }
 
 .admin-next-host .mail-meta {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 8px;
     justify-content: flex-end;
     color: var(--muted);
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .admin-next-host .attachment-indicator {
     font-size: 13px;
     opacity: 0.8;
+}
+
+.admin-next-host .mail-row-actions {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 120ms ease, visibility 120ms ease;
+}
+
+.admin-next-host .mail-row-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    min-height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: background-color 120ms ease, color 120ms ease, scale 80ms ease;
+}
+
+.admin-next-host .mail-row-action-btn svg {
+    width: 15px;
+    height: 15px;
+    stroke: currentColor;
+    stroke-width: 1.8;
+}
+
+.admin-next-host .mail-row-action-btn:hover:not(:disabled) {
+    background: color-mix(in oklch, var(--fg) 12%, transparent);
+    color: var(--fg);
+}
+
+.admin-next-host .mail-row-action-btn.danger:hover:not(:disabled) {
+    background: color-mix(in oklch, var(--danger) 18%, transparent);
+    color: var(--danger);
+}
+
+.admin-next-host .mail-row-action-btn:focus-visible {
+    outline: 2px solid var(--ets-focus-ring);
+    outline-offset: 1px;
+    color: var(--fg);
+}
+
+.admin-next-host .mail-row-action-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.admin-next-host .mail-row:not(.exception):hover .mail-time,
+.admin-next-host .mail-row:not(.exception):focus .mail-time,
+.admin-next-host .mail-row:not(.exception):focus-within .mail-time {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.admin-next-host .mail-row:hover .mail-row-actions,
+.admin-next-host .mail-row:focus .mail-row-actions,
+.admin-next-host .mail-row:focus-within .mail-row-actions {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
 }
 
 .admin-next-host .queue-section {
@@ -3560,7 +3637,9 @@ body:has(.admin-next) .n-message-container {
 
 @media (prefers-reduced-motion: reduce) {
     .admin-next-host button,
-    .admin-next-host .toast {
+    .admin-next-host .toast,
+    .admin-next-host .mail-time,
+    .admin-next-host .mail-row-actions {
         transition-duration: 1ms;
     }
 }

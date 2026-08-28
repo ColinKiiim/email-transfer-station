@@ -961,6 +961,8 @@ const workspaceActions = {
     batchMarkRead: (rows, read) => batchSetMailReadState(rows, read),
     batchDeleteMails: (rows) => deleteMailRows(rows, t('scopeSelectedMails')),
     batchExportMails: (rows) => exportMailRows(rows),
+    setRowReadState: (row, read) => batchSetMailReadState([row], read),
+    deleteMailRow: (row) => deleteMailRows([row], t('scopeCurrentMail')),
     handleAddressRowAction,
     handleDomainRowAction,
     handleUserRowAction,

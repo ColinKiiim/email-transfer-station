@@ -129,6 +129,13 @@ describe('AdminMailWorkspace selection controls and accessible DOM structure', (
             expect(btn.find('input, button, a, label').exists()).toBe(false)
         })
 
+        // 6. Verify globally across the component that no span wraps block-level flow elements
+        const allSpans = wrapper.findAll('span')
+        expect(allSpans.length).toBeGreaterThan(0)
+        allSpans.forEach((sp) => {
+            expect(sp.find('div, p, section, aside, header').exists()).toBe(false)
+        })
+
         wrapper.unmount()
     })
 
@@ -295,6 +302,153 @@ describe('AdminMailWorkspace selection controls and accessible DOM structure', (
             model.filteredMailRows[0],
             expect.objectContaining({ shiftKey: false })
         )
+
+        wrapper.unmount()
+    })
+
+    it('renders valid list and listitem ARIA semantics and aria-current for active row', () => {
+        const model = createMockMailModel({
+            filteredUnknownRows: [
+                {
+                    id: 'unknown-9',
+                    owner: 'nobody@example.test',
+                    ownerDisplay: 'nobody',
+                    title: 'Bounced mail',
+                    detail: 'Delivery failed',
+                    status: 'risk',
+                    level: 'warning',
+                },
+            ],
+        })
+        const actions = createMockMailActions({
+            isSelected: (kind, row) => (kind === 'flow' && row.id === 'mail-1') || (kind === 'exception' && row.id === 'unknown-9'),
+        })
+        const wrapper = mount(AdminMailWorkspace, {
+            props: { model, actions },
+            global: { plugins: [i18n] },
+        })
+
+        const mailList = wrapper.get('.mail-list')
+        expect(mailList.attributes('role')).toBe('list')
+        expect(mailList.attributes('aria-label')).toBe('邮件记录')
+
+        const normalRows = wrapper.findAll('.mail-row:not(.exception)')
+        expect(normalRows).toHaveLength(2)
+        expect(normalRows[0].attributes('role')).toBe('listitem')
+        expect(normalRows[0].attributes('tabindex')).toBe('0')
+        expect(normalRows[0].attributes('aria-current')).toBe('true')
+        expect(normalRows[1].attributes('role')).toBe('listitem')
+        expect(normalRows[1].attributes('tabindex')).toBe('0')
+        expect(normalRows[1].attributes('aria-current')).toBeUndefined()
+
+        const exceptionRows = wrapper.findAll('.mail-row.exception')
+        expect(exceptionRows).toHaveLength(1)
+        expect(exceptionRows[0].attributes('role')).toBe('listitem')
+        expect(exceptionRows[0].attributes('tabindex')).toBe('0')
+        expect(exceptionRows[0].attributes('aria-current')).toBe('true')
+        expect(exceptionRows[0].element.tagName.toLowerCase()).not.toBe('button')
+
+        wrapper.unmount()
+    })
+
+    it('renders hover/focus quick action buttons according to read/unread state with accessible names and titles', () => {
+        const model = createMockMailModel()
+        const actions = createMockMailActions()
+        const wrapper = mount(AdminMailWorkspace, {
+            props: { model, actions },
+            global: { plugins: [i18n] },
+        })
+
+        const normalRows = wrapper.findAll('.mail-row:not(.exception)')
+
+        // mail-1 is unread (unread: true) -> renders "Mark as read" and "Delete"
+        const row1Meta = normalRows[0].get('.mail-meta')
+        expect(row1Meta.element.tagName.toLowerCase()).toBe('span')
+        expect(row1Meta.find('div').exists()).toBe(false)
+
+        const row1Actions = normalRows[0].get('.mail-row-actions')
+        expect(row1Actions.element.tagName.toLowerCase()).toBe('span')
+        expect(row1Actions.attributes('role')).toBe('toolbar')
+        expect(row1Actions.attributes('aria-label')).toBe('快捷操作')
+
+        const row1Btns = row1Actions.findAll('.mail-row-action-btn')
+        expect(row1Btns).toHaveLength(2)
+        expect(row1Btns[0].attributes('aria-label')).toBe('标为已读')
+        expect(row1Btns[0].attributes('title')).toBe('标为已读')
+        expect(row1Btns[1].attributes('aria-label')).toBe('删除')
+        expect(row1Btns[1].attributes('title')).toBe('删除')
+        expect(row1Btns[1].classes()).toContain('danger')
+
+        // mail-2 is read (unread: false) -> renders "Mark as unread" and "Delete"
+        const row2Meta = normalRows[1].get('.mail-meta')
+        expect(row2Meta.element.tagName.toLowerCase()).toBe('span')
+        expect(row2Meta.find('div').exists()).toBe(false)
+
+        const row2Actions = normalRows[1].get('.mail-row-actions')
+        expect(row2Actions.element.tagName.toLowerCase()).toBe('span')
+        expect(row2Actions.attributes('role')).toBe('toolbar')
+        expect(row2Actions.attributes('aria-label')).toBe('快捷操作')
+
+        const row2Btns = row2Actions.findAll('.mail-row-action-btn')
+        expect(row2Btns).toHaveLength(2)
+        expect(row2Btns[0].attributes('aria-label')).toBe('标为未读')
+        expect(row2Btns[0].attributes('title')).toBe('标为未读')
+        expect(row2Btns[1].attributes('aria-label')).toBe('删除')
+        expect(row2Btns[1].attributes('title')).toBe('删除')
+
+        wrapper.unmount()
+    })
+
+    it('dispatches single-row mark read/unread and delete without opening mail details', async () => {
+        const model = createMockMailModel()
+        const actions = createMockMailActions({
+            setRowReadState: vi.fn(),
+            deleteMailRow: vi.fn(),
+        })
+        const wrapper = mount(AdminMailWorkspace, {
+            props: { model, actions },
+            global: { plugins: [i18n] },
+        })
+
+        const normalRows = wrapper.findAll('.mail-row:not(.exception)')
+
+        // 1. Click "Mark as read" on unread row (mail-1)
+        const markReadBtn = normalRows[0].find('button[aria-label="标为已读"]')
+        expect(markReadBtn.exists()).toBe(true)
+        await markReadBtn.trigger('click')
+        expect(actions.setRowReadState).toHaveBeenCalledWith(model.filteredMailRows[0], true)
+        expect(actions.selectRow).not.toHaveBeenCalled()
+
+        // 2. Keyboard Space/Enter "Mark as unread" on read row (mail-2)
+        const markUnreadBtn = normalRows[1].find('button[aria-label="标为未读"]')
+        expect(markUnreadBtn.exists()).toBe(true)
+        await markUnreadBtn.trigger('keydown.space')
+        expect(actions.setRowReadState).toHaveBeenCalledWith(model.filteredMailRows[1], false)
+        expect(actions.selectRow).not.toHaveBeenCalled()
+
+        // 3. Click "Delete" on row
+        const deleteBtn = normalRows[0].find('button[aria-label="删除"]')
+        expect(deleteBtn.exists()).toBe(true)
+        await deleteBtn.trigger('click')
+        expect(actions.deleteMailRow).toHaveBeenCalledWith(model.filteredMailRows[0])
+        expect(actions.selectRow).not.toHaveBeenCalled()
+
+        wrapper.unmount()
+    })
+
+    it('disables quick action buttons when actionBusy is active', () => {
+        const model = createMockMailModel({ actionBusy: 'batch-mark-read' })
+        const actions = createMockMailActions()
+        const wrapper = mount(AdminMailWorkspace, {
+            props: { model, actions },
+            global: { plugins: [i18n] },
+        })
+
+        const allQuickBtns = wrapper.findAll('.mail-row-action-btn')
+        expect(allQuickBtns.length).toBeGreaterThan(0)
+        allQuickBtns.forEach((btn) => {
+            expect(btn.element.disabled).toBe(true)
+        })
 
         wrapper.unmount()
     })

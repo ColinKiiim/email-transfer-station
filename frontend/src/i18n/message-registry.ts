@@ -3259,6 +3259,10 @@ export const MESSAGE_REGISTRY = {
     "selectionOptions": {
       "en": "Selection options",
       "zh": "选择选项"
+    },
+    "rowActions": {
+      "en": "Quick actions",
+      "zh": "快捷操作"
     }
   },
   "admin.console": {

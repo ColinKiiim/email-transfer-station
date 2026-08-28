@@ -228,9 +228,9 @@ defineExpose({
                     <span class="status neutral">{{ t('mailCount', { count: formatNumber(model.filteredMailRows.length) }) }}</span>
                 </div>
             </div>
-            <div ref="mailList" class="mail-list" role="listbox" :aria-label="t('mailRecordsLabel')">
+            <div ref="mailList" class="mail-list" role="list" :aria-label="t('mailRecordsLabel')">
                 <div v-for="row in model.filteredMailRows" :key="row.id" class="mail-row"
-                    role="option" :aria-selected="actions.isSelected('flow', row)" tabindex="0"
+                    role="listitem" :aria-current="actions.isSelected('flow', row) ? 'true' : undefined" tabindex="0"
                     :class="{ 'is-selected': actions.isSelected('flow', row), 'is-unread': row.unread, 'is-checked': actions.isMailSelected(row.id) }"
                     @click="actions.selectRow('flow', row.id)"
                     @keydown="actions.handleRowKey($event, 'flow', row)">
@@ -251,13 +251,52 @@ defineExpose({
                     <span class="mail-meta">
                         <span v-if="row.attachmentCount > 0" class="attachment-indicator" :title="t('attachments') || '附件'">📎</span>
                         <span class="mail-time">{{ row.time }}</span>
+                        <span class="mail-row-actions" role="toolbar" :aria-label="t('rowActions') || '快捷操作'">
+                            <button v-if="row.unread" type="button" class="mail-row-action-btn"
+                                :title="t('markAsRead')"
+                                :aria-label="t('markAsRead')"
+                                :disabled="!!model.actionBusy"
+                                @click.stop.prevent="actions.setRowReadState ? actions.setRowReadState(row, true) : actions.batchMarkRead([row], true)"
+                                @keydown.space.stop.prevent="actions.setRowReadState ? actions.setRowReadState(row, true) : actions.batchMarkRead([row], true)"
+                                @keydown.enter.stop.prevent="actions.setRowReadState ? actions.setRowReadState(row, true) : actions.batchMarkRead([row], true)">
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M21.2 8.4c.5.38.8.97.8 1.6v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V10a2 2 0 0 1 .8-1.6l8-6a2 2 0 0 1 2.4 0l8 6z" />
+                                    <path d="m22 10-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 10" />
+                                </svg>
+                            </button>
+                            <button v-else type="button" class="mail-row-action-btn"
+                                :title="t('markAsUnread')"
+                                :aria-label="t('markAsUnread')"
+                                :disabled="!!model.actionBusy"
+                                @click.stop.prevent="actions.setRowReadState ? actions.setRowReadState(row, false) : actions.batchMarkRead([row], false)"
+                                @keydown.space.stop.prevent="actions.setRowReadState ? actions.setRowReadState(row, false) : actions.batchMarkRead([row], false)"
+                                @keydown.enter.stop.prevent="actions.setRowReadState ? actions.setRowReadState(row, false) : actions.batchMarkRead([row], false)">
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                    <rect x="3" y="5" width="18" height="14" rx="2" />
+                                    <path d="m3 7 9 6 9-6" />
+                                </svg>
+                            </button>
+                            <button type="button" class="mail-row-action-btn danger"
+                                :title="t('delete')"
+                                :aria-label="t('delete')"
+                                :disabled="!!model.actionBusy"
+                                @click.stop.prevent="actions.deleteMailRow ? actions.deleteMailRow(row) : actions.batchDeleteMails([row])"
+                                @keydown.space.stop.prevent="actions.deleteMailRow ? actions.deleteMailRow(row) : actions.batchDeleteMails([row])"
+                                @keydown.enter.stop.prevent="actions.deleteMailRow ? actions.deleteMailRow(row) : actions.batchDeleteMails([row])">
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M3 6h18" />
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                                    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                </svg>
+                            </button>
+                        </span>
                     </span>
                 </div>
 
                 <div v-if="model.filteredUnknownRows.length" class="queue-section">
                     <div class="queue-title">{{ t('exceptionQueue') }}</div>
-                    <button v-for="row in model.filteredUnknownRows" :key="row.id" class="mail-row exception"
-                        type="button" role="option" :aria-selected="actions.isSelected('exception', row)"
+                    <div v-for="row in model.filteredUnknownRows" :key="row.id" class="mail-row exception"
+                        role="listitem" :aria-current="actions.isSelected('exception', row) ? 'true' : undefined" tabindex="0"
                         :class="{ 'is-selected': actions.isSelected('exception', row) }"
                         @click="actions.selectRow('exception', row.id)"
                         @keydown="actions.handleRowKey($event, 'exception', row)">
@@ -271,7 +310,7 @@ defineExpose({
                             <span class="status" :class="statusClass(row.statusTone || row.status)">{{ row.status }}</span>
                             <span class="mail-time">{{ row.level }}</span>
                         </span>
-                    </button>
+                    </div>
                 </div>
 
                 <AdminEmptyState v-if="model.filteredMailRows.length === 0 && model.filteredUnknownRows.length === 0"

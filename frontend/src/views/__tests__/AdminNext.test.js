@@ -279,13 +279,13 @@ describe('AdminNext behavior baseline', () => {
             mailId: 'mail-7',
             mode: 'detail',
         })
-        expect(wrapper.get('.mail-row').attributes('aria-selected')).toBe('true')
+        expect(wrapper.get('.mail-row').attributes('aria-current')).toBe('true')
         expect(wrapper.get('.mail-workbench').classes()).toContain('flow-mode-detail')
 
         await router.replace('/admin?view=flow&q=invoice&mailId=mail-7&mode=detail')
         await settle()
         expect(wrapper.get('.searchbox input').element.value).toBe('invoice')
-        expect(wrapper.get('.mail-row').attributes('aria-selected')).toBe('true')
+        expect(wrapper.get('.mail-row').attributes('aria-current')).toBe('true')
 
         await wrapper.get('button[aria-label="总览"]').trigger('click')
         await settle()
@@ -302,7 +302,7 @@ describe('AdminNext behavior baseline', () => {
         await mounted.router.push(selectedPath)
         await settle()
         expect(mounted.wrapper.get('.searchbox input').element.value).toBe('invoice')
-        expect(mounted.wrapper.get('.mail-row').attributes('aria-selected')).toBe('true')
+        expect(mounted.wrapper.get('.mail-row').attributes('aria-current')).toBe('true')
         expect(mounted.wrapper.get('.mail-workbench').classes()).toContain('flow-mode-detail')
 
         await mounted.router.push('/admin?view=overview')
@@ -312,7 +312,7 @@ describe('AdminNext behavior baseline', () => {
         mounted.router.back()
         await settle()
         expect(mounted.router.currentRoute.value.fullPath).toBe(selectedPath)
-        expect(mounted.wrapper.get('.mail-row').attributes('aria-selected')).toBe('true')
+        expect(mounted.wrapper.get('.mail-row').attributes('aria-current')).toBe('true')
 
         mounted.router.forward()
         await settle()
@@ -322,7 +322,7 @@ describe('AdminNext behavior baseline', () => {
 
         const refreshed = await mountAdmin({ path: selectedPath })
         expect(refreshed.wrapper.get('.searchbox input').element.value).toBe('invoice')
-        expect(refreshed.wrapper.get('.mail-row').attributes('aria-selected')).toBe('true')
+        expect(refreshed.wrapper.get('.mail-row').attributes('aria-current')).toBe('true')
         expect(refreshed.wrapper.get('.mail-workbench').classes()).toContain('flow-mode-detail')
         refreshed.wrapper.unmount()
     })
