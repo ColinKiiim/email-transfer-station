@@ -3841,6 +3841,14 @@ export const MESSAGE_REGISTRY = {
     "emptyDetailHint": {
       "en": "Select a message to read its body, metadata, and attachments here.",
       "zh": "选择一封邮件后在这里阅读正文、元数据和附件。"
+    },
+    "rowActions": {
+      "en": "Quick actions",
+      "zh": "快捷操作"
+    },
+    "selectRow": {
+      "en": "Select {subject}",
+      "zh": "选择 {subject}"
     }
   },
   "admin.actions": {

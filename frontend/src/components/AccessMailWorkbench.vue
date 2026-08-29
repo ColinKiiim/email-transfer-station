@@ -78,14 +78,19 @@ const pageSize = ref(20)
 const count = ref(0)
 const localFilterKeyword = ref('')
 const isRefreshing = ref(false)
+const isBatchOperating = ref(false)
+const isRowActionBusy = ref(false)
 const timer = ref(null)
 const autoRefreshInterval = ref(configAutoRefreshInterval.value)
 const multiActionMode = ref(false)
+const lastSelectedMailId = ref(null)
 const showMultiActionDownload = ref(false)
 const showMultiActionDelete = ref(false)
 const multiActionDownloadZip = ref({})
 const multiActionDeleteProgress = ref({ percentage: 0, tip: '0/0' })
 const detailPanelRef = ref(null)
+
+const isBusy = computed(() => isRefreshing.value || isBatchOperating.value || isRowActionBusy.value)
 
 const selectedAddress = computed({
   get: () => props.addressFilter || '',
@@ -125,19 +130,64 @@ const mailSecondaryAddress = (row) => props.showEMailTo ? compactWhitespace(row.
 const mailItemClass = (row) => [
   curMail.value && row.id === curMail.value.id ? 'is-selected' : '',
   row.unread ? 'is-unread' : '',
+  row.checked ? 'is-checked' : '',
 ].filter(Boolean).join(' ')
 
-const markMailRead = async (row) => {
-  if (!row || row.unread === false || row.is_read === true) return
-  try {
-    const result = await props.updateMailReadState(row.id, true)
+const updateSingleMailReadState = async (row, read = true) => {
+  if (!row || typeof props.updateMailReadState !== 'function') return false
+  const result = await props.updateMailReadState(row.id, read)
+  if (result && typeof result === 'object' && result.success === false) {
+    throw new Error('Failed to update mail read state')
+  }
+  if (read) {
     row.read_at = result?.read_at || row.read_at || new Date().toISOString()
     row.is_read = true
     row.unread = false
+  } else {
+    row.read_at = result?.read_at !== undefined ? result.read_at : null
+    row.is_read = false
+    row.unread = true
+  }
+  return true
+}
+
+const applyMailReadState = async (row, read = true) => {
+  if (!row) return false
+  if (read && row.unread === false && row.is_read === true) return true
+  if (!read && row.unread === true && row.is_read === false) return true
+  if (isBusy.value) return false
+
+  try {
+    isRowActionBusy.value = true
+    return await updateSingleMailReadState(row, read)
   } catch (error) {
     console.error(error)
     message.warning(t('markReadFailed'))
+    return false
+  } finally {
+    isRowActionBusy.value = false
   }
+}
+
+const toggleRowSelection = (row, { shiftKey = false } = {}) => {
+  if (!row?.id) return
+  const isCurrentlyChecked = !!row.checked
+  const shouldCheck = !isCurrentlyChecked
+
+  if (shiftKey && lastSelectedMailId.value && data.value.some((r) => r.id === lastSelectedMailId.value)) {
+    const lastIdx = data.value.findIndex((r) => r.id === lastSelectedMailId.value)
+    const currIdx = data.value.findIndex((r) => r.id === row.id)
+    if (lastIdx !== -1 && currIdx !== -1) {
+      const start = Math.min(lastIdx, currIdx)
+      const end = Math.max(lastIdx, currIdx)
+      for (let i = start; i <= end; i += 1) {
+        data.value[i].checked = shouldCheck
+      }
+    }
+  } else {
+    row.checked = shouldCheck
+  }
+  lastSelectedMailId.value = row.id
 }
 
 const refresh = async ({ keepPage = true } = {}) => {
@@ -145,6 +195,7 @@ const refresh = async ({ keepPage = true } = {}) => {
     if (!keepPage) page.value = 1
     isRefreshing.value = true
     loading.value = true
+    lastSelectedMailId.value = null
     const { results, count: totalCount } = await props.fetchMailData(
       pageSize.value,
       (page.value - 1) * pageSize.value,
@@ -176,21 +227,46 @@ const backFirstPageAndRefresh = async () => {
   await refresh({ keepPage: false })
 }
 
-const clickRow = async (row) => {
+const clickRow = async (row, { shiftKey = false } = {}) => {
   if (multiActionMode.value) {
-    row.checked = !row.checked
+    toggleRowSelection(row, { shiftKey })
     return
   }
   curMail.value = row
-  await markMailRead(row)
+  await applyMailReadState(row, true)
   await nextTick()
   if (typeof window !== 'undefined' && window.innerWidth <= 1180) {
     detailPanelRef.value?.scrollIntoView?.({ block: 'start', behavior: 'smooth' })
   }
 }
 
+const handleRowKey = (event, row) => {
+  if (event.target !== event.currentTarget) return
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault()
+    clickRow(row, { shiftKey: event.shiftKey })
+  }
+}
+
+const deleteSingleMail = async (row) => {
+  if (!props.enableUserDeleteEmail || !row || isBusy.value) return
+  try {
+    isRowActionBusy.value = true
+    await props.deleteMail(row.id)
+    message.success(t('success'))
+    if (curMail.value?.id === row.id) {
+      curMail.value = null
+    }
+    await refresh()
+  } catch (error) {
+    message.error(error.message || 'error')
+  } finally {
+    isRowActionBusy.value = false
+  }
+}
+
 const deleteCurrentMail = async () => {
-  if (!curMail.value) return
+  if (!props.enableUserDeleteEmail || !curMail.value) return
   try {
     await props.deleteMail(curMail.value.id)
     message.success(t('success'))
@@ -210,6 +286,7 @@ const multiActionModeClick = (enabled) => {
   data.value.forEach((item) => {
     item.checked = false
   })
+  lastSelectedMailId.value = null
   multiActionMode.value = enabled
 }
 
@@ -217,9 +294,45 @@ const multiActionSelectAll = (checked) => {
   data.value.forEach((item) => {
     item.checked = checked
   })
+  lastSelectedMailId.value = null
+}
+
+const multiActionMarkRead = async (read = true) => {
+  if (isBusy.value) return
+  const selectedMails = data.value.filter((item) => item.checked)
+  if (selectedMails.length === 0) {
+    message.error(t('pleaseSelectMail'))
+    return
+  }
+
+  isBatchOperating.value = true
+  isRefreshing.value = true
+  let failCount = 0
+  let successCount = 0
+
+  try {
+    for (const mail of selectedMails) {
+      try {
+        await updateSingleMailReadState(mail, read)
+        successCount++
+      } catch (err) {
+        console.error(err)
+        failCount++
+      }
+    }
+    if (failCount > 0) {
+      message.warning(t('markReadFailed'))
+    } else {
+      message.success(t('success'))
+    }
+  } finally {
+    isBatchOperating.value = false
+    isRefreshing.value = false
+  }
 }
 
 const multiActionDeleteMail = async () => {
+  if (!props.enableUserDeleteEmail) return
   try {
     const selectedMails = data.value.filter((item) => item.checked)
     if (selectedMails.length === 0) {
@@ -227,6 +340,7 @@ const multiActionDeleteMail = async () => {
       return
     }
     isRefreshing.value = true
+    isBatchOperating.value = true
     multiActionDeleteProgress.value = { percentage: 0, tip: `0/${selectedMails.length}` }
     for (const [index, mail] of selectedMails.entries()) {
       await props.deleteMail(mail.id)
@@ -242,6 +356,7 @@ const multiActionDeleteMail = async () => {
     message.error(error.message || 'error')
   } finally {
     isRefreshing.value = false
+    isBatchOperating.value = false
   }
 }
 
@@ -253,6 +368,7 @@ const multiActionDownload = async () => {
       return
     }
     isRefreshing.value = true
+    isBatchOperating.value = true
     const JSZipModule = await import('jszip')
     const zip = new JSZipModule.default()
     for (const mail of selectedMails) {
@@ -268,6 +384,7 @@ const multiActionDownload = async () => {
     message.error(error.message || 'error')
   } finally {
     isRefreshing.value = false
+    isBatchOperating.value = false
   }
 }
 
@@ -326,22 +443,28 @@ onBeforeUnmount(() => {
             {{ t('multiAction') }}
           </n-button>
           <template v-else>
-            <n-button size="tiny" tertiary @click="multiActionModeClick(false)">
+            <n-button size="tiny" tertiary :disabled="isBusy" @click="multiActionModeClick(false)">
               {{ t('cancelMultiAction') }}
             </n-button>
-            <n-button size="tiny" tertiary @click="multiActionSelectAll(true)">
+            <n-button size="tiny" tertiary :disabled="isBusy" @click="multiActionSelectAll(true)">
               {{ t('selectAll') }}
             </n-button>
-            <n-button size="tiny" tertiary @click="multiActionSelectAll(false)">
+            <n-button size="tiny" tertiary :disabled="isBusy" @click="multiActionSelectAll(false)">
               {{ t('unselectAll') }}
+            </n-button>
+            <n-button size="tiny" tertiary :disabled="selectedCount === 0 || isBusy" @click="multiActionMarkRead(true)">
+              {{ t('markAsRead') }}
+            </n-button>
+            <n-button size="tiny" tertiary :disabled="selectedCount === 0 || isBusy" @click="multiActionMarkRead(false)">
+              {{ t('markAsUnread') }}
             </n-button>
             <n-popconfirm v-if="enableUserDeleteEmail" @positive-click="multiActionDeleteMail">
               <template #trigger>
-                <n-button size="tiny" tertiary type="error" :disabled="selectedCount === 0">{{ t('delete') }}</n-button>
+                <n-button size="tiny" tertiary type="error" :disabled="selectedCount === 0 || isBusy">{{ t('delete') }}</n-button>
               </template>
               {{ t('deleteMailTip') }}
             </n-popconfirm>
-            <n-button size="tiny" tertiary type="info" :disabled="selectedCount === 0" @click="multiActionDownload">
+            <n-button size="tiny" tertiary type="info" :disabled="selectedCount === 0 || isBusy" @click="multiActionDownload">
               <template #icon>
                 <n-icon :component="CloudDownloadRound" />
               </template>
@@ -406,25 +529,96 @@ onBeforeUnmount(() => {
           />
         </div>
 
-        <div class="mail-list">
-          <button
+        <div class="mail-list" role="list">
+          <div
             v-for="row in data"
             :key="row.id"
-            type="button"
             class="mail-row"
-            :class="[mailItemClass(row), { 'is-unread': row.unread, 'has-checkbox': multiActionMode }]"
-            @click="clickRow(row)"
+            role="listitem"
+            tabindex="0"
+            :class="[mailItemClass(row), { 'has-checkbox': multiActionMode }]"
+            @click="clickRow(row, { shiftKey: $event.shiftKey })"
+            @keydown="handleRowKey($event, row)"
           >
-            <n-checkbox
+            <label
               v-if="multiActionMode"
-              v-model:checked="row.checked"
-              class="mail-row-checkbox"
-              @click.stop
-            />
+              class="mail-row-select-cell"
+              @click.stop.prevent="toggleRowSelection(row, { shiftKey: $event.shiftKey })"
+            >
+              <input
+                type="checkbox"
+                class="mail-row-checkbox"
+                :checked="row.checked"
+                :aria-label="tw('selectRow', { subject: row.subject || '' })"
+                tabindex="0"
+                @keydown.space.stop.prevent="toggleRowSelection(row, { shiftKey: $event.shiftKey })"
+                @keydown.enter.stop.prevent="toggleRowSelection(row, { shiftKey: $event.shiftKey })"
+              />
+            </label>
             <div class="mail-row-content">
               <div class="mail-row-header">
                 <span class="user-mail-sender" :title="mailPrimaryAddress(row)">{{ mailSenderDisplay(row) }}</span>
-                <time class="user-mail-time">{{ utcToLocalDate(row.created_at, useUTCDate) }}</time>
+                <div class="user-mail-header-right">
+                  <time class="user-mail-time">{{ utcToLocalDate(row.created_at, useUTCDate) }}</time>
+                  <div class="user-mail-row-actions" role="toolbar" :aria-label="tw('rowActions')">
+                    <button
+                      v-if="row.unread"
+                      type="button"
+                      class="user-mail-action-btn"
+                      :title="t('markAsRead')"
+                      :aria-label="t('markAsRead')"
+                      :disabled="isBusy"
+                      @click.stop.prevent="applyMailReadState(row, true)"
+                      @keydown.space.stop.prevent="applyMailReadState(row, true)"
+                      @keydown.enter.stop.prevent="applyMailReadState(row, true)"
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M21.2 8.4c.5.38.8.97.8 1.6v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V10a2 2 0 0 1 .8-1.6l8-6a2 2 0 0 1 2.4 0l8 6z" />
+                        <path d="m22 10-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 10" />
+                      </svg>
+                    </button>
+                    <button
+                      v-else
+                      type="button"
+                      class="user-mail-action-btn"
+                      :title="t('markAsUnread')"
+                      :aria-label="t('markAsUnread')"
+                      :disabled="isBusy"
+                      @click.stop.prevent="applyMailReadState(row, false)"
+                      @keydown.space.stop.prevent="applyMailReadState(row, false)"
+                      @keydown.enter.stop.prevent="applyMailReadState(row, false)"
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <rect x="3" y="5" width="18" height="14" rx="2" />
+                        <path d="m3 7 9 6 9-6" />
+                      </svg>
+                    </button>
+                    <n-popconfirm
+                      v-if="enableUserDeleteEmail"
+                      @positive-click="deleteSingleMail(row)"
+                    >
+                      <template #trigger>
+                        <button
+                          type="button"
+                          class="user-mail-action-btn is-danger"
+                          :title="t('delete')"
+                          :aria-label="t('delete')"
+                          :disabled="isBusy"
+                          @click.stop
+                          @keydown.space.stop
+                          @keydown.enter.stop
+                        >
+                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M3 6h18" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          </svg>
+                        </button>
+                      </template>
+                      {{ t('deleteMailTip') }}
+                    </n-popconfirm>
+                  </div>
+                </div>
               </div>
               <div class="mail-row-main">
                 <strong class="user-mail-subject" :title="row.subject">{{ row.subject }}</strong>
@@ -432,7 +626,7 @@ onBeforeUnmount(() => {
                 <span v-if="mailPreview(row)" class="user-mail-preview">{{ mailPreview(row) }}</span>
               </div>
             </div>
-          </button>
+          </div>
 
           <n-empty v-if="!isRefreshing && data.length === 0" class="empty-list" :description="t('emptyInbox')" />
           <n-skeleton v-if="isRefreshing && data.length === 0" text :repeat="8" />
@@ -687,7 +881,6 @@ onBeforeUnmount(() => {
   position: relative;
   width: 100%;
   min-height: 54px;
-  border: 0;
   border-bottom: 1px solid var(--ets-border);
   padding: 10px 14px;
   background: transparent;
@@ -695,12 +888,14 @@ onBeforeUnmount(() => {
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition: all 120ms ease;
+  transition: background-color 120ms ease, box-shadow 120ms ease;
   box-sizing: border-box;
+  outline: none;
 }
 
-.mail-row:active {
-  scale: 0.99;
+.mail-row:focus-visible {
+  outline: 2px solid var(--ets-focus-ring, #3b82f6);
+  outline-offset: -2px;
 }
 
 .mail-row:hover,
@@ -712,9 +907,26 @@ onBeforeUnmount(() => {
   box-shadow: inset 3px 0 0 var(--ets-brand);
 }
 
-.mail-row-checkbox {
+.mail-row-select-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   margin-top: 2px;
   flex-shrink: 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.mail-row-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--ets-brand, #3b82f6);
+}
+
+.mail-row-checkbox:focus-visible {
+  outline: 2px solid var(--ets-focus-ring, #3b82f6);
+  outline-offset: 2px;
 }
 
 .mail-row-content {
@@ -729,7 +941,7 @@ onBeforeUnmount(() => {
 .mail-row-header {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
   min-width: 0;
 }
@@ -750,17 +962,105 @@ onBeforeUnmount(() => {
   font-weight: 700;
 }
 
+.user-mail-header-right {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
+  min-height: 28px;
+}
+
 .user-mail-time {
   flex-shrink: 0;
   color: var(--ets-text-muted);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  transition: opacity 120ms ease, visibility 120ms ease;
 }
 
 .mail-row.is-unread .user-mail-time {
   color: var(--ets-text-strong);
   font-weight: 650;
+}
+
+.user-mail-row-actions {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 120ms ease, visibility 120ms ease;
+}
+
+.user-mail-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ets-text-muted);
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.user-mail-action-btn svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.user-mail-action-btn:hover:not(:disabled) {
+  background: var(--ets-hover, rgba(255, 255, 255, 0.08));
+  color: var(--ets-text);
+}
+
+.user-mail-action-btn.is-danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.user-mail-action-btn:focus-visible {
+  outline: 2px solid var(--ets-focus-ring, #3b82f6);
+  outline-offset: 1px;
+  color: var(--ets-text);
+}
+
+.user-mail-action-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.mail-row:hover .user-mail-time,
+.mail-row:focus .user-mail-time,
+.mail-row:focus-within .user-mail-time {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.mail-row:hover .user-mail-row-actions,
+.mail-row:focus .user-mail-row-actions,
+.mail-row:focus-within .user-mail-row-actions {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
 }
 
 .mail-row-main {
@@ -847,6 +1147,16 @@ onBeforeUnmount(() => {
 
 .empty-detail h2 {
   font-size: 18px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .user-mail-time,
+  .user-mail-row-actions,
+  .user-mail-action-btn,
+  .user-filter-chip,
+  .mail-row {
+    transition: none !important;
+  }
 }
 
 @media (max-width: 1180px) {
