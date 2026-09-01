@@ -3621,12 +3621,12 @@ export const MESSAGE_REGISTRY = {
       "zh": "新增并启动"
     },
     "oneTimeOnlyTitle": {
-      "en": "Shown only once",
-      "zh": "仅显示本次"
+      "en": "Credential info",
+      "zh": "凭证信息"
     },
     "oneTimeResultLabel": {
-      "en": "One-time result",
-      "zh": "一次性结果"
+      "en": "Credential details",
+      "zh": "凭证详情"
     },
     "copyResult": {
       "en": "Copy result",
@@ -3641,8 +3641,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "生产地址"
     },
     "productionAddressNote": {
-      "en": "The address is written to D1 immediately; the JWT and address password are shown only once after it succeeds.",
-      "zh": "创建后会立即写入 D1；JWT 和地址密码只在成功后显示一次。"
+      "en": "The address is written to D1; the generated JWT stays valid and can be viewed anytime in the address list.",
+      "zh": "创建后写入 D1；生成的 JWT 长期有效，可在地址列表中随时查看与复用。"
     },
     "addressName": {
       "en": "Address name",
@@ -3953,16 +3953,16 @@ export const MESSAGE_REGISTRY = {
       "zh": "新增地址"
     },
     "confirmCreateAddress": {
-      "en": "Create {address}? The address credential is shown only once after it is created.",
-      "zh": "确认创建 {address}？创建成功后地址凭证只显示一次。"
+      "en": "Create address {address}?",
+      "zh": "确认创建 {address}？"
     },
     "addressCreatedTitle": {
       "en": "Address created: {address}",
       "zh": "地址已创建：{address}"
     },
     "credentialShownOnce": {
-      "en": "This credential is shown only once. Copy it into a trusted password manager.",
-      "zh": "凭证只显示本次。请复制到可信密码管理器。"
+      "en": "Address created. Valid JWT and login link generated; you can view and reuse them anytime.",
+      "zh": "地址创建成功，已生成有效 JWT 凭证与免密登录链接，可在后台随时查看与复用。"
     },
     "addressCreatedNoCredential": {
       "en": "The address was created, but the API returned no credential.",
@@ -3985,16 +3985,16 @@ export const MESSAGE_REGISTRY = {
       "zh": "创建访问包"
     },
     "confirmCreateSharePackage": {
-      "en": "Create a read-only access package for {address}? The share link is shown only once.",
-      "zh": "确认为 {address} 创建只读访问包？分享链接只显示一次。"
+      "en": "Create a read-only access package for {address}?",
+      "zh": "确认为 {address} 创建只读访问包？"
     },
     "sharePackageCreatedTitle": {
       "en": "Access package created: {address}",
       "zh": "访问包已创建：{address}"
     },
     "shareLinkShownOnce": {
-      "en": "The link is shown only once; anyone holding it gets read-only access to this address.",
-      "zh": "链接仅显示本次；持有者可只读查看该地址。"
+      "en": "The access link is ready; anyone holding it gets read-only access to this address.",
+      "zh": "访问链接已生成；持有者可只读查看该地址。"
     },
     "sharePackageCreatedNoToken": {
       "en": "The access package was created, but the API returned no token.",
@@ -4057,16 +4057,16 @@ export const MESSAGE_REGISTRY = {
       "zh": "显示地址凭证"
     },
     "confirmShowCredential": {
-      "en": "Show the current JWT and fixed login link for {address}? Make sure nobody else can see your screen.",
-      "zh": "确认显示 {address} 的当前 JWT 和固定登录链接？请确保屏幕不会被无关人员看到。"
+      "en": "View current active credential for {address}?",
+      "zh": "确认查看 {address} 的当前有效凭证？"
     },
     "credentialTitle": {
       "en": "Address credential: {address}",
       "zh": "地址凭证：{address}"
     },
     "credentialNote": {
-      "en": "The result is cleared from page state once you close it; the current JWT stays valid until you rotate the credential.",
-      "zh": "结果在关闭后会从页面状态清除；轮换凭证前当前 JWT 仍然有效。"
+      "en": "Current JWT is valid and reusable; it remains active and viewable anytime until rotated.",
+      "zh": "当前 JWT 长期有效，可直接复用；在主动轮换凭证前始终有效且可在列表中随时查看。"
     },
     "addressNotProductionRotate": {
       "en": "The current address is not a production address, so its credential cannot be rotated",

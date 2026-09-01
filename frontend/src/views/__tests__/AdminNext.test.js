@@ -502,7 +502,7 @@ describe('AdminNext behavior baseline', () => {
         expect(oneTimeResult).toContain('fixture-address-jwt')
         expect(oneTimeResult).toContain('fixture-address-password')
         expect(oneTimeResult).toContain('/?jwt=fixture-address-jwt')
-        expect(wrapper.text()).toContain('仅显示本次')
+        expect(wrapper.text()).toContain('凭证信息')
         wrapper.unmount()
     })
 
