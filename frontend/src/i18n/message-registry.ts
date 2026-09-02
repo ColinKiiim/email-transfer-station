@@ -3641,8 +3641,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "生产地址"
     },
     "productionAddressNote": {
-      "en": "The address is written to D1; the generated JWT stays valid and can be viewed anytime in the address list.",
-      "zh": "创建后写入 D1；生成的 JWT 长期有效，可在地址列表中随时查看与复用。"
+      "en": "Address credential can be viewed and reused anytime from the list.",
+      "zh": "创建成功后，登录凭证可在列表中随时查看与复用。"
     },
     "addressName": {
       "en": "Address name",
@@ -3961,8 +3961,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "地址已创建：{address}"
     },
     "credentialShownOnce": {
-      "en": "Address created. Valid JWT and login link generated; you can view and reuse them anytime.",
-      "zh": "地址创建成功，已生成有效 JWT 凭证与免密登录链接，可在后台随时查看与复用。"
+      "en": "Address created. Credential stays valid and can be viewed anytime.",
+      "zh": "地址已创建，凭证长期有效，可随时在列表中查看与复用。"
     },
     "addressCreatedNoCredential": {
       "en": "The address was created, but the API returned no credential.",
@@ -4029,8 +4029,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "已删除 {address}"
     },
     "domainNotManagedDisable": {
-      "en": "The current domain is not a D1-managed record and cannot be disabled",
-      "zh": "当前域名不是 D1 管理记录，无法停用"
+      "en": "The current domain is not a managed record and cannot be disabled",
+      "zh": "当前域名不是系统托管域名，无法停用"
     },
     "labelDisableDomain": {
       "en": "disable domain",
@@ -4057,16 +4057,16 @@ export const MESSAGE_REGISTRY = {
       "zh": "显示地址凭证"
     },
     "confirmShowCredential": {
-      "en": "View current active credential for {address}?",
-      "zh": "确认查看 {address} 的当前有效凭证？"
+      "en": "View login credential for {address}?",
+      "zh": "确认查看 {address} 的登录凭证？"
     },
     "credentialTitle": {
       "en": "Address credential: {address}",
       "zh": "地址凭证：{address}"
     },
     "credentialNote": {
-      "en": "Current JWT is valid and reusable; it remains active and viewable anytime until rotated.",
-      "zh": "当前 JWT 长期有效，可直接复用；在主动轮换凭证前始终有效且可在列表中随时查看。"
+      "en": "Credential stays valid; rotate it if you need to revoke access.",
+      "zh": "当前凭证长期有效；如需作废可在列表中进行凭证轮换。"
     },
     "addressNotProductionRotate": {
       "en": "The current address is not a production address, so its credential cannot be rotated",
@@ -4077,16 +4077,16 @@ export const MESSAGE_REGISTRY = {
       "zh": "凭证轮换"
     },
     "confirmRotateCredential": {
-      "en": "Rotate the address credential for {address}? The old address JWT stops working and the new credential is shown only once, so copy it somewhere safe.",
-      "zh": "确认轮换 {address} 的地址凭证？旧地址 JWT 会失效，新的凭证只会显示一次，请在安全位置复制保存。"
+      "en": "Rotate login credential for {address}? The previous credential will stop working.",
+      "zh": "确认轮换 {address} 的登录凭证？旧凭证将立即失效。"
     },
     "credentialRotatedTitle": {
       "en": "Credential rotated: {address}",
       "zh": "凭证已轮换：{address}"
     },
     "credentialRotatedNote": {
-      "en": "The old JWT is now invalid; the new credential is cleared from page state once you close this.",
-      "zh": "旧 JWT 已失效；新凭证在关闭后会从页面状态清除。"
+      "en": "Previous credential revoked; new credential is now active.",
+      "zh": "旧凭证已失效，新凭证已生效并可随时查看。"
     },
     "credentialRotated": {
       "en": "Rotated the credential for {address}",
@@ -4169,8 +4169,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "停用影响检查失败"
     },
     "domainNotManaged": {
-      "en": "The current domain is not a D1-managed record",
-      "zh": "当前域名不是 D1 管理记录"
+      "en": "The current domain is not a managed record",
+      "zh": "当前域名不是系统托管记录"
     },
     "verificationAddressFallback": {
       "en": "the verification address",
@@ -4181,8 +4181,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "验证已开始，请向 {address} 发送测试邮件"
     },
     "domainNotManagedVerifyCheck": {
-      "en": "The current domain is not a D1-managed record, so verification cannot be checked",
-      "zh": "当前域名不是 D1 管理记录，无法检查验证"
+      "en": "The current domain is not a managed record, so verification cannot be checked",
+      "zh": "当前域名不是系统托管记录，无法检查验证"
     },
     "labelCheckVerification": {
       "en": "domain verification check",
@@ -4205,8 +4205,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "Cloudflare 上已有 catch-all 规则。确认替换为发送到 Worker：{domain}？"
     },
     "domainNotManagedCloudflareSetup": {
-      "en": "The current domain is not a D1-managed record, so Cloudflare cannot be configured automatically",
-      "zh": "当前域名不是 D1 管理记录，无法自动配置 Cloudflare"
+      "en": "The current domain is not a managed record, so Cloudflare cannot be configured automatically",
+      "zh": "当前域名不是系统托管记录，无法自动配置 Cloudflare"
     },
     "domainNotCloudflareMode": {
       "en": "The current domain is not in Cloudflare Email Routing mode",
