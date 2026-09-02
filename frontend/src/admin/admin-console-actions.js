@@ -488,7 +488,7 @@ export const useAdminConsoleActions = ({
         await runProductionAction(
             'credential-show',
             t('labelShowCredential'),
-            t('confirmShowCredential', { address: row.address }),
+            '',
             async () => {
                 const result = await adminApi.showAddressCredential(row.sourceId, row.credentialVersion)
                 showOneTimeResult(

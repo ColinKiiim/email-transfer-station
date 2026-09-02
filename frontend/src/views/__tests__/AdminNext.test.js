@@ -539,8 +539,7 @@ describe('AdminNext behavior baseline', () => {
         wrapper.unmount()
     })
 
-    it('reveals the selected address credential behind an explicit confirmation', async () => {
-        vi.spyOn(window, 'confirm').mockReturnValue(true)
+    it('reveals the selected address credential directly', async () => {
         runtime.addresses = [{ id: 3, name: 'ops@example.test', credential_version: 2 }]
         const { wrapper } = await mountAdmin({ path: '/admin?view=identity' })
 
