@@ -363,7 +363,6 @@ export const useAdminConsoleActions = ({
             showWarning(t('busy'))
             return
         }
-        if (!window.confirm(t('confirmCreateAddress', { address: `${name}@${domain}` }))) return
         actionBusy.value = 'address-create'
         try {
             const result = await adminApi.createAddress({
@@ -401,7 +400,6 @@ export const useAdminConsoleActions = ({
             showWarning(t('busy'))
             return
         }
-        if (!window.confirm(t('confirmCreateSharePackage', { address: row.address }))) return
         actionBusy.value = 'share-create'
         try {
             const result = await adminApi.createShareToken(row.sourceId, {
@@ -725,8 +723,6 @@ export const useAdminConsoleActions = ({
         }
         if (!requireProductionWrite(t('labelCreateDomain'))) return
         const mode = domainActivationForm.receiveMode
-        const label = mode === 'cloudflare_email' ? t('labelCloudflareSetup') : t('labelImprovmxVerification')
-        if (!window.confirm(t('confirmCreateDomain', { domain, action: label }))) return
         domainActivationBusy.value = true
         actionBusy.value = mode === 'cloudflare_email' ? 'cloudflare-create' : 'improvmx-create'
         try {
