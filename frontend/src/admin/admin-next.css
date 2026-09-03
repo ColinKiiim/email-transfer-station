@@ -2552,6 +2552,113 @@ body:has(.admin-next) .n-message-container {
     width: min(720px, calc(100vw - 36px));
 }
 
+.admin-next-host .confirm-backdrop {
+    z-index: 60;
+}
+
+.admin-next-host .confirm-modal {
+    width: min(500px, calc(100vw - 36px));
+}
+
+.admin-next-host .confirm-head-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.admin-next-host .confirm-head-title h2 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.admin-next-host .confirm-tone-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.admin-next-host .confirm-tone-badge svg {
+    width: 16px;
+    height: 16px;
+}
+
+.admin-next-host .confirm-tone-badge.tone-danger {
+    background: var(--danger-soft);
+    color: var(--danger);
+}
+
+.admin-next-host .confirm-tone-badge.tone-warning {
+    background: var(--warn-soft);
+    color: var(--warn);
+}
+
+.admin-next-host .confirm-tone-badge.tone-info {
+    background: var(--info-soft);
+    color: var(--info);
+}
+
+.admin-next-host .confirm-modal .confirm-message {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--fg);
+    margin: 0 0 14px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.admin-next-host .confirm-impact-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    background: var(--surface-soft);
+    border: 1px solid var(--border);
+    margin-bottom: 14px;
+}
+
+.admin-next-host .confirm-impact-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+}
+
+.admin-next-host .confirm-impact-label {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.admin-next-host .confirm-impact-value {
+    font-weight: 650;
+    color: var(--fg);
+    font-variant-numeric: tabular-nums;
+}
+
+.admin-next-host .confirm-modal.tone-danger .btn.confirm-primary {
+    background: var(--danger-soft);
+    color: var(--danger);
+    box-shadow: 0 0 0 1px var(--danger);
+}
+
+.admin-next-host .confirm-modal.tone-warning .btn.confirm-primary {
+    background: var(--warn-soft);
+    color: var(--warn);
+    box-shadow: 0 0 0 1px var(--warn);
+}
+
+.admin-next-host .confirm-modal.tone-info .btn.confirm-primary {
+    background: var(--accent);
+    color: var(--accent-contrast);
+}
+
 .admin-next-host .modal-head,
 .admin-next-host .modal-actions {
     display: flex;

@@ -371,4 +371,109 @@ describe('admin console action controller', () => {
         expect(createObjectURLMock).toHaveBeenCalledOnce()
         expect(harness.showToast).toHaveBeenCalledWith('已导出 1 封邮件', 'success')
     })
+
+    describe('unified confirmation controller (requestConfirm)', () => {
+        it('opens confirm dialog with provided options and defaults', async () => {
+            const harness = buildHarness()
+            const { confirmDialogState, requestConfirm, resolveConfirm } = harness.actions
+
+            expect(confirmDialogState.open).toBe(false)
+
+            const pendingPromise = requestConfirm({
+                title: '删除地址',
+                message: '确定要删除该地址吗？',
+                impactItems: [{ label: '收件数', value: 12 }],
+                confirmLabel: '确认删除',
+                cancelLabel: '再想想',
+            })
+
+            expect(confirmDialogState.open).toBe(true)
+            expect(confirmDialogState.tone).toBe('danger')
+            expect(confirmDialogState.title).toBe('删除地址')
+            expect(confirmDialogState.message).toBe('确定要删除该地址吗？')
+            expect(confirmDialogState.impactItems).toEqual([{ label: '收件数', value: 12 }])
+            expect(confirmDialogState.confirmLabel).toBe('确认删除')
+            expect(confirmDialogState.cancelLabel).toBe('再想想')
+            expect(typeof confirmDialogState.resolve).toBe('function')
+
+            resolveConfirm(false)
+            const result = await pendingPromise
+            expect(result).toBe(false)
+        })
+
+        it('resolves with true when resolveConfirm(true) is invoked', async () => {
+            const harness = buildHarness()
+            const { confirmDialogState, requestConfirm, resolveConfirm } = harness.actions
+
+            const confirmPromise = requestConfirm({
+                title: '清空收件箱',
+                message: '确定清空吗？',
+                tone: 'danger',
+            })
+
+            expect(confirmDialogState.open).toBe(true)
+            resolveConfirm(true)
+
+            const result = await confirmPromise
+            expect(result).toBe(true)
+            expect(confirmDialogState.open).toBe(false)
+            expect(confirmDialogState.resolve).toBe(null)
+        })
+
+        it('resolves with false when resolveConfirm(false) is invoked', async () => {
+            const harness = buildHarness()
+            const { confirmDialogState, requestConfirm, resolveConfirm } = harness.actions
+
+            const confirmPromise = requestConfirm({
+                title: '轮换凭证',
+                tone: 'warning',
+            })
+
+            expect(confirmDialogState.open).toBe(true)
+            expect(confirmDialogState.tone).toBe('warning')
+            resolveConfirm(false)
+
+            const result = await confirmPromise
+            expect(result).toBe(false)
+            expect(confirmDialogState.open).toBe(false)
+            expect(confirmDialogState.resolve).toBe(null)
+        })
+
+        it('subsequent calls to resolveConfirm when dialog is closed are no-ops', async () => {
+            const harness = buildHarness()
+            const { confirmDialogState, requestConfirm, resolveConfirm } = harness.actions
+
+            const confirmPromise = requestConfirm({ title: '测试操作' })
+            resolveConfirm(true)
+            const result = await confirmPromise
+            expect(result).toBe(true)
+
+            expect(() => {
+                resolveConfirm(false)
+                resolveConfirm(true)
+            }).not.toThrow()
+            expect(confirmDialogState.open).toBe(false)
+            expect(confirmDialogState.resolve).toBe(null)
+        })
+
+        it('cancels previous pending confirm request if a new request is made concurrently', async () => {
+            const harness = buildHarness()
+            const { confirmDialogState, requestConfirm, resolveConfirm } = harness.actions
+
+            const firstPromise = requestConfirm({ title: '第一次确认', tone: 'danger' })
+            expect(confirmDialogState.title).toBe('第一次确认')
+
+            const secondPromise = requestConfirm({ title: '第二次确认', tone: 'info' })
+            expect(confirmDialogState.title).toBe('第二次确认')
+            expect(confirmDialogState.tone).toBe('info')
+
+            const firstResult = await firstPromise
+            expect(firstResult).toBe(false)
+
+            resolveConfirm(true)
+            const secondResult = await secondPromise
+            expect(secondResult).toBe(true)
+            expect(confirmDialogState.open).toBe(false)
+        })
+    })
 })

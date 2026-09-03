@@ -3536,6 +3536,14 @@ export const MESSAGE_REGISTRY = {
     }
   },
   "admin.overlay": {
+    "confirmDefaultTitle": {
+      "en": "Confirm action",
+      "zh": "确认操作"
+    },
+    "confirm": {
+      "en": "Confirm",
+      "zh": "确认"
+    },
     "detailDrawerLabel": {
       "en": "Context detail drawer",
       "zh": "上下文详情抽屉"

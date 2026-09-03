@@ -76,6 +76,44 @@ export const useAdminConsoleActions = ({
         value: '',
         note: '',
     })
+    const confirmDialogState = reactive({
+        open: false,
+        tone: 'danger',
+        title: '',
+        message: '',
+        impactItems: [],
+        confirmLabel: '',
+        cancelLabel: '',
+        autofocus: '',
+        resolve: null,
+    })
+
+    const resolveConfirm = (confirmed = false) => {
+        if (!confirmDialogState.open) return
+        const resolve = confirmDialogState.resolve
+        confirmDialogState.open = false
+        confirmDialogState.resolve = null
+        if (typeof resolve === 'function') {
+            resolve(Boolean(confirmed))
+        }
+    }
+
+    const requestConfirm = (options = {}) => {
+        if (confirmDialogState.open && typeof confirmDialogState.resolve === 'function') {
+            confirmDialogState.resolve(false)
+        }
+        return new Promise((resolve) => {
+            confirmDialogState.tone = options.tone || 'danger'
+            confirmDialogState.title = options.title || ''
+            confirmDialogState.message = options.message || ''
+            confirmDialogState.impactItems = Array.isArray(options.impactItems) ? options.impactItems : []
+            confirmDialogState.confirmLabel = options.confirmLabel || ''
+            confirmDialogState.cancelLabel = options.cancelLabel || ''
+            confirmDialogState.autofocus = options.autofocus || ''
+            confirmDialogState.resolve = resolve
+            confirmDialogState.open = true
+        })
+    }
     const addressDomainOptions = computed(() => domainRows.value.filter((row) => row.isEnabled))
     const selectedAddressDomain = computed(() => (
         addressDomainOptions.value.find((row) => row.domain === addressCreateForm.domain)
@@ -1153,6 +1191,9 @@ export const useAdminConsoleActions = ({
     return {
         actionBusy,
         actionModal,
+        confirmDialogState,
+        requestConfirm,
+        resolveConfirm,
         addressCreateForm,
         addressDomainOptions,
         selectedAddressDomain,

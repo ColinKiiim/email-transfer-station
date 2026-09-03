@@ -757,6 +757,9 @@ const {
     handleAddressRowAction,
     handleDomainRowAction,
     handleUserRowAction,
+    confirmDialogState,
+    requestConfirm,
+    resolveConfirm,
 } = useAdminConsoleActions({
     activeView,
     addressRows,
@@ -913,6 +916,7 @@ const overlayModel = computed(() => ({
     detailOpen: detailOpen.value,
     currentRail: currentRail.value,
     actionBusy: actionBusy.value,
+    confirmDialogState,
     domainActivationOpen: domainActivationOpen.value,
     domainActivationBusy: domainActivationBusy.value,
     domainActivationForm,
@@ -1012,6 +1016,7 @@ const overlayActions = {
     copyText,
     bindAddressToUser,
     unbindAddressFromUser,
+    resolveConfirm,
 }
 
 watch(pageTitle, (title) => {
@@ -1035,7 +1040,7 @@ const handleGlobalKeydown = (event) => {
         nextTick(() => shellRef.value?.focusSearch?.())
         return
     }
-    if (event.key === 'Escape' && detailOpen.value && !actionModal.value && !domainActivationOpen.value) closeDetail()
+    if (event.key === 'Escape' && detailOpen.value && !actionModal.value && !domainActivationOpen.value && !confirmDialogState.open) closeDetail()
 }
 
 onMounted(async () => {
