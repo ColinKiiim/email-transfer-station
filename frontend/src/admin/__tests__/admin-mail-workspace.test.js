@@ -82,6 +82,9 @@ const createMockMailActions = (overrides = {}) => ({
     batchDeleteMails: vi.fn(),
     batchExportMails: vi.fn(),
     handleAction: vi.fn(),
+    schedulePrefetchMail: vi.fn(),
+    cancelPrefetchMail: vi.fn(),
+    prefetchAdminMail: vi.fn(),
     ...overrides,
 })
 
@@ -660,6 +663,99 @@ describe('AdminMailWorkspace selection controls and accessible DOM structure', (
         const emptyDetail = wrapper.get('.reader-empty')
         expect(emptyDetail.text()).toContain('选择一封邮件')
 
+        wrapper.unmount()
+    })
+
+    it('handles accessible hover and focus prefetch with child element transition protection', async () => {
+        const mail = {
+            id: 'mail-1',
+            subject: 'Prefetch candidate',
+            sender: 'sender@example.test',
+            senderDisplay: 'Sender',
+            unread: true,
+            body: 'Preview snippet',
+        }
+        const model = createMockMailModel({
+            visibleMailRows: [mail],
+            filteredMailRows: [mail],
+        })
+        const actions = createMockMailActions()
+        const wrapper = mount(AdminMailWorkspace, {
+            props: { model, actions },
+            global: { plugins: [i18n] },
+        })
+
+        const rowEl = wrapper.get('.mail-row')
+        const checkboxEl = rowEl.get('.mail-checkbox')
+
+        // 1. Mouse enters row -> schedulePrefetchMail called with row
+        await rowEl.trigger('mouseenter')
+        expect(actions.schedulePrefetchMail).toHaveBeenCalledWith(mail)
+        expect(actions.schedulePrefetchMail).toHaveBeenCalledTimes(1)
+
+        // 2. Mouse moves from row to child checkbox (relatedTarget inside row) -> should NOT cancel
+        await rowEl.trigger('mouseleave', { relatedTarget: checkboxEl.element })
+        expect(actions.cancelPrefetchMail).not.toHaveBeenCalled()
+
+        // 3. Mouse leaves row entirely -> cancels prefetch
+        await rowEl.trigger('mouseleave', { relatedTarget: null })
+        expect(actions.cancelPrefetchMail).toHaveBeenCalledWith(mail)
+        expect(actions.cancelPrefetchMail).toHaveBeenCalledTimes(1)
+
+        // 4. Keyboard focus enters row -> schedulePrefetchMail called
+        await rowEl.trigger('focusin')
+        expect(actions.schedulePrefetchMail).toHaveBeenCalledTimes(2)
+
+        // 5. Focus moves to child element inside row -> should NOT cancel
+        await rowEl.trigger('focusout', { relatedTarget: checkboxEl.element })
+        expect(actions.cancelPrefetchMail).toHaveBeenCalledTimes(1) // still 1
+
+        // 6. Focus moves outside row -> cancels prefetch
+        await rowEl.trigger('focusout', { relatedTarget: null })
+        expect(actions.cancelPrefetchMail).toHaveBeenCalledTimes(2)
+
+        // 7. Component unmount cancels prefetch
+        wrapper.unmount()
+        expect(actions.cancelPrefetchMail).toHaveBeenCalledTimes(3)
+    })
+
+    it('does not display list snippet in mail detail when mail text is empty or unparsed', () => {
+        const mail = {
+            id: 'mail-1',
+            subject: 'No body mail',
+            sender: 'sender@example.test',
+            unread: false,
+            body: 'This preview snippet must never be shown as email body',
+        }
+        const model = createMockMailModel({
+            ui: {
+                flowMode: 'detail',
+                status: 'all',
+                domain: 'all',
+                address: 'all',
+                mailRenderMode: 'html',
+                selected: { flow: 'mail-1', exception: '' },
+            },
+            currentMail: mail,
+            currentRendererMail: null,
+            currentRail: {
+                empty: false,
+                title: 'No body mail',
+                body: '',
+                mail: null,
+            },
+        })
+        const actions = createMockMailActions({
+            isSelected: vi.fn((kind, r) => r.id === 'mail-1'),
+        })
+        const wrapper = mount(AdminMailWorkspace, {
+            props: { model, actions },
+            global: { plugins: [i18n] },
+        })
+
+        const detailPane = wrapper.get('.body-section')
+        expect(detailPane.text()).not.toContain('This preview snippet must never be shown as email body')
+        expect(detailPane.text()).toContain('当前记录没有可展示正文。')
         wrapper.unmount()
     })
 })

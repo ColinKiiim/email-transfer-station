@@ -621,4 +621,258 @@ describe('admin mail-flow model', () => {
         expect(ui.flowMode).toBe('list')
         expect(syncRoute).toHaveBeenCalledWith({ mode: undefined })
     })
+
+    it('tracks isDetailParsing during async parsing, switches cleanly, and isolates renderer from preview snippets', async () => {
+        let resolveParse1
+        const parsePromise1 = new Promise((resolve) => {
+            resolveParse1 = resolve
+        })
+        let resolveParse2
+        const parsePromise2 = new Promise((resolve) => {
+            resolveParse2 = resolve
+        })
+
+        const parseItem = vi.fn().mockImplementation((item) => {
+            if (item.id === 1) return parsePromise1
+            if (item.id === 2) return parsePromise2
+            return Promise.resolve({ subject: item.subject, html: '', message: '', raw: '' })
+        })
+
+        const source = ref([
+            { ...rawMail(1), raw: 'From: a@b.c\r\nSubject: Mail 1\r\n\r\nPreviewSnippetOne' },
+            { ...rawMail(2), raw: 'From: a@b.c\r\nSubject: Mail 2\r\n\r\nPreviewSnippetTwo' },
+        ])
+        const ui = reactive({
+            view: 'flow',
+            query: '',
+            domain: 'all',
+            address: 'all',
+            status: 'all',
+            flowMode: 'detail',
+            detailKind: 'flow',
+            mailRenderMode: 'html',
+            selected: { flow: '', exception: '' },
+        })
+
+        const scope = effectScope()
+        scopes.push(scope)
+        const flow = scope.run(() => useAdminMailFlow({
+            getMails: () => source.value,
+            getUnknownMails: () => [],
+            ui,
+            activeView: ref('flow'),
+            parseItem,
+            loadMail: vi.fn(),
+            resetListScroll: vi.fn(),
+            syncRoute: vi.fn(),
+            replaceRouteQuery: vi.fn(),
+            persistView: vi.fn(),
+            onSelectionMissing: vi.fn(),
+            onParseError: vi.fn(),
+        }))
+
+        // Initially no mail is selected
+        expect(flow.isDetailParsing.value).toBe(false)
+        expect(flow.currentRendererMail.value).toBeNull()
+
+        // 1. Select Mail 1: parsing becomes pending
+        ui.selected.flow = 'mail-1'
+        await nextTick()
+        expect(flow.isDetailParsing.value).toBe(true)
+
+        // List row maintains its snippet preview
+        expect(flow.currentMail.value.body).toContain('PreviewSnippetOne')
+
+        // But renderer mail input MUST NOT contain the list preview snippet or fallback to row.body
+        const pendingRendererMail = flow.currentRendererMail.value
+        expect(pendingRendererMail).not.toBeNull()
+        expect(pendingRendererMail.message).toBe('')
+        expect(pendingRendererMail.text).toBe('')
+        expect(pendingRendererMail.messageIsHtml).toBe(false)
+        expect(pendingRendererMail.message).not.toContain('PreviewSnippetOne')
+        expect(pendingRendererMail.text).not.toContain('PreviewSnippetOne')
+
+        // 2. Switch to Mail 2 while Mail 1 is still pending
+        ui.selected.flow = 'mail-2'
+        await nextTick()
+
+        // isDetailParsing for currentMail (mail-2) becomes true once mail-2's parse is triggered
+        expect(flow.currentMail.value.id).toBe('mail-2')
+        expect(flow.isDetailParsing.value).toBe(true)
+        expect(flow.currentRendererMail.value.message).not.toContain('PreviewSnippetTwo')
+
+        // 3. Resolve Mail 1 in background (should not flip mail-2's pending state)
+        resolveParse1({
+            subject: 'Mail 1',
+            html: '<p>Resolved Body 1</p>',
+            message: '<p>Resolved Body 1</p>',
+            messageIsHtml: true,
+            raw: '...',
+            attachments: [],
+        })
+        await nextTick()
+        await Promise.resolve()
+        await nextTick()
+        // Mail 2 is still pending
+        expect(flow.isDetailParsing.value).toBe(true)
+
+        // 4. Resolve Mail 2
+        resolveParse2({
+            subject: 'Mail 2',
+            html: '<p>Resolved Body 2</p>',
+            message: '<p>Resolved Body 2</p>',
+            messageIsHtml: true,
+            raw: '...',
+            attachments: [],
+        })
+        await nextTick()
+        await Promise.resolve()
+        await nextTick()
+
+        // Now mail-2 is complete and isDetailParsing is false
+        expect(flow.isDetailParsing.value).toBe(false)
+        expect(flow.currentRendererMail.value.message).toBe('<p>Resolved Body 2</p>')
+        expect(flow.currentRendererMail.value.messageIsHtml).toBe(true)
+
+        // Switch back to Mail 1 (already cached): isDetailParsing remains false immediately
+        ui.selected.flow = 'mail-1'
+        await nextTick()
+        expect(flow.isDetailParsing.value).toBe(false)
+        expect(flow.currentRendererMail.value.message).toBe('<p>Resolved Body 1</p>')
+    })
+
+    it('schedules prefetch with ~120ms delay, cancels on leave, and deduplicates against cache and in-flight parse', async () => {
+        vi.useFakeTimers()
+        try {
+            const source = ref([
+                { ...rawMail(1), raw: 'From: a@b.c\r\nSubject: Mail 1\r\n\r\nBody 1' },
+                { ...rawMail(2), raw: 'From: a@b.c\r\nSubject: Mail 2\r\n\r\nBody 2' },
+            ])
+            const ui = reactive({
+                view: 'flow',
+                query: '',
+                domain: 'all',
+                address: 'all',
+                status: 'all',
+                flowMode: 'list',
+                detailKind: '',
+                mailRenderMode: 'html',
+                selected: { flow: '', exception: '' },
+            })
+            const parseItem = vi.fn().mockResolvedValue({
+                subject: 'Parsed',
+                html: '<p>Parsed</p>',
+                message: '<p>Parsed</p>',
+                messageIsHtml: true,
+                raw: '...',
+                attachments: [],
+            })
+            const scope = effectScope()
+            scopes.push(scope)
+            const flow = scope.run(() => useAdminMailFlow({
+                getMails: () => source.value,
+                getUnknownMails: () => [],
+                ui,
+                activeView: ref('flow'),
+                parseItem,
+                loadMail: vi.fn(),
+                resetListScroll: vi.fn(),
+                syncRoute: vi.fn(),
+                replaceRouteQuery: vi.fn(),
+                persistView: vi.fn(),
+                onSelectionMissing: vi.fn(),
+                onParseError: vi.fn(),
+            }))
+
+            const row1 = flow.mailRows.value[0]
+            const row2 = flow.mailRows.value[1]
+
+            // 1. Hover row 1 -> schedule prefetch
+            flow.schedulePrefetchMail(row1)
+            expect(parseItem).not.toHaveBeenCalled()
+
+            // 2. Advance 100ms (not yet 120ms) -> still not called
+            vi.advanceTimersByTime(100)
+            expect(parseItem).not.toHaveBeenCalled()
+
+            // 3. Mouse leaves row 1 before 120ms -> cancel prefetch
+            flow.cancelPrefetchMail(row1)
+            vi.advanceTimersByTime(50)
+            expect(parseItem).not.toHaveBeenCalled()
+
+            // 4. Hover row 2 -> wait 120ms -> triggered
+            flow.schedulePrefetchMail(row2)
+            vi.advanceTimersByTime(120)
+            await Promise.resolve()
+            expect(parseItem).toHaveBeenCalledTimes(1)
+
+            // 5. Subsequent hover on row 2 (already cached) does not re-fetch
+            flow.schedulePrefetchMail(row2)
+            vi.advanceTimersByTime(200)
+            await Promise.resolve()
+            expect(parseItem).toHaveBeenCalledTimes(1)
+        } finally {
+            vi.useRealTimers()
+        }
+    })
+
+    it('handles missing raw and parse failures gracefully without remaining in a stuck pending state', async () => {
+        const source = ref([
+            { ...rawMail(1), raw: '' },
+            { ...rawMail(2), raw: '' },
+        ])
+        const ui = reactive({
+            view: 'flow',
+            query: '',
+            domain: 'all',
+            address: 'all',
+            status: 'all',
+            flowMode: 'detail',
+            detailKind: 'flow',
+            mailRenderMode: 'html',
+            selected: { flow: '', exception: '' },
+        })
+        const parseError = new Error('WASM engine failure')
+        const onParseError = vi.fn()
+        const loadMail = vi.fn().mockImplementation(async (id) => {
+            if (id === 1) return { raw: '' }
+            throw parseError
+        })
+        const scope = effectScope()
+        scopes.push(scope)
+        const flow = scope.run(() => useAdminMailFlow({
+            getMails: () => source.value,
+            getUnknownMails: () => [],
+            ui,
+            activeView: ref('flow'),
+            parseItem: vi.fn(),
+            loadMail,
+            resetListScroll: vi.fn(),
+            syncRoute: vi.fn(),
+            replaceRouteQuery: vi.fn(),
+            persistView: vi.fn(),
+            onSelectionMissing: vi.fn(),
+            onParseError,
+        }))
+
+        // Select mail 1: loadMail returns empty raw
+        ui.selected.flow = 'mail-1'
+        await nextTick()
+        await Promise.resolve()
+        await nextTick()
+
+        expect(flow.isDetailParsing.value).toBe(false)
+        expect(flow.currentDisplayMail.value.parseFailed).toBe(true)
+        expect(flow.currentRendererMail.value.message).toBe('')
+
+        // Select mail 2: loadMail throws error
+        ui.selected.flow = 'mail-2'
+        await nextTick()
+        await Promise.resolve()
+        await nextTick()
+
+        expect(flow.isDetailParsing.value).toBe(false)
+        expect(flow.currentDisplayMail.value.parseFailed).toBe(true)
+        expect(onParseError).toHaveBeenCalledWith(parseError)
+    })
 })

@@ -1,4 +1,4 @@
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onScopeDispose, reactive, ref, watch } from 'vue'
 
 import {
     adminMailCacheKey,
@@ -219,8 +219,8 @@ export const buildAdminMailHierarchy = ({
 
 export const buildAdminDisplayMail = (row, parsed) => {
     if (!row) return null
-    const html = parsed?.html || (parsed?.messageIsHtml ? parsed?.message : '') || row.html || ''
-    const text = parsed?.text || row.text || (!html ? row.body : '')
+    const html = parsed?.html || (parsed?.messageIsHtml ? parsed?.message : '') || ''
+    const text = parsed?.text || ''
     const attachments = parsed?.attachments || row.attachments || []
     return {
         ...row,
@@ -228,7 +228,7 @@ export const buildAdminDisplayMail = (row, parsed) => {
         sender: parsed?.source || row.sender,
         html,
         text,
-        message: parsed?.message || html || text || row.body || '',
+        message: parsed?.message || html || text || '',
         raw: parsed?.raw || row.raw || '',
         messageIsHtml: !!(parsed?.messageIsHtml || html),
         attachments,
@@ -244,9 +244,9 @@ export const buildAdminRendererMail = (row, renderMode) => row ? ({
     source: row.sender,
     address: row.to,
     created_at: row.created_at || row.fullTime || row.time,
-    message: row.message || row.html || row.text || row.body || '',
+    message: row.message || row.html || row.text || '',
     messageIsHtml: !!row.messageIsHtml,
-    text: renderMode === 'html' ? '' : (row.text || (!row.html ? row.body : '')),
+    text: renderMode === 'html' ? '' : (row.text || ''),
     raw: row.raw || '',
     attachments: row.attachments || [],
     metadata: row.metadata || {},
@@ -279,7 +279,7 @@ export const buildAdminMailRail = (mail) => {
             [t('fieldAttachments'), mail.attachmentLabel],
             [t('fieldRender'), mail.messageIsHtml ? t('htmlSandboxed') : mail.risk, 'status'],
         ],
-        body: mail.body,
+        body: mail.text || mail.html || '',
         mail,
     }
 }
@@ -307,13 +307,36 @@ export const useAdminMailFlow = ({
     const parsedMailCache = reactive({})
     const parsedMailPending = ref('')
 
+    const isDetailParsing = computed(() => {
+        const row = currentMail.value
+        if (!row) return false
+        const key = adminMailCacheKey(row)
+        return Boolean(key && !parsedMailCache[key] && parsedMailPending.value === key)
+    })
+
     const parseAdminMailDetail = async (row) => {
         const key = adminMailCacheKey(row)
         if (!key || parsedMailCache[key] || parsedMailPending.value === key) return
         parsedMailPending.value = key
         try {
             const detail = row.raw ? row : await loadMail?.(row.sourceId || row.id)
-            if (!detail?.raw) return
+            if (!detail?.raw) {
+                parsedMailCache[key] = {
+                    id: row.sourceId || row.id,
+                    subject: row.subject,
+                    source: row.sender,
+                    address: row.to,
+                    created_at: row.created_at || row.fullTime || row.time,
+                    message: '',
+                    text: '',
+                    html: '',
+                    raw: '',
+                    attachments: [],
+                    parseFailed: true,
+                    empty: true,
+                }
+                return
+            }
             parsedMailCache[key] = await parseItem({
                 id: row.sourceId || row.id,
                 raw: detail.raw,
@@ -325,11 +348,56 @@ export const useAdminMailFlow = ({
                 metadata: detail.metadata || row.metadata || {},
             })
         } catch (error) {
+            parsedMailCache[key] = {
+                id: row.sourceId || row.id,
+                subject: row.subject,
+                source: row.sender,
+                address: row.to,
+                created_at: row.created_at || row.fullTime || row.time,
+                message: '',
+                text: '',
+                html: '',
+                raw: row.raw || '',
+                attachments: row.attachments || [],
+                parseFailed: true,
+                error,
+            }
             onParseError(error)
         } finally {
             if (parsedMailPending.value === key) parsedMailPending.value = ''
         }
     }
+
+    let prefetchTimer = null
+    let prefetchTargetKey = ''
+
+    const cancelPrefetchMail = (row) => {
+        if (row) {
+            const key = adminMailCacheKey(row)
+            if (key && prefetchTargetKey !== key) return
+        }
+        if (prefetchTimer) {
+            clearTimeout(prefetchTimer)
+            prefetchTimer = null
+            prefetchTargetKey = ''
+        }
+    }
+
+    const schedulePrefetchMail = (row, delayMs = 120) => {
+        if (!row) return
+        const key = adminMailCacheKey(row)
+        if (!key || parsedMailCache[key] || parsedMailPending.value === key) return
+        if (prefetchTimer && prefetchTargetKey === key) return
+        cancelPrefetchMail()
+        prefetchTargetKey = key
+        prefetchTimer = setTimeout(() => {
+            prefetchTimer = null
+            prefetchTargetKey = ''
+            void parseAdminMailDetail(row)
+        }, delayMs)
+    }
+
+    const prefetchAdminMail = (row) => parseAdminMailDetail(row)
 
     const currentParsedMail = computed(() => parsedMailCache[adminMailCacheKey(currentMail.value)] || null)
     const currentDisplayMail = computed(() => buildAdminDisplayMail(currentMail.value, currentParsedMail.value))
@@ -555,16 +623,22 @@ export const useAdminMailFlow = ({
         }
     }, { immediate: true })
     watch(currentMail, (row) => {
+        cancelPrefetchMail()
         if (row) parseAdminMailDetail(row)
     }, { immediate: true })
     watch(currentParsedMail, (mail) => {
         if (mail?.messageIsHtml && ui.mailRenderMode !== 'raw') ui.mailRenderMode = 'html'
     })
 
+    onScopeDispose(() => {
+        cancelPrefetchMail()
+    })
+
     return {
         backToMailList,
         canNextMailPage,
         canPrevMailPage,
+        cancelPrefetchMail,
         clearMailSelection,
         currentDisplayMail,
         currentMail,
@@ -574,6 +648,7 @@ export const useAdminMailFlow = ({
         filteredMailRows,
         filteredUnknownRows,
         isAllVisibleSelected,
+        isDetailParsing,
         isMailSelected,
         isSomeVisibleSelected,
         mailPage,
@@ -583,7 +658,9 @@ export const useAdminMailFlow = ({
         openMailFromAddress,
         openMailFromDomain,
         parseAdminMailDetail,
+        prefetchAdminMail,
         prevMailPage,
+        schedulePrefetchMail,
         selectAllVisibleMails,
         selectedMailCount,
         selectedMailIds,

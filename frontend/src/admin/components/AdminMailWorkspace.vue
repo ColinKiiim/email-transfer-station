@@ -80,11 +80,34 @@ const rangeLabel = computed(() => {
     return t('rangeLabel', { start, end, total: filteredCount })
 })
 
+const handleRowMouseEnter = (row) => {
+    props.actions.schedulePrefetchMail?.(row)
+}
+
+const handleRowMouseLeave = (event, row) => {
+    const current = event.currentTarget || event.target
+    if (event.relatedTarget && current?.contains?.(event.relatedTarget)) return
+    props.actions.cancelPrefetchMail?.(row)
+}
+
+const handleRowFocusIn = (event, row) => {
+    const current = event.currentTarget || event.target
+    if (event.relatedTarget && current?.contains?.(event.relatedTarget)) return
+    props.actions.schedulePrefetchMail?.(row)
+}
+
+const handleRowFocusOut = (event, row) => {
+    const current = event.currentTarget || event.target
+    if (event.relatedTarget && current?.contains?.(event.relatedTarget)) return
+    props.actions.cancelPrefetchMail?.(row)
+}
+
 onMounted(() => {
     window.addEventListener('click', handleClickOutside)
 })
 onBeforeUnmount(() => {
     window.removeEventListener('click', handleClickOutside)
+    props.actions.cancelPrefetchMail?.()
 })
 
 defineExpose({
@@ -285,7 +308,11 @@ defineExpose({
                     role="listitem" :aria-current="actions.isSelected('flow', row) ? 'true' : undefined" tabindex="0"
                     :class="{ 'is-selected': actions.isSelected('flow', row), 'is-unread': row.unread, 'is-checked': actions.isMailSelected(row.id) }"
                     @click="actions.selectRow('flow', row.id)"
-                    @keydown="actions.handleRowKey($event, 'flow', row)">
+                    @keydown="actions.handleRowKey($event, 'flow', row)"
+                    @mouseenter="handleRowMouseEnter(row)"
+                    @mouseleave="handleRowMouseLeave($event, row)"
+                    @focusin="handleRowFocusIn($event, row)"
+                    @focusout="handleRowFocusOut($event, row)">
                     <label class="mail-select-cell" @click.stop.prevent="actions.toggleMailSelection(row, { shiftKey: $event.shiftKey })">
                         <input type="checkbox" class="mail-checkbox"
                             :checked="actions.isMailSelected(row.id)"
@@ -467,7 +494,6 @@ defineExpose({
                             class="mail-body text-body">{{ model.currentRail.mail.text }}</pre>
                         <pre v-else-if="model.currentRail.mail?.raw && model.ui.mailRenderMode === 'raw'"
                             class="mail-body raw-body">{{ model.currentRail.mail.raw }}</pre>
-                        <p v-else-if="model.currentRail.body" class="mail-body text-fallback">{{ model.currentRail.body }}</p>
                         <p v-else class="mail-body text-fallback">{{ t('emptyBody') }}</p>
                     </section>
                     <section v-if="model.currentRail.mail?.attachments?.length" class="attachment-section">
