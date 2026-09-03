@@ -4,6 +4,7 @@ import {
     adminMailCacheKey,
     cellText,
     clampNumber,
+    cleanMailPreview,
     compactRaw,
     compactText,
     extractHeader,
@@ -11,6 +12,7 @@ import {
     formatAttachmentCount,
     formatBadgeCount,
     formatDate,
+    formatSenderDisplay,
     formatShortDate,
     getDomain,
     mailRenderLabel,
@@ -91,6 +93,28 @@ describe('admin pure formatters', () => {
         expect(stripHtml('<style>x</style><b>A&amp;B</b><script>bad()</script>')).toBe('  A&B  ')
         expect(compactText(' A  B\n\n\nC ')).toBe('A B\n\nC')
         expect(compactRaw(raw)).toBe('Body')
+    })
+
+    it('sanitizes mail preview text from entities and zero-width markers', () => {
+        expect(cleanMailPreview('Hello &nbsp; world &zwnj;!', '')).toBe('Hello world !')
+        expect(cleanMailPreview('', '<p>Welcome &amp; join&#8204;us &#x200C;today!</p>')).toBe('Welcome & joinus today!')
+        expect(cleanMailPreview('', '<p>Sign &nbsp;&zwnj; up &zwnj; now</p>')).toBe('Sign up now')
+        expect(cleanMailPreview('\u200B\uFEFFImportant notice\u200D', '')).toBe('Important notice')
+        expect(cleanMailPreview('', '', compactRaw('From: a@b.c\r\n\r\nFallback message'))).toBe('Fallback message')
+        expect(cleanMailPreview('', '', '')).toBe('')
+    })
+
+    it('formats RFC-5322 senders into friendly display names', () => {
+        expect(formatSenderDisplay('GitHub <notifications@github.com>')).toBe('GitHub')
+        expect(formatSenderDisplay('"GitHub Support" <support@github.com>')).toBe('GitHub Support')
+        expect(formatSenderDisplay("'Security Team' <sec@example.com>")).toBe('Security Team')
+        expect(formatSenderDisplay('"Doe, Jane" <jane@example.com>')).toBe('Doe, Jane')
+        expect(formatSenderDisplay('<bare@example.com>')).toBe('bare@example.com')
+        expect(formatSenderDisplay('bare@example.com')).toBe('bare@example.com')
+        expect(formatSenderDisplay('"" <bare@example.com>')).toBe('bare@example.com')
+        expect(formatSenderDisplay('')).toBe('')
+        expect(formatSenderDisplay(null)).toBe('')
+        expect(formatSenderDisplay('(未知发件人)')).toBe('(未知发件人)')
     })
 
     it('normalizes attachment summaries and render labels', () => {

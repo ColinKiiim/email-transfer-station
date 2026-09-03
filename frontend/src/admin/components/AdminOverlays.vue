@@ -98,8 +98,84 @@ const handleOverlayKeydown = (event, close, dialog) => {
     }
 }
 
+const confirmDialog = ref(null)
+const confirmButton = ref(null)
+const cancelButton = ref(null)
+let confirmPreviousFocus = null
+
+const confirmBtnToneClass = computed(() => {
+    const tone = props.model.confirmDialogState?.tone || 'danger'
+    if (tone === 'warning') return 'warning'
+    if (tone === 'info') return 'primary info'
+    return 'danger'
+})
+
+const handleConfirmCancel = () => {
+    props.actions.resolveConfirm?.(false)
+}
+
+const handleConfirmSubmit = () => {
+    if (props.model.actionBusy) return
+    props.actions.resolveConfirm?.(true)
+}
+
+const handleConfirmKeydown = (event) => {
+    if (event.key === 'Escape') {
+        event.preventDefault()
+        event.stopPropagation()
+        handleConfirmCancel()
+        return
+    }
+    if (event.key === 'Enter') {
+        if (event.target === cancelButton.value || event.target?.closest?.('.icon-btn')) {
+            return
+        }
+        event.preventDefault()
+        event.stopPropagation()
+        handleConfirmSubmit()
+        return
+    }
+    if (event.key === 'Tab') {
+        handleOverlayKeydown(event, handleConfirmCancel, confirmDialog.value)
+    }
+}
+
+watch(() => props.model.confirmDialogState?.open, async (isOpen, wasOpen) => {
+    if (isOpen && !wasOpen) {
+        confirmPreviousFocus = document.activeElement
+        await nextTick()
+        const dialog = confirmDialog.value
+        if (!dialog) return
+        const tone = props.model.confirmDialogState?.tone || 'danger'
+        const autofocusOption = props.model.confirmDialogState?.autofocus
+        let target = null
+        if (autofocusOption === 'confirm') {
+            target = confirmButton.value
+        } else if (autofocusOption === 'cancel') {
+            target = cancelButton.value
+        } else {
+            target = tone === 'danger' ? cancelButton.value : confirmButton.value
+        }
+        if (!target) {
+            target = dialog.querySelector?.('[data-autofocus]')
+                || dialog.querySelector?.(focusableSelector)
+                || dialog
+        }
+        target?.focus?.()
+    } else if (!isOpen && wasOpen) {
+        await nextTick()
+        if (confirmPreviousFocus && typeof confirmPreviousFocus.focus === 'function') {
+            confirmPreviousFocus.focus()
+        }
+        confirmPreviousFocus = null
+    }
+}, { immediate: true })
+
 onBeforeUnmount(() => {
     previousFocus?.focus?.()
+    if (confirmPreviousFocus && typeof confirmPreviousFocus.focus === 'function') {
+        confirmPreviousFocus.focus()
+    }
 })
 </script>
 
@@ -460,5 +536,61 @@ onBeforeUnmount(() => {
                 </template>
             </div>
         </form>
+    </div>
+
+    <div v-if="model.confirmDialogState?.open" ref="confirmDialog"
+        class="modal-backdrop is-open confirm-backdrop" role="alertdialog" aria-modal="true"
+        aria-labelledby="confirm-dialog-title" aria-describedby="confirm-dialog-message" tabindex="-1"
+        data-testid="confirm-dialog-backdrop"
+        @click.self="handleConfirmCancel"
+        @keydown="handleConfirmKeydown">
+        <div class="modal confirm-modal" :class="`tone-${model.confirmDialogState.tone || 'danger'}`"
+            :aria-busy="model.actionBusy ? 'true' : 'false'">
+            <div class="modal-head">
+                <div class="confirm-head-title">
+                    <span class="confirm-tone-badge" :class="`tone-${model.confirmDialogState.tone || 'danger'}`" aria-hidden="true">
+                        <svg v-if="model.confirmDialogState.tone === 'warning'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="12" y1="8" x2="12" y2="12" />
+                            <line x1="12" y1="16" x2="12.01" y2="16" />
+                        </svg>
+                        <svg v-else-if="model.confirmDialogState.tone === 'info'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="12" y1="16" x2="12" y2="12" />
+                            <line x1="12" y1="8" x2="12.01" y2="8" />
+                        </svg>
+                        <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                            <line x1="12" y1="9" x2="12" y2="13" />
+                            <line x1="12" y1="17" x2="12.01" y2="17" />
+                        </svg>
+                    </span>
+                    <h2 id="confirm-dialog-title">{{ model.confirmDialogState.title || t('confirmDefaultTitle') }}</h2>
+                </div>
+                <button class="icon-btn" type="button" :aria-label="t('close')" data-testid="confirm-close-btn"
+                    :disabled="!!model.actionBusy" @click="handleConfirmCancel">
+                    <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" /></svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p id="confirm-dialog-message" class="modal-copy confirm-message">{{ model.confirmDialogState.message }}</p>
+                <div v-if="model.confirmDialogState.impactItems?.length" class="confirm-impact-list" data-testid="confirm-impact-list">
+                    <div v-for="(item, idx) in model.confirmDialogState.impactItems" :key="item.key || item.label || idx" class="confirm-impact-item">
+                        <span class="confirm-impact-label">{{ item.label }}</span>
+                        <span class="confirm-impact-value">{{ item.value }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button ref="cancelButton" class="btn" type="button" data-testid="confirm-cancel"
+                    :disabled="!!model.actionBusy" @click="handleConfirmCancel">
+                    {{ model.confirmDialogState.cancelLabel || t('cancel') }}
+                </button>
+                <button ref="confirmButton" class="btn confirm-primary" :class="confirmBtnToneClass" type="button"
+                    data-testid="confirm-submit" :disabled="!!model.actionBusy" @click="handleConfirmSubmit">
+                    {{ model.actionBusy ? t('running') : (model.confirmDialogState.confirmLabel || t('confirm')) }}
+                </button>
+            </div>
+        </div>
     </div>
 </template>

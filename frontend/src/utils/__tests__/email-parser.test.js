@@ -4,7 +4,7 @@ import { mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import ShadowHtmlComponent from '../../components/ShadowHtmlComponent.vue'
-import { processItem, revokeMailObjectUrls, stripHtmlForPreview } from '../email-parser'
+import { formatSenderDisplay, processItem, revokeMailObjectUrls, stripHtmlForPreview } from '../email-parser'
 
 const badgeMail = `MIME-Version: 1.0\r
 From: sender@example.test\r
@@ -129,5 +129,28 @@ Content-Type: text/html; charset=utf-8\r
         // Preview generated from it is cleaned and decoded
         const preview = stripHtmlForPreview(item.text || item.message || '', 180)
         expect(preview).toBe('Actual message body & content')
+    })
+})
+
+describe('formatSenderDisplay', () => {
+    it('extracts display names from RFC-5322 formatted sender strings', () => {
+        expect(formatSenderDisplay('GitHub <notifications@github.com>')).toBe('GitHub')
+        expect(formatSenderDisplay('"GitHub Support" <support@github.com>')).toBe('GitHub Support')
+        expect(formatSenderDisplay("'Security Team' <sec@example.com>")).toBe('Security Team')
+        expect(formatSenderDisplay('"Doe, Jane" <jane@example.com>')).toBe('Doe, Jane')
+    })
+
+    it('falls back to email address for bare angle bracket or quoted empty names', () => {
+        expect(formatSenderDisplay('<bare@example.com>')).toBe('bare@example.com')
+        expect(formatSenderDisplay('bare@example.com')).toBe('bare@example.com')
+        expect(formatSenderDisplay('"" <bare@example.com>')).toBe('bare@example.com')
+        expect(formatSenderDisplay("'' <bare@example.com>")).toBe('bare@example.com')
+    })
+
+    it('handles non-email, empty or falsy inputs gracefully', () => {
+        expect(formatSenderDisplay('')).toBe('')
+        expect(formatSenderDisplay(null)).toBe('')
+        expect(formatSenderDisplay(undefined)).toBe('')
+        expect(formatSenderDisplay('(未知发件人)')).toBe('(未知发件人)')
     })
 })

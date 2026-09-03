@@ -3208,6 +3208,10 @@ export const MESSAGE_REGISTRY = {
       "en": "This record has no body to display.",
       "zh": "当前记录没有可展示正文。"
     },
+    "loadingBody": {
+      "en": "Loading email body...",
+      "zh": "正在解析邮件正文..."
+    },
     "attachments": {
       "en": "Attachments",
       "zh": "附件"
@@ -3215,6 +3219,90 @@ export const MESSAGE_REGISTRY = {
     "technicalInfo": {
       "en": "Technical details",
       "zh": "技术信息"
+    },
+    "selectAll": {
+      "en": "All",
+      "zh": "全部"
+    },
+    "selectNone": {
+      "en": "None",
+      "zh": "无"
+    },
+    "selectRead": {
+      "en": "Read",
+      "zh": "已读"
+    },
+    "selectUnread": {
+      "en": "Unread",
+      "zh": "未读"
+    },
+    "selectedCount": {
+      "en": "{count} selected",
+      "zh": "已选择 {count} 封"
+    },
+    "markAsRead": {
+      "en": "Mark as read",
+      "zh": "标为已读"
+    },
+    "markAsUnread": {
+      "en": "Mark as unread",
+      "zh": "标为未读"
+    },
+    "exportSelected": {
+      "en": "Export",
+      "zh": "导出"
+    },
+    "deleteSelected": {
+      "en": "Delete",
+      "zh": "删除"
+    },
+    "selectRow": {
+      "en": "Select: {subject}",
+      "zh": "选择：{subject}"
+    },
+    "selectionOptions": {
+      "en": "Selection options",
+      "zh": "选择选项"
+    },
+    "rowActions": {
+      "en": "Quick actions",
+      "zh": "快捷操作"
+    },
+    "rangeLabel": {
+      "en": "{start}-{end} of {total}",
+      "zh": "第 {start}-{end} 封，共 {total} 封"
+    },
+    "rangeLabelLoaded": {
+      "en": "{start}-{end} of {loaded} (loaded) / {total} total",
+      "zh": "第 {start}-{end} 封 (已载 {loaded})，共 {total} 封"
+    },
+    "rangeLabelFilteredLoaded": {
+      "en": "{start}-{end} of {loadedMatches} loaded matches / {total} total",
+      "zh": "第 {start}-{end} 封（当前已载匹配 {loadedMatches} 封），数据库总数 {total} 封"
+    },
+    "rangeEmpty": {
+      "en": "0 of 0",
+      "zh": "第 0 封，共 0 封"
+    },
+    "prevPage": {
+      "en": "Previous page",
+      "zh": "上一页"
+    },
+    "nextPage": {
+      "en": "Next page",
+      "zh": "下一页"
+    },
+    "toggleSplitView": {
+      "en": "Toggle split view",
+      "zh": "切换拆分视图"
+    },
+    "splitView": {
+      "en": "Split view",
+      "zh": "拆分视图"
+    },
+    "listView": {
+      "en": "List view",
+      "zh": "列表视图"
     }
   },
   "admin.console": {
@@ -3452,6 +3540,14 @@ export const MESSAGE_REGISTRY = {
     }
   },
   "admin.overlay": {
+    "confirmDefaultTitle": {
+      "en": "Confirm action",
+      "zh": "确认操作"
+    },
+    "confirm": {
+      "en": "Confirm",
+      "zh": "确认"
+    },
     "detailDrawerLabel": {
       "en": "Context detail drawer",
       "zh": "上下文详情抽屉"
@@ -3537,12 +3633,12 @@ export const MESSAGE_REGISTRY = {
       "zh": "新增并启动"
     },
     "oneTimeOnlyTitle": {
-      "en": "Shown only once",
-      "zh": "仅显示本次"
+      "en": "Credential info",
+      "zh": "凭证信息"
     },
     "oneTimeResultLabel": {
-      "en": "One-time result",
-      "zh": "一次性结果"
+      "en": "Credential details",
+      "zh": "凭证详情"
     },
     "copyResult": {
       "en": "Copy result",
@@ -3557,8 +3653,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "生产地址"
     },
     "productionAddressNote": {
-      "en": "The address is written to D1 immediately; the JWT and address password are shown only once after it succeeds.",
-      "zh": "创建后会立即写入 D1；JWT 和地址密码只在成功后显示一次。"
+      "en": "Address credential can be viewed and reused anytime from the list.",
+      "zh": "创建成功后，登录凭证可在列表中随时查看与复用。"
     },
     "addressName": {
       "en": "Address name",
@@ -3757,6 +3853,14 @@ export const MESSAGE_REGISTRY = {
     "emptyDetailHint": {
       "en": "Select a message to read its body, metadata, and attachments here.",
       "zh": "选择一封邮件后在这里阅读正文、元数据和附件。"
+    },
+    "rowActions": {
+      "en": "Quick actions",
+      "zh": "快捷操作"
+    },
+    "selectRow": {
+      "en": "Select {subject}",
+      "zh": "选择 {subject}"
     }
   },
   "admin.actions": {
@@ -3804,6 +3908,34 @@ export const MESSAGE_REGISTRY = {
       "en": "Deleted {count} production messages",
       "zh": "已删除 {count} 封生产邮件"
     },
+    "markedMailsRead": {
+      "en": "Marked {count} message(s) as read",
+      "zh": "已将 {count} 封邮件标为已读"
+    },
+    "markedMailsUnread": {
+      "en": "Marked {count} message(s) as unread",
+      "zh": "已将 {count} 封邮件标为未读"
+    },
+    "markReadPartialFailed": {
+      "en": "Read status update interrupted after {count} message(s)",
+      "zh": "更新已读状态在第 {count} 封邮件时中断"
+    },
+    "exportedMails": {
+      "en": "Exported {count} message(s)",
+      "zh": "已导出 {count} 封邮件"
+    },
+    "exportFailed": {
+      "en": "Export failed",
+      "zh": "导出失败"
+    },
+    "noMailsToExport": {
+      "en": "No messages to export",
+      "zh": "没有可导出的邮件"
+    },
+    "noMailsSelected": {
+      "en": "No messages selected",
+      "zh": "未选择任何邮件"
+    },
     "deleteInterrupted": {
       "en": "Interrupted after deleting {count} messages",
       "zh": "已删除 {count} 封后中断"
@@ -3833,16 +3965,16 @@ export const MESSAGE_REGISTRY = {
       "zh": "新增地址"
     },
     "confirmCreateAddress": {
-      "en": "Create {address}? The address credential is shown only once after it is created.",
-      "zh": "确认创建 {address}？创建成功后地址凭证只显示一次。"
+      "en": "Create address {address}?",
+      "zh": "确认创建 {address}？"
     },
     "addressCreatedTitle": {
       "en": "Address created: {address}",
       "zh": "地址已创建：{address}"
     },
     "credentialShownOnce": {
-      "en": "This credential is shown only once. Copy it into a trusted password manager.",
-      "zh": "凭证只显示本次。请复制到可信密码管理器。"
+      "en": "Address created. Credential stays valid and can be viewed anytime.",
+      "zh": "地址已创建，凭证长期有效，可随时在列表中查看与复用。"
     },
     "addressCreatedNoCredential": {
       "en": "The address was created, but the API returned no credential.",
@@ -3865,16 +3997,16 @@ export const MESSAGE_REGISTRY = {
       "zh": "创建访问包"
     },
     "confirmCreateSharePackage": {
-      "en": "Create a read-only access package for {address}? The share link is shown only once.",
-      "zh": "确认为 {address} 创建只读访问包？分享链接只显示一次。"
+      "en": "Create a read-only access package for {address}?",
+      "zh": "确认为 {address} 创建只读访问包？"
     },
     "sharePackageCreatedTitle": {
       "en": "Access package created: {address}",
       "zh": "访问包已创建：{address}"
     },
     "shareLinkShownOnce": {
-      "en": "The link is shown only once; anyone holding it gets read-only access to this address.",
-      "zh": "链接仅显示本次；持有者可只读查看该地址。"
+      "en": "The access link is ready; anyone holding it gets read-only access to this address.",
+      "zh": "访问链接已生成；持有者可只读查看该地址。"
     },
     "sharePackageCreatedNoToken": {
       "en": "The access package was created, but the API returned no token.",
@@ -3909,8 +4041,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "已删除 {address}"
     },
     "domainNotManagedDisable": {
-      "en": "The current domain is not a D1-managed record and cannot be disabled",
-      "zh": "当前域名不是 D1 管理记录，无法停用"
+      "en": "The current domain is not a managed record and cannot be disabled",
+      "zh": "当前域名不是系统托管域名，无法停用"
     },
     "labelDisableDomain": {
       "en": "disable domain",
@@ -3937,16 +4069,16 @@ export const MESSAGE_REGISTRY = {
       "zh": "显示地址凭证"
     },
     "confirmShowCredential": {
-      "en": "Show the current JWT and fixed login link for {address}? Make sure nobody else can see your screen.",
-      "zh": "确认显示 {address} 的当前 JWT 和固定登录链接？请确保屏幕不会被无关人员看到。"
+      "en": "View login credential for {address}?",
+      "zh": "确认查看 {address} 的登录凭证？"
     },
     "credentialTitle": {
       "en": "Address credential: {address}",
       "zh": "地址凭证：{address}"
     },
     "credentialNote": {
-      "en": "The result is cleared from page state once you close it; the current JWT stays valid until you rotate the credential.",
-      "zh": "结果在关闭后会从页面状态清除；轮换凭证前当前 JWT 仍然有效。"
+      "en": "Credential stays valid; rotate it if you need to revoke access.",
+      "zh": "当前凭证长期有效；如需作废可在列表中进行凭证轮换。"
     },
     "addressNotProductionRotate": {
       "en": "The current address is not a production address, so its credential cannot be rotated",
@@ -3957,16 +4089,16 @@ export const MESSAGE_REGISTRY = {
       "zh": "凭证轮换"
     },
     "confirmRotateCredential": {
-      "en": "Rotate the address credential for {address}? The old address JWT stops working and the new credential is shown only once, so copy it somewhere safe.",
-      "zh": "确认轮换 {address} 的地址凭证？旧地址 JWT 会失效，新的凭证只会显示一次，请在安全位置复制保存。"
+      "en": "Rotate login credential for {address}? The previous credential will stop working.",
+      "zh": "确认轮换 {address} 的登录凭证？旧凭证将立即失效。"
     },
     "credentialRotatedTitle": {
       "en": "Credential rotated: {address}",
       "zh": "凭证已轮换：{address}"
     },
     "credentialRotatedNote": {
-      "en": "The old JWT is now invalid; the new credential is cleared from page state once you close this.",
-      "zh": "旧 JWT 已失效；新凭证在关闭后会从页面状态清除。"
+      "en": "Previous credential revoked; new credential is now active.",
+      "zh": "旧凭证已失效，新凭证已生效并可随时查看。"
     },
     "credentialRotated": {
       "en": "Rotated the credential for {address}",
@@ -4049,8 +4181,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "停用影响检查失败"
     },
     "domainNotManaged": {
-      "en": "The current domain is not a D1-managed record",
-      "zh": "当前域名不是 D1 管理记录"
+      "en": "The current domain is not a managed record",
+      "zh": "当前域名不是系统托管记录"
     },
     "verificationAddressFallback": {
       "en": "the verification address",
@@ -4061,8 +4193,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "验证已开始，请向 {address} 发送测试邮件"
     },
     "domainNotManagedVerifyCheck": {
-      "en": "The current domain is not a D1-managed record, so verification cannot be checked",
-      "zh": "当前域名不是 D1 管理记录，无法检查验证"
+      "en": "The current domain is not a managed record, so verification cannot be checked",
+      "zh": "当前域名不是系统托管记录，无法检查验证"
     },
     "labelCheckVerification": {
       "en": "domain verification check",
@@ -4085,8 +4217,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "Cloudflare 上已有 catch-all 规则。确认替换为发送到 Worker：{domain}？"
     },
     "domainNotManagedCloudflareSetup": {
-      "en": "The current domain is not a D1-managed record, so Cloudflare cannot be configured automatically",
-      "zh": "当前域名不是 D1 管理记录，无法自动配置 Cloudflare"
+      "en": "The current domain is not a managed record, so Cloudflare cannot be configured automatically",
+      "zh": "当前域名不是系统托管记录，无法自动配置 Cloudflare"
     },
     "domainNotCloudflareMode": {
       "en": "The current domain is not in Cloudflare Email Routing mode",
@@ -4259,6 +4391,70 @@ export const MESSAGE_REGISTRY = {
     "lastAdminProtectedConflict": {
       "en": "Cannot demote or delete the last administrator",
       "zh": "无法降级或删除最后一名管理员"
+    },
+    "labelDeleteMail": {
+      "en": "delete messages",
+      "zh": "删除邮件"
+    },
+    "labelCreateUser": {
+      "en": "create user",
+      "zh": "创建用户"
+    },
+    "labelDeleteUser": {
+      "en": "delete user",
+      "zh": "删除用户"
+    },
+    "labelResetPassword": {
+      "en": "reset password",
+      "zh": "重置密码"
+    },
+    "labelUpdateRole": {
+      "en": "update role",
+      "zh": "变更角色"
+    },
+    "labelBindAddress": {
+      "en": "bind address",
+      "zh": "绑定地址"
+    },
+    "labelUnbindAddress": {
+      "en": "unbind address",
+      "zh": "解绑地址"
+    },
+    "impactSelectedCount": {
+      "en": "Selected messages",
+      "zh": "选中封数"
+    },
+    "impactScope": {
+      "en": "Scope",
+      "zh": "当前范围"
+    },
+    "impactMailCount": {
+      "en": "Messages",
+      "zh": "收件数"
+    },
+    "impactSentCount": {
+      "en": "Sent records",
+      "zh": "发送数"
+    },
+    "impactPackageCount": {
+      "en": "Access packages",
+      "zh": "访问包"
+    },
+    "impactAddressCount": {
+      "en": "Addresses",
+      "zh": "地址数"
+    },
+    "impactTargetUser": {
+      "en": "Target user",
+      "zh": "目标用户"
+    },
+    "impactTargetAddress": {
+      "en": "Target address",
+      "zh": "目标地址"
+    },
+    "impactTargetDomain": {
+      "en": "Target domain",
+      "zh": "目标域名"
     }
   },
   "components.AppUtilityMenu": {

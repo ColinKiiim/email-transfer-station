@@ -60,9 +60,9 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
 </script>
 
 <template>
-  <!-- The rail is omitted entirely when there is nothing to navigate (e.g. the
-       signed-out state), instead of reserving 232px of empty column. -->
   <div class="access-shell" :class="{ 'has-rail': railItems.length > 0 }">
+    <!-- The rail is omitted entirely when there is nothing to navigate (e.g. the
+         signed-out state), instead of reserving 232px of empty column. -->
     <aside v-if="railItems.length" class="access-sidebar">
       <div class="brand-row">
         <ProductBrand :context-label="brandContext" />
@@ -392,7 +392,7 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
   padding: 16px 24px 24px;
 }
 
-.access-shell:not(.has-rail) .access-view {
+.access-shell:not(.has-rail) .access-view:has(.auth-card, .token-state-card) {
   padding: 0;
   display: flex;
   flex-direction: column;

@@ -83,6 +83,7 @@ export const createAdminApi = (fetcher, { requestIdFactory = createAdminRequestI
         confirm: true,
     })),
 
+    setMailReadState: (id, read = true) => fetcher(`/api/admin/mails/${pathId(id)}/read_state`, writeOptions('PATCH', { read: Boolean(read) })),
     markMailRead: (id) => fetcher(`/api/admin/mails/${pathId(id)}/read_state`, writeOptions('PATCH', { read: true })),
     deleteMail: (id) => fetcher(`/api/admin/mails/${pathId(id)}`, writeOptions('DELETE', { confirm: true })),
     createAddress: ({ name, domain, enablePrefix, enableRandomSubdomain }) => fetcher('/api/admin/new_address', writeOptions('POST', {

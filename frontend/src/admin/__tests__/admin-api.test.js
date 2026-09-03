@@ -55,6 +55,8 @@ describe('admin API adapter', () => {
         const client = createAdminApi(fetcher, requestIdOptions)
 
         await client.markMailRead('mail/7')
+        await client.setMailReadState(7, false)
+        await client.setMailReadState(8, true)
         await client.deleteMail(7)
         await client.createUser({ email: ' alice@example.test ', passwordHash: 'hash-abc', username: 'alice', displayName: 'Alice' })
         await client.deleteUser(12)
@@ -87,6 +89,8 @@ describe('admin API adapter', () => {
 
         expect(fetcher.mock.calls).toEqual([
             ['/api/admin/mails/mail%2F7/read_state', write('PATCH', { read: true })],
+            ['/api/admin/mails/7/read_state', write('PATCH', { read: false })],
+            ['/api/admin/mails/8/read_state', write('PATCH', { read: true })],
             ['/api/admin/mails/7', write('DELETE', { confirm: true })],
             ['/api/admin/users', write('POST', { email: 'alice@example.test', password: 'hash-abc', username: 'alice', display_name: 'Alice' })],
             ['/api/admin/users/12', write('DELETE', { confirm: true })],

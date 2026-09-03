@@ -31,7 +31,8 @@ vi.mock('../../utils', async (importOriginal) => ({
     hashPassword: vi.fn(async () => 'hashed-password'),
 }))
 
-vi.mock('../../utils/email-parser', () => ({
+vi.mock('../../utils/email-parser', async (importOriginal) => ({
+    ...(await importOriginal()),
     getDownloadEmlUrl: () => '#',
     processItem: vi.fn(async (mail) => ({
         ...mail,
@@ -278,13 +279,13 @@ describe('AdminNext behavior baseline', () => {
             mailId: 'mail-7',
             mode: 'detail',
         })
-        expect(wrapper.get('.mail-row').attributes('aria-selected')).toBe('true')
+        expect(wrapper.get('.mail-row').attributes('aria-current')).toBe('true')
         expect(wrapper.get('.mail-workbench').classes()).toContain('flow-mode-detail')
 
         await router.replace('/admin?view=flow&q=invoice&mailId=mail-7&mode=detail')
         await settle()
         expect(wrapper.get('.searchbox input').element.value).toBe('invoice')
-        expect(wrapper.get('.mail-row').attributes('aria-selected')).toBe('true')
+        expect(wrapper.get('.mail-row').attributes('aria-current')).toBe('true')
 
         await wrapper.get('button[aria-label="总览"]').trigger('click')
         await settle()
@@ -301,7 +302,7 @@ describe('AdminNext behavior baseline', () => {
         await mounted.router.push(selectedPath)
         await settle()
         expect(mounted.wrapper.get('.searchbox input').element.value).toBe('invoice')
-        expect(mounted.wrapper.get('.mail-row').attributes('aria-selected')).toBe('true')
+        expect(mounted.wrapper.get('.mail-row').attributes('aria-current')).toBe('true')
         expect(mounted.wrapper.get('.mail-workbench').classes()).toContain('flow-mode-detail')
 
         await mounted.router.push('/admin?view=overview')
@@ -311,7 +312,7 @@ describe('AdminNext behavior baseline', () => {
         mounted.router.back()
         await settle()
         expect(mounted.router.currentRoute.value.fullPath).toBe(selectedPath)
-        expect(mounted.wrapper.get('.mail-row').attributes('aria-selected')).toBe('true')
+        expect(mounted.wrapper.get('.mail-row').attributes('aria-current')).toBe('true')
 
         mounted.router.forward()
         await settle()
@@ -321,7 +322,7 @@ describe('AdminNext behavior baseline', () => {
 
         const refreshed = await mountAdmin({ path: selectedPath })
         expect(refreshed.wrapper.get('.searchbox input').element.value).toBe('invoice')
-        expect(refreshed.wrapper.get('.mail-row').attributes('aria-selected')).toBe('true')
+        expect(refreshed.wrapper.get('.mail-row').attributes('aria-current')).toBe('true')
         expect(refreshed.wrapper.get('.mail-workbench').classes()).toContain('flow-mode-detail')
         refreshed.wrapper.unmount()
     })
@@ -384,24 +385,30 @@ describe('AdminNext behavior baseline', () => {
     })
 
     it('cancels a destructive mail write before the API call', async () => {
-        const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
         const { wrapper } = await mountAdmin({ path: '/admin?view=flow&mailId=mail-7&mode=detail' })
 
         await wrapper.get('.mail-detail-panel .panel-head .danger').trigger('click')
         await settle()
 
-        expect(confirm).toHaveBeenCalledOnce()
+        expect(wrapper.find('[data-testid="confirm-dialog-backdrop"]').exists()).toBe(true)
+        await wrapper.get('[data-testid="confirm-cancel"]').trigger('click')
+        await settle()
+
+        expect(wrapper.find('[data-testid="confirm-dialog-backdrop"]').exists()).toBe(false)
         expect(mocks.fetch).not.toHaveBeenCalledWith('/api/admin/mails/7', expect.objectContaining({ method: 'DELETE' }))
         expect(wrapper.find('.mail-row').exists()).toBe(true)
         wrapper.unmount()
     })
 
     it('reports a failed confirmed mail write and preserves the row', async () => {
-        vi.spyOn(window, 'confirm').mockReturnValue(true)
         runtime.deleteError = new Error('删除接口失败')
         const { wrapper } = await mountAdmin({ path: '/admin?view=flow&mailId=mail-7&mode=detail' })
 
         await wrapper.get('.mail-detail-panel .panel-head .danger').trigger('click')
+        await settle()
+
+        expect(wrapper.find('[data-testid="confirm-dialog-backdrop"]').exists()).toBe(true)
+        await wrapper.get('[data-testid="confirm-submit"]').trigger('click')
         await settle()
 
         expect(wrapper.get('.toast').text()).toContain('删除接口失败')
@@ -411,10 +418,13 @@ describe('AdminNext behavior baseline', () => {
     })
 
     it('reports a successful confirmed mail write and refreshes the row away', async () => {
-        vi.spyOn(window, 'confirm').mockReturnValue(true)
         const { wrapper } = await mountAdmin({ path: '/admin?view=flow&mailId=mail-7&mode=detail' })
 
         await wrapper.get('.mail-detail-panel .panel-head .danger').trigger('click')
+        await settle()
+
+        expect(wrapper.find('[data-testid="confirm-dialog-backdrop"]').exists()).toBe(true)
+        await wrapper.get('[data-testid="confirm-submit"]').trigger('click')
         await settle()
 
         expect(mocks.fetch).toHaveBeenCalledWith('/api/admin/mails/7', expect.objectContaining({
@@ -430,8 +440,45 @@ describe('AdminNext behavior baseline', () => {
         wrapper.unmount()
     })
 
+    it('renders mail range indicator, pagination controls, and split view toggle in flow view', async () => {
+        runtime.mails = [mail()]
+        const { wrapper, router } = await mountAdmin({ path: '/admin?view=flow' })
+
+        // Range indicator
+        expect(wrapper.get('.mail-range-indicator').text()).toBe('第 1-1 封，共 1 封')
+
+        // Prev and next buttons are disabled for single page
+        const prevBtn = wrapper.get('button.mail-page-btn[aria-label="上一页"]')
+        const nextBtn = wrapper.get('button.mail-page-btn[aria-label="下一页"]')
+        expect(prevBtn.element.disabled).toBe(true)
+        expect(nextBtn.element.disabled).toBe(true)
+
+        // Split view toggle button
+        const toggleBtn = wrapper.get('button.mail-view-toggle-btn')
+        expect(toggleBtn.attributes('aria-label')).toBe('切换拆分视图')
+        expect(toggleBtn.attributes('aria-pressed')).toBe('false')
+
+        // Click split view toggle -> switches to detail mode and updates route
+        await toggleBtn.trigger('click')
+        await settle()
+
+        expect(router.currentRoute.value.query.mode).toBe('detail')
+        expect(wrapper.get('.mail-workbench').classes()).toContain('flow-mode-detail')
+        expect(toggleBtn.attributes('aria-pressed')).toBe('true')
+        expect(toggleBtn.classes()).toContain('is-active')
+
+        // Click again -> returns to list mode
+        await toggleBtn.trigger('click')
+        await settle()
+
+        expect(router.currentRoute.value.query.mode).toBeUndefined()
+        expect(wrapper.get('.mail-workbench').classes()).toContain('flow-mode-list')
+        expect(toggleBtn.attributes('aria-pressed')).toBe('false')
+
+        wrapper.unmount()
+    })
+
     it('creates a production address and exposes its credentials exactly once', async () => {
-        vi.spyOn(window, 'confirm').mockReturnValue(true)
         runtime.domains = [{
             id: 1,
             domain: 'example.test',
@@ -463,7 +510,7 @@ describe('AdminNext behavior baseline', () => {
         expect(oneTimeResult).toContain('fixture-address-jwt')
         expect(oneTimeResult).toContain('fixture-address-password')
         expect(oneTimeResult).toContain('/?jwt=fixture-address-jwt')
-        expect(wrapper.text()).toContain('仅显示本次')
+        expect(wrapper.text()).toContain('凭证信息')
         wrapper.unmount()
     })
 
@@ -500,8 +547,7 @@ describe('AdminNext behavior baseline', () => {
         wrapper.unmount()
     })
 
-    it('reveals the selected address credential behind an explicit confirmation', async () => {
-        vi.spyOn(window, 'confirm').mockReturnValue(true)
+    it('reveals the selected address credential directly', async () => {
         runtime.addresses = [{ id: 3, name: 'ops@example.test', credential_version: 2 }]
         const { wrapper } = await mountAdmin({ path: '/admin?view=identity' })
 
@@ -523,7 +569,6 @@ describe('AdminNext behavior baseline', () => {
     })
 
     it('creates a read-only access package for the selected address', async () => {
-        vi.spyOn(window, 'confirm').mockReturnValue(true)
         runtime.addresses = [{ id: 3, name: 'ops@example.test', credential_version: 1 }]
         const { wrapper } = await mountAdmin({ path: '/admin?view=identity' })
 
@@ -545,7 +590,6 @@ describe('AdminNext behavior baseline', () => {
     })
 
     it('deletes the selected address and disables a domain with impact confirmation', async () => {
-        const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
         runtime.addresses = [{
             id: 3,
             name: 'ops@example.test',
@@ -561,6 +605,11 @@ describe('AdminNext behavior baseline', () => {
         expect(deleteAddressButton).toBeTruthy()
         await deleteAddressButton.trigger('click')
         await settle()
+
+        expect(mounted.wrapper.find('[data-testid="confirm-dialog-backdrop"]').exists()).toBe(true)
+        await mounted.wrapper.get('[data-testid="confirm-submit"]').trigger('click')
+        await settle()
+
         expect(mocks.fetch).toHaveBeenCalledWith('/api/admin/delete_address/3', expect.objectContaining({
             method: 'DELETE',
             body: JSON.stringify({
@@ -591,13 +640,16 @@ describe('AdminNext behavior baseline', () => {
         await settle()
 
         expect(mocks.fetch).toHaveBeenCalledWith('/api/admin/domains/1/impact')
+        expect(mounted.wrapper.find('[data-testid="confirm-dialog-backdrop"]').exists()).toBe(true)
+        await mounted.wrapper.get('[data-testid="confirm-submit"]').trigger('click')
+        await settle()
+
         expect(mocks.fetch).toHaveBeenCalledWith('/api/admin/domains/1', {
             method: 'DELETE',
             body: JSON.stringify({ config_version: 7, confirm: true }),
             headers: expect.objectContaining({ 'x-admin-request-id': expect.any(String) }),
         })
         expect(runtime.lastDomainDisable).toEqual({ config_version: 7, confirm: true })
-        expect(confirm).toHaveBeenCalled()
         mounted.wrapper.unmount()
     })
 })

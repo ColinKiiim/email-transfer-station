@@ -92,5 +92,12 @@ describe('admin route state', () => {
         expect(ui.status).toBe('active')
         expect(ui.selected.exception).toBe('unknown-2')
         expect(ui.detailKind).toBe('exception')
+
+        route.query = { view: 'flow' }
+        await nextTick()
+        expect(ui.selected.flow).toBe('')
+        expect(ui.selected.exception).toBe('')
+        expect(ui.detailKind).toBe('')
+        expect(ui.flowMode).toBe('list')
     })
 })

@@ -101,6 +101,35 @@ export function stripHtmlForPreview(value, maxLength = 180) {
         : normalized;
 }
 
+export function formatSenderDisplay(value) {
+    if (!value) return '';
+    const text = String(value).trim();
+    if (!text) return '';
+
+    // RFC-5322 "Display Name" <address> or Display Name <address>
+    const match = text.match(/^(.+?)\s*<([^>]+)>$/);
+    if (match) {
+        let name = match[1].trim();
+        if ((name.startsWith('"') && name.endsWith('"')) || (name.startsWith("'") && name.endsWith("'"))) {
+            name = name.slice(1, -1).trim();
+        }
+        if (name) {
+            return name;
+        }
+        const addr = match[2].trim();
+        if (addr) return addr;
+    }
+
+    // Bare angle bracket form: <address>
+    const angleMatch = text.match(/^<([^>]+)>$/);
+    if (angleMatch) {
+        const addr = angleMatch[1].trim();
+        if (addr) return addr;
+    }
+
+    return text;
+}
+
 function applyParsedContent(item, html, text, forcePlainText = false) {
     const htmlContent = forcePlainText ? '' : (html || '');
     const textContent = text || '';

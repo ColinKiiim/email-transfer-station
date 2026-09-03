@@ -1,3 +1,4 @@
+import { formatSenderDisplay, stripHtmlForPreview } from '../utils/email-parser'
 import { adminT } from './admin-i18n'
 
 const t = adminT('admin.format')
@@ -116,6 +117,17 @@ export const compactRaw = (raw) => {
         .trim()
     return text ? text.slice(0, 240) : t('bodyRenderNotice')
 }
+
+export const cleanMailPreview = (text, html, rawFallback = '', maxLength = 180) => {
+    const fromText = text ? stripHtmlForPreview(text, maxLength) : ''
+    if (fromText) return fromText
+    const fromHtml = html ? stripHtmlForPreview(html, maxLength) : ''
+    if (fromHtml) return fromHtml
+    const fallback = typeof rawFallback === 'string' && rawFallback.trim() ? stripHtmlForPreview(rawFallback, maxLength) : ''
+    return fallback || ''
+}
+
+export { formatSenderDisplay }
 
 export const normalizedAttachments = (value) => {
     if (Array.isArray(value)) return value
