@@ -4,7 +4,13 @@ import { mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import AdminMailWorkspace from '../components/AdminMailWorkspace.vue'
+import MailContentRenderer from '../../components/MailContentRenderer.vue'
 import i18n from '../../i18n'
+
+vi.mock('naive-ui', async (importOriginal) => ({
+    ...(await importOriginal()),
+    useMessage: () => ({ error: vi.fn(), info: vi.fn(), success: vi.fn() }),
+}))
 
 i18n.global.locale.value = 'zh'
 
@@ -57,6 +63,7 @@ const createMockMailModel = (overrides = {}) => ({
     currentRail: { empty: true, title: '选择一封邮件' },
     currentMail: null,
     currentRendererMail: null,
+    isDetailParsing: false,
     hasActiveFilters: false,
     actionBusy: false,
     ...overrides,
@@ -756,6 +763,232 @@ describe('AdminMailWorkspace selection controls and accessible DOM structure', (
         const detailPane = wrapper.get('.body-section')
         expect(detailPane.text()).not.toContain('This preview snippet must never be shown as email body')
         expect(detailPane.text()).toContain('当前记录没有可展示正文。')
+        wrapper.unmount()
+    })
+
+    it('renders accessible mail-body-skeleton with stable height contract and disabled buttons when isDetailParsing is true', () => {
+        const mail = {
+            id: 'mail-1',
+            subject: 'Async loading mail',
+            sender: 'sender@example.test',
+            unread: false,
+            body: 'PreviewSnippetShouldNeverAppear',
+        }
+        const model = createMockMailModel({
+            ui: {
+                flowMode: 'detail',
+                status: 'all',
+                domain: 'all',
+                address: 'all',
+                mailRenderMode: 'html',
+                selected: { flow: 'mail-1', exception: '' },
+            },
+            isDetailParsing: true,
+            currentMail: mail,
+            currentRendererMail: null,
+            currentRail: {
+                empty: false,
+                title: 'Async loading mail',
+                body: '',
+                mail: {
+                    subject: 'Async loading mail',
+                    sender: 'sender@example.test',
+                    html: '',
+                    text: '',
+                    raw: '',
+                },
+            },
+        })
+        const actions = createMockMailActions({
+            isSelected: vi.fn((kind, r) => r.id === 'mail-1'),
+        })
+        const wrapper = mount(AdminMailWorkspace, {
+            props: { model, actions },
+            global: { plugins: [i18n] },
+        })
+
+        // 1. Body stage wrapper exists and marks aria-busy="true"
+        const stage = wrapper.get('.mail-body-stage')
+        expect(stage.attributes('aria-busy')).toBe('true')
+
+        // 2. Skeleton exists and has proper accessible attributes
+        const skeleton = stage.get('.mail-body-skeleton')
+        expect(skeleton.classes()).toContain('mail-body')
+        expect(skeleton.classes()).toContain('mail-body-skeleton')
+        expect(skeleton.attributes('role')).toBe('status')
+        expect(skeleton.attributes('aria-live')).toBe('polite')
+        expect(skeleton.attributes('aria-busy')).toBe('true')
+        expect(skeleton.attributes('aria-label')).toBeTruthy()
+
+        // 3. Skeleton contains simulated paragraph lines
+        const lines = skeleton.findAll('.skeleton-line')
+        expect(lines.length).toBeGreaterThanOrEqual(3)
+        expect(skeleton.find('.skeleton-line-title').exists()).toBe(true)
+
+        // 4. Preview snippet is NOT rendered in the detail pane
+        expect(stage.text()).not.toContain('PreviewSnippetShouldNeverAppear')
+
+        // 5. Neither MailContentRenderer nor empty fallback is shown while parsing
+        expect(stage.find('.html-body').exists()).toBe(false)
+        expect(stage.find('.text-fallback').exists()).toBe(false)
+
+        // 6. Mode toggle buttons are all disabled during pending parse
+        const toggleButtons = wrapper.findAll('.render-toggle button')
+        expect(toggleButtons.length).toBe(3)
+        toggleButtons.forEach((btn) => {
+            expect(btn.attributes('disabled')).toBeDefined()
+        })
+
+        wrapper.unmount()
+    })
+
+    it('mounts renderer smoothly when parsing finishes and allows switching render modes without clobbering selection', async () => {
+        const mail = {
+            id: 'mail-1',
+            subject: 'Resolved email',
+            sender: 'sender@example.test',
+            unread: false,
+            body: 'PreviewSnippet',
+        }
+        const model = createMockMailModel({
+            ui: {
+                flowMode: 'detail',
+                status: 'all',
+                domain: 'all',
+                address: 'all',
+                mailRenderMode: 'html',
+                selected: { flow: 'mail-1', exception: '' },
+            },
+            isDetailParsing: false,
+            currentMail: mail,
+            currentRendererMail: {
+                id: 'mail-1',
+                subject: 'Resolved email',
+                source: 'sender@example.test',
+                address: 'user@example.test',
+                message: '<p>Rich Email Body</p>',
+                messageIsHtml: true,
+                text: '',
+                raw: 'From: sender\r\n\r\nRaw Email Content',
+            },
+            currentRail: {
+                empty: false,
+                title: 'Resolved email',
+                body: 'Plain Email Body',
+                mail: {
+                    subject: 'Resolved email',
+                    sender: 'sender@example.test',
+                    html: '<p>Rich Email Body</p>',
+                    text: 'Plain Email Body',
+                    raw: 'From: sender\r\n\r\nRaw Email Content',
+                },
+            },
+        })
+        const actions = createMockMailActions({
+            isSelected: vi.fn((kind, r) => r.id === 'mail-1'),
+        })
+        const wrapper = mount(AdminMailWorkspace, {
+            props: { model, actions },
+            global: { plugins: [i18n] },
+        })
+
+        // 1. When parsing is resolved, skeleton does not exist
+        const stage = wrapper.get('.mail-body-stage')
+        expect(stage.attributes('aria-busy')).toBe('false')
+        expect(stage.find('.mail-body-skeleton').exists()).toBe(false)
+
+        // 2. HTML body is rendered and contains MailContentRenderer
+        const htmlBody = stage.get('.mail-body.html-body')
+        expect(htmlBody.findComponent(MailContentRenderer).exists()).toBe(true)
+
+        // 3. Mode buttons: all valid modes are enabled
+        const [htmlBtn, textBtn, rawBtn] = wrapper.findAll('.render-toggle button')
+        expect(htmlBtn.attributes('disabled')).toBeUndefined()
+        expect(textBtn.attributes('disabled')).toBeUndefined()
+        expect(rawBtn.attributes('disabled')).toBeUndefined()
+        expect(htmlBtn.classes()).toContain('is-active')
+
+        // 4. Click text mode button
+        await textBtn.trigger('click')
+        expect(model.ui.mailRenderMode).toBe('text')
+        await wrapper.vm.$nextTick()
+        const textBody = stage.get('.mail-body.text-body')
+        expect(textBody.text()).toContain('Plain Email Body')
+
+        // 5. Click raw mode button
+        await rawBtn.trigger('click')
+        expect(model.ui.mailRenderMode).toBe('raw')
+        await wrapper.vm.$nextTick()
+        const rawBody = stage.get('.mail-body.raw-body')
+        expect(rawBody.text()).toContain('Raw Email Content')
+
+        wrapper.unmount()
+    })
+
+    it('enables only available render modes and preserves mode selection without unwarranted watchers', async () => {
+        const mail = {
+            id: 'mail-1',
+            subject: 'Text only email',
+            sender: 'sender@example.test',
+            unread: false,
+            body: 'PreviewText',
+        }
+        const model = createMockMailModel({
+            ui: {
+                flowMode: 'detail',
+                status: 'all',
+                domain: 'all',
+                address: 'all',
+                mailRenderMode: 'text',
+                selected: { flow: 'mail-1', exception: '' },
+            },
+            isDetailParsing: false,
+            currentMail: mail,
+            currentRendererMail: {
+                id: 'mail-1',
+                subject: 'Text only email',
+                source: 'sender@example.test',
+                address: 'user@example.test',
+                message: 'Plain Text Only Content',
+                messageIsHtml: false,
+                text: 'Plain Text Only Content',
+                raw: '',
+            },
+            currentRail: {
+                empty: false,
+                title: 'Text only email',
+                body: 'Plain Text Only Content',
+                mail: {
+                    subject: 'Text only email',
+                    sender: 'sender@example.test',
+                    html: '',
+                    text: 'Plain Text Only Content',
+                    raw: '',
+                },
+            },
+        })
+        const actions = createMockMailActions({
+            isSelected: vi.fn((kind, r) => r.id === 'mail-1'),
+        })
+        const wrapper = mount(AdminMailWorkspace, {
+            props: { model, actions },
+            global: { plugins: [i18n] },
+        })
+
+        const [htmlBtn, textBtn, rawBtn] = wrapper.findAll('.render-toggle button')
+        // HTML is disabled because mail has no HTML
+        expect(htmlBtn.attributes('disabled')).toBeDefined()
+        // Text is enabled
+        expect(textBtn.attributes('disabled')).toBeUndefined()
+        // Raw is disabled because mail has no Raw
+        expect(rawBtn.attributes('disabled')).toBeDefined()
+
+        // User selected 'text' mode is preserved
+        expect(model.ui.mailRenderMode).toBe('text')
+        expect(textBtn.classes()).toContain('is-active')
+        const textBody = wrapper.get('.mail-body.text-body')
+        expect(textBody.text()).toContain('Plain Text Only Content')
+
         wrapper.unmount()
     })
 })

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { Transition, computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 
 import MailContentRenderer from '../../components/MailContentRenderer.vue'
@@ -476,25 +476,38 @@ defineExpose({
                             <strong>{{ t('body') }}</strong>
                             <div class="render-toggle" role="group" :aria-label="t('renderModeLabel')">
                                 <button type="button" :class="{ 'is-active': model.ui.mailRenderMode === 'html' }"
-                                    :disabled="!model.currentRail.mail?.html"
+                                    :disabled="Boolean(model.isDetailParsing || !model.currentRail.mail?.html)"
                                     @click="model.ui.mailRenderMode = 'html'">HTML</button>
                                 <button type="button" :class="{ 'is-active': model.ui.mailRenderMode === 'text' }"
-                                    :disabled="!model.currentRail.mail?.text"
+                                    :disabled="Boolean(model.isDetailParsing || !model.currentRail.mail?.text)"
                                     @click="model.ui.mailRenderMode = 'text'">{{ t('textMode') }}</button>
                                 <button type="button" :class="{ 'is-active': model.ui.mailRenderMode === 'raw' }"
-                                    :disabled="!model.currentRail.mail?.raw"
+                                    :disabled="Boolean(model.isDetailParsing || !model.currentRail.mail?.raw)"
                                     @click="model.ui.mailRenderMode = 'raw'">{{ t('rawMode') }}</button>
                             </div>
                         </div>
-                        <div v-if="model.currentRendererMail && model.ui.mailRenderMode === 'html'" class="mail-body html-body">
-                            <MailContentRenderer :mail="model.currentRendererMail" :showEMailTo="true"
-                                :showReply="false" :showMetaBar="false" />
+                        <div class="mail-body-stage" :aria-busy="model.isDetailParsing ? 'true' : 'false'">
+                            <Transition name="mail-body-fade" mode="out-in">
+                                <div v-if="model.isDetailParsing" key="skeleton"
+                                    class="mail-body mail-body-skeleton" role="status"
+                                    aria-live="polite" aria-busy="true" :aria-label="t('loadingBody') || '正在解析邮件正文...'">
+                                    <div class="skeleton-line skeleton-line-title"></div>
+                                    <div class="skeleton-line"></div>
+                                    <div class="skeleton-line"></div>
+                                    <div class="skeleton-line skeleton-line-short"></div>
+                                </div>
+                                <div v-else-if="model.currentRendererMail && !model.currentRendererMail.parseFailed && (model.currentRendererMail.message || model.currentRail.mail?.html || model.currentRail.mail?.text) && model.ui.mailRenderMode === 'html'"
+                                    key="html" class="mail-body html-body">
+                                    <MailContentRenderer :mail="model.currentRendererMail" :showEMailTo="true"
+                                        :showReply="false" :showMetaBar="false" />
+                                </div>
+                                <pre v-else-if="model.currentRail.mail?.text && model.ui.mailRenderMode === 'text'"
+                                    key="text" class="mail-body text-body">{{ model.currentRail.mail.text }}</pre>
+                                <pre v-else-if="model.currentRail.mail?.raw && model.ui.mailRenderMode === 'raw'"
+                                    key="raw" class="mail-body raw-body">{{ model.currentRail.mail.raw }}</pre>
+                                <p v-else key="empty" class="mail-body text-fallback">{{ t('emptyBody') }}</p>
+                            </Transition>
                         </div>
-                        <pre v-else-if="model.currentRail.mail?.text && model.ui.mailRenderMode === 'text'"
-                            class="mail-body text-body">{{ model.currentRail.mail.text }}</pre>
-                        <pre v-else-if="model.currentRail.mail?.raw && model.ui.mailRenderMode === 'raw'"
-                            class="mail-body raw-body">{{ model.currentRail.mail.raw }}</pre>
-                        <p v-else class="mail-body text-fallback">{{ t('emptyBody') }}</p>
                     </section>
                     <section v-if="model.currentRail.mail?.attachments?.length" class="attachment-section">
                         <div class="body-section-head">

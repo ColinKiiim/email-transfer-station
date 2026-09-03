@@ -2143,6 +2143,13 @@ body:has(.admin-next) .n-message-container {
 
 .admin-next-host .render-toggle button:disabled {
     opacity: 0.38;
+    cursor: not-allowed;
+}
+
+.admin-next-host .mail-body-stage {
+    min-height: 360px;
+    position: relative;
+    width: 100%;
 }
 
 .admin-next-host .mail-body {
@@ -2153,6 +2160,68 @@ body:has(.admin-next) .n-message-container {
     border: 1px solid rgba(255, 255, 255, 0.06);
     color: #e6edf3;
     overflow: auto;
+    min-height: 360px;
+    box-sizing: border-box;
+}
+
+.admin-next-host .mail-body-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    background: #181b22;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    min-height: 360px;
+    pointer-events: none;
+    user-select: none;
+    box-sizing: border-box;
+}
+
+.admin-next-host .mail-body-skeleton .skeleton-line {
+    height: 14px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    animation: mail-skeleton-pulse 1.6s ease-in-out infinite;
+}
+
+.admin-next-host .mail-body-skeleton .skeleton-line-title {
+    width: 42%;
+    height: 18px;
+    margin-bottom: 6px;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.admin-next-host .mail-body-skeleton .skeleton-line-short {
+    width: 58%;
+}
+
+@keyframes mail-skeleton-pulse {
+    0%, 100% {
+        opacity: 0.65;
+    }
+    50% {
+        opacity: 0.25;
+    }
+}
+
+.admin-next-host .mail-body-fade-enter-active,
+.admin-next-host .mail-body-fade-leave-active {
+    transition: opacity 150ms ease;
+}
+
+.admin-next-host .mail-body-fade-enter-from,
+.admin-next-host .mail-body-fade-leave-to {
+    opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .admin-next-host .mail-body-skeleton .skeleton-line {
+        animation: none;
+        opacity: 0.45;
+    }
+    .admin-next-host .mail-body-fade-enter-active,
+    .admin-next-host .mail-body-fade-leave-active {
+        transition: none;
+    }
 }
 
 .admin-next-host .html-body {

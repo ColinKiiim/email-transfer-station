@@ -3208,6 +3208,10 @@ export const MESSAGE_REGISTRY = {
       "en": "This record has no body to display.",
       "zh": "当前记录没有可展示正文。"
     },
+    "loadingBody": {
+      "en": "Loading email body...",
+      "zh": "正在解析邮件正文..."
+    },
     "attachments": {
       "en": "Attachments",
       "zh": "附件"
