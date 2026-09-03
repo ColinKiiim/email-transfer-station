@@ -4387,6 +4387,70 @@ export const MESSAGE_REGISTRY = {
     "lastAdminProtectedConflict": {
       "en": "Cannot demote or delete the last administrator",
       "zh": "无法降级或删除最后一名管理员"
+    },
+    "labelDeleteMail": {
+      "en": "delete messages",
+      "zh": "删除邮件"
+    },
+    "labelCreateUser": {
+      "en": "create user",
+      "zh": "创建用户"
+    },
+    "labelDeleteUser": {
+      "en": "delete user",
+      "zh": "删除用户"
+    },
+    "labelResetPassword": {
+      "en": "reset password",
+      "zh": "重置密码"
+    },
+    "labelUpdateRole": {
+      "en": "update role",
+      "zh": "变更角色"
+    },
+    "labelBindAddress": {
+      "en": "bind address",
+      "zh": "绑定地址"
+    },
+    "labelUnbindAddress": {
+      "en": "unbind address",
+      "zh": "解绑地址"
+    },
+    "impactSelectedCount": {
+      "en": "Selected messages",
+      "zh": "选中封数"
+    },
+    "impactScope": {
+      "en": "Scope",
+      "zh": "当前范围"
+    },
+    "impactMailCount": {
+      "en": "Messages",
+      "zh": "收件数"
+    },
+    "impactSentCount": {
+      "en": "Sent records",
+      "zh": "发送数"
+    },
+    "impactPackageCount": {
+      "en": "Access packages",
+      "zh": "访问包"
+    },
+    "impactAddressCount": {
+      "en": "Addresses",
+      "zh": "地址数"
+    },
+    "impactTargetUser": {
+      "en": "Target user",
+      "zh": "目标用户"
+    },
+    "impactTargetAddress": {
+      "en": "Target address",
+      "zh": "目标地址"
+    },
+    "impactTargetDomain": {
+      "en": "Target domain",
+      "zh": "目标域名"
     }
   },
   "components.AppUtilityMenu": {

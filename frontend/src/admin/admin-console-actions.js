@@ -229,10 +229,27 @@ export const useAdminConsoleActions = ({
             showWarning(t('noProductionMailsToDelete'))
             return
         }
-        const confirmed = window.confirm(t('confirmDeleteMails', { count: targets.length, scope: scopeLabel }))
+        if (actionBusy.value) {
+            showWarning(t('busy'))
+            return
+        }
+        const confirmed = await requestConfirm({
+            tone: 'danger',
+            title: t('labelDeleteMail'),
+            message: t('confirmDeleteMails', { count: targets.length, scope: scopeLabel }),
+            impactItems: [
+                { label: t('impactSelectedCount'), value: targets.length },
+                { label: t('impactScope'), value: scopeLabel },
+            ],
+        })
         if (!confirmed) return
+        if (actionBusy.value) {
+            showWarning(t('busy'))
+            return
+        }
         const previousSelected = ui.selected.flow
         let deleted = 0
+        actionBusy.value = 'mail-delete'
         try {
             for (const target of targets) {
                 const result = await adminApi.deleteMail(target.id)
@@ -254,6 +271,8 @@ export const useAdminConsoleActions = ({
         } catch (error) {
             showError(error?.message || t('deleteInterrupted', { count: deleted }))
             await refreshAll()
+        } finally {
+            actionBusy.value = ''
         }
     }
 
@@ -365,13 +384,25 @@ export const useAdminConsoleActions = ({
         return true
     }
 
-    const runProductionAction = async (key, label, confirmText, task) => {
+    const runProductionAction = async (key, label, confirmConfig, task) => {
         if (!requireProductionWrite(label)) return
         if (actionBusy.value) {
             showWarning(t('busy'))
             return
         }
-        if (confirmText && !window.confirm(confirmText)) return
+        if (confirmConfig) {
+            const options = typeof confirmConfig === 'string'
+                ? { title: label, message: confirmConfig, tone: 'warning' }
+                : (typeof confirmConfig === 'function' ? await confirmConfig() : confirmConfig)
+            if (options) {
+                const confirmed = await requestConfirm(options)
+                if (!confirmed) return
+                if (actionBusy.value) {
+                    showWarning(t('busy'))
+                    return
+                }
+            }
+        }
         actionBusy.value = key
         try {
             await task()
@@ -468,7 +499,17 @@ export const useAdminConsoleActions = ({
         await runProductionAction(
             'address-delete',
             t('labelDeleteAddress'),
-            t('confirmDeleteAddress', { address: row.address, mailCount: row.mails, sentCount: row.sent }),
+            {
+                tone: 'danger',
+                title: t('labelDeleteAddress'),
+                message: t('confirmDeleteAddress', { address: row.address, mailCount: row.mails, sentCount: row.sent }),
+                impactItems: [
+                    { label: t('impactTargetAddress'), value: row.address },
+                    { label: t('impactMailCount'), value: row.mails },
+                    { label: t('impactSentCount'), value: row.sent },
+                    { label: t('impactPackageCount'), value: row.packages },
+                ],
+            },
             async () => {
                 const result = await adminApi.deleteAddress(row.sourceId, {
                     credentialVersion: row.credentialVersion,
@@ -495,13 +536,37 @@ export const useAdminConsoleActions = ({
             showWarning(t('busy'))
             return
         }
+        let impact = null
+        actionBusy.value = 'domain-impact'
+        try {
+            impact = await adminApi.getDomainImpact(row.sourceId)
+        } catch (error) {
+            showError(error?.message || t('disableImpactCheckFailed'))
+            return
+        } finally {
+            actionBusy.value = ''
+        }
+        const confirmed = await requestConfirm({
+            tone: 'danger',
+            title: t('labelDisableDomain'),
+            message: t('confirmDisableDomain', {
+                domain: row.domain,
+                addressCount: impact?.address_count ?? 0,
+                mailCount: impact?.mail_count ?? 0,
+            }),
+            impactItems: [
+                { label: t('impactTargetDomain'), value: row.domain },
+                { label: t('impactAddressCount'), value: impact?.address_count ?? 0 },
+                { label: t('impactMailCount'), value: impact?.mail_count ?? 0 },
+            ],
+        })
+        if (!confirmed) return
+        if (actionBusy.value) {
+            showWarning(t('busy'))
+            return
+        }
         actionBusy.value = 'domain-disable'
         try {
-            const impact = await adminApi.getDomainImpact(row.sourceId)
-            const confirmed = window.confirm(
-                t('confirmDisableDomain', { domain: row.domain, addressCount: impact?.address_count ?? 0, mailCount: impact?.mail_count ?? 0 }),
-            )
-            if (!confirmed) return
             const result = await adminApi.disableDomain(row.sourceId, {
                 configVersion: row.configVersion,
             })
@@ -545,7 +610,14 @@ export const useAdminConsoleActions = ({
         await runProductionAction(
             'rotate',
             t('labelRotateCredential'),
-            t('confirmRotateCredential', { address: row.address }),
+            {
+                tone: 'warning',
+                title: t('labelRotateCredential'),
+                message: t('confirmRotateCredential', { address: row.address }),
+                impactItems: [
+                    { label: t('impactTargetAddress'), value: row.address },
+                ],
+            },
             async () => {
                 const result = await adminApi.rotateAddressCredential(row.sourceId, row.credentialVersion)
                 await refreshAll()
@@ -571,7 +643,14 @@ export const useAdminConsoleActions = ({
         await runProductionAction(
             'revoke',
             t('labelRevokeSharePackages'),
-            t('confirmRevokeSharePackages', { address: row.address }),
+            {
+                tone: 'warning',
+                title: t('labelRevokeSharePackages'),
+                message: t('confirmRevokeSharePackages', { address: row.address }),
+                impactItems: [
+                    { label: t('impactTargetAddress'), value: row.address },
+                ],
+            },
             async () => {
                 const result = await adminApi.revokeShareTokens(row.sourceId)
                 if (result?.success === false) throw new Error(t('revokeSharePackagesFailed'))
@@ -590,7 +669,15 @@ export const useAdminConsoleActions = ({
         await runProductionAction(
             'clear-inbox',
             t('labelClearInbox'),
-            t('confirmClearInbox', { address: row.address }),
+            {
+                tone: 'danger',
+                title: t('labelClearInbox'),
+                message: t('confirmClearInbox', { address: row.address }),
+                impactItems: [
+                    { label: t('impactTargetAddress'), value: row.address },
+                    { label: t('impactMailCount'), value: row.mails },
+                ],
+            },
             async () => {
                 const result = await adminApi.clearAddressInbox(row.sourceId, row.mails)
                 if (result?.success === false) throw new Error(t('clearInboxFailed'))
@@ -716,9 +803,24 @@ export const useAdminConsoleActions = ({
         if (!check?.automatic_setup_supported) {
             throw new Error(t('notCloudflareZoneRoot'))
         }
-        const replaceCatchAll = !!check?.setup_preview?.catch_all_conflict
-            && window.confirm(t('confirmReplaceCatchAll', { domain: domainRow.domain }))
-        if (check?.setup_preview?.catch_all_conflict && !replaceCatchAll) return null
+        let replaceCatchAll = false
+        if (check?.setup_preview?.catch_all_conflict) {
+            const previousBusy = actionBusy.value
+            actionBusy.value = ''
+            try {
+                replaceCatchAll = await requestConfirm({
+                    tone: 'warning',
+                    title: t('labelCloudflareSetup'),
+                    message: t('confirmReplaceCatchAll', { domain: domainRow.domain }),
+                    impactItems: [
+                        { label: t('impactTargetDomain'), value: domainRow.domain },
+                    ],
+                })
+            } finally {
+                actionBusy.value = previousBusy
+            }
+            if (!replaceCatchAll) return null
+        }
         await adminApi.setupCloudflareDomain(domainRow.sourceId, {
             configVersion: domainRow.configVersion,
             confirmReplaceCatchAll: replaceCatchAll,
@@ -742,12 +844,21 @@ export const useAdminConsoleActions = ({
         await runProductionAction(
             'cloudflare-setup',
             t('labelCloudflareSetup'),
-            t('confirmCloudflareSetup', { domain: domainRow.domain }),
+            {
+                tone: 'warning',
+                title: t('labelCloudflareSetup'),
+                message: t('confirmCloudflareSetup', { domain: domainRow.domain }),
+                impactItems: [
+                    { label: t('impactTargetDomain'), value: domainRow.domain },
+                ],
+            },
             async () => {
                 const verification = await performCloudflareSetup(domainRow)
-                showSuccess(verification?.verification_address
-                    ? t('cloudflareConfiguredSendTest', { target: verification.verification_address })
-                    : t('cloudflareConfiguredStartVerification'))
+                if (verification) {
+                    showSuccess(verification?.verification_address
+                        ? t('cloudflareConfiguredSendTest', { target: verification.verification_address })
+                        : t('cloudflareConfiguredStartVerification'))
+                }
             }
         )
     }
@@ -926,7 +1037,14 @@ export const useAdminConsoleActions = ({
             await runProductionAction(
                 'domain-verify-start',
                 t('labelStartDomainVerification'),
-                t('confirmRegenerateVerification', { domain: currentDomain.value?.domain || t('currentDomainFallback') }),
+                {
+                    tone: 'warning',
+                    title: t('labelStartDomainVerification'),
+                    message: t('confirmRegenerateVerification', { domain: currentDomain.value?.domain || t('currentDomainFallback') }),
+                    impactItems: [
+                        { label: t('impactTargetDomain'), value: currentDomain.value?.domain || '' },
+                    ],
+                },
                 async () => startDomainVerification(currentDomain.value)
             )
             return
@@ -965,7 +1083,7 @@ export const useAdminConsoleActions = ({
             showWarning(t('passwordRequired'))
             return
         }
-        if (!requireProductionWrite('create user')) return
+        if (!requireProductionWrite(t('labelCreateUser'))) return
         if (actionBusy.value) {
             showWarning(t('busy'))
             return
@@ -1002,12 +1120,11 @@ export const useAdminConsoleActions = ({
             showWarning(t('passwordRequired'))
             return
         }
-        if (!requireProductionWrite('reset password')) return
+        if (!requireProductionWrite(t('labelResetPassword'))) return
         if (actionBusy.value) {
             showWarning(t('busy'))
             return
         }
-        if (!window.confirm(t('confirmResetPassword', { user: targetUser.user }))) return
         actionBusy.value = 'user-reset-password'
         try {
             const passwordHash = await hashPassword(rawPassword)
@@ -1015,6 +1132,8 @@ export const useAdminConsoleActions = ({
             userResetPasswordForm.password = ''
             closeActionModal()
             showSuccess(t('userPasswordReset', { user: targetUser.user }))
+            if (refreshUsers) await refreshUsers()
+            else await refreshAll()
         } catch (error) {
             userResetPasswordForm.password = ''
             showError(resolveErrorMessage(error, t('resetPasswordFailed')))
@@ -1030,7 +1149,7 @@ export const useAdminConsoleActions = ({
             showWarning(t('selectUserFirst'))
             return
         }
-        if (!requireProductionWrite('update role')) return
+        if (!requireProductionWrite(t('labelUpdateRole'))) return
         if (actionBusy.value) {
             showWarning(t('busy'))
             return
@@ -1054,12 +1173,24 @@ export const useAdminConsoleActions = ({
             showWarning(t('selectUserFirst'))
             return
         }
-        if (!requireProductionWrite('delete user')) return
+        if (!requireProductionWrite(t('labelDeleteUser'))) return
         if (actionBusy.value) {
             showWarning(t('busy'))
             return
         }
-        if (!window.confirm(t('confirmDeleteUser', { user: user.user }))) return
+        const confirmed = await requestConfirm({
+            tone: 'danger',
+            title: t('labelDeleteUser'),
+            message: t('confirmDeleteUser', { user: user.user }),
+            impactItems: [
+                { label: t('impactTargetUser'), value: user.user },
+            ],
+        })
+        if (!confirmed) return
+        if (actionBusy.value) {
+            showWarning(t('busy'))
+            return
+        }
         actionBusy.value = 'user-delete'
         try {
             await adminApi.deleteUser(user.sourceId)
@@ -1119,7 +1250,7 @@ export const useAdminConsoleActions = ({
             showWarning(t('addressRequired'))
             return
         }
-        if (!requireProductionWrite('bind address')) return
+        if (!requireProductionWrite(t('labelBindAddress'))) return
         if (actionBusy.value) {
             showWarning(t('busy'))
             return
@@ -1142,9 +1273,22 @@ export const useAdminConsoleActions = ({
 
     const unbindAddressFromUser = async (user = currentUser?.value, addressItem) => {
         if (!user?.sourceId || !addressItem) return
+        if (!requireProductionWrite(t('labelUnbindAddress'))) return
+        if (actionBusy.value) {
+            showWarning(t('busy'))
+            return
+        }
         const addressName = addressItem.name || addressItem.address || (addressItem.id ? `ID #${addressItem.id}` : '-')
-        if (!window.confirm(t('confirmUnbindAddress', { address: addressName, user: user.user }))) return
-        if (!requireProductionWrite('unbind address')) return
+        const confirmed = await requestConfirm({
+            tone: 'warning',
+            title: t('labelUnbindAddress'),
+            message: t('confirmUnbindAddress', { address: addressName, user: user.user }),
+            impactItems: [
+                { label: t('impactTargetUser'), value: user.user },
+                { label: t('impactTargetAddress'), value: addressName },
+            ],
+        })
+        if (!confirmed) return
         if (actionBusy.value) {
             showWarning(t('busy'))
             return

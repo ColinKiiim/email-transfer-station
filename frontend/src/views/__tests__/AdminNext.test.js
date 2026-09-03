@@ -385,24 +385,30 @@ describe('AdminNext behavior baseline', () => {
     })
 
     it('cancels a destructive mail write before the API call', async () => {
-        const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
         const { wrapper } = await mountAdmin({ path: '/admin?view=flow&mailId=mail-7&mode=detail' })
 
         await wrapper.get('.mail-detail-panel .panel-head .danger').trigger('click')
         await settle()
 
-        expect(confirm).toHaveBeenCalledOnce()
+        expect(wrapper.find('[data-testid="confirm-dialog-backdrop"]').exists()).toBe(true)
+        await wrapper.get('[data-testid="confirm-cancel"]').trigger('click')
+        await settle()
+
+        expect(wrapper.find('[data-testid="confirm-dialog-backdrop"]').exists()).toBe(false)
         expect(mocks.fetch).not.toHaveBeenCalledWith('/api/admin/mails/7', expect.objectContaining({ method: 'DELETE' }))
         expect(wrapper.find('.mail-row').exists()).toBe(true)
         wrapper.unmount()
     })
 
     it('reports a failed confirmed mail write and preserves the row', async () => {
-        vi.spyOn(window, 'confirm').mockReturnValue(true)
         runtime.deleteError = new Error('删除接口失败')
         const { wrapper } = await mountAdmin({ path: '/admin?view=flow&mailId=mail-7&mode=detail' })
 
         await wrapper.get('.mail-detail-panel .panel-head .danger').trigger('click')
+        await settle()
+
+        expect(wrapper.find('[data-testid="confirm-dialog-backdrop"]').exists()).toBe(true)
+        await wrapper.get('[data-testid="confirm-submit"]').trigger('click')
         await settle()
 
         expect(wrapper.get('.toast').text()).toContain('删除接口失败')
@@ -412,10 +418,13 @@ describe('AdminNext behavior baseline', () => {
     })
 
     it('reports a successful confirmed mail write and refreshes the row away', async () => {
-        vi.spyOn(window, 'confirm').mockReturnValue(true)
         const { wrapper } = await mountAdmin({ path: '/admin?view=flow&mailId=mail-7&mode=detail' })
 
         await wrapper.get('.mail-detail-panel .panel-head .danger').trigger('click')
+        await settle()
+
+        expect(wrapper.find('[data-testid="confirm-dialog-backdrop"]').exists()).toBe(true)
+        await wrapper.get('[data-testid="confirm-submit"]').trigger('click')
         await settle()
 
         expect(mocks.fetch).toHaveBeenCalledWith('/api/admin/mails/7', expect.objectContaining({
@@ -470,7 +479,6 @@ describe('AdminNext behavior baseline', () => {
     })
 
     it('creates a production address and exposes its credentials exactly once', async () => {
-        vi.spyOn(window, 'confirm').mockReturnValue(true)
         runtime.domains = [{
             id: 1,
             domain: 'example.test',
@@ -561,7 +569,6 @@ describe('AdminNext behavior baseline', () => {
     })
 
     it('creates a read-only access package for the selected address', async () => {
-        vi.spyOn(window, 'confirm').mockReturnValue(true)
         runtime.addresses = [{ id: 3, name: 'ops@example.test', credential_version: 1 }]
         const { wrapper } = await mountAdmin({ path: '/admin?view=identity' })
 
@@ -583,7 +590,6 @@ describe('AdminNext behavior baseline', () => {
     })
 
     it('deletes the selected address and disables a domain with impact confirmation', async () => {
-        const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
         runtime.addresses = [{
             id: 3,
             name: 'ops@example.test',
@@ -599,6 +605,11 @@ describe('AdminNext behavior baseline', () => {
         expect(deleteAddressButton).toBeTruthy()
         await deleteAddressButton.trigger('click')
         await settle()
+
+        expect(mounted.wrapper.find('[data-testid="confirm-dialog-backdrop"]').exists()).toBe(true)
+        await mounted.wrapper.get('[data-testid="confirm-submit"]').trigger('click')
+        await settle()
+
         expect(mocks.fetch).toHaveBeenCalledWith('/api/admin/delete_address/3', expect.objectContaining({
             method: 'DELETE',
             body: JSON.stringify({
@@ -629,13 +640,16 @@ describe('AdminNext behavior baseline', () => {
         await settle()
 
         expect(mocks.fetch).toHaveBeenCalledWith('/api/admin/domains/1/impact')
+        expect(mounted.wrapper.find('[data-testid="confirm-dialog-backdrop"]').exists()).toBe(true)
+        await mounted.wrapper.get('[data-testid="confirm-submit"]').trigger('click')
+        await settle()
+
         expect(mocks.fetch).toHaveBeenCalledWith('/api/admin/domains/1', {
             method: 'DELETE',
             body: JSON.stringify({ config_version: 7, confirm: true }),
             headers: expect.objectContaining({ 'x-admin-request-id': expect.any(String) }),
         })
         expect(runtime.lastDomainDisable).toEqual({ config_version: 7, confirm: true })
-        expect(confirm).toHaveBeenCalled()
         mounted.wrapper.unmount()
     })
 })
