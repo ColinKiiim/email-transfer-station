@@ -66,7 +66,7 @@ index 25fbbbb47c7f88e83ae26f629e5ae1a0c141725c..ab82c5391596ee2ed8dbe4128f3ba57a
      }
      const boundary = crypto.randomBytes(32).toString('hex');
      const formData = new multipart_stream_1.default(boundary);
--    await Promise.all(Object.keys(payload).map((key) => 
+-    await Promise.all(Object.keys(payload).map((key) =>
 -    // @ts-expect-error payload[key] can obviously index payload, but TS doesn't trust us
 -    attachFormValue(formData, key, payload[key], agent)));
 +    await Promise.all(Object.keys(payload).map((key) =>
@@ -166,7 +166,7 @@ index 23d021c3d5f98493bd714a2114ec8fa853560e5c..90094d18316138b7e12eab42f722e69c
      /**
       * @see https://github.com/telegraf/telegraf/discussions/1344#discussioncomment-335700
       */
--    async launch(config = {}, 
+-    async launch(config = {},
 +    async launch(config = {},
      /** @experimental */
      onLaunch) {

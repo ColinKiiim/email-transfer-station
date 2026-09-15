@@ -77,4 +77,3 @@ export const getNaiveLocaleConfig = (locale: SupportedLocale) => {
 export const getTurnstileLocale = (locale: SupportedLocale) => {
   return getLocaleRegistryEntry(locale).turnstileLocale
 }
-

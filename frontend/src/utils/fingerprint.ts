@@ -27,4 +27,3 @@ export const getFingerprint = async (): Promise<string> => {
         return errorValue;
     }
 };
-
