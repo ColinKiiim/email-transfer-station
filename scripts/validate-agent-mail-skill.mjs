@@ -1,5 +1,6 @@
 import {
   lstatSync,
+  existsSync,
   readFileSync,
   readlinkSync,
   readdirSync,
@@ -89,13 +90,16 @@ export function validateRepository(root) {
   }
 
   const discoveryPath = resolve(root, '.agents/skills');
-  const discovery = lstatSync(discoveryPath);
-  if (discovery.isSymbolicLink()) {
-    if (readlinkSync(discoveryPath).replaceAll('\\', '/') !== '../skills') {
-      addIssue(issues, 'repository:discovery-target');
+  // The discovery link is a local convenience; public clones use skills/.
+  if (existsSync(discoveryPath)) {
+    const discovery = lstatSync(discoveryPath);
+    if (discovery.isSymbolicLink()) {
+      if (readlinkSync(discoveryPath).replaceAll('\\', '/') !== '../skills') {
+        addIssue(issues, 'repository:discovery-target');
+      }
+    } else if (!discovery.isFile() || readFileSync(discoveryPath, 'utf8').trim().replaceAll('\\', '/') !== '../skills') {
+      addIssue(issues, 'repository:discovery-shape');
     }
-  } else if (!discovery.isFile() || readFileSync(discoveryPath, 'utf8').trim().replaceAll('\\', '/') !== '../skills') {
-    addIssue(issues, 'repository:discovery-shape');
   }
 
   const agentGuide = read(root, 'AGENTS.md');

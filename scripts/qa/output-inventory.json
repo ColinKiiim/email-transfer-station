@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-04T19:02:56.524Z",
+  "activeSources": [
+    "AGENTS.md",
+    "HANDOFF.md",
+    "docs/CURRENT.md",
+    "docs/INDEX.md",
+    "docs/plans/PLAN_2026-10-05_maintainability-refactor.md"
+  ],
+  "policy": {
+    "rule": "retain active references and every unit from the last N days, with at least the newest M units retained",
+    "minimumRuns": 5,
+    "days": 14
+  },
+  "summary": {
+    "totalUnits": 0,
+    "retainedUnits": 0,
+    "pruneCandidates": 0,
+    "retainedBytes": 0,
+    "candidateBytes": 0
+  },
+  "entries": [],
+  "pruneHistory": []
+}

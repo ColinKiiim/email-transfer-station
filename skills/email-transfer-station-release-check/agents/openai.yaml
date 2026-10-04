@@ -1,0 +1,4 @@
+interface:
+  display_name: "Email Transfer Station Release Check"
+  short_description: "Exact-artifact Cloudflare Pages release workflow"
+  default_prompt: "Use $email-transfer-station-release-check to prepare or run an Immediate or Deferred Pages release."
