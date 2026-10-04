@@ -3,7 +3,7 @@ import { bodyLimit } from 'hono/body-limit';
 import { generateShareToken, hashShareToken } from './share_tokens';
 import { decryptTotp, encryptTotp, generateTotp, parseTotp } from './totp';
 
-type Item = { id: string; user_id: number; label: string; issuer: string; secret_ciphertext: string;
+type Item = { id: string; label: string; issuer: string; secret_ciphertext: string;
     secret_nonce: string; algorithm: string; digits: number; period: number; expires_at?: string | null };
 const activeShare = "s.revoked_at IS NULL AND (s.expires_at IS NULL OR s.expires_at > datetime('now'))";
 
@@ -48,10 +48,13 @@ function parseExpiry(body: Record<string, unknown> | null): string | null | 'inv
 }
 
 authenticatorApi.get('/user_api/authenticators', async c => {
-    const { results } = await c.env.DB.prepare(`SELECT a.*, s.expires_at FROM user_authenticators a
+    const { results } = await c.env.DB.prepare(`SELECT a.*,
+        CASE WHEN x.direct_assigned = 1 THEN NULL ELSE s.expires_at END AS expires_at
+        FROM user_authenticators a
         JOIN user_authenticator_access x ON x.authenticator_id = a.id
-        JOIN authenticator_share_tokens s ON s.id = x.share_id AND s.authenticator_id = a.id
-        WHERE x.user_id = ? AND ${activeShare} ORDER BY a.created_at DESC`).bind(c.get('userPayload').user_id).all<Item>();
+        LEFT JOIN authenticator_share_tokens s ON s.id = x.share_id AND s.authenticator_id = a.id
+        WHERE x.user_id = ? AND (x.direct_assigned = 1 OR ${activeShare})
+        ORDER BY a.created_at DESC`).bind(c.get('userPayload').user_id).all<Item>();
     const now = Date.now();
     return c.json({ server_time: now, results: await Promise.all(results.map(async row => ({
         ...await publicCode(c, row, now), owned: false,
@@ -71,8 +74,8 @@ authenticatorApi.delete('/user_api/authenticators/:id', async c => {
 authenticatorApi.post('/user_api/authenticators/save-share', async c => {
     const share = await findShare(c, (await readBody(c))?.token);
     if (!share) return c.json({ error: 'invalid_authenticator_share' }, 404);
-    await c.env.DB.prepare(`INSERT INTO user_authenticator_access (user_id, authenticator_id, share_id)
-        SELECT ?, s.authenticator_id, s.id FROM authenticator_share_tokens s WHERE s.id = ? AND ${activeShare}
+    await c.env.DB.prepare(`INSERT INTO user_authenticator_access (user_id, authenticator_id, direct_assigned, share_id)
+        SELECT ?, s.authenticator_id, 0, s.id FROM authenticator_share_tokens s WHERE s.id = ? AND ${activeShare}
         ON CONFLICT(user_id, authenticator_id) DO UPDATE SET share_id = excluded.share_id`)
         .bind(c.get('userPayload').user_id, share.share_id).run();
     return c.json({ success: true });
@@ -80,14 +83,14 @@ authenticatorApi.post('/user_api/authenticators/save-share', async c => {
 
 authenticatorApi.get('/api/admin/authenticators', async c => {
     const { results } = await c.env.DB.prepare(`SELECT a.*,
-        (SELECT COUNT(*) FROM user_authenticator_access x JOIN authenticator_share_tokens s ON s.id = x.share_id
-            WHERE x.authenticator_id = a.id AND ${activeShare}) AS assigned_count,
+        (SELECT COUNT(*) FROM user_authenticator_access x
+            WHERE x.authenticator_id = a.id AND x.direct_assigned = 1) AS assigned_count,
         (SELECT COUNT(*) FROM authenticator_share_tokens s WHERE s.authenticator_id = a.id
             AND s.token_hash NOT LIKE 'assignment:%' AND ${activeShare}) AS share_count
         FROM user_authenticators a ORDER BY a.created_at DESC`).all<Item & { assigned_count: number; share_count: number }>();
     const now = Date.now();
     return c.json({ server_time: now, results: await Promise.all(results.map(async row => ({
-        ...await publicCode(c, row, now), owner_user_id: row.user_id, assigned_count: row.assigned_count,
+        ...await publicCode(c, row, now), assigned_count: row.assigned_count,
         share_count: row.share_count,
     }))) });
 });
@@ -100,8 +103,8 @@ authenticatorApi.post('/api/admin/authenticators', async c => {
     const id = crypto.randomUUID();
     const encrypted = await encryptTotp(item.secret, c.env.TWO_FACTOR_ENCRYPTION_KEY!, id);
     await c.env.DB.prepare(`INSERT INTO user_authenticators
-        (id, user_id, label, issuer, secret_ciphertext, secret_nonce, algorithm, digits, period)
-        VALUES (?, 0, ?, ?, ?, ?, ?, ?, ?)`).bind(id, item.label, item.issuer,
+        (id, label, issuer, secret_ciphertext, secret_nonce, algorithm, digits, period)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).bind(id, item.label, item.issuer,
         encrypted.secret_ciphertext, encrypted.secret_nonce, item.algorithm, item.digits, item.period).run();
     return c.json({ id }, 201);
 });
@@ -121,8 +124,7 @@ authenticatorApi.delete('/api/admin/authenticators/:id', async c => {
 authenticatorApi.get('/api/admin/authenticators/:id/assignments', async c => {
     const { results } = await c.env.DB.prepare(`SELECT u.id, u.user_email, u.username, u.display_name
         FROM user_authenticator_access x JOIN users u ON u.id = x.user_id
-        JOIN authenticator_share_tokens s ON s.id = x.share_id AND ${activeShare}
-        WHERE x.authenticator_id = ? ORDER BY u.user_email`).bind(c.req.param('id')).all();
+        WHERE x.authenticator_id = ? AND x.direct_assigned = 1 ORDER BY u.user_email`).bind(c.req.param('id')).all();
     return c.json({ results });
 });
 
@@ -133,27 +135,22 @@ authenticatorApi.post('/api/admin/authenticators/:id/assignments', async c => {
     const user = await c.env.DB.prepare('SELECT id FROM users WHERE id = ?').bind(userId).first('id');
     const item = await c.env.DB.prepare('SELECT id FROM user_authenticators WHERE id = ?').bind(c.req.param('id')).first('id');
     if (!user || !item) return c.json({ error: 'not_found' }, 404);
-    const existing = await c.env.DB.prepare(`SELECT 1 FROM user_authenticator_access x
-        JOIN authenticator_share_tokens s ON s.id = x.share_id
-        WHERE x.user_id = ? AND x.authenticator_id = ? AND ${activeShare}`)
-        .bind(userId, c.req.param('id')).first();
-    if (existing) return c.json({ success: true });
-    const shareId = crypto.randomUUID();
-    await c.env.DB.batch([
-        c.env.DB.prepare('INSERT INTO authenticator_share_tokens (id, authenticator_id, token_hash) VALUES (?, ?, ?)')
-            .bind(shareId, c.req.param('id'), `assignment:${shareId}`),
-        c.env.DB.prepare(`INSERT INTO user_authenticator_access (user_id, authenticator_id, share_id) VALUES (?, ?, ?)
-            ON CONFLICT(user_id, authenticator_id) DO UPDATE SET share_id = excluded.share_id`)
-            .bind(userId, c.req.param('id'), shareId),
-    ]);
+    await c.env.DB.prepare(`INSERT INTO user_authenticator_access
+        (user_id, authenticator_id, direct_assigned, share_id) VALUES (?, ?, 1, NULL)
+        ON CONFLICT(user_id, authenticator_id) DO UPDATE SET direct_assigned = 1`)
+        .bind(userId, c.req.param('id')).run();
     return c.json({ success: true });
 });
 
 authenticatorApi.delete('/api/admin/authenticators/:id/assignments/:userId', async c => {
     const itemId = c.req.param('id');
     const userId = Number(c.req.param('userId'));
-    await c.env.DB.prepare('DELETE FROM user_authenticator_access WHERE authenticator_id = ? AND user_id = ?')
-        .bind(itemId, userId).run();
+    await c.env.DB.batch([
+        c.env.DB.prepare('UPDATE user_authenticator_access SET direct_assigned = 0 WHERE authenticator_id = ? AND user_id = ?')
+            .bind(itemId, userId),
+        c.env.DB.prepare('DELETE FROM user_authenticator_access WHERE authenticator_id = ? AND user_id = ? AND direct_assigned = 0 AND share_id IS NULL')
+            .bind(itemId, userId),
+    ]);
     return c.json({ success: true });
 });
 

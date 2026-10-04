@@ -63,7 +63,35 @@ describe('authenticator distribution on real SQLite', () => {
         expect((await request('/user_api/authenticators/save-share', 'POST', { token: share.token })).status).toBe(404);
     });
 
-    // WP3 will replace these known gaps with executable order/cleanup regressions.
-    it.todo('direct assignment survives saving and revoking a link, in both arrival orders');
-    it.todo('unassignment clears only the direct source; deleting a user preserves admin resources');
+    it('keeps direct assignment when a user saves and later loses a share link', async () => {
+        const { request, create, sqlite } = fixture();
+        const id = await create();
+        const share = await (await request(`/api/admin/authenticators/${id}/shares`, 'POST', {})).json() as any;
+        await request(`/api/admin/authenticators/${id}/assignments`, 'POST', { user_id: 1 });
+        await request('/user_api/authenticators/save-share', 'POST', { token: share.token });
+        await request(`/api/admin/authenticators/${id}/shares/${share.id}`, 'DELETE', { confirm: true });
+        expect((await (await request('/user_api/authenticators')).json() as any).results).toHaveLength(1);
+        expect(sqlite.prepare('SELECT direct_assigned, share_id FROM user_authenticator_access').get()).toEqual({ direct_assigned: 1, share_id: share.id });
+    });
+
+    it('keeps a saved link when an admin assigns and then unassigns the user', async () => {
+        const { request, create, sqlite } = fixture();
+        const id = await create();
+        const share = await (await request(`/api/admin/authenticators/${id}/shares`, 'POST', {})).json() as any;
+        await request('/user_api/authenticators/save-share', 'POST', { token: share.token });
+        await request(`/api/admin/authenticators/${id}/assignments`, 'POST', { user_id: 1 });
+        await request(`/api/admin/authenticators/${id}/assignments/1`, 'DELETE', {});
+        expect((await (await request('/user_api/authenticators')).json() as any).results).toHaveLength(1);
+        expect(sqlite.prepare('SELECT direct_assigned, share_id FROM user_authenticator_access').get()).toEqual({ direct_assigned: 0, share_id: share.id });
+    });
+
+    it('removes only the user access row while preserving the independent resource', async () => {
+        const { request, create, sqlite } = fixture();
+        const id = await create();
+        await request(`/api/admin/authenticators/${id}/assignments`, 'POST', { user_id: 1 });
+        await request(`/api/admin/authenticators/${id}/assignments/1`, 'DELETE', {});
+        expect((await (await request('/user_api/authenticators')).json() as any).results).toHaveLength(0);
+        expect(sqlite.prepare('SELECT COUNT(*) AS count FROM user_authenticators').get()?.count).toBe(1);
+        expect(sqlite.prepare('SELECT COUNT(*) AS count FROM user_authenticator_access').get()?.count).toBe(0);
+    });
 });

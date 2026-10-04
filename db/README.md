@@ -5,14 +5,15 @@ unchanged. `worker/src/database.ts` imports their SQL as text and orders support
 upgrades from `v0.0.2` onward. Admin routes retain authorization, confirmation,
 audit, and response handling; they contain no table definitions.
 
-The current local code expects `v0.0.17`. The corrective step described in
+The current local code expects `v0.0.18`. The v0.0.17 corrective step described in
 `2026-10-05-schema-consistency.sql` rebuilds the three authenticator tables in one
 D1 batch using the definitions from `schema.sql`, then restores canonical indexes.
 Both published `v0.0.16` shapes are supported. Resource IDs, ciphertext, nonces,
 token hashes, and access rows are retained. Historical ownership does not grant
 new access. Unexpected columns stop the upgrade and leave the original tables
-and version intact. Direct assignment and saved-link semantics remain unchanged
-in this schema correction.
+and version intact. The v0.0.18 source migration removes the sentinel owner and
+`assignment:*` rows, preserves real links, and stores direct assignment and saved
+link sources independently in `user_authenticator_access`.
 
 Each historical ALTER checks whether its column already exists. Historical
 version writes are ignored; the executor writes the current version only after
@@ -39,7 +40,7 @@ failure/retry, and rejection of unsupported shapes. Run it with Node 22.13 or
 later (the local validated runtime is Node 24).
 
 These are local changes. Production migration requires separate authorization,
-a recoverable backup, and a tested restore/compatibility procedure. This step
-does not change access-source columns, so the previous Worker can still read
-the migrated authenticator rows; it does not fix the old source-overwrite issue.
-That compatibility does not replace a production recovery plan.
+a recoverable backup, and a tested restore/compatibility procedure. The previous
+Worker cannot read the v0.0.18 access-source shape, so deploy the compatible
+Worker before any authorized production migration. This local step does not
+replace a production recovery plan.

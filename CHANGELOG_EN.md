@@ -6,6 +6,7 @@
 
 ### Added
 
+- Made authenticator resources independent from users and preserved direct assignments separately from saved share links; the local v0.0.18 migration removes `user_id=0` and `assignment:` sentinel records.
 - Added a lightweight Authenticator workspace where admins store TOTP entries, assign them to users, or share expiring, revocable links.
 - Added an admin console with `/admin` as its sole canonical entry and a same-origin
   `/api/admin/*` API.

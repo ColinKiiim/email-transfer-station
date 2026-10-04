@@ -10,6 +10,20 @@ const databases: ReturnType<typeof sqliteD1>[] = [];
 const fixture = () => { const db = sqliteD1(); databases.push(db); return db; };
 afterEach(() => { for (const db of databases.splice(0)) db.sqlite.close(); });
 const sql = (file: string) => readFileSync(new URL(`../../../db/${file}`, import.meta.url), 'utf8');
+const legacyAuthenticatorTables = `
+CREATE TABLE user_authenticators (
+    id TEXT PRIMARY KEY, user_id INTEGER NOT NULL, label TEXT NOT NULL, issuer TEXT NOT NULL DEFAULT '',
+    secret_ciphertext TEXT NOT NULL, secret_nonce TEXT NOT NULL, algorithm TEXT NOT NULL DEFAULT 'SHA1',
+    digits INTEGER NOT NULL DEFAULT 6, period INTEGER NOT NULL DEFAULT 30, created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE authenticator_share_tokens (
+    id TEXT PRIMARY KEY, authenticator_id TEXT NOT NULL, token_hash TEXT UNIQUE NOT NULL,
+    expires_at DATETIME, revoked_at DATETIME, created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE user_authenticator_access (
+    user_id INTEGER NOT NULL, authenticator_id TEXT NOT NULL, share_id TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (user_id, authenticator_id)
+);`;
 const normalize = (rows: Record<string, any>[]) => rows.map(row => ({ ...row, sql: row.sql?.replace(/\s+/g, ' ') }));
 const structure = (db: ReturnType<typeof sqliteD1>) => normalize(db.sqlite.prepare("SELECT type, name, sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' ORDER BY name").all());
 const relationalStructure = (db: ReturnType<typeof sqliteD1>) => db.sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all().map(row => ({
@@ -62,24 +76,23 @@ describe('single-source database upgrades', () => {
         canonical.sqlite.exec(sql('schema.sql'));
         const names = ['user_authenticators', 'authenticator_share_tokens', 'user_authenticator_access'];
         db.sqlite.exec(sqlStatements(sql('schema.sql')).filter(s => !names.some(name => new RegExp(`\\b${name}\\b`).test(s))).join(';') + ';');
-        if (variant === 'published-foreign-keys') db.sqlite.exec(sql('2026-10-04-authenticators.sql'));
-        else db.sqlite.exec(sql('schema.sql'));
+        db.sqlite.exec(legacyAuthenticatorTables);
         db.sqlite.exec("INSERT INTO settings (key,value) VALUES ('db_version','v0.0.16'); INSERT INTO users (id,user_email,password) VALUES (1,'owner@example.test','fixture'),(2,'recipient@example.test','fixture')");
         db.sqlite.prepare('INSERT INTO user_authenticators (id,user_id,label,secret_ciphertext,secret_nonce) VALUES (?,?,?,?,?)').run('existing-item', 1, 'Existing', encrypted.secret_ciphertext, encrypted.secret_nonce);
         db.sqlite.exec("INSERT INTO authenticator_share_tokens (id,authenticator_id,token_hash) VALUES ('direct','existing-item','assignment:direct'),('real','existing-item','fixture-token-hash'); INSERT INTO user_authenticator_access (user_id,authenticator_id,share_id) VALUES (2,'existing-item','direct')");
         const rows = (table: string) => db.sqlite.prepare(`SELECT * FROM ${table}`).all();
-        const before = names.map(rows);
         await migrateDatabase(db.db);
-        expect(names.map(rows)).toEqual(before);
         expect(relationalStructure(db)).toEqual(relationalStructure(canonical));
         expect(await decryptTotp(encrypted.secret_ciphertext, encrypted.secret_nonce, key, 'existing-item')).toBe('JBSWY3DPEHPK3PXP');
-        expect(rows('user_authenticator_access')).toHaveLength(1); // No grant to historical owner 1.
+        expect(rows('user_authenticator_access')).toEqual([expect.objectContaining({ user_id: 2, authenticator_id: 'existing-item', direct_assigned: 1, share_id: null })]);
+        expect(rows('authenticator_share_tokens')).toEqual([expect.objectContaining({ id: 'real', token_hash: 'fixture-token-hash' })]);
         expect(await migrateDatabase(db.db)).toEqual({ from: CONSTANTS.DB_VERSION, changed: false });
     });
 
     it('rolls back a failed corrective batch, keeps the old version, and retries safely', async () => {
         const db = fixture();
-        db.sqlite.exec(sql('schema.sql'));
+        db.sqlite.exec(sqlStatements(sql('schema.sql')).filter(s => !/user_authenticators|authenticator_share_tokens|user_authenticator_access/.test(s)).join(';') + ';');
+        db.sqlite.exec(legacyAuthenticatorTables);
         db.sqlite.exec("INSERT INTO settings (key,value) VALUES ('db_version','v0.0.16')");
         const before = structure(db);
         const prepare = db.db.prepare.bind(db.db);
@@ -95,7 +108,8 @@ describe('single-source database upgrades', () => {
 
     it('preserves unexpected recovery columns instead of silently dropping them', async () => {
         const db = fixture();
-        db.sqlite.exec(sql('schema.sql'));
+        db.sqlite.exec(sqlStatements(sql('schema.sql')).filter(s => !/user_authenticators|authenticator_share_tokens|user_authenticator_access/.test(s)).join(';') + ';');
+        db.sqlite.exec(legacyAuthenticatorTables);
         db.sqlite.exec("INSERT INTO settings (key,value) VALUES ('db_version','v0.0.16'); ALTER TABLE user_authenticators ADD COLUMN recovery_note TEXT");
         await expect(migrateDatabase(db.db)).rejects.toThrow('unsupported_database_shape:user_authenticators');
         expect(db.sqlite.prepare('PRAGMA table_info(user_authenticators)').all().some(c => c.name === 'recovery_note')).toBe(true);

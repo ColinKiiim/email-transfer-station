@@ -13,12 +13,13 @@ import hardening from '../../db/2026-06-18-managed-domain-hardening.sql';
 import readStates from '../../db/2026-07-27-mail-read-states.sql';
 import delivery from '../../db/2026-08-13-delivery-authority.sql';
 import consistency from '../../db/2026-10-05-schema-consistency.sql';
+import authenticatorSources from '../../db/2026-10-05-authenticator-access-sources.sql';
 import { CONSTANTS } from './constants';
 
 const migrations = [
     [3, password], [4, metadata], [5, sourceMeta], [6, messageId], [7, rawBlob],
     [8, ingress], [9, credentials], [10, identities], [11, audit], [12, domains],
-    [13, hardening], [14, readStates], [15, delivery],
+    [13, hardening], [14, readStates], [15, delivery], [18, authenticatorSources],
 ] as const;
 
 // SQL files here contain no triggers or semicolons inside string literals.
@@ -62,6 +63,60 @@ async function reconcileAuthenticatorTables(db: D1Database) {
     await execute(db, consistency);
 }
 
+async function reconcileAuthenticatorSources(db: D1Database) {
+    const names = ['user_authenticators', 'authenticator_share_tokens', 'user_authenticator_access'];
+    const definitions = sqlStatements(schema);
+    const definition = (name: string) => definitions.find(s => s.startsWith(`CREATE TABLE IF NOT EXISTS ${name} (`))!;
+    const stagingDefinition = (name: string) => definition(name)
+        .replace(`IF NOT EXISTS ${name}`, `${name}_v18`)
+        .replaceAll('REFERENCES user_authenticators', 'REFERENCES user_authenticators_v18')
+        .replaceAll('REFERENCES authenticator_share_tokens', 'REFERENCES authenticator_share_tokens_v18');
+    const legacyColumns: Record<string, string[]> = {
+        user_authenticators: ['id', 'user_id', 'label', 'issuer', 'secret_ciphertext', 'secret_nonce', 'algorithm', 'digits', 'period', 'created_at'],
+        authenticator_share_tokens: ['id', 'authenticator_id', 'token_hash', 'expires_at', 'revoked_at', 'created_at'],
+        user_authenticator_access: ['user_id', 'authenticator_id', 'share_id', 'created_at'],
+    };
+    for (const name of names) {
+        const current = await db.prepare(`PRAGMA table_info(${name})`).all<{ name: string }>();
+        const expected = legacyColumns[name];
+        if (current.results.length !== expected.length || current.results.some(row => !expected.includes(row.name))) {
+            throw new Error(`unsupported_database_shape:${name}`);
+        }
+    }
+    const statements: D1PreparedStatement[] = [];
+    statements.push(
+        db.prepare(stagingDefinition('user_authenticators')),
+        db.prepare(`INSERT INTO user_authenticators_v18
+            (id, label, issuer, secret_ciphertext, secret_nonce, algorithm, digits, period, created_at)
+            SELECT id, label, issuer, secret_ciphertext, secret_nonce, algorithm, digits, period, created_at
+            FROM user_authenticators`),
+        db.prepare(stagingDefinition('authenticator_share_tokens')),
+        db.prepare(`INSERT INTO authenticator_share_tokens_v18
+            (id, authenticator_id, token_hash, expires_at, revoked_at, created_at)
+            SELECT id, authenticator_id, token_hash, expires_at, revoked_at, created_at
+            FROM authenticator_share_tokens WHERE token_hash NOT LIKE 'assignment:%'`),
+        db.prepare(stagingDefinition('user_authenticator_access')),
+        db.prepare(`INSERT INTO user_authenticator_access_v18
+            (user_id, authenticator_id, direct_assigned, share_id, created_at)
+            SELECT x.user_id, x.authenticator_id,
+                CASE WHEN s.token_hash LIKE 'assignment:%' THEN 1 ELSE 0 END,
+                CASE WHEN s.token_hash LIKE 'assignment:%' THEN NULL ELSE x.share_id END,
+                x.created_at
+            FROM user_authenticator_access x
+            JOIN authenticator_share_tokens s ON s.id = x.share_id`),
+    );
+    for (const name of [...names].reverse()) statements.push(db.prepare(`DROP TABLE ${name}`));
+    for (const name of names) statements.push(db.prepare(`ALTER TABLE ${name}_v18 RENAME TO ${name}`));
+    await db.batch(statements);
+}
+
+async function hasLegacyAuthenticatorOwner(db: D1Database) {
+    const table = await db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'user_authenticators'").first();
+    if (!table) return false;
+    const columns = await db.prepare('PRAGMA table_info(user_authenticators)').all<{ name: string }>();
+    return columns.results.some(row => row.name === 'user_id');
+}
+
 export async function getDatabaseVersion(db: D1Database) {
     const hasSettings = await db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'settings'").first();
     return hasSettings ? await db.prepare("SELECT value FROM settings WHERE key = 'db_version'").first<string>('value') : null;
@@ -84,9 +139,13 @@ export async function migrateDatabase(db: D1Database) {
     const definitions = sqlStatements(schema);
     for (const statement of definitions.filter(s => /^CREATE TABLE/i.test(s))) await execute(db, statement);
     for (const [target, sql] of migrations) {
-        if (!version || Number(match![1]) < target) await execute(db, sql);
+        if (!version || Number(match![1]) < target) {
+            if (target === 18) {
+                if (await hasLegacyAuthenticatorOwner(db)) await reconcileAuthenticatorSources(db);
+                await execute(db, sql);
+            } else await execute(db, sql);
+        }
     }
-    if (version || existingAuthenticators) await reconcileAuthenticatorTables(db);
     await execute(db, schema);
     await db.prepare("INSERT INTO settings (key, value) VALUES ('db_version', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')")
         .bind(CONSTANTS.DB_VERSION).run();

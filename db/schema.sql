@@ -194,7 +194,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_user_passkeys_user_id_passkey_id ON user_p
 
 CREATE TABLE IF NOT EXISTS user_authenticators (
     id TEXT PRIMARY KEY,
-    user_id INTEGER NOT NULL,
     label TEXT NOT NULL,
     issuer TEXT NOT NULL DEFAULT '',
     secret_ciphertext TEXT NOT NULL,
@@ -205,11 +204,9 @@ CREATE TABLE IF NOT EXISTS user_authenticators (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_user_authenticators_user_id ON user_authenticators(user_id);
-
 CREATE TABLE IF NOT EXISTS authenticator_share_tokens (
     id TEXT PRIMARY KEY,
-    authenticator_id TEXT NOT NULL,
+    authenticator_id TEXT NOT NULL REFERENCES user_authenticators(id) ON DELETE CASCADE,
     token_hash TEXT NOT NULL UNIQUE,
     expires_at DATETIME,
     revoked_at DATETIME,
@@ -220,8 +217,9 @@ CREATE INDEX IF NOT EXISTS idx_authenticator_share_tokens_authenticator_id ON au
 
 CREATE TABLE IF NOT EXISTS user_authenticator_access (
     user_id INTEGER NOT NULL,
-    authenticator_id TEXT NOT NULL,
-    share_id TEXT NOT NULL,
+    authenticator_id TEXT NOT NULL REFERENCES user_authenticators(id) ON DELETE CASCADE,
+    direct_assigned INTEGER NOT NULL DEFAULT 0 CHECK (direct_assigned IN (0, 1)),
+    share_id TEXT REFERENCES authenticator_share_tokens(id) ON DELETE CASCADE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (user_id, authenticator_id)
 );

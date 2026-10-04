@@ -6,6 +6,7 @@
 
 ### 新增
 
+- 验证器资源改为独立于用户，直接分配与保存分享链接分别保留；本地 v0.0.18 迁移会清理 `user_id=0` 与 `assignment:` 哨兵记录。
 - 增加轻量 Authenticator 工作区，由管理员保存 TOTP 条目并分发给用户，或生成可撤销、可过期的分享链接。
 - 新增以 `/admin` 为唯一规范入口的管理控制台，以及同源 `/api/admin/*` 管理 API。
 - 新增托管域名注册表、Cloudflare Email Routing 激活流程和外部 forwarding collector
