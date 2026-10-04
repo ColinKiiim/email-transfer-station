@@ -4,7 +4,8 @@ import { getBooleanValue, getJsonSetting } from "../utils";
 import { sendMailToTelegram } from "../telegram_api";
 import { auto_reply } from "./auto_reply";
 import { isBlocked } from "./black_list";
-import { triggerWebhook, triggerAnotherWorker, commonParseMail } from "../common";
+import { triggerWebhook, triggerAnotherWorker } from "../common";
+import { parseMail } from "./mail_parser";
 import { check_if_junk_mail } from "./check_junk";
 import { remove_attachment_if_need } from "./check_attachment";
 import { extractEmailInfo } from "./ai_extract";
@@ -213,7 +214,7 @@ async function email(message: ForwardableEmailMessage, env: Bindings, ctx: Execu
 
     // trigger another worker
     try {
-        const parsedEmail = (await commonParseMail(parsedEmailContext));
+        const parsedEmail = (await parseMail(parsedEmailContext));
         const parsedText = parsedEmail?.text ?? ""
         const rpcEmail: RPCEmailMessage = {
             from: message.from,

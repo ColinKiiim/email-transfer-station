@@ -7,6 +7,7 @@ import { getFingerprint } from '../utils/fingerprint'
 import { safeBearerHeader, safeHeaderValue } from '../utils/headers'
 import { ApiRequestError, formatApiErrorData } from '../utils/api-error'
 import { sanitizeRichText } from '../security/safe-html'
+import { createRequestState } from './request-state'
 
 const API_BASE = import.meta.env.VITE_API_BASE || "";
 const {
@@ -21,11 +22,12 @@ const instance = axios.create({
     validateStatus: (status) => status >= 200 && status <= 500
 });
 
-let pendingRequests = 0;
+const requestState = createRequestState((isLoading) => {
+    loading.value = isLoading
+});
 
 const apiFetch = async (path, options = {}) => {
-    pendingRequests++;
-    loading.value = true;
+    requestState.begin();
     try {
         // Get browser fingerprint for request tracking
         const fingerprint = await getFingerprint();
@@ -79,8 +81,7 @@ const apiFetch = async (path, options = {}) => {
         }
         throw new Error(error?.message || formatApiErrorData(error));
     } finally {
-        pendingRequests = Math.max(0, pendingRequests - 1);
-        loading.value = pendingRequests > 0;
+        requestState.end();
     }
 }
 

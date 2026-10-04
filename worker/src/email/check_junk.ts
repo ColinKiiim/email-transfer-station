@@ -1,5 +1,5 @@
 import { getBooleanValue, getStringArray } from "../utils";
-import { commonParseMail } from "../common";
+import { parseMail } from "./mail_parser";
 
 export const check_if_junk_mail = async (
     env: Bindings, address: string,
@@ -9,7 +9,7 @@ export const check_if_junk_mail = async (
     if (!getBooleanValue(env.ENABLE_CHECK_JUNK_MAIL)) {
         return false;
     }
-    const parsedEmail = await commonParseMail(parsedEmailContext);
+    const parsedEmail = await parseMail(parsedEmailContext);
     if (!parsedEmail?.headers) return false;
 
     const checkListWhenExist = getStringArray(env.JUNK_MAIL_CHECK_LIST);

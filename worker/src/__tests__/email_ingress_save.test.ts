@@ -28,7 +28,7 @@ vi.mock("../email/check_attachment", () => ({ remove_attachment_if_need: async (
 vi.mock("../common", () => ({
     triggerWebhook,
     triggerAnotherWorker,
-    commonParseMail: async () => ({ text: "body" }),
+        parseMail: async () => ({ text: "body" }),
 }));
 vi.mock("../domains", () => ({
     getCollectorAddresses: async () => [],

@@ -22,6 +22,7 @@ import {
     normalizeAddressPasswordInput,
 } from './address_password';
 import { deleteAddressS3Objects } from './mails_api/s3_attachment';
+import { parseMail } from './email/mail_parser';
 
 const DEFAULT_NAME_REGEX = /[^a-z0-9]/g;
 const DEFAULT_RANDOM_SUBDOMAIN_LENGTH = 8;
@@ -717,73 +718,6 @@ export const handleMailListQuery = async (
     return c.json({ results: resolvedResults, count });
 }
 
-export const commonParseMail = async (parsedEmailContext: ParsedEmailContext): Promise<{
-    sender: string,
-    subject: string,
-    text: string,
-    html: string,
-    headers?: Record<string, string>[],
-    attachments?: ParsedEmailAttachment[],
-} | undefined> => {
-    // check parsed email context is valid
-    if (!parsedEmailContext || !parsedEmailContext.rawEmail) {
-        return undefined;
-    }
-    // return parsed email if already parsed
-    if (parsedEmailContext.parsedEmail) {
-        return parsedEmailContext.parsedEmail;
-    }
-    const raw_mail = parsedEmailContext.rawEmail;
-    // NOTE: WASM parse email
-    // try {
-    //     const { parse_message_wrapper } = await import('mail-parser-wasm-worker');
-
-    //     const parsedEmail = parse_message_wrapper(raw_mail);
-    //     parsedEmailContext.parsedEmail = {
-    //         sender: parsedEmail.sender || "",
-    //         subject: parsedEmail.subject || "",
-    //         text: parsedEmail.text || "",
-    //         headers: parsedEmail.headers?.map(
-    //             (header) => ({ key: header.key, value: header.value })
-    //         ) || [],
-    //         html: parsedEmail.body_html || "",
-    //         attachments: (parsedEmail.attachments || []).map(att => ({
-    //             filename: att.filename || "attachment",
-    //             mimeType: att.content_type || "application/octet-stream",
-    //             content: att.content,
-    //             disposition: "attachment",
-    //         })),
-    //     };
-    //     return parsedEmailContext.parsedEmail;
-    // } catch (e) {
-    //     console.error("Failed use mail-parser-wasm-worker to parse email", e);
-    // }
-    try {
-        const { default: PostalMime } = await import('postal-mime');
-        const parsedEmail = await PostalMime.parse(raw_mail);
-        parsedEmailContext.parsedEmail = {
-            sender: parsedEmail.from ? `${parsedEmail.from.name} <${parsedEmail.from.address}>` : "",
-            subject: parsedEmail.subject || "",
-            text: parsedEmail.text || "",
-            html: parsedEmail.html || "",
-            headers: parsedEmail.headers || [],
-            attachments: (parsedEmail.attachments || []).map(att => ({
-                filename: att.filename || "attachment",
-                mimeType: att.mimeType || "application/octet-stream",
-                content: typeof att.content === "string"
-                    ? new TextEncoder().encode(att.content)
-                    : Uint8Array.from(new Uint8Array(att.content)),
-                disposition: att.disposition || "attachment",
-            })),
-        };
-        return parsedEmailContext.parsedEmail;
-    }
-    catch (e) {
-        console.error("Failed use PostalMime to parse email", e);
-    }
-    return undefined;
-}
-
 export const commonGetUserRole = async (
     c: Context<HonoCustomType>, user_id: number | string
 ): Promise<UserRole | undefined | null> => {
@@ -894,7 +828,7 @@ export async function triggerWebhook(
         `SELECT id FROM raw_mails where address = ? and message_id = ?`
     ).bind(address, message_id).first<string>("id");
 
-    const parsedEmail = await commonParseMail(parsedEmailContext);
+    const parsedEmail = await parseMail(parsedEmailContext);
     const webhookMail = {
         id: mailId || "",
         url: c.env.FRONTEND_URL ? `${c.env.FRONTEND_URL}?mail_id=${mailId}` : "",
