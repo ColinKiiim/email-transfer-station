@@ -986,6 +986,7 @@ const workspaceActions = {
     setView,
     openMailFromAddress,
     copyText,
+    requestConfirm,
     openSharePackage,
     isMailSelected,
     toggleMailSelection,

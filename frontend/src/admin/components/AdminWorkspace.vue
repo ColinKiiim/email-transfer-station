@@ -7,6 +7,7 @@ import { ICON_SHAPES as iconShapes } from '../admin-view-config'
 import AdminMailWorkspace from './AdminMailWorkspace.vue'
 import AdminResourceWorkspace from './AdminResourceWorkspace.vue'
 import AdminViewFeedback from './AdminViewFeedback.vue'
+import AdminAuthenticators from './AdminAuthenticators.vue'
 
 defineProps({
     model: { type: Object, required: true },
@@ -60,6 +61,8 @@ defineExpose({
 
         <AdminMailWorkspace v-if="model.activeView === 'flow'" ref="mailWorkspace"
             :model="model" :actions="actions" />
+        <AdminAuthenticators v-else-if="model.activeView === 'authenticators'"
+            :request-confirm="actions.requestConfirm" :copy-text="actions.copyText" />
         <AdminResourceWorkspace v-else :model="model" :actions="actions" />
     </section>
 </template>

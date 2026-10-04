@@ -1658,6 +1658,10 @@ export const MESSAGE_REGISTRY = {
       "en": "Access",
       "zh": "访问包"
     },
+    "authenticators": {
+      "en": "Authenticators",
+      "zh": "验证器"
+    },
     "ops": {
       "en": "Operations",
       "zh": "系统维护"
@@ -3309,6 +3313,31 @@ export const MESSAGE_REGISTRY = {
       "zh": "列表视图"
     }
   },
+  "admin.authenticators": {
+    "title": { "en": "Authenticator distribution", "zh": "验证器分发" },
+    "description": { "en": "Create TOTP entries here, then assign them to users or share a link.", "zh": "在这里创建 TOTP 条目，再分发给用户或生成分享链接。" },
+    "label": { "en": "Label", "zh": "名称" },
+    "labelPlaceholder": { "en": "Example account", "zh": "例如：测试账号" },
+    "secret": { "en": "Secret or otpauth URI", "zh": "密钥或 otpauth 链接" },
+    "secretPlaceholder": { "en": "Paste the authenticator secret", "zh": "粘贴验证器密钥" },
+    "create": { "en": "Create", "zh": "创建" },
+    "shareExpiry": { "en": "Link expiry", "zh": "链接有效期" },
+    "empty": { "en": "No authenticators yet.", "zh": "还没有验证器。" },
+    "noIssuer": { "en": "No issuer", "zh": "无发行方" },
+    "copyCode": { "en": "Copy current code", "zh": "复制当前验证码" },
+    "assigned": { "en": "Assigned: {count}", "zh": "已分发：{count}" },
+    "shared": { "en": "Links: {count}", "zh": "链接：{count}" },
+    "selectUser": { "en": "Select user", "zh": "选择用户" },
+    "assign": { "en": "Assign", "zh": "分发" },
+    "viewAssignments": { "en": "View users", "zh": "查看用户" },
+    "noAssignments": { "en": "No users assigned.", "zh": "还没有分发给用户。" },
+    "unassign": { "en": "Remove", "zh": "移除" },
+    "share": { "en": "Share link", "zh": "分享链接" },
+    "delete": { "en": "Delete", "zh": "删除" },
+    "deleteTitle": { "en": "Delete authenticator", "zh": "删除验证器" },
+    "deleteConfirm": { "en": "Delete {label}? Existing assignments and links will stop working.", "zh": "删除“{label}”？已有分发和链接将立即失效。" },
+    "failed": { "en": "Operation failed", "zh": "操作失败" }
+  },
   "admin.console": {
     "signInRequired": {
       "en": "Sign-in required",
@@ -4463,7 +4492,7 @@ export const MESSAGE_REGISTRY = {
   },
   "views.user.UserAuthenticators": {
     "authenticators": { "en": "Authenticator", "zh": "验证器" },
-    "description": { "en": "Store and share time-based verification codes.", "zh": "保存和分享基于时间的验证码。" },
+    "description": { "en": "View authenticators assigned by an admin or saved from a share link.", "zh": "查看管理员分配或通过分享链接保存的验证器。" },
     "label": { "en": "Label", "zh": "名称" },
     "labelPlaceholder": { "en": "GitHub", "zh": "GitHub" },
     "secretOrUri": { "en": "Secret or otpauth URI", "zh": "密钥或 otpauth 地址" },

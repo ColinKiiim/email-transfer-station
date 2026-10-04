@@ -53,6 +53,14 @@ export const createAdminApi = (fetcher, { requestIdFactory = createAdminRequestI
     getAiSettings: () => fetcher('/api/admin/ai_extract/settings'),
     listSenderAccess: () => fetcher('/api/admin/address_sender?limit=20&offset=0'),
     listSendBox: () => fetcher('/api/admin/sendbox?limit=10&offset=0'),
+    listAuthenticators: () => fetcher('/api/admin/authenticators'),
+    createAuthenticator: ({ input, label }) => fetcher('/api/admin/authenticators', writeOptions('POST', { input, label, confirm: true })),
+    deleteAuthenticator: (id) => fetcher(`/api/admin/authenticators/${pathId(id)}`, writeOptions('DELETE', { confirm: true })),
+    listAuthenticatorAssignments: (id) => fetcher(`/api/admin/authenticators/${pathId(id)}/assignments`),
+    assignAuthenticator: (id, userId) => fetcher(`/api/admin/authenticators/${pathId(id)}/assignments`, writeOptions('POST', { user_id: userId, confirm: true })),
+    unassignAuthenticator: (id, userId) => fetcher(`/api/admin/authenticators/${pathId(id)}/assignments/${pathId(userId)}`, writeOptions('DELETE', { confirm: true })),
+    createAuthenticatorShare: (id, expiresAt) => fetcher(`/api/admin/authenticators/${pathId(id)}/shares`, writeOptions('POST', { expires_at: expiresAt || null, confirm: true })),
+    revokeAuthenticatorShare: (id, shareId) => fetcher(`/api/admin/authenticators/${pathId(id)}/shares/${pathId(shareId)}`, writeOptions('DELETE', { confirm: true })),
 
     createUser: ({ email, passwordHash, username, displayName }) => fetcher('/api/admin/users', writeOptions('POST', {
         email: typeof email === 'string' ? email.trim() : '',
