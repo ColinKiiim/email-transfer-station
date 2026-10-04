@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
     createAdminApi,
     loadAdminSnapshot,
+    loadAdminViewSnapshot,
     loadRemainingAdminMails,
     normalizeAdminSnapshot,
 } from '../admin-api'
@@ -176,5 +177,20 @@ describe('admin snapshot DTO', () => {
         await loadRemainingAdminMails(createAdminApi(fetcher), snapshot.mailTotalCount, (rows) => later.push(...rows))
         expect(later).toEqual([{ id: 2 }])
         expect(fetcher).toHaveBeenCalledWith('/api/admin/mails?limit=25&offset=50&include_raw=false')
+    })
+
+    it('loads only the active feature boundary instead of the full admin snapshot', async () => {
+        const fetcher = vi.fn().mockResolvedValue({ results: [] })
+        const client = createAdminApi(fetcher)
+
+        await loadAdminViewSnapshot(client, 'authenticators')
+        expect(fetcher).not.toHaveBeenCalled()
+
+        await loadAdminViewSnapshot(client, 'identity')
+        expect(fetcher.mock.calls.map(([path]) => path)).toEqual([
+            '/api/admin/domains',
+            '/api/admin/address?limit=50&offset=0',
+            '/api/admin/users?limit=20&offset=0',
+        ])
     })
 })

@@ -238,3 +238,76 @@ export const loadAdminSnapshot = async (client = adminApi, seed = {}) => {
     )
     return normalizeAdminSnapshot(Object.fromEntries(entries), errors)
 }
+
+const VIEW_READS = {
+    overview: [
+        ['overview', 'overview', 'getOverview'],
+        ['statistics', 'statistics', 'getStatistics'],
+        ['domains', 'domains', 'listDomains'],
+        ['mailDomains', 'mail domains', 'listMailDomains'],
+        ['mails', 'mails', 'listMails'],
+        ['auditEvents', 'audit events', 'listAuditEvents'],
+        ['accessEvents', 'access events', 'listAccessEvents'],
+        ['workerConfig', 'worker configs', 'getWorkerConfig'],
+        ['dbVersion', 'db version', 'getDbVersion'],
+    ],
+    flow: [
+        ['domains', 'domains', 'listDomains'],
+        ['mailDomains', 'mail domains', 'listMailDomains'],
+        ['mailAddresses', 'mail addresses', 'listMailAddresses'],
+        ['mails', 'mails', 'listMails'],
+        ['unknownMails', 'unknown mails', 'listUnknownMails'],
+    ],
+    identity: [
+        ['domains', 'domains', 'listDomains'],
+        ['addresses', 'addresses', 'listAddresses'],
+        ['users', 'users', 'listUsers'],
+    ],
+    routing: [
+        ['overview', 'overview', 'getOverview'],
+        ['domains', 'domains', 'listDomains'],
+        ['mailDomains', 'mail domains', 'listMailDomains'],
+        ['workerConfig', 'worker configs', 'getWorkerConfig'],
+    ],
+    delivery: [
+        ['mailWebhook', 'mail webhook', 'getMailWebhook'],
+        ['globalWebhook', 'global webhook', 'getGlobalWebhook'],
+        ['telegram', 'telegram', 'getTelegramStatus', false],
+        ['aiSettings', 'ai extract', 'getAiSettings'],
+        ['senderAccess', 'sender access', 'listSenderAccess'],
+        ['sendBox', 'sendbox', 'listSendBox'],
+    ],
+    users: [
+        ['users', 'users', 'listUsers'],
+        ['addresses', 'addresses', 'listAddresses'],
+    ],
+    access: [
+        ['accessPackages', 'access packages', 'listAccessPackages'],
+        ['auditEvents', 'audit events', 'listAuditEvents'],
+        ['accessEvents', 'access events', 'listAccessEvents'],
+    ],
+    ops: [
+        ['workerConfig', 'worker configs', 'getWorkerConfig'],
+        ['dbVersion', 'db version', 'getDbVersion'],
+        ['mailWebhook', 'mail webhook', 'getMailWebhook'],
+        ['globalWebhook', 'global webhook', 'getGlobalWebhook'],
+        ['telegram', 'telegram', 'getTelegramStatus', false],
+        ['aiSettings', 'ai extract', 'getAiSettings'],
+    ],
+    authenticators: [],
+}
+
+export const loadAdminViewSnapshot = async (client = adminApi, view = 'overview') => {
+    const errors = []
+    const reads = VIEW_READS[view] || VIEW_READS.overview
+    const safeRead = async ([key, label, method, shouldRecord = true]) => {
+        try {
+            return [key, await client[method]()]
+        } catch (error) {
+            if (shouldRecord) errors.push(`${label}: ${error?.message || error || 'error'}`)
+            return [key, null]
+        }
+    }
+    const entries = await Promise.all(reads.map(safeRead))
+    return normalizeAdminSnapshot(Object.fromEntries(entries), errors)
+}

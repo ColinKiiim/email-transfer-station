@@ -8,7 +8,7 @@ import { api } from '../api'
 import { useGlobalState } from '../store'
 import { hashPassword } from '../utils'
 import { processItem } from '../utils/email-parser'
-import { adminApi, loadAdminSnapshot, loadRemainingAdminMails } from '../admin/admin-api'
+import { adminApi, loadAdminViewSnapshot, loadRemainingAdminMails } from '../admin/admin-api'
 import { useAdminConsoleActions } from '../admin/admin-console-actions'
 import { useAdminFeedback } from '../admin/admin-feedback'
 import AdminConsoleShell from '../admin/components/AdminConsoleShell.vue'
@@ -279,18 +279,12 @@ const adminNotificationSink = {
 const fetchAdminData = async () => {
     if (!showAdminPage.value) return
     const generation = ++adminLoadGeneration
-    let overview
-    try {
-        overview = await adminApi.getOverview()
-    } catch (error) {
-        if (showAdminAuth.value) return
-        throw error
-    }
-    const snapshot = await loadAdminSnapshot(adminApi, { overview })
+    const snapshot = await loadAdminViewSnapshot(adminApi, activeView.value)
     if (generation !== adminLoadGeneration) return
     Object.assign(live, snapshot)
     live.fetchedAdmin = true
     live.lastSynced = new Date().toLocaleTimeString('zh-CN', { hour12: false })
+    if (!['overview', 'flow'].includes(activeView.value)) return
     void loadRemainingAdminMails(adminApi, snapshot.mailTotalCount, (rows) => {
         if (generation !== adminLoadGeneration || showAdminAuth.value) return false
         const loaded = new Set(live.mails.map((row) => row.id))
@@ -339,6 +333,10 @@ const refreshUsers = async () => {
         recordLoadError('users', error)
     }
 }
+
+watch(activeView, () => {
+    if (live.fetchedAdmin && showAdminPage.value && !showAdminAuth.value) void refreshAll()
+})
 
 const {
     authFunc,
