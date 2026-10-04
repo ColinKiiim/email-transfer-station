@@ -11,6 +11,7 @@ import ProductSurfaceLinks from '../components/ProductSurfaceLinks.vue'
 import { getRouterPathWithLang } from '../utils'
 import AddressMangement from './user/AddressManagement.vue'
 import UserSettingsPage from './user/UserSettings.vue'
+import UserAuthenticators from './user/UserAuthenticators.vue'
 import BindAddress from './user/BindAddress.vue'
 import UserLogin from './user/UserLogin.vue'
 
@@ -44,6 +45,7 @@ const railItems = computed(() => {
     { id: 'user_mail_box_tab', label: t('user_mail_box_tab'), icon: 'mailbox' },
     { id: 'address_management', label: t('address_management'), icon: 'addresses', badge: String(addressFilterOptions.value.length || '') },
     { id: 'user_settings', label: t('user_settings'), icon: 'account' },
+    { id: 'authenticators', label: t('authenticators'), icon: 'lock' },
     ...(canCreateOrBindAddress.value ? [{ id: 'bind_address', label: t('bind_address'), icon: 'bind' }] : []),
   ]
 })
@@ -244,6 +246,14 @@ onMounted(async () => {
         <h2>{{ t('user_settings') }}</h2>
       </div>
       <UserSettingsPage />
+    </section>
+
+    <section v-else-if="userTab === 'authenticators'" class="access-card">
+      <div class="module-head">
+        <span>{{ t('accountSecurity') }}</span>
+        <h2>{{ t('authenticators') }}</h2>
+      </div>
+      <UserAuthenticators />
     </section>
 
     <section v-else-if="canCreateOrBindAddress" class="access-card">

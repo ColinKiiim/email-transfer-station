@@ -6,6 +6,7 @@
 
 ### 新增
 
+- 增加轻量 Authenticator 工作区，支持保存 TOTP 条目以及分享可撤销、可过期的链接。
 - 新增以 `/admin` 为唯一规范入口的管理控制台，以及同源 `/api/admin/*` 管理 API。
 - 新增托管域名注册表、Cloudflare Email Routing 激活流程和外部 forwarding collector
   原始收件人恢复。

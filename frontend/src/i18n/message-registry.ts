@@ -696,6 +696,10 @@ export const MESSAGE_REGISTRY = {
   "views.user.BindAddress": {
   },
   "views.User": {
+    "authenticators": {
+      "en": "Authenticators",
+      "zh": "验证器"
+    },
     "brandContext": {
       "en": "User workspace",
       "zh": "用户工作台"
@@ -4456,6 +4460,34 @@ export const MESSAGE_REGISTRY = {
       "en": "Target domain",
       "zh": "目标域名"
     }
+  },
+  "views.user.UserAuthenticators": {
+    "authenticators": { "en": "Authenticator", "zh": "验证器" },
+    "description": { "en": "Store and share time-based verification codes.", "zh": "保存和分享基于时间的验证码。" },
+    "label": { "en": "Label", "zh": "名称" },
+    "labelPlaceholder": { "en": "GitHub", "zh": "GitHub" },
+    "secretOrUri": { "en": "Secret or otpauth URI", "zh": "密钥或 otpauth 地址" },
+    "secretPlaceholder": { "en": "Paste a secret or otpauth:// URI", "zh": "粘贴密钥或 otpauth:// 地址" },
+    "add": { "en": "Add", "zh": "添加" },
+    "shareExpiry": { "en": "Link expiry (optional)", "zh": "链接有效期（可选）" },
+    "empty": { "en": "No authenticators yet.", "zh": "还没有验证器。" },
+    "noIssuer": { "en": "Authenticator", "zh": "验证器" },
+    "copyCode": { "en": "Copy verification code", "zh": "复制验证码" },
+    "share": { "en": "Share link", "zh": "分享链接" },
+    "delete": { "en": "Delete", "zh": "删除" },
+    "deleteConfirm": { "en": "Delete this authenticator?", "zh": "删除这个验证器吗？" },
+    "saved": { "en": "Saved", "zh": "已保存" },
+    "copied": { "en": "Copied", "zh": "已复制" },
+    "linkCopied": { "en": "Share link copied", "zh": "分享链接已复制" },
+    "failed": { "en": "Operation failed", "zh": "操作失败" }
+  },
+  "views.AuthenticatorShare": {
+    "kicker": { "en": "Shared authenticator", "zh": "共享验证器" },
+    "save": { "en": "Add to my account", "zh": "添加到我的账号" },
+    "expires": { "en": "Link expires:", "zh": "链接过期时间：" },
+    "invalid": { "en": "This link is invalid or expired.", "zh": "链接无效或已过期。" },
+    "copied": { "en": "Copied", "zh": "已复制" },
+    "saved": { "en": "Added to your account", "zh": "已添加到你的账号" }
   },
   "components.AppUtilityMenu": {
     "settings": {

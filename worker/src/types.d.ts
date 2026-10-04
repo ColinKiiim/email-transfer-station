@@ -18,6 +18,7 @@ type SmtpImapProxyConfig = {
 }
 
 type Bindings = {
+    TWO_FACTOR_ENCRYPTION_KEY?: string
     // bindings
     DB: D1Database
     KV: KVNamespace

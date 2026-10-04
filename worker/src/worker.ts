@@ -23,6 +23,7 @@ import { adminAuthMiddleware } from './admin_security';
 import { validateAddressJwtPayload, validateShareJwtPayload } from './address_authority';
 import { validateUserJwtPayload } from './user_identity';
 import { enforceAuthRateLimit } from './auth_rate_limit';
+import { authenticatorApi } from './authenticators';
 
 const API_PATHS = [
 	"/api/",
@@ -269,6 +270,7 @@ app.use('/user_api/*', async (c, next) => {
 		|| c.req.path.startsWith("/user_api/login")
 		|| c.req.path.startsWith("/user_api/verify_code")
 		|| c.req.path.startsWith("/user_api/passkey/authenticate_")
+		|| c.req.path.startsWith("/open_api/authenticator_share")
 		|| c.req.path.startsWith("/user_api/oauth2")
 	) {
 		await next();
@@ -312,6 +314,7 @@ app.use('/api/admin/*', adminAuthMiddleware);
 app.route('/', commonApi)
 app.route('/', openAuthApi)
 app.route('/', openShareApi)
+app.route('/', authenticatorApi)
 app.route('/', mailsApi)
 app.route('/', userApi)
 app.route('/api', adminApi)

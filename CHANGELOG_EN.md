@@ -6,6 +6,7 @@
 
 ### Added
 
+- Added a lightweight Authenticator workspace for storing TOTP entries and sharing expiring, revocable links.
 - Added an admin console with `/admin` as its sole canonical entry and a same-origin
   `/api/admin/*` API.
 - Added a managed-domain registry, Cloudflare Email Routing activation flow, and
