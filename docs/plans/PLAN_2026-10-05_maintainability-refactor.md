@@ -5,7 +5,7 @@ Updated: 2026-10-05 (Asia/Singapore)
 Product baseline: `main@4175b2a86299e303ec31b1e0c6c501c1ac38db69`
 Continuation baseline: `main@196cc18` (WP2S milestone; WP1 `b5a3597` and WP2 `971ec08` are ancestors)
 Revision: 2026-10-05，按用户新决定改为根目录单仓库；参考 WANdrop 的一份源码、多部署环境方案。
-Execution: WP1、WP2、WP2S 已完成并本地提交。按用户要求在 WP2S 后暂停，等待明确指令再开始 WP3；禁止推送、部署、远程迁移与子代理。
+Execution: WP1、WP2、WP2S、WP3 已完成并本地提交，继续执行 WP4–WP7；禁止推送、部署、远程迁移与子代理。
 
 ## 1. 目标、范围与约束
 
@@ -225,7 +225,7 @@ follow-up.
 
 **交付**：唯一根 checkout、沿用产品历史、可恢复的外部归档、正确文档/工具入口；业务和 schema 行为保持 WP2 状态。
 
-### WP3 — 修正验证器资源和访问来源
+### WP3 — 修正验证器资源和访问来源（已完成）
 
 **步骤**
 
@@ -241,6 +241,8 @@ follow-up.
 
 **验收**：第 4 节行为表全部通过；包含到期、撤销、权限拒绝、重复分配、时间偏差及资源清理。
 **交付**：本地可运行迁移、明确的验证器模块、相关界面与测试；外部迁移待当前任务授权。
+
+WP3 本地交付：`b295fa1`。v0.0.18 将验证器资源与用户解耦，直接分配和保存分享来源独立存储；旧 `user_id=0` 与 `assignment:` 哨兵数据在真实 SQLite 迁移测试中转换，密文、nonce、真实 token hash 与访问关系保留。admin/user/open 入口继续共用验证器模块；Worker lint、typecheck、25 个测试文件（103 passed）和 dry-run build 通过。
 
 ### WP4 — 后台按功能拥有数据和动作
 
@@ -326,29 +328,29 @@ follow-up.
 | WP1 | 完成 | `b5a3597`；真实 SQLite 2 tests + 2 WP3 todo；前端 adapter 4 tests；Worker lint/typecheck、diff check 通过。 |
 | WP2 | 完成 | `971ec08`；唯一 SQL 定义来源、薄 Admin 路由、本地 v0.0.17 结构纠正；10 项真实迁移测试。Worker 25 files / 100 passed + 2 WP3 todo；lint/typecheck/dry-run build、TOML 结构和 diff check 通过。 |
 | WP2S | 完成 | 根产品 Git 沿用 `main` 历史和产品 origin；治理/产品 bundle 验证，旧失效 worktree 注册清理，文档迁移，QA/发布/启动路径修正；Worker/frontend/Pages/Skill/QA 离线验证通过，业务树保持 WP2 行为。 |
-| WP3 | 未开始 | — |
+| WP3 | 完成 | `b295fa1`；v0.0.18 来源迁移、真实 SQLite 迁移/回滚/重试、admin/user/open 验证器行为测试；Worker 25 files / 103 passed，lint/typecheck/dry-run build 通过。 |
 | WP4 | 未开始 | — |
 | WP5 | 未开始 | — |
 | WP6 | 未开始 | — |
 | WP7 | 未开始 | — |
 
 新对话先按 AGENTS → docs/CURRENT → docs/INDEX → 本规划恢复；不用重看归档历史。
-当前暂停点：WP2S 已完成，等待用户复核后再授权 WP3，不自动续做。WP2 未改变访问来源语义；`user_id=0`、`assignment:` 和来源覆盖问题仍属于 WP3。v0.0.17 只在本地测试库运行，无远程迁移。维护/兼容说明在 `db/README.md`；上线前仍须另行准备真实备份与恢复方案。
+当前执行点：WP3 已完成，继续推进 WP4。WP3 只在本地测试库运行，无远程迁移；v0.0.18 需要兼容 Worker 后才能获得生产迁移授权。维护/兼容说明在 `db/README.md`；上线前仍须另行准备真实备份与恢复方案。
 WP1 入口复核：admin session/role 由 `admin_security` 校验；user token 由 `user_identity` 校验；address 与 mailbox share 由 `address_authority` 校验并限制分享只读；authenticator open share 校验 token hash、撤销和到期。所有后台 view 当前同用 20 项读取，单接口失败进入 snapshot errors；验证器另自行读取。WP4 按 view 替换该全量集合。
 建议一个主执行对话按阶段连续推进，不让多个对话同时修改同一 checkout。
-用户要求分阶段复核：已完成当前阶段，下一阶段需用户指令。
+用户已要求持续推进；阶段内部自行处理普通实现和测试问题。
 本规划状态只在真实开始、阻塞或完成时按项目允许值更新。
 
 可用于下一次执行的提示：
 
 > 请读取 AGENTS.md、docs/CURRENT.md、docs/INDEX.md 和
 > docs/plans/PLAN_2026-10-05_maintainability-refactor.md 的最新版本，复核根 Git 边界。
-> WP1/WP2/WP2S 已完成，不重做。下一阶段按本计划从 WP3 开始，先复核根 Git、docs 和
-> WP2 的本地验证记录，再执行用户明确授权的阶段。
-> 不进入 WP3、不推送、不部署、不执行远程 D1 迁移、不启动子代理；需要我决定时再提问。
+> WP1/WP2/WP2S/WP3 已完成，不重做。继续按本计划从 WP4 到 WP7 推进，
+> 每个工作包完成后做本地提交和受影响验证。
+> 不推送、不部署、不执行远程 D1 迁移、不启动子代理；需要我决定时再提问。
 
-WP2S 已完成；后续接手统一读取 `docs/CURRENT.md`、`docs/INDEX.md` 和
-`docs/plans/PLAN_2026-10-05_maintainability-refactor.md`。WP3–WP7 仍按用户每次指定的阶段执行。
+WP3 已完成；后续接手统一读取 `docs/CURRENT.md`、`docs/INDEX.md` 和
+`docs/plans/PLAN_2026-10-05_maintainability-refactor.md`，从 WP4 继续。
 
 参考记录：
 
