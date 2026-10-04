@@ -168,6 +168,8 @@ describe('admin snapshot DTO', () => {
         expect(snapshot.mailUnreadCount).toBe(3)
         expect(snapshot.domains).toEqual([{ id: 9, domain: 'example.test' }])
         expect(snapshot.errors).toEqual([])
+        // WP1 baseline: every view currently pays for the same 20-read snapshot.
+        expect(fetcher).toHaveBeenCalledTimes(20)
         expect(fetcher).not.toHaveBeenCalledWith('/api/admin/mails?limit=25&offset=25&include_raw=false')
 
         const later = []
