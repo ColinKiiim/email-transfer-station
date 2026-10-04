@@ -3,7 +3,7 @@
 Status: active
 Updated: 2026-10-05 (Asia/Singapore)
 Product baseline: `main@4175b2a86299e303ec31b1e0c6c501c1ac38db69`
-Continuation baseline: `main@971ec08b94868b7d4c89d078117f0d84f62c77ce`
+Continuation baseline: `main@196cc18` (WP2S milestone; WP1 `b5a3597` and WP2 `971ec08` are ancestors)
 Revision: 2026-10-05，按用户新决定改为根目录单仓库；参考 WANdrop 的一份源码、多部署环境方案。
 Execution: WP1、WP2、WP2S 已完成并本地提交。按用户要求在 WP2S 后暂停，等待明确指令再开始 WP3；禁止推送、部署、远程迁移与子代理。
 

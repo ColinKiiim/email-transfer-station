@@ -17,7 +17,7 @@ WP2S promoted the product checkout to this repository root while preserving the
 product Git history and the product remote:
 
 - root Git: `D:/Develop/Email-Transfer-Station`
-- root `main`: local product history at `971ec08` before the WP2S commit
+- root `main`: WP2S milestone commit `196cc18` (with WP1 `b5a3597` and WP2 `971ec08` as ancestors)
 - `origin`: `https://github.com/ColinKiiim/email-transfer-station`
 - private recovery archive: `D:/Develop/Email-Transfer-Station-archives/20261005-WP2S`
 
@@ -45,6 +45,8 @@ WP2S validation completed:
 - Pages check and middleware syntax check passed;
 - mailbox Skill validation, its five contract tests, QA help, QA inventory, and
   root `git diff --check` passed;
+- local milestone commit: `196cc18` (`refactor(repo): promote product to single
+  root repository`);
 - Worker/frontend/package behavior remains the WP2 implementation; no business
   or schema behavior was changed by the repository cutover.
 
