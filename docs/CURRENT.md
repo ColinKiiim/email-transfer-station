@@ -2,11 +2,12 @@
 
 Updated: 2026-10-05 (Asia/Singapore)
 
-## Maintainability refactor — WP3 complete, continuing locally
+## Maintainability refactor — paused after WP4
 
-Decision: `LOCAL_REFACTOR_IN_PROGRESS`. WP1, WP2, WP2S, and WP3 are complete
-locally. WP4–WP7 are continuing in this task. No push, deployment, remote D1
-migration, or subagents were used.
+Decision: `LOCAL_REFACTOR_PAUSED_AFTER_WP4`. WP1, WP2, WP2S, WP3, and WP4 are
+complete locally. WP5–WP7 have not started. Wait for explicit user instruction
+before continuing. No push, deployment, remote D1 migration, or subagents were
+used.
 
 WP1 established real SQLite relationship tests and request-count baselines.
 WP2 moved SQL definitions and retryable upgrade execution into `db/` and
@@ -50,10 +51,16 @@ WP2S validation completed:
 - Worker/frontend/package behavior remains the WP2 implementation; no business
   or schema behavior was changed by the repository cutover.
 
-The next phase is WP4: move admin data and actions into their owning features
-while preserving routes, admin dispatch, and independent feature refreshes. The
-two WP1 relationship todo tests remain intentionally open and are not passing
-behavior claims.
+WP4 is complete in local commit `4d24737`. Admin reads now follow the active
+feature boundary: the authenticator view makes no snapshot reads, identity loads
+only its domains, addresses, and users, and the remaining views request only
+their required data. View changes refresh the selected feature without restoring
+the full 20-read snapshot. Existing admin routes, dispatch, confirmation flows,
+and component contracts remain intact. The two WP1 relationship todo tests
+remain intentionally open and are not passing behavior claims.
+
+The next phase is WP5: separate remaining backend common responsibilities and
+frontend identity/request state. Continue only after explicit user instruction.
 
 WP3 is complete in local commit `b295fa1`. Authenticator resources no longer use
 `user_id=0`; `user_authenticator_access` keeps `direct_assigned` and nullable
