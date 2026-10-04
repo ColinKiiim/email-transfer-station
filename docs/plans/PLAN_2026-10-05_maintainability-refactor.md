@@ -338,7 +338,7 @@ WP4 本地交付：`4d24737`。保留已有 AdminWorkspace/AdminResourceWorkspac
 
 新对话先按 AGENTS → docs/CURRENT → docs/INDEX → 本规划恢复；不用重看归档历史。
 当前暂停点：WP4 已完成，等待用户复核后再授权 WP5。WP3 只在本地测试库运行，无远程迁移；v0.0.18 需要兼容 Worker 后才能获得生产迁移授权。维护/兼容说明在 `db/README.md`；上线前仍须另行准备真实备份与恢复方案。
-WP1 入口复核：admin session/role 由 `admin_security` 校验；user token 由 `user_identity` 校验；address 与 mailbox share 由 `address_authority` 校验并限制分享只读；authenticator open share 校验 token hash、撤销和到期。所有后台 view 当前同用 20 项读取，单接口失败进入 snapshot errors；验证器另自行读取。WP4 按 view 替换该全量集合。
+WP1 入口复核：admin session/role 由 `admin_security` 校验；user token 由 `user_identity` 校验；address 与 mailbox share 由 `address_authority` 校验并限制分享只读；authenticator open share 校验 token hash、撤销和到期。WP4 已将后台读取改为按 view 的清单，单接口失败进入当前 view 的 errors；验证器继续自行读取。
 建议一个主执行对话按阶段连续推进，不让多个对话同时修改同一 checkout。
 用户要求阶段完成后暂停；WP4 已完成，下一阶段需用户指令。
 本规划状态只在真实开始、阻塞或完成时按项目允许值更新。
@@ -357,12 +357,11 @@ WP4 已完成；后续接手统一读取 `docs/CURRENT.md`、`docs/INDEX.md` 和
 参考记录：
 
 - [评估仓库开源准备度](codex://threads/01a1060f-b80b-76e1-b4bb-570e8edde1ee)：采用最终一份源码/模板方案，不采用前期已撤回的生产配置必须全部动态注入方案。
-- [执行维护性重构计划](codex://threads/01a10809-0b38-7792-b36a-c73fa27bb74f)：WP1/WP2 完成、本地验证和用户要求的暂停点。
+- [执行维护性重构计划](codex://threads/01a10809-0b38-7792-b36a-c73fa27bb74f)：WP1/WP2/WP3/WP4 完成、本地验证和阶段暂停点。
 
 ## 8. 对话与模型建议（2026-10-05 快照）
 
-目前已有“执行维护性重构计划”对话完成 WP1/WP2 并暂停，建议在那里重新读取最新规划后继续 WP2S。
-无需为单仓库方向另开执行对话，也不要让两个对话同时修改同一 checkout。
+当前执行对话已完成 WP1/WP2/WP2S/WP3/WP4，并在 WP4 后暂停；后续继续读取本规划和 CURRENT，不要让两个对话同时修改同一 checkout。
 若另开对话，以本规划和 CURRENT 接手；这是工作组织建议，不是对对话速度或质量的实测保证。
 
 - 默认执行：`GPT-6.1-Sol` + `high`。
