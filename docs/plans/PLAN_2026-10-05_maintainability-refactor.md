@@ -5,7 +5,7 @@ Updated: 2026-10-05 (Asia/Singapore)
 Product baseline: `main@4175b2a86299e303ec31b1e0c6c501c1ac38db69`
 Continuation baseline: `main@196cc18` (WP2S milestone; WP1 `b5a3597` and WP2 `971ec08` are ancestors)
 Revision: 2026-10-05，按用户新决定改为根目录单仓库；参考 WANdrop 的一份源码、多部署环境方案。
-Execution: WP1、WP2、WP2S、WP3、WP4 已完成并本地提交。按用户要求在 WP4 后暂停，等待明确指令再开始 WP5；禁止推送、部署、远程迁移与子代理。
+Execution: WP1、WP2、WP2S、WP3、WP4、WP5、WP6、WP7 已完成并本地提交；禁止推送、部署、远程迁移与子代理。
 
 ## 1. 目标、范围与约束
 
@@ -332,15 +332,15 @@ WP4 本地交付：`4d24737`。保留已有 AdminWorkspace/AdminResourceWorkspac
 | WP2S | 完成 | 根产品 Git 沿用 `main` 历史和产品 origin；治理/产品 bundle 验证，旧失效 worktree 注册清理，文档迁移，QA/发布/启动路径修正；Worker/frontend/Pages/Skill/QA 离线验证通过，业务树保持 WP2 行为。 |
 | WP3 | 完成 | `b295fa1`；v0.0.18 来源迁移、真实 SQLite 迁移/回滚/重试、admin/user/open 验证器行为测试；Worker 25 files / 103 passed，lint/typecheck/dry-run build 通过。 |
 | WP4 | 完成 | `4d24737`；按 view 的 admin API 读取边界、切换刷新和 5 项 adapter 回归测试；frontend 33 files / 234 passed，lint/typecheck/build/build:pages、Pages check 通过。 |
-| WP5 | 未开始 | — |
-| WP6 | 未开始 | — |
-| WP7 | 未开始 | — |
+| WP5 | 完成 | 本地重构：邮件解析移入 `worker/src/email/mail_parser.ts`；前端请求 loading 计数移入 `frontend/src/api/request-state.js`；Worker lint/typecheck/25 files 103 passed，前端 lint/typecheck 及受影响测试通过。 |
+| WP6 | 完成 | 管理后台邮件列表移除 500 封隐式预取，使用既有服务端 `limit/offset` 按翻页加载；邮件流程与 AdminNext 回归测试通过。 |
+| WP7 | 完成 | 删除无调用的 500 封预加载出口，更新引用、测试和维护文档；最终全包验证与 diff check 通过。 |
 
 新对话先按 AGENTS → docs/CURRENT → docs/INDEX → 本规划恢复；不用重看归档历史。
-当前暂停点：WP4 已完成，等待用户复核后再授权 WP5。WP3 只在本地测试库运行，无远程迁移；v0.0.18 需要兼容 Worker 后才能获得生产迁移授权。维护/兼容说明在 `db/README.md`；上线前仍须另行准备真实备份与恢复方案。
+当前状态：WP1–WP7 已完成本地验证。WP3 只在本地测试库运行，无远程迁移；v0.0.18 需要兼容 Worker 后才能获得生产迁移授权。维护/兼容说明在 `db/README.md`；上线前仍须另行准备真实备份与恢复方案。
 WP1 入口复核：admin session/role 由 `admin_security` 校验；user token 由 `user_identity` 校验；address 与 mailbox share 由 `address_authority` 校验并限制分享只读；authenticator open share 校验 token hash、撤销和到期。WP4 已将后台读取改为按 view 的清单，单接口失败进入当前 view 的 errors；验证器继续自行读取。
 建议一个主执行对话按阶段连续推进，不让多个对话同时修改同一 checkout。
-用户要求阶段完成后暂停；WP4 已完成，下一阶段需用户指令。
+用户已授权同时推进 WP5、WP6、WP7；三阶段完成后等待新的指令。
 本规划状态只在真实开始、阻塞或完成时按项目允许值更新。
 
 可用于下一次执行的提示：
@@ -351,8 +351,8 @@ WP1 入口复核：admin session/role 由 `admin_security` 校验；user token �
 > 先复核根 Git、docs 和 WP4 的本地验证记录。
 > 不推送、不部署、不执行远程 D1 迁移、不启动子代理；需要我决定时再提问。
 
-WP4 已完成；后续接手统一读取 `docs/CURRENT.md`、`docs/INDEX.md` 和
-`docs/plans/PLAN_2026-10-05_maintainability-refactor.md`，从 WP5 继续。
+WP1–WP7 已完成；后续接手统一读取 `docs/CURRENT.md`、`docs/INDEX.md` 和
+`docs/plans/PLAN_2026-10-05_maintainability-refactor.md`，从新的维护任务继续。
 
 参考记录：
 

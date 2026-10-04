@@ -2,12 +2,11 @@
 
 Updated: 2026-10-05 (Asia/Singapore)
 
-## Maintainability refactor — paused after WP4
+## Maintainability refactor — WP5–WP7 complete
 
-Decision: `LOCAL_REFACTOR_PAUSED_AFTER_WP4`. WP1, WP2, WP2S, WP3, and WP4 are
-complete locally. WP5–WP7 have not started. Wait for explicit user instruction
-before continuing. No push, deployment, remote D1 migration, or subagents were
-used.
+Decision: `LOCAL_REFACTOR_COMPLETE`. WP1, WP2, WP2S, WP3, WP4, WP5, WP6, and
+WP7 are complete locally. No push, deployment, remote D1 migration, or
+subagents were used.
 
 WP1 established real SQLite relationship tests and request-count baselines.
 WP2 moved SQL definitions and retryable upgrade execution into `db/` and
@@ -59,8 +58,11 @@ the full 20-read snapshot. Existing admin routes, dispatch, confirmation flows,
 and component contracts remain intact. The two WP1 relationship todo tests
 remain intentionally open and are not passing behavior claims.
 
-The next phase is WP5: separate remaining backend common responsibilities and
-frontend identity/request state. Continue only after explicit user instruction.
+WP5–WP7 are complete in the current local milestone. Mail parsing now belongs to
+the email module, shared request loading is tracked by a small request-state
+helper, and the admin mail workbench fetches later pages on demand through the
+existing server `limit/offset` contract. The old 500-row preload helper and its
+dead constant were removed after the runtime callers were migrated.
 
 WP3 is complete in local commit `b295fa1`. Authenticator resources no longer use
 `user_id=0`; `user_authenticator_access` keeps `direct_assigned` and nullable
