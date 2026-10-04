@@ -297,6 +297,8 @@ export const useAdminMailFlow = ({
     persistView,
     onSelectionMissing,
     onParseError,
+    loadMailPage,
+    getMailTotalCount,
 }) => {
     const mailRows = computed(() => normalizeAdminMailRows(getMails()))
     const unknownRows = computed(() => normalizeUnknownMailRows(getUnknownMails()))
@@ -463,7 +465,14 @@ export const useAdminMailFlow = ({
     const mailPage = ref(1)
     const mailPageSize = ref(25)
 
-    const totalMailPages = computed(() => Math.max(1, Math.ceil(filteredMailRows.value.length / mailPageSize.value)))
+    const totalMailPages = computed(() => {
+        const loadedPages = Math.ceil(filteredMailRows.value.length / mailPageSize.value)
+        const serverTotal = Number(getMailTotalCount?.())
+        const serverPages = Number.isFinite(serverTotal) && serverTotal >= 0
+            ? Math.ceil(serverTotal / mailPageSize.value)
+            : 0
+        return Math.max(1, loadedPages, serverPages)
+    })
 
     const visibleMailRows = computed(() => {
         const start = (mailPage.value - 1) * mailPageSize.value
@@ -473,12 +482,13 @@ export const useAdminMailFlow = ({
     const canPrevMailPage = computed(() => mailPage.value > 1)
     const canNextMailPage = computed(() => mailPage.value < totalMailPages.value)
 
-    const setMailPage = (page) => {
+    const setMailPage = async (page) => {
         const target = Number(page) || 1
         const clamped = Math.min(Math.max(1, target), totalMailPages.value)
         if (clamped !== mailPage.value) {
             mailPage.value = clamped
             resetListScroll()
+            await loadMailPage?.(clamped)
         }
     }
 

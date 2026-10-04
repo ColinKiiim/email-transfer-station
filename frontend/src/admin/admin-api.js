@@ -2,7 +2,6 @@ import { api } from '../api'
 import { createAdminRequestId } from '../security/admin-request'
 
 const ADMIN_MAIL_PAGE_LIMIT = 25
-const ADMIN_MAIL_FETCH_MAX = 500
 
 const pathId = (value) => encodeURIComponent(String(value))
 const jsonOptions = (method, body) => ({
@@ -189,14 +188,6 @@ export const normalizeAdminSnapshot = (raw, errors = []) => ({
     sendBox: resultRows(raw.sendBox),
     errors: [...errors],
 })
-
-export const loadRemainingAdminMails = async (client, total, onPage) => {
-    const upperBound = Math.min(Number(total) || 0, ADMIN_MAIL_FETCH_MAX)
-    for (let offset = ADMIN_MAIL_PAGE_LIMIT; offset < upperBound; offset += ADMIN_MAIL_PAGE_LIMIT) {
-        const rows = resultRows(await client.listMails({ limit: ADMIN_MAIL_PAGE_LIMIT, offset }))
-        if (!rows.length || onPage(rows) === false) break
-    }
-}
 
 export const loadAdminSnapshot = async (client = adminApi, seed = {}) => {
     const errors = []

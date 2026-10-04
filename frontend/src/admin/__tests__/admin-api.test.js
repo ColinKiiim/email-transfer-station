@@ -6,7 +6,6 @@ import {
     createAdminApi,
     loadAdminSnapshot,
     loadAdminViewSnapshot,
-    loadRemainingAdminMails,
     normalizeAdminSnapshot,
 } from '../admin-api'
 
@@ -148,7 +147,7 @@ describe('admin snapshot DTO', () => {
         })
     })
 
-    it('returns the first mail page immediately and streams later pages separately', async () => {
+    it('returns the first mail page immediately without preloading later pages', async () => {
         const fetcher = vi.fn(async (path) => {
             if (path === '/api/admin/mails?limit=25&offset=0&include_raw=false') {
                 return { results: [{ id: 1 }], count: 75, unread_count: 3 }
@@ -173,10 +172,6 @@ describe('admin snapshot DTO', () => {
         expect(fetcher).toHaveBeenCalledTimes(20)
         expect(fetcher).not.toHaveBeenCalledWith('/api/admin/mails?limit=25&offset=25&include_raw=false')
 
-        const later = []
-        await loadRemainingAdminMails(createAdminApi(fetcher), snapshot.mailTotalCount, (rows) => later.push(...rows))
-        expect(later).toEqual([{ id: 2 }])
-        expect(fetcher).toHaveBeenCalledWith('/api/admin/mails?limit=25&offset=50&include_raw=false')
     })
 
     it('loads only the active feature boundary instead of the full admin snapshot', async () => {
