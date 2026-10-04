@@ -23,6 +23,7 @@
 
 ### Changed
 
+- Made `db/schema.sql` and historical SQL migrations the database definition source. The local `v0.0.17` upgrade reconciles authenticator table variants, preserves data, and supports retries without marking a failed migration complete. Initialization does not upgrade an existing database.
 - Changed defaults to administrator-created addresses, with anonymous creation and
   ordinary-user deletion disabled.
 - Made Pages the only frontend release surface; its Function proxies Worker APIs
