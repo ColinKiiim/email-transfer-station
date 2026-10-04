@@ -60,6 +60,7 @@ export const createAdminApi = (fetcher, { requestIdFactory = createAdminRequestI
     assignAuthenticator: (id, userId) => fetcher(`/api/admin/authenticators/${pathId(id)}/assignments`, writeOptions('POST', { user_id: userId, confirm: true })),
     unassignAuthenticator: (id, userId) => fetcher(`/api/admin/authenticators/${pathId(id)}/assignments/${pathId(userId)}`, writeOptions('DELETE', { confirm: true })),
     createAuthenticatorShare: (id, expiresAt) => fetcher(`/api/admin/authenticators/${pathId(id)}/shares`, writeOptions('POST', { expires_at: expiresAt || null, confirm: true })),
+    listAuthenticatorShares: (id) => fetcher(`/api/admin/authenticators/${pathId(id)}/shares`),
     revokeAuthenticatorShare: (id, shareId) => fetcher(`/api/admin/authenticators/${pathId(id)}/shares/${pathId(shareId)}`, writeOptions('DELETE', { confirm: true })),
 
     createUser: ({ email, passwordHash, username, displayName }) => fetcher('/api/admin/users', writeOptions('POST', {

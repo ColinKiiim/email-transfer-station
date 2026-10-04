@@ -4,12 +4,12 @@ import { useScopedI18n } from '@/i18n/app'
 import { api } from '../../api'
 
 const { t } = useScopedI18n('views.user.UserAuthenticators')
-const message = useMessage(); const rows = ref([]); const now = ref(Date.now()); let timer
+const message = useMessage(); const rows = ref([]); const now = ref(Date.now()); let timer; let refreshing = false
 const load = async () => { const data = await api.fetch('/user_api/authenticators'); rows.value = data.results || []; now.value = data.server_time || Date.now() }
 const remaining = row => Math.max(0, Math.ceil(((row.valid_until || now.value + row.period * 1000) - now.value) / 1000))
 const remove = async row => { try { await api.fetch(`/user_api/authenticators/${encodeURIComponent(row.id)}`, { method:'DELETE', body:JSON.stringify({ confirm:true }) }); await load() } catch (error) { message.error(error.message || t('failed')) } }
 const copy = async value => { try { await navigator.clipboard.writeText(value); message.success(t('copied')) } catch (error) { message.error(error.message || t('failed')) } }
-onMounted(async () => { try { await load() } catch (error) { message.error(error.message) }; timer = window.setInterval(() => { now.value = Date.now() }, 1000) }); onBeforeUnmount(() => window.clearInterval(timer))
+onMounted(async () => { try { await load() } catch (error) { message.error(error.message) }; timer = window.setInterval(async () => { now.value = Date.now(); if (!refreshing && rows.value.some(row => remaining(row) === 0)) { refreshing = true; try { await load() } catch (error) { rows.value = []; message.error(error.message || t('failed')) } finally { refreshing = false } } }, 1000) }); onBeforeUnmount(() => window.clearInterval(timer))
 </script>
 <template>
   <div class="authenticator-panel">

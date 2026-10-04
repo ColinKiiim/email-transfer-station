@@ -80,8 +80,10 @@ authenticatorApi.post('/user_api/authenticators/save-share', async c => {
 
 authenticatorApi.get('/api/admin/authenticators', async c => {
     const { results } = await c.env.DB.prepare(`SELECT a.*,
-        (SELECT COUNT(*) FROM user_authenticator_access x WHERE x.authenticator_id = a.id) AS assigned_count,
-        (SELECT COUNT(*) FROM authenticator_share_tokens s WHERE s.authenticator_id = a.id AND ${activeShare}) AS share_count
+        (SELECT COUNT(*) FROM user_authenticator_access x JOIN authenticator_share_tokens s ON s.id = x.share_id
+            WHERE x.authenticator_id = a.id AND ${activeShare}) AS assigned_count,
+        (SELECT COUNT(*) FROM authenticator_share_tokens s WHERE s.authenticator_id = a.id
+            AND s.token_hash NOT LIKE 'assignment:%' AND ${activeShare}) AS share_count
         FROM user_authenticators a ORDER BY a.created_at DESC`).all<Item & { assigned_count: number; share_count: number }>();
     const now = Date.now();
     return c.json({ server_time: now, results: await Promise.all(results.map(async row => ({
@@ -131,14 +133,17 @@ authenticatorApi.post('/api/admin/authenticators/:id/assignments', async c => {
     const user = await c.env.DB.prepare('SELECT id FROM users WHERE id = ?').bind(userId).first('id');
     const item = await c.env.DB.prepare('SELECT id FROM user_authenticators WHERE id = ?').bind(c.req.param('id')).first('id');
     if (!user || !item) return c.json({ error: 'not_found' }, 404);
-    const existing = await c.env.DB.prepare('SELECT 1 FROM user_authenticator_access WHERE user_id = ? AND authenticator_id = ?')
+    const existing = await c.env.DB.prepare(`SELECT 1 FROM user_authenticator_access x
+        JOIN authenticator_share_tokens s ON s.id = x.share_id
+        WHERE x.user_id = ? AND x.authenticator_id = ? AND ${activeShare}`)
         .bind(userId, c.req.param('id')).first();
     if (existing) return c.json({ success: true });
     const shareId = crypto.randomUUID();
     await c.env.DB.batch([
         c.env.DB.prepare('INSERT INTO authenticator_share_tokens (id, authenticator_id, token_hash) VALUES (?, ?, ?)')
-            .bind(shareId, c.req.param('id'), await hashShareToken(generateShareToken())),
-        c.env.DB.prepare('INSERT INTO user_authenticator_access (user_id, authenticator_id, share_id) VALUES (?, ?, ?)')
+            .bind(shareId, c.req.param('id'), `assignment:${shareId}`),
+        c.env.DB.prepare(`INSERT INTO user_authenticator_access (user_id, authenticator_id, share_id) VALUES (?, ?, ?)
+            ON CONFLICT(user_id, authenticator_id) DO UPDATE SET share_id = excluded.share_id`)
             .bind(userId, c.req.param('id'), shareId),
     ]);
     return c.json({ success: true });
@@ -147,13 +152,8 @@ authenticatorApi.post('/api/admin/authenticators/:id/assignments', async c => {
 authenticatorApi.delete('/api/admin/authenticators/:id/assignments/:userId', async c => {
     const itemId = c.req.param('id');
     const userId = Number(c.req.param('userId'));
-    const mapping = await c.env.DB.prepare('SELECT share_id FROM user_authenticator_access WHERE authenticator_id = ? AND user_id = ?')
-        .bind(itemId, userId).first<{ share_id: string }>();
-    if (!mapping) return c.json({ success: true });
-    await c.env.DB.batch([
-        c.env.DB.prepare('DELETE FROM user_authenticator_access WHERE authenticator_id = ? AND user_id = ?').bind(itemId, userId),
-        c.env.DB.prepare("UPDATE authenticator_share_tokens SET revoked_at = datetime('now') WHERE id = ?").bind(mapping.share_id),
-    ]);
+    await c.env.DB.prepare('DELETE FROM user_authenticator_access WHERE authenticator_id = ? AND user_id = ?')
+        .bind(itemId, userId).run();
     return c.json({ success: true });
 });
 
@@ -170,7 +170,9 @@ authenticatorApi.post('/api/admin/authenticators/:id/shares', async c => {
 
 authenticatorApi.get('/api/admin/authenticators/:id/shares', async c => {
     const { results } = await c.env.DB.prepare(`SELECT id, expires_at, revoked_at, created_at FROM authenticator_share_tokens
-        WHERE authenticator_id = ? ORDER BY created_at DESC`).bind(c.req.param('id')).all();
+        WHERE authenticator_id = ? AND token_hash NOT LIKE 'assignment:%'
+        AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > datetime('now'))
+        ORDER BY created_at DESC`).bind(c.req.param('id')).all();
     return c.json({ results });
 });
 
