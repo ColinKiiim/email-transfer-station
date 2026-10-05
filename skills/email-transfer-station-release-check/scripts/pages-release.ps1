@@ -21,7 +21,7 @@ $ErrorActionPreference = 'Stop'
 $script:Clock = [Diagnostics.Stopwatch]::StartNew()
 $script:Schema = 'email-transfer-station-pages-readiness/v2'
 $script:ReceiptSchema = 'email-transfer-station-pages-release-receipt/v2'
-$script:WorkspaceRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..\..')).TrimEnd('\')
+$script:WorkspaceRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..')).TrimEnd('\')
 $script:PrivateTmpRoot = [IO.Path]::GetFullPath((Join-Path $script:WorkspaceRoot 'output\release')).TrimEnd('\')
 $script:CanonicalProductRoot = $script:WorkspaceRoot
 
