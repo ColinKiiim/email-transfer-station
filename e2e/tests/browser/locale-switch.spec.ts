@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import type { Locator, Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 import { FRONTEND_URL } from '../../fixtures/test-helpers';
 
@@ -28,34 +28,25 @@ const installLocaleInitScript = async (page: Page, locales: string[], preferredL
   );
 };
 
-const selectLanguage = async (page: Page, selectTrigger: Locator, optionLabel: string) => {
-  await selectTrigger.click();
-  const option = page.locator('.n-dropdown-option, .n-dropdown-option-body').filter({ hasText: optionLabel }).first();
-  await expect(option).toBeVisible();
-  await option.click();
-};
-
 test.describe('Locale switching', () => {
-  test('keeps default route in Chinese while persisting browser language preference', async ({ page }) => {
+  test('redirects the default route to the browser language', async ({ page }) => {
     await installLocaleInitScript(page, ['en-GB', 'en-US']);
 
     await page.goto(`${FRONTEND_URL}/`);
 
-    await expect(page).toHaveURL(`${FRONTEND_URL}/`);
+    await expect(page).toHaveURL(`${FRONTEND_URL}/en/`);
     await expect.poll(() => page.evaluate(() => window.localStorage.getItem('preferredLocale'))).toBe('en');
-    await expect.poll(() => page.evaluate(() => document.documentElement.lang)).toBe('zh');
+    await expect.poll(() => page.evaluate(() => document.documentElement.lang)).toBe('en');
   });
 
-  test('mobile drawer switch updates locale route and persisted preference', async ({ page }) => {
+  test('mobile utility menu updates locale route and persisted preference', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 844 });
     await installLocaleInitScript(page, ['zh-CN']);
 
     await page.goto(`${FRONTEND_URL}/`);
 
-    await page.getByRole('button', { name: /菜单|Menu/i }).click();
-
-    const drawerLocaleDropdown = page.locator('.n-drawer').getByRole('button', { name: /中文|English/ }).first();
-    await selectLanguage(page, drawerLocaleDropdown, 'English');
+    await page.getByRole('button', { name: /外观与语言|Appearance and language/i }).click();
+    await page.getByRole('menuitemradio', { name: 'English' }).click();
 
     await expect(page).toHaveURL(`${FRONTEND_URL}/en/`);
     await expect.poll(() => page.evaluate(() => window.localStorage.getItem('preferredLocale'))).toBe('en');
