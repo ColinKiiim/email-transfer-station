@@ -34,4 +34,3 @@ export const parseMail = async (parsedEmailContext: ParsedEmailContext): Promise
         return undefined
     }
 }
-
