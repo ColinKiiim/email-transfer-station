@@ -2,11 +2,11 @@
 
 Updated: 2026-10-05 (Asia/Singapore)
 
-## Maintainability refactor — WP5–WP7 complete
+## Maintainability refactor — WP1–WP7 complete
 
-Decision: `LOCAL_REFACTOR_COMPLETE`. WP1, WP2, WP2S, WP3, WP4, WP5, WP6, and
-WP7 are complete locally. No push, deployment, remote D1 migration, or
-subagents were used.
+Decision: `REFACTOR_COMPLETE`. WP1, WP2, WP2S, WP3, WP4, WP5, WP6, and WP7
+are complete. The refactor milestones were validated and committed locally;
+the separately authorized GitHub synchronization is recorded below.
 
 WP1 established real SQLite relationship tests and request-count baselines.
 WP2 moved SQL definitions and retryable upgrade execution into `db/` and
@@ -80,3 +80,36 @@ resources or issue links.
 
 No production resource, remote database, DNS record, deployment, or secret was
 changed by this local refactor.
+
+## GitHub synchronization — 2026-10-05
+
+The user authorized deleting the obsolete governance repository and synchronizing
+the product remote. `ColinKiiim/email-transfer-station-workspace` was inspected
+and deleted: it contained old governance/reference records, with no product
+packages, issues, pull requests, releases, or workflows. The private recovery
+archive outside this repository remains available.
+
+The canonical product repository is `ColinKiiim/email-transfer-station`.
+[PR #5](https://github.com/ColinKiiim/email-transfer-station/pull/5) is the
+integration record for `origin/main`, retaining the local milestone history and
+the existing required `validate` check. The local `upstream` remote points to
+the original project and is unrelated to the deleted governance repository.
+
+CI follow-up commits are `c87b7d9` (EOF whitespace), `15d15d9` (canonical SQL
+included in the E2E Worker image), and `10d96f6` (cross-container proxy bindings
+and E2E contracts aligned with the current UI/API). Passkey remains archived in
+the active UI; its browser test checks that contract, while backend tests remain.
+Admin selection, confirmation, locale switching, and HTML sanitization checks
+remain meaningful; no test was skipped to obtain a passing run.
+
+Validation at code commit `10d96f6`:
+
+- local frontend: 34 files / 235 tests passed;
+- local E2E discovery: 129 tests in 31 files; Docker is unavailable on this host;
+- [GitHub Actions run 37265210587](https://github.com/ColinKiiim/email-transfer-station/actions/runs/37265210587):
+  `validate` and Docker E2E passed, with all 129 E2E tests executed;
+- repository whitespace checks passed.
+
+GitHub synchronization does not perform a deployment or remote D1 migration.
+The v0.0.18 production migration remains separately authorized work with the
+backup and compatibility requirements documented in `db/README.md`.

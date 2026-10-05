@@ -1,11 +1,11 @@
 # Email Transfer Station 可维护性重构实施规划
 
-Status: active
+Status: completed
 Updated: 2026-10-05 (Asia/Singapore)
 Product baseline: `main@4175b2a86299e303ec31b1e0c6c501c1ac38db69`
 Continuation baseline: `main@196cc18` (WP2S milestone; WP1 `b5a3597` and WP2 `971ec08` are ancestors)
 Revision: 2026-10-05，按用户新决定改为根目录单仓库；参考 WANdrop 的一份源码、多部署环境方案。
-Execution: WP1、WP2、WP2S、WP3、WP4、WP5、WP6、WP7 已完成并本地提交；禁止推送、部署、远程迁移与子代理。
+Execution: WP1、WP2、WP2S、WP3、WP4、WP5、WP6、WP7 已完成并本地提交；用户随后授权删除旧 workspace 远端并同步产品仓库。部署、远程 D1 迁移与子代理仍不在授权范围内。
 
 ## 1. 目标、范围与约束
 
@@ -340,15 +340,22 @@ WP4 本地交付：`4d24737`。保留已有 AdminWorkspace/AdminResourceWorkspac
 当前状态：WP1–WP7 已完成本地验证。WP3 只在本地测试库运行，无远程迁移；v0.0.18 需要兼容 Worker 后才能获得生产迁移授权。维护/兼容说明在 `db/README.md`；上线前仍须另行准备真实备份与恢复方案。
 WP1 入口复核：admin session/role 由 `admin_security` 校验；user token 由 `user_identity` 校验；address 与 mailbox share 由 `address_authority` 校验并限制分享只读；authenticator open share 校验 token hash、撤销和到期。WP4 已将后台读取改为按 view 的清单，单接口失败进入当前 view 的 errors；验证器继续自行读取。
 建议一个主执行对话按阶段连续推进，不让多个对话同时修改同一 checkout。
-用户已授权同时推进 WP5、WP6、WP7；三阶段完成后等待新的指令。
+用户已授权同时推进 WP5、WP6、WP7；三阶段完成后又授权 GitHub 同步收尾。
 本规划状态只在真实开始、阻塞或完成时按项目允许值更新。
+
+同步收尾（2026-10-05）：旧 `ColinKiiim/email-transfer-station-workspace` 已复核并删除，仓库外恢复归档保留。
+产品提交通过 [PR #5](https://github.com/ColinKiiim/email-transfer-station/pull/5) 集成，沿用产品历史和现有 `validate` 保护规则。
+`c87b7d9` 修正 EOF 空白；`15d15d9` 补齐 E2E 镜像中的唯一 SQL 来源；`10d96f6` 修正测试代理监听和过时 UI/API 测试契约。
+代码提交 `10d96f6` 的 [Actions 37265210587](https://github.com/ColinKiiim/email-transfer-station/actions/runs/37265210587) 中 validate 和 Docker E2E 全部通过（129 passed）。
+本地前端 34 files / 235 tests、E2E 用例发现（129 tests / 31 files）和 diff check 通过。本机没有 Docker，不声称本地容器验证。
+部署和生产 v0.0.18 迁移仍须另行授权。
 
 可用于下一次执行的提示：
 
 > 请读取 AGENTS.md、docs/CURRENT.md、docs/INDEX.md 和
 > docs/plans/PLAN_2026-10-05_maintainability-refactor.md 的最新版本，复核根 Git 边界。
-> WP1/WP2/WP2S/WP3/WP4 已完成，不重做。下一阶段按本计划从 WP5 开始，
-> 先复核根 Git、docs 和 WP4 的本地验证记录。
+> WP1–WP7 已完成，不重做。先复核当前 Git 与 PR #5 的状态，
+> 再处理用户新授权的维护任务。
 > 不推送、不部署、不执行远程 D1 迁移、不启动子代理；需要我决定时再提问。
 
 WP1–WP7 已完成；后续接手统一读取 `docs/CURRENT.md`、`docs/INDEX.md` 和
@@ -361,7 +368,7 @@ WP1–WP7 已完成；后续接手统一读取 `docs/CURRENT.md`、`docs/INDEX.m
 
 ## 8. 对话与模型建议（2026-10-05 快照）
 
-当前执行对话已完成 WP1/WP2/WP2S/WP3/WP4，并在 WP4 后暂停；后续继续读取本规划和 CURRENT，不要让两个对话同时修改同一 checkout。
+当前执行对话已完成 WP1–WP7 和 GitHub 同步验证；后续继续读取本规划和 CURRENT，不要让两个对话同时修改同一 checkout。
 若另开对话，以本规划和 CURRENT 接手；这是工作组织建议，不是对对话速度或质量的实测保证。
 
 - 默认执行：`GPT-6.1-Sol` + `high`。
