@@ -5,6 +5,7 @@ import { queueAccessEvent, queueAuditEvent } from "./audit";
 import i18n from "./i18n";
 import { validateUserJwtPayload } from "./user_identity";
 import { getBooleanValue } from "./utils";
+import { readAdminBrowserSession } from "./admin_browser_session";
 
 export const ADMIN_SESSION_ISSUER = "email-transfer-station";
 export const ADMIN_SESSION_AUDIENCE = "admin-api";
@@ -47,6 +48,7 @@ export const issueAdminSession = async (
     username: string,
     secret: string,
     now = Math.floor(Date.now() / 1000),
+    browserSessionId?: string,
 ): Promise<string> => Jwt.sign({
     iss: ADMIN_SESSION_ISSUER,
     aud: ADMIN_SESSION_AUDIENCE,
@@ -57,12 +59,14 @@ export const issueAdminSession = async (
     nbf: now,
     exp: now + ADMIN_SESSION_TTL_SECONDS,
     jti: crypto.randomUUID(),
+    ...(browserSessionId ? { browser_session_id: browserSessionId } : {}),
 }, secret, "HS256");
 
 export const verifyAdminSession = async (
     token: string | null | undefined,
     secret: string,
     now = Math.floor(Date.now() / 1000),
+    c?: Context<HonoCustomType>,
 ): Promise<AdminActor | null> => {
     if (!token) return null;
     try {
@@ -86,6 +90,11 @@ export const verifyAdminSession = async (
         ) {
             return null;
         }
+        if (payload.browser_session_id !== undefined) {
+            if (!c || typeof payload.browser_session_id !== 'string') return null;
+            const session = await readAdminBrowserSession(c, payload.browser_session_id);
+            if (!session || session.username !== payload.username) return null;
+        }
         return {
             actor_type: "admin",
             actor_label: payload.username,
@@ -102,7 +111,7 @@ const resolveAdminActor = async (c: Context<HonoCustomType>): Promise<AdminAuthR
     const msgs = i18n.getMessages(lang);
     const sessionToken = c.req.raw.headers.get("x-admin-auth");
     if (sessionToken) {
-        const actor = await verifyAdminSession(sessionToken, c.env.JWT_SECRET);
+        const actor = await verifyAdminSession(sessionToken, c.env.JWT_SECRET, undefined, c);
         if (actor) return { actor };
     }
 

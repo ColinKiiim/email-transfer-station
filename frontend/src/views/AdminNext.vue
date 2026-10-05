@@ -335,6 +335,7 @@ const {
     initializeAdminSession,
     needsAdminLogin,
     resetAdminLogin,
+    restoringAdminSession,
     tmpAdminAccount,
     tmpAdminAuth,
     turnstileRef,
@@ -1071,7 +1072,7 @@ onBeforeUnmount(() => {
             v-model:account="tmpAdminAccount" v-model:password="tmpAdminAuth" v-model:cf-token="cfToken"
             :loading="loading" :open-settings="openSettings" @submit="authFunc" />
 
-        <AdminConsoleShell v-else ref="shellRef" :model="shellModel" :actions="shellActions">
+        <AdminConsoleShell v-else-if="!restoringAdminSession" ref="shellRef" :model="shellModel" :actions="shellActions">
             <AdminWorkspace ref="mailListRef" :model="workspaceModel" :actions="workspaceActions" />
             <template #overlays>
                 <AdminOverlays :model="overlayModel" :actions="overlayActions" />

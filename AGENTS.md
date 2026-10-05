@@ -14,6 +14,14 @@ node --test scripts/validate-agent-mail-skill.test.mjs
 node scripts/validate-agent-mail-skill.mjs
 ```
 
+Run the mailbox checks only when the mailbox Skill or its credential contract
+changes; they are not a default repository test pass.
+
+For explicitly delegated AgyCLI work, read
+[`docs/agy-cli-operation-guide.md`](docs/agy-cli-operation-guide.md).
+Independent local Codex/Antigravity sessions follow this file and
+`docs/CURRENT.md`; do not automatically launch or delegate to the other tool.
+
 ## Contracts and authorization
 
 - Admin UI is `/admin`; the canonical admin API is `/api/admin/*`.
@@ -24,10 +32,14 @@ node scripts/validate-agent-mail-skill.mjs
   high-impact `POST` also requires `{"confirm":true}`.
 - Public, user, address-credential, and share-token routes retain their existing
   authentication and resource-level authorization boundaries.
-- Change requests authorize local edits and proportionate local validation.
-  Push, deployment, D1 migration, DNS/domain, GitHub, and Cloudflare writes
-  require explicit authorization for the current task. Never print, log, or
-  commit secrets, runtime configuration, mailbox contents, or browser state.
+- Change requests authorize local edits and the smallest validation needed for
+  the changed behavior. For every ordinary commit, the default delivery is:
+  commit, push the current branch, and deploy production in the same task.
+  An explicit local-only, no-push, or no-deploy instruction overrides that
+  default. D1 migrations, DNS/domain changes, secret or credential rotation,
+  destructive remote actions, rollback, force-push, and non-production writes
+  remain protected actions and require explicit authorization. Never print, log,
+  or commit secrets, runtime configuration, mailbox contents, or browser state.
 - Preserve unrelated dirty work. Do not reset, clean, stash, delete, or broaden
   cleanup without explicit authorization.
 
@@ -40,42 +52,43 @@ node scripts/validate-agent-mail-skill.mjs
   from `pages/`, including its `BACKEND` binding.
 - `references/`, local output, release readiness, receipts, and governance
   archives are not product source and stay outside the tracked tree.
-- Follow the ponytail principle: reuse existing helpers and dependencies, choose
-  the smallest working change, delete before adding abstractions, and leave one
-  meaningful runnable check for non-trivial logic. Do not introduce generic
+- Follow the ponytail principle strictly for every change: trace the actual
+  caller path first, then edit the fewest necessary files; reuse existing
+  helpers and dependencies; delete or narrow before adding; and do not add an
+  abstraction, dependency, config switch, schema copy, or cross-package edit
+  unless the changed behavior cannot work without it. Do not introduce generic
   resource engines, ORMs, event buses, microservices, or a whole-repo language
-  migration for this refactor.
+  migration. Keep unrelated cleanup out of the diff.
 
-## Validation
+## Validation and delivery
 
-Run only checks relevant to the changed package. The normal menu is:
+Do not run or add extra tests by default. Do not run a full suite, repeat a
+check, or validate an unrelated package. Run at most the smallest relevant
+check when the changed contract, security boundary, data-loss risk, build
+output, or runtime behavior requires evidence; skip tests for documentation,
+copy, styling, and other reversible low-risk edits unless the user asks for
+them. Browser matrices, screenshots, E2E, SMTP, Rust/WASM, and security scans
+also require an explicit request or a directly affected boundary. Never turn a
+focused change into a repository-wide validation pass.
+
+The normal product delivery path is:
 
 ```powershell
-cd worker
-corepack pnpm run lint
-corepack pnpm run typecheck
-corepack pnpm run test
-corepack pnpm run build
-
-cd ../frontend
-corepack pnpm run lint
-corepack pnpm run typecheck
-corepack pnpm run test
-corepack pnpm run build
-corepack pnpm run build:pages
-
-cd ../pages
-corepack pnpm install --frozen-lockfile
-node --check functions/_middleware.js
-
-cd ..
+# Run only the one check required by the changed behavior, if any.
 git diff --check
+git add <task-owned-files>
+git commit -m "<message>"
+git push
+pwsh -NoProfile -File skills/email-transfer-station-release-check/scripts/pages-release.ps1 `
+  -Action Immediate -ConfirmDevelopmentValidated -AuthorizeDeploy
 ```
 
-Run E2E, SMTP, Rust/WASM, browser, documentation, or security checks only when
-the changed surface requires them. Browser matrices and screenshot sweeps need
-explicit user direction, except for one local reproduction of a defect that
-source, tests, and build cannot validate.
+Use the Immediate release command once for a same-task product release. It
+performs the required live preflight, one upload, and bounded acceptance; do
+not manually chain `Prepare`, `Verify`, `Preflight`, a second build, or a
+second deploy around it. Use the Deferred manifest flow only for a deliberate
+handoff across tasks or days. The Pages package command remains a low-level
+fallback, not a second default release path.
 
 Use `docs/CURRENT.md`, `docs/INDEX.md`, and the active plan as the current
 maintenance record. Update them once at delivery for material work. Work in

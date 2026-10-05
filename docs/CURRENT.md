@@ -92,8 +92,8 @@ archive outside this repository remains available.
 The canonical product repository is `ColinKiiim/email-transfer-station`.
 [PR #5](https://github.com/ColinKiiim/email-transfer-station/pull/5) is the
 integration record for `origin/main`, retaining the local milestone history and
-the existing required `validate` check. The local `upstream` remote points to
-the original project and is unrelated to the deleted governance repository.
+the existing required `validate` check. The user subsequently authorized removing
+the local `upstream` remote; only the product `origin` remains configured.
 
 CI follow-up commits are `c87b7d9` (EOF whitespace), `15d15d9` (canonical SQL
 included in the E2E Worker image), and `10d96f6` (cross-container proxy bindings
@@ -113,3 +113,62 @@ Validation at code commit `10d96f6`:
 GitHub synchronization does not perform a deployment or remote D1 migration.
 The v0.0.18 production migration remains separately authorized work with the
 backup and compatibility requirements documented in `db/README.md`.
+
+## AgyCLI operation guide — 2026-10-05
+
+Added `docs/agy-cli-operation-guide.md` from the current WANdrop guide, linked
+from `AGENTS.md` and `docs/INDEX.md`. Only repository paths, product references,
+package validation commands, and the local QA URL were adapted. Plans use
+`docs/plans/`; browser evidence uses ignored `output/ui-audits/`; product UI
+decisions use `docs/UI_SPECIFICATION.md`. The delegation, permission, quota
+recovery, staged execution, and browser acceptance flow is preserved.
+
+Validation: reviewed the adaptation diff and document references;
+`git diff --check` passed. This task only adds documentation; no AgyCLI session,
+browser run, push, deployment, or remote D1 migration was performed.
+
+## Administrator login persistence — 2026-10-05
+
+Fixed the one-hour administrator login interruption locally. Password login now
+creates an HttpOnly browser cookie backed by a revocable D1 session. The existing
+one-hour `x-admin-auth` token renews automatically; reopening the same browser
+restores it. Continued use rolls the browser session forward by 90 days, with
+no deadline from the original login. Logout and administrator configuration
+changes invalidate session-backed API tokens immediately. All sign-out surfaces
+revoke the browser session before clearing local credentials. Network/server
+failures and private-site password challenges do not clear administrator login.
+
+The canonical schema now includes `admin_browser_sessions`; the current database
+version is `v0.0.19`. From v0.0.18 the upgrade is additive and retryable. Earlier
+authenticator migration compatibility requirements still apply. Details and
+official Google/Microsoft references are in [`admin-sessions.md`](admin-sessions.md).
+
+Validation:
+
+- Worker suite: 26 files / 107 tests passed; the final session/migration subset
+  passed 14 tests after the credential-invalidation checks were tightened;
+- frontend session/API/admin integration: 4 files / 37 tests passed, including
+  renewal concurrency, request-ID preservation, logout races, and loading states;
+- Worker/frontend lint and typecheck, Worker dry-run build, frontend production
+  and Pages builds, Pages middleware syntax, and `git diff --check` passed;
+- no browser acceptance run, commit, push, deployment, or production D1 write
+  was performed. One fresh password login after rollout establishes persistence
+  for users of the former one-hour-only login.
+
+## Ponytail validation and release policy — 2026-10-05
+
+The repository workflow now uses the smallest necessary diff and the smallest
+relevant check. Full-suite, repeated, unrelated, browser, E2E, and security
+checks are not default work; they require an affected boundary or an explicit
+request. The normal product path is one focused check, commit, push, and the
+single Pages Immediate release command. That command retains live preflight,
+one upload, and bounded acceptance. Prepare/Verify/Deferred is reserved for a
+cross-task handoff. Every ordinary commit follows the default push and
+production release path. Protected writes such as D1, DNS, credentials, deletion,
+rollback, force-push, and non-production changes still require explicit
+authorization.
+
+The release audit found no need to remove the existing safety checks or replace
+the release script. The avoidable cost was treating the full CI menu and the
+Deferred path as every-release steps. WANdrop's push-triggered deployment and
+bounded live check informed this shorter default without copying its workflow.

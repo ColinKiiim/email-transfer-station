@@ -1,4 +1,5 @@
 import type { Context } from "hono";
+import { ADMIN_BROWSER_PATHS } from './admin_browser_session';
 
 export const CORS_ALLOWED_METHODS = ["GET", "HEAD", "POST", "PATCH", "DELETE"] as const;
 export const CORS_ALLOWED_HEADERS = [
@@ -113,6 +114,7 @@ export const corsPolicy = async (
                 "Access-Control-Allow-Methods": CORS_ALLOWED_METHODS.join(", "),
                 "Access-Control-Allow-Headers": CORS_ALLOWED_HEADERS.join(", "),
                 "Access-Control-Max-Age": String(PREFLIGHT_MAX_AGE_SECONDS),
+                ...(ADMIN_BROWSER_PATHS.has(c.req.path) ? { 'Access-Control-Allow-Credentials': 'true' } : {}),
                 "Vary": PREFLIGHT_VARY,
             },
         });
@@ -121,5 +123,7 @@ export const corsPolicy = async (
     if (!ALLOWED_METHODS.has(c.req.method.toUpperCase())) return deniedResponse(false);
     await next();
     c.header("Access-Control-Allow-Origin", allowedOrigin);
+    c.header('Access-Control-Expose-Headers', 'x-auth-reason');
+    if (ADMIN_BROWSER_PATHS.has(c.req.path)) c.header('Access-Control-Allow-Credentials', 'true');
     c.header("Vary", "Origin", { append: true });
 };

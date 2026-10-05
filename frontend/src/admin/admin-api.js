@@ -16,6 +16,8 @@ export const createAdminApi = (fetcher, { requestIdFactory = createAdminRequestI
     })
     return {
     getLoginSettings: () => fetcher('/open_api/admin_login_settings'),
+    restoreSession: () => fetcher('/open_api/admin_session', jsonOptions('POST', {})),
+    logout: () => fetcher('/open_api/admin_logout', jsonOptions('POST', {})),
     login: ({ username, passwordHash, cfToken }) => fetcher('/open_api/admin_login', jsonOptions('POST', {
         username,
         password: passwordHash,

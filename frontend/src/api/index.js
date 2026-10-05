@@ -26,7 +26,46 @@ const requestState = createRequestState((isLoading) => {
     loading.value = isLoading
 });
 
+const ADMIN_BROWSER_PATHS = new Set(['/open_api/admin_login', '/open_api/admin_session', '/open_api/admin_logout']);
+let adminRefreshPromise;
+let adminSessionGeneration = 0;
+let adminSessionClosing = false;
+
+const refreshAdminSession = () => {
+    if (adminSessionClosing) return Promise.reject(new Error('Admin session is signing out'));
+    if (!adminRefreshPromise) {
+        const generation = adminSessionGeneration;
+        adminRefreshPromise = apiFetch('/open_api/admin_session', {
+            method: 'POST', body: '{}', skipAdminSessionRecovery: true,
+        }).then((result) => {
+            if (generation !== adminSessionGeneration) throw new Error('Admin session changed');
+            if (!result?.token) throw new Error('Admin session response missing token');
+            adminAuth.value = result.token;
+            showAdminAuth.value = false;
+            return result;
+        }).finally(() => { adminRefreshPromise = undefined; });
+    }
+    return adminRefreshPromise;
+};
+
+const logoutAdminSession = async () => {
+    adminSessionClosing = true;
+    adminSessionGeneration += 1;
+    try {
+        await apiFetch('/open_api/admin_logout', { method: 'POST', body: '{}', skipAdminSessionRecovery: true });
+        adminAuth.value = '';
+        showAdminAuth.value = true;
+    } finally {
+        adminSessionClosing = false;
+    }
+};
+
 const apiFetch = async (path, options = {}) => {
+    if (!options.skipAdminSessionRecovery) {
+        if (path === '/open_api/admin_session') return refreshAdminSession();
+        if (path === '/open_api/admin_logout') return logoutAdminSession();
+    }
+    if (path === '/open_api/admin_login') adminSessionGeneration += 1;
     requestState.begin();
     try {
         // Get browser fingerprint for request tracking
@@ -59,8 +98,23 @@ const apiFetch = async (path, options = {}) => {
             method: options.method || 'GET',
             data: options.body || null,
             headers,
+            ...(ADMIN_BROWSER_PATHS.has(path) ? { withCredentials: true } : {}),
         });
         if (response.status === 401 && (path.startsWith("/api/admin") || path.startsWith("/admin"))) {
+            // A site-password challenge is separate from administrator session expiry.
+            if (response.headers?.['x-auth-reason'] === 'site_password_required') {
+                showAuth.value = true;
+                throw new ApiRequestError(response.status, response.data);
+            }
+            if (!options.adminSessionRetried) {
+                try {
+                    if (!adminAuth.value || adminAuth.value === adminAuthHeader) await refreshAdminSession();
+                    return await apiFetch(path, { ...options, adminSessionRetried: true });
+                } catch (error) {
+                    // Network/server errors preserve the session; only definite denial signs out.
+                    if (error.status !== 401) throw error;
+                }
+            }
             adminAuth.value = '';
             showAdminAuth.value = true;
         }
@@ -227,6 +281,8 @@ const bindUserAddress = async () => {
 
 export const api = {
     fetch: apiFetch,
+    refreshAdminSession,
+    logoutAdminSession,
     getSettings,
     getOpenSettings,
     getUserOpenSettings,

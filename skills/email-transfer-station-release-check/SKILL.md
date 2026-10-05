@@ -1,17 +1,17 @@
 ---
 name: email-transfer-station-release-check
-description: Prepare, verify, preflight, and run Immediate or Deferred Cloudflare Pages releases for Email Transfer Station. Use only for Pages release readiness, exact prepared-artifact verification, Cloudflare Pages preflight, or an explicitly authorized Pages deployment; ordinary Worker, frontend, E2E, and documentation development does not trigger it. This skill never grants remote-write authority.
+description: Prepare, verify, preflight, and run Immediate or Deferred Cloudflare Pages releases for Email Transfer Station. Use for the default product release path, Pages readiness, exact prepared-artifact verification, or Cloudflare Pages preflight; ordinary Worker, frontend, E2E, and documentation development does not trigger it. This skill never grants authority for protected remote writes.
 ---
 
 # Email Transfer Station release check
 
 ## Scope and route
 
-- Complete ordinary implementation, validation, browser QA, and the local
-  candidate commit under `AGENTS.md` before invoking this release Skill. Never
-  reopen development inside a release action.
+- Complete ordinary implementation, the smallest required validation, and the
+  local candidate commit under `AGENTS.md` before invoking this release Skill.
+  Never reopen development inside a release action.
 - **IMMEDIATE RELEASE:** default when the same development task just finished
-  proportionate tests/build/browser QA, committed clean product `main`, prepared
+  proportionate required checks, committed clean product `main`, prepared
   `frontend/dist`, and made no later source or dist change. Use the canonical
   product root directly; do not create a worktree or readiness manifest.
 - **DEFERRED RELEASE:** use across tasks, days, or handoffs. Require the retained
@@ -21,7 +21,13 @@ description: Prepare, verify, preflight, and run Immediate or Deferred Cloudflar
 
 ## Authorization
 
-Require explicit authorization for the current task before any push, deploy, D1 migration, DNS/domain change, or other GitHub/Cloudflare write. Check current platform documentation only when changing this workflow, after a CLI/API incompatibility, or when the user asks—not for a routine manifest-driven release.
+The repository default authorizes push and the ordinary production release for
+every ordinary commit. An explicit local-only, no-push, or no-deploy
+instruction overrides it. D1 migrations, DNS/domain changes, secret or
+credential rotation, destructive remote actions, rollback, force-push, and
+non-production writes still require explicit authorization. Check current
+platform documentation only when changing this workflow, after a CLI/API
+incompatibility, or when the user asks—not for a routine release.
 
 ## Secrets
 
@@ -29,8 +35,8 @@ Never print, log, commit, or copy credential values, runtime env files, mailbox 
 
 ## Deferred readiness
 
-After proportionate development checks and browser QA pass, finish the
-authorized local candidate commit. For a later deferred release, retain its prepared
+After the smallest required development check passes, finish the local
+candidate commit. For a later deferred release, retain its prepared
 `frontend/dist` and installed Pages Wrangler, then stamp exact-tree readiness:
 
 ```powershell
@@ -79,7 +85,7 @@ or live preflight needs broad investigation, stop before upload.
    pwsh -NoProfile -File skills/email-transfer-station-release-check/scripts/pages-release.ps1 -Action Verify -ManifestPath <manifest>
    ```
 
-2. With current explicit deploy authorization, run `Deploy -AuthorizeDeploy`.
+2. With the repository's ordinary release authorization, run `Deploy -AuthorizeDeploy`.
    The action re-verifies locally, performs one secure live auth/project/
    metadata-authoritative `production_branch`/`BACKEND`/rollback preflight, then
    runs exactly one `wrangler pages deploy ../frontend/dist` from `pages/`,

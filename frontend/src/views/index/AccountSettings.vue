@@ -24,6 +24,12 @@ const confirmPassword = ref('')
 const { locale, t } = useScopedI18n('views.index.AccountSettings')
 
 const logout = async () => {
+    try {
+        await api.logoutAdminSession()
+    } catch (error) {
+        message.error(error.message || 'Logout failed')
+        return
+    }
     // Shared teardown: clears every credential, not only this address's JWT.
     clearSessionStorageKeys()
     jwt.value = '';
@@ -33,6 +39,7 @@ const logout = async () => {
 
 const deleteAccount = async () => {
     try {
+        await api.logoutAdminSession()
         await api.fetch(`/api/delete_address`, {
             method: 'DELETE'
         });

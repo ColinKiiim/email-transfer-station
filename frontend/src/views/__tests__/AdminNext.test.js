@@ -70,6 +70,7 @@ const mail = () => ({
 let runtime
 
 const fixtureResponse = async (path, options = {}) => {
+    if (path === '/open_api/admin_session') throw Object.assign(new Error('No browser session'), { status: 401 })
     if (path === '/open_api/admin_login_settings') {
         return { accountHint: '', enableGlobalTurnstileCheck: false, cfTurnstileSiteKey: '' }
     }

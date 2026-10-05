@@ -4,6 +4,8 @@
 public maintenance records that apply to the single product repository.
 
 - Current state: [`CURRENT.md`](CURRENT.md)
+- AgyCLI operation guide: [`agy-cli-operation-guide.md`](agy-cli-operation-guide.md)
+- Administrator session policy and rollout: [`admin-sessions.md`](admin-sessions.md)
 - Product integration: [GitHub PR #5](https://github.com/ColinKiiim/email-transfer-station/pull/5)
 - Maintainability refactor plan:
   [`plans/PLAN_2026-10-05_maintainability-refactor.md`](plans/PLAN_2026-10-05_maintainability-refactor.md)

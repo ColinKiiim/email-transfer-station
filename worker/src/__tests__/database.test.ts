@@ -37,6 +37,15 @@ const relationalStructure = (db: ReturnType<typeof sqliteD1>) => db.sqlite.prepa
 }));
 
 describe('single-source database upgrades', () => {
+    it('adds persistent admin sessions to v0.0.18 without changing existing resources and retries safely', async () => {
+        const db = fixture();
+        db.sqlite.exec(sql('schema.sql'));
+        db.sqlite.exec("DROP TABLE admin_browser_sessions; INSERT INTO settings (key,value) VALUES ('db_version','v0.0.18'); INSERT INTO users (user_email,password) VALUES ('existing@example.test','fixture')");
+        await migrateDatabase(db.db);
+        expect(db.sqlite.prepare('SELECT user_email FROM users').get()?.user_email).toBe('existing@example.test');
+        expect(db.sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'admin_browser_sessions'").get()?.name).toBe('admin_browser_sessions');
+        expect(await migrateDatabase(db.db)).toEqual({ from: CONSTANTS.DB_VERSION, changed: false });
+    });
     it('initializes from the canonical schema and repeats without changing structure', async () => {
         const db = fixture(), canonical = fixture();
         canonical.sqlite.exec(sql('schema.sql'));

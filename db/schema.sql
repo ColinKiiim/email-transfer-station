@@ -308,6 +308,15 @@ CREATE INDEX IF NOT EXISTS idx_access_events_resource ON access_events(resource_
 CREATE INDEX IF NOT EXISTS idx_access_events_status ON access_events(status);
 CREATE INDEX IF NOT EXISTS idx_access_events_ip ON access_events(ip);
 
+CREATE TABLE IF NOT EXISTS admin_browser_sessions (
+    id TEXT PRIMARY KEY,
+    username TEXT NOT NULL,
+    credential_version TEXT NOT NULL,
+    expires_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_browser_sessions_expiry ON admin_browser_sessions(expires_at);
+
 CREATE TABLE IF NOT EXISTS managed_domains (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     domain TEXT UNIQUE NOT NULL,
