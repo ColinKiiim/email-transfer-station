@@ -14,6 +14,11 @@ node --test scripts/validate-agent-mail-skill.test.mjs
 node scripts/validate-agent-mail-skill.mjs
 ```
 
+For explicitly delegated AgyCLI work, read
+[`docs/agy-cli-operation-guide.md`](docs/agy-cli-operation-guide.md).
+Independent local Codex/Antigravity sessions follow this file and
+`docs/CURRENT.md`; do not automatically launch or delegate to the other tool.
+
 ## Contracts and authorization
 
 - Admin UI is `/admin`; the canonical admin API is `/api/admin/*`.

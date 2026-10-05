@@ -92,8 +92,8 @@ archive outside this repository remains available.
 The canonical product repository is `ColinKiiim/email-transfer-station`.
 [PR #5](https://github.com/ColinKiiim/email-transfer-station/pull/5) is the
 integration record for `origin/main`, retaining the local milestone history and
-the existing required `validate` check. The local `upstream` remote points to
-the original project and is unrelated to the deleted governance repository.
+the existing required `validate` check. The user subsequently authorized removing
+the local `upstream` remote; only the product `origin` remains configured.
 
 CI follow-up commits are `c87b7d9` (EOF whitespace), `15d15d9` (canonical SQL
 included in the E2E Worker image), and `10d96f6` (cross-container proxy bindings
@@ -113,3 +113,16 @@ Validation at code commit `10d96f6`:
 GitHub synchronization does not perform a deployment or remote D1 migration.
 The v0.0.18 production migration remains separately authorized work with the
 backup and compatibility requirements documented in `db/README.md`.
+
+## AgyCLI operation guide — 2026-10-05
+
+Added `docs/agy-cli-operation-guide.md` from the current WANdrop guide, linked
+from `AGENTS.md` and `docs/INDEX.md`. Only repository paths, product references,
+package validation commands, and the local QA URL were adapted. Plans use
+`docs/plans/`; browser evidence uses ignored `output/ui-audits/`; product UI
+decisions use `docs/UI_SPECIFICATION.md`. The delegation, permission, quota
+recovery, staged execution, and browser acceptance flow is preserved.
+
+Validation: reviewed the adaptation diff and document references;
+`git diff --check` passed. This task only adds documentation; no AgyCLI session,
+browser run, push, deployment, or remote D1 migration was performed.
