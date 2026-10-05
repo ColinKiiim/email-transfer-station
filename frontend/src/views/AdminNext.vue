@@ -598,7 +598,6 @@ const activePanels = computed(() => {
     if (view === 'flow') {
         return [
             { id: 'mails', title: t('panelMailRecords'), columns: tableSpecs.mails, rows: filterRows(mailRows.value), kind: 'flow' },
-            { id: 'unknown', title: t('panelExceptionQueue'), columns: tableSpecs.risks, rows: filterRows(unknownRows.value), kind: 'access' },
             { id: 'logs', title: t('panelProcessingLogs'), columns: tableSpecs.logs, rows: filterRows(processingRows.value), kind: 'logs' },
         ]
     }

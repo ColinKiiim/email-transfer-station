@@ -33,13 +33,6 @@ export async function scheduled(event: ScheduledEvent, env: Bindings, ctx: any) 
             autoCleanupSetting.cleanMailsDays
         );
     }
-    if (autoCleanupSetting.enableUnknowMailsAutoCleanup) {
-        await cleanup(
-            { env: env, } as Context<HonoCustomType>,
-            "mails_unknow",
-            autoCleanupSetting.cleanUnknowMailsDays
-        );
-    }
     if (autoCleanupSetting.enableSendBoxAutoCleanup) {
         await cleanup(
             { env: env, } as Context<HonoCustomType>,

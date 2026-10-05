@@ -137,7 +137,7 @@ describe('admin mail-flow model', () => {
         }, 'flow')).toEqual([rows[1]])
     })
 
-    it('builds queue and domain counts from normalized rows', () => {
+    it('builds mail and domain counts from normalized rows', () => {
         const mails = normalizeAdminMailRows([
             rawMail(1),
             rawMail(2, { address: 'team@example.test', attachments: [] }),
@@ -151,7 +151,7 @@ describe('admin mail-flow model', () => {
             unreadCount: 2,
         })
 
-        expect(hierarchy.queues.map((row) => row.count)).toEqual([12, 2, 2, 1, 1])
+        expect(hierarchy.queues.map((row) => row.count)).toEqual([12, 2, 2, 1])
         expect(hierarchy.domains[0]).toMatchObject({
             domain: 'example.test',
             mails: 2,

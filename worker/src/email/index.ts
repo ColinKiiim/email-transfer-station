@@ -1,6 +1,6 @@
 import { Context } from "hono";
 
-import { getBooleanValue, getJsonSetting } from "../utils";
+import { getBooleanValue } from "../utils";
 import { sendMailToTelegram } from "../telegram_api";
 import { auto_reply } from "./auto_reply";
 import { isBlocked } from "./black_list";
@@ -10,8 +10,6 @@ import { check_if_junk_mail } from "./check_junk";
 import { remove_attachment_if_need } from "./check_attachment";
 import { extractEmailInfo } from "./ai_extract";
 import { forwardEmail } from "./forward";
-import { EmailRuleSettings } from "../models";
-import { CONSTANTS } from "../constants";
 import { compressText } from "../gzip";
 import { resolveInboundRecipient } from "./recipient";
 import {
@@ -52,25 +50,6 @@ async function email(message: ForwardableEmailMessage, env: Bindings, ctx: Execu
         }
     } catch (error) {
         console.error("check junk mail error", error);
-    }
-
-    // check if unknown address mail
-    try {
-        const emailRuleSettings = await getJsonSetting<EmailRuleSettings>(
-            { env: env } as Context<HonoCustomType>, CONSTANTS.EMAIL_RULE_SETTINGS_KEY
-        );
-        if (emailRuleSettings?.blockReceiveUnknowAddressEmail && !inboundRecipient.isVerificationRecipient) {
-            const db_address_id = await env.DB.prepare(
-                `SELECT id FROM address where name = ? `
-            ).bind(inboundRecipient.address).first("id");
-            if (!db_address_id) {
-                message.setReject("Unknown address");
-                console.log(`Unknown address mail from ${message.from} to ${inboundRecipient.address}`);
-                return;
-            }
-        }
-    } catch (error) {
-        console.error("check unknown address mail error", error);
     }
 
     // remove attachment if configured or size > 2MB

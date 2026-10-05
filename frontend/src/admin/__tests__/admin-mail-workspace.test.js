@@ -318,17 +318,7 @@ describe('AdminMailWorkspace selection controls and accessible DOM structure', (
 
     it('renders valid list and listitem ARIA semantics and aria-current for active row', () => {
         const model = createMockMailModel({
-            filteredUnknownRows: [
-                {
-                    id: 'unknown-9',
-                    owner: 'nobody@example.test',
-                    ownerDisplay: 'nobody',
-                    title: 'Bounced mail',
-                    detail: 'Delivery failed',
-                    status: 'risk',
-                    level: 'warning',
-                },
-            ],
+            filteredUnknownRows: [],
         })
         const actions = createMockMailActions({
             isSelected: (kind, row) => (kind === 'flow' && row.id === 'mail-1') || (kind === 'exception' && row.id === 'unknown-9'),
@@ -350,13 +340,6 @@ describe('AdminMailWorkspace selection controls and accessible DOM structure', (
         expect(normalRows[1].attributes('role')).toBe('listitem')
         expect(normalRows[1].attributes('tabindex')).toBe('0')
         expect(normalRows[1].attributes('aria-current')).toBeUndefined()
-
-        const exceptionRows = wrapper.findAll('.mail-row.exception')
-        expect(exceptionRows).toHaveLength(1)
-        expect(exceptionRows[0].attributes('role')).toBe('listitem')
-        expect(exceptionRows[0].attributes('tabindex')).toBe('0')
-        expect(exceptionRows[0].attributes('aria-current')).toBe('true')
-        expect(exceptionRows[0].element.tagName.toLowerCase()).not.toBe('button')
 
         wrapper.unmount()
     })

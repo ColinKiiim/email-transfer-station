@@ -536,19 +536,6 @@ export const cleanup = async (
                 DELETE FROM raw_mails WHERE created_at < datetime('now', '-${cleanDays} day')`
             ).run();
             break;
-        case "mails_unknow":
-            await c.env.DB.prepare(`
-                DELETE FROM mail_read_states
-                WHERE mail_id IN (
-                    SELECT id FROM raw_mails WHERE address NOT IN
-                    (select name from address) AND created_at < datetime('now', '-${cleanDays} day')
-                )`
-            ).run();
-            await c.env.DB.prepare(`
-                DELETE FROM raw_mails WHERE address NOT IN
-                (select name from address) AND created_at < datetime('now', '-${cleanDays} day')`
-            ).run();
-            break;
         case "sendbox":
             await c.env.DB.prepare(`
                 DELETE FROM sendbox WHERE created_at < datetime('now', '-${cleanDays} day')`

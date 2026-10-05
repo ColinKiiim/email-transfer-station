@@ -182,7 +182,6 @@ export const filterAdminRows = (rows, filters, view) => rows.filter((row) => mat
 
 export const buildAdminMailHierarchy = ({
     mails,
-    unknownMails,
     domains,
     addresses,
     totalCount,
@@ -202,7 +201,6 @@ export const buildAdminMailHierarchy = ({
             { id: 'queue-unread', label: t('unread'), count: unreadCount, status: 'unread' },
             { id: 'queue-saved', label: t('saved'), count: mails.filter((row) => row.isSaved).length, status: 'saved' },
             { id: 'queue-attachment', label: t('hasAttachment'), count: attachmentCount, status: 'attachment' },
-            { id: 'queue-unknown', label: t('unknownRecipient'), count: unknownMails.length, status: 'unknown' },
         ],
         domains: domains.map((domain) => ({
             ...domain,

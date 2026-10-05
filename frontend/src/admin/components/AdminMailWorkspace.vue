@@ -372,27 +372,7 @@ defineExpose({
                     </span>
                 </div>
 
-                <div v-if="model.filteredUnknownRows.length" class="queue-section">
-                    <div class="queue-title">{{ t('exceptionQueue') }}</div>
-                    <div v-for="row in model.filteredUnknownRows" :key="row.id" class="mail-row exception"
-                        role="listitem" :aria-current="actions.isSelected('exception', row) ? 'true' : undefined" tabindex="0"
-                        :class="{ 'is-selected': actions.isSelected('exception', row) }"
-                        @click="actions.selectRow('exception', row.id)"
-                        @keydown="actions.handleRowKey($event, 'exception', row)">
-                        <span class="mail-sender" :title="row.owner">{{ row.ownerDisplay || row.owner }}</span>
-                        <span class="mail-main">
-                            <strong class="mail-subject">{{ row.title }}</strong>
-                            <span v-if="row.detail" class="mail-snippet-sep">-</span>
-                            <small v-if="row.detail" class="mail-body-preview">{{ row.detail }}</small>
-                        </span>
-                        <span class="mail-meta">
-                            <span class="status" :class="statusClass(row.statusTone || row.status)">{{ row.status }}</span>
-                            <span class="mail-time">{{ row.level }}</span>
-                        </span>
-                    </div>
-                </div>
-
-                <AdminEmptyState v-if="model.filteredMailRows.length === 0 && model.filteredUnknownRows.length === 0"
+                <AdminEmptyState v-if="model.filteredMailRows.length === 0"
                     :action-label="model.hasActiveFilters ? t('clearFilters') : ''"
                     @action="actions.handleAction('reset-filters')" />
             </div>
