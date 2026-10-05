@@ -839,7 +839,11 @@ const submitActionModal = async () => {
 const currentRail = computed(() => {
     const context = detailContext.value
     if (context === 'flow') return buildAdminMailRail(currentDisplayMail.value || currentMail.value)
-    if (context === 'exception') return buildAdminExceptionRail(currentException.value)
+    if (context === 'exception') return buildAdminExceptionRail(currentException.value) || {
+        title: t('railEmptyTitle'),
+        subtitle: t('railEmptySubtitle'),
+        empty: true,
+    }
     if (context === 'identity') return buildAdminAddressRail(currentAddress.value)
     if (context === 'users') return buildAdminUserRail(currentUser.value)
     if (context === 'routing') return buildAdminDomainRail(currentDomain.value)
