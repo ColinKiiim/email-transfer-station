@@ -8,7 +8,7 @@ import { api } from '../api'
 import { useGlobalState } from '../store'
 import { hashPassword } from '../utils'
 import { processItem } from '../utils/email-parser'
-import { adminApi, loadAdminSnapshot, loadRemainingAdminMails } from '../admin/admin-api'
+import { adminApi, loadAdminViewSnapshot } from '../admin/admin-api'
 import { useAdminConsoleActions } from '../admin/admin-console-actions'
 import { useAdminFeedback } from '../admin/admin-feedback'
 import AdminConsoleShell from '../admin/components/AdminConsoleShell.vue'
@@ -279,26 +279,11 @@ const adminNotificationSink = {
 const fetchAdminData = async () => {
     if (!showAdminPage.value) return
     const generation = ++adminLoadGeneration
-    let overview
-    try {
-        overview = await adminApi.getOverview()
-    } catch (error) {
-        if (showAdminAuth.value) return
-        throw error
-    }
-    const snapshot = await loadAdminSnapshot(adminApi, { overview })
+    const snapshot = await loadAdminViewSnapshot(adminApi, activeView.value)
     if (generation !== adminLoadGeneration) return
     Object.assign(live, snapshot)
     live.fetchedAdmin = true
     live.lastSynced = new Date().toLocaleTimeString('zh-CN', { hour12: false })
-    void loadRemainingAdminMails(adminApi, snapshot.mailTotalCount, (rows) => {
-        if (generation !== adminLoadGeneration || showAdminAuth.value) return false
-        const loaded = new Set(live.mails.map((row) => row.id))
-        live.mails.push(...rows.filter((row) => !loaded.has(row.id)))
-        return true
-    }).catch((error) => {
-        if (generation === adminLoadGeneration && !showAdminAuth.value) recordLoadError('mails', error)
-    })
 }
 
 /*
@@ -339,6 +324,10 @@ const refreshUsers = async () => {
         recordLoadError('users', error)
     }
 }
+
+watch(activeView, () => {
+    if (live.fetchedAdmin && showAdminPage.value && !showAdminAuth.value) void refreshAll()
+})
 
 const {
     authFunc,
@@ -431,6 +420,13 @@ const {
         if (activeView.value === 'flow') replaceRouteQuery({ mailId: undefined, mode: undefined }, ['item'])
     },
     onParseError: (error) => console.error(error),
+    getMailTotalCount: () => live.mailTotalCount,
+    loadMailPage: async (page) => {
+        const response = await adminApi.listMails({ limit: 25, offset: (page - 1) * 25 })
+        const rows = Array.isArray(response?.results) ? response.results : []
+        const loaded = new Set(live.mails.map((row) => row.id))
+        live.mails.push(...rows.filter((row) => !loaded.has(row.id)))
+    },
 })
 
 const routeRows = computed(() => buildAdminRouteRows(domainRows.value, live.mailWebhook))
@@ -986,6 +982,7 @@ const workspaceActions = {
     setView,
     openMailFromAddress,
     copyText,
+    requestConfirm,
     openSharePackage,
     isMailSelected,
     toggleMailSelection,

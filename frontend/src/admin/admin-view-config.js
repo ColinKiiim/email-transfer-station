@@ -18,6 +18,7 @@ export const VIEW_META = {
     delivery: { kicker: 'send access and notifications' },
     users: { kicker: 'user accounts and roles' },
     access: { kicker: 'share packages and audit' },
+    authenticators: { kicker: 'admin-managed TOTP distribution' },
     ops: { kicker: 'worker, d1, kv and policies' },
 }
 
@@ -43,6 +44,7 @@ export const NAV_GROUPS = [
         items: [
             { id: 'users', badgeKey: 'users', icon: 'users' },
             { id: 'access', badgeKey: 'access', icon: 'access' },
+            { id: 'authenticators', badgeKey: 'authenticators', icon: 'lock' },
             { id: 'ops', badgeKey: 'ops', icon: 'ops' },
         ],
     },

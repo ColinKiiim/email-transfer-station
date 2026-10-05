@@ -1,13 +1,14 @@
 import { Context } from 'hono'
 
-import { commonParseMail, updateAddressUpdatedAt } from '../common'
+import { updateAddressUpdatedAt } from '../common'
+import { parseMail } from '../email/mail_parser'
 import { resolveRawEmailRow } from '../gzip'
 import { getAddressMailReadActor, listRawMailsWithReadState } from '../mail_read_state';
 import { RawMailRow } from '../models';
 
 const toParsedMailRow = async (row: RawMailRow): Promise<Record<string, unknown>> => {
     const raw = typeof row.raw === 'string' ? row.raw : '';
-    const parsed = raw ? await commonParseMail({ rawEmail: raw }) : undefined;
+    const parsed = raw ? await parseMail({ rawEmail: raw }) : undefined;
     const { raw: _raw, ...rest } = row;
     return {
         ...rest,

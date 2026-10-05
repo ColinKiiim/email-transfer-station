@@ -2,7 +2,6 @@ import { api } from '../api'
 import { createAdminRequestId } from '../security/admin-request'
 
 const ADMIN_MAIL_PAGE_LIMIT = 25
-const ADMIN_MAIL_FETCH_MAX = 500
 
 const pathId = (value) => encodeURIComponent(String(value))
 const jsonOptions = (method, body) => ({
@@ -53,6 +52,15 @@ export const createAdminApi = (fetcher, { requestIdFactory = createAdminRequestI
     getAiSettings: () => fetcher('/api/admin/ai_extract/settings'),
     listSenderAccess: () => fetcher('/api/admin/address_sender?limit=20&offset=0'),
     listSendBox: () => fetcher('/api/admin/sendbox?limit=10&offset=0'),
+    listAuthenticators: () => fetcher('/api/admin/authenticators'),
+    createAuthenticator: ({ input, label }) => fetcher('/api/admin/authenticators', writeOptions('POST', { input, label, confirm: true })),
+    deleteAuthenticator: (id) => fetcher(`/api/admin/authenticators/${pathId(id)}`, writeOptions('DELETE', { confirm: true })),
+    listAuthenticatorAssignments: (id) => fetcher(`/api/admin/authenticators/${pathId(id)}/assignments`),
+    assignAuthenticator: (id, userId) => fetcher(`/api/admin/authenticators/${pathId(id)}/assignments`, writeOptions('POST', { user_id: userId, confirm: true })),
+    unassignAuthenticator: (id, userId) => fetcher(`/api/admin/authenticators/${pathId(id)}/assignments/${pathId(userId)}`, writeOptions('DELETE', { confirm: true })),
+    createAuthenticatorShare: (id, expiresAt) => fetcher(`/api/admin/authenticators/${pathId(id)}/shares`, writeOptions('POST', { expires_at: expiresAt || null, confirm: true })),
+    listAuthenticatorShares: (id) => fetcher(`/api/admin/authenticators/${pathId(id)}/shares`),
+    revokeAuthenticatorShare: (id, shareId) => fetcher(`/api/admin/authenticators/${pathId(id)}/shares/${pathId(shareId)}`, writeOptions('DELETE', { confirm: true })),
 
     createUser: ({ email, passwordHash, username, displayName }) => fetcher('/api/admin/users', writeOptions('POST', {
         email: typeof email === 'string' ? email.trim() : '',
@@ -181,14 +189,6 @@ export const normalizeAdminSnapshot = (raw, errors = []) => ({
     errors: [...errors],
 })
 
-export const loadRemainingAdminMails = async (client, total, onPage) => {
-    const upperBound = Math.min(Number(total) || 0, ADMIN_MAIL_FETCH_MAX)
-    for (let offset = ADMIN_MAIL_PAGE_LIMIT; offset < upperBound; offset += ADMIN_MAIL_PAGE_LIMIT) {
-        const rows = resultRows(await client.listMails({ limit: ADMIN_MAIL_PAGE_LIMIT, offset }))
-        if (!rows.length || onPage(rows) === false) break
-    }
-}
-
 export const loadAdminSnapshot = async (client = adminApi, seed = {}) => {
     const errors = []
     const recordError = (label, error) => {
@@ -227,5 +227,78 @@ export const loadAdminSnapshot = async (client = adminApi, seed = {}) => {
     const entries = await Promise.all(
         reads.map(([key, label, loader, shouldRecord]) => safeRead(key, label, loader, shouldRecord)),
     )
+    return normalizeAdminSnapshot(Object.fromEntries(entries), errors)
+}
+
+const VIEW_READS = {
+    overview: [
+        ['overview', 'overview', 'getOverview'],
+        ['statistics', 'statistics', 'getStatistics'],
+        ['domains', 'domains', 'listDomains'],
+        ['mailDomains', 'mail domains', 'listMailDomains'],
+        ['mails', 'mails', 'listMails'],
+        ['auditEvents', 'audit events', 'listAuditEvents'],
+        ['accessEvents', 'access events', 'listAccessEvents'],
+        ['workerConfig', 'worker configs', 'getWorkerConfig'],
+        ['dbVersion', 'db version', 'getDbVersion'],
+    ],
+    flow: [
+        ['domains', 'domains', 'listDomains'],
+        ['mailDomains', 'mail domains', 'listMailDomains'],
+        ['mailAddresses', 'mail addresses', 'listMailAddresses'],
+        ['mails', 'mails', 'listMails'],
+        ['unknownMails', 'unknown mails', 'listUnknownMails'],
+    ],
+    identity: [
+        ['domains', 'domains', 'listDomains'],
+        ['addresses', 'addresses', 'listAddresses'],
+        ['users', 'users', 'listUsers'],
+    ],
+    routing: [
+        ['overview', 'overview', 'getOverview'],
+        ['domains', 'domains', 'listDomains'],
+        ['mailDomains', 'mail domains', 'listMailDomains'],
+        ['workerConfig', 'worker configs', 'getWorkerConfig'],
+    ],
+    delivery: [
+        ['mailWebhook', 'mail webhook', 'getMailWebhook'],
+        ['globalWebhook', 'global webhook', 'getGlobalWebhook'],
+        ['telegram', 'telegram', 'getTelegramStatus', false],
+        ['aiSettings', 'ai extract', 'getAiSettings'],
+        ['senderAccess', 'sender access', 'listSenderAccess'],
+        ['sendBox', 'sendbox', 'listSendBox'],
+    ],
+    users: [
+        ['users', 'users', 'listUsers'],
+        ['addresses', 'addresses', 'listAddresses'],
+    ],
+    access: [
+        ['accessPackages', 'access packages', 'listAccessPackages'],
+        ['auditEvents', 'audit events', 'listAuditEvents'],
+        ['accessEvents', 'access events', 'listAccessEvents'],
+    ],
+    ops: [
+        ['workerConfig', 'worker configs', 'getWorkerConfig'],
+        ['dbVersion', 'db version', 'getDbVersion'],
+        ['mailWebhook', 'mail webhook', 'getMailWebhook'],
+        ['globalWebhook', 'global webhook', 'getGlobalWebhook'],
+        ['telegram', 'telegram', 'getTelegramStatus', false],
+        ['aiSettings', 'ai extract', 'getAiSettings'],
+    ],
+    authenticators: [],
+}
+
+export const loadAdminViewSnapshot = async (client = adminApi, view = 'overview') => {
+    const errors = []
+    const reads = VIEW_READS[view] || VIEW_READS.overview
+    const safeRead = async ([key, label, method, shouldRecord = true]) => {
+        try {
+            return [key, await client[method]()]
+        } catch (error) {
+            if (shouldRecord) errors.push(`${label}: ${error?.message || error || 'error'}`)
+            return [key, null]
+        }
+    }
+    const entries = await Promise.all(reads.map(safeRead))
     return normalizeAdminSnapshot(Object.fromEntries(entries), errors)
 }

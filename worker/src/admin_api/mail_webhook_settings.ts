@@ -1,7 +1,8 @@
 import { Context } from "hono";
 import { CONSTANTS } from "../constants";
 import { WebhookSettings, RawMailRow } from "../models";
-import { commonParseMail, sendWebhook } from "../common";
+import { sendWebhook } from "../common";
+import { parseMail } from "../email/mail_parser";
 import { resolveRawEmail } from "../gzip";
 import { recordAuditEvent } from "../audit";
 
@@ -40,7 +41,7 @@ async function testWebhookSettings(c: Context<HonoCustomType>): Promise<Response
     const mailId = mailRow?.id;
     const raw = mailRow ? await resolveRawEmail(mailRow) : "";
     const parsedEmailContext: ParsedEmailContext = { rawEmail: raw };
-    const parsedEmail = await commonParseMail(parsedEmailContext);
+    const parsedEmail = await parseMail(parsedEmailContext);
     const res = await sendWebhook(settings, {
         id: String(mailId || 0),
         url: c.env.FRONTEND_URL ? `${c.env.FRONTEND_URL}?mail_id=${mailId}` : "",

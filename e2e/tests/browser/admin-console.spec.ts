@@ -43,7 +43,7 @@ test.describe('Admin console', () => {
       });
       expect(seeded.ok()).toBe(true);
 
-      await page.goto('/admin?view=flow');
+      await page.goto('/zh/admin?view=flow');
       await expect(page.locator('.admin-next.app')).toBeVisible();
       const row = page.locator('.mail-row', { hasText: subject });
       await expect(row).toBeVisible();
@@ -54,33 +54,33 @@ test.describe('Admin console', () => {
 
       const detailUrl = page.url();
       await page.reload();
-      await expect(page.locator('.mail-row[aria-selected="true"]', { hasText: subject })).toBeVisible();
+      await expect(page.locator('.mail-row[aria-current="true"]', { hasText: subject })).toBeVisible();
 
       const search = page.locator('.searchbox input');
       await search.fill(subject);
       await expect(page).toHaveURL(/q=Admin(?:\+|%20)console/);
       await expect(page.locator('.mail-row', { hasText: subject })).toHaveCount(1);
 
-      await page.goto('/admin?view=overview');
+      await page.goto('/zh/admin?view=overview');
       await page.goto(detailUrl);
       await page.goBack();
       await expect(page).toHaveURL(/view=overview/);
       await page.goForward();
       await expect(page).toHaveURL(/view=flow/);
-      await expect(page.locator('.mail-row[aria-selected="true"]', { hasText: subject })).toBeVisible();
+      await expect(page.locator('.mail-row[aria-current="true"]', { hasText: subject })).toBeVisible();
 
-      page.once('dialog', (dialog) => dialog.accept());
-      await page.locator('.mail-reader-actions .danger, .mail-detail-panel .danger').click();
+      await page.locator('.mail-detail-panel .panel-head .danger').click();
+      await expect(page.getByTestId('confirm-dialog-backdrop')).toBeVisible();
+      await page.getByTestId('confirm-submit').click();
       await expect(page.locator('.toast')).toContainText('已删除 1 封生产邮件');
       await expect(page.locator('.mail-row', { hasText: subject })).toHaveCount(0);
 
-      await page.goto('/admin?view=identity');
+      await page.goto('/zh/admin?view=identity');
       const addressRow = page.locator('.panel-addresses tbody tr', { hasText: address.address });
       await expect(addressRow).toBeVisible();
       await addressRow.click();
       const addressDetails = page.getByRole('dialog', { name: '地址详情' });
       await expect(addressDetails).toBeVisible();
-      page.once('dialog', (dialog) => dialog.accept());
       await addressDetails.getByRole('button', { name: '显示凭证', exact: true }).click();
       const oneTimeResult = page.getByTestId('one-time-result');
       await expect(oneTimeResult).toBeVisible();

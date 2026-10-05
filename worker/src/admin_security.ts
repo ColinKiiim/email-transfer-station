@@ -23,6 +23,7 @@ const CONFIRMED_POST_PATHS = [
     /^\/api\/admin\/domains\/[^/]+\/(?:verify\/start|cloudflare\/setup)$/,
     /^\/api\/admin\/mail_webhook\/test$/,
     /^\/api\/admin\/telegram\/init$/,
+    /^\/api\/admin\/authenticators(?:\/[^/]+)?(?:\/assignments|\/shares)?$/,
 ];
 
 type AdminAuthResolution = {

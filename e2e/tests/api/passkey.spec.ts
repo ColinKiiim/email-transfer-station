@@ -72,7 +72,7 @@ test.describe('Passkey API', () => {
     expect(options.allowCredentials).toBeInstanceOf(Array);
   });
 
-  test('authenticate_response with invalid credential returns error', async ({ request }) => {
+  test('authenticate_response with invalid credential returns 400', async ({ request }) => {
     const res = await request.post(`${WORKER_URL}/user_api/passkey/authenticate_response`, {
       data: {
         domain: 'localhost',
@@ -81,7 +81,7 @@ test.describe('Passkey API', () => {
       },
     });
     expect(res.ok()).toBe(false);
-    expect(res.status()).toBe(404);
+    expect(res.status()).toBe(400);
   });
 
   test('passkey list is empty for new user', async ({ request }) => {

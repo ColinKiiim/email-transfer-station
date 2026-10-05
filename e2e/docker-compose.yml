@@ -111,6 +111,7 @@ services:
       PROXY_URL: http://worker:8787
       PORT: "8025"
       IMAP_PORT: "11143"
+      BIND_HOST: "0.0.0.0"
       ALLOW_INSECURE_AUTH: "true"
     depends_on:
       worker:
@@ -127,6 +128,7 @@ services:
       PROXY_URL: http://worker:8787
       PORT: "8026"
       IMAP_PORT: "11144"
+      BIND_HOST: "0.0.0.0"
       smtp_tls_cert: /certs/cert.pem
       smtp_tls_key: /certs/key.pem
       imap_tls_cert: /certs/cert.pem

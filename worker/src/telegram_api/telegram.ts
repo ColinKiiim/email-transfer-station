@@ -8,7 +8,7 @@ import { getBooleanValue, getJsonObjectValue, getStringValue } from '../utils';
 import { TelegramSettings } from "./settings";
 import { sendTelegramAttachments } from "./tg_file_upload";
 import { bindTelegramAddress, deleteTelegramAddress, jwtListToAddressData, tgUserNewAddress, unbindTelegramAddress, unbindTelegramByAddress } from "./common";
-import { commonParseMail } from "../common";
+import { parseMail as parseRawMail } from "../email/mail_parser";
 import { resolveRawEmail } from "../gzip";
 import { RawMailRow } from "../models";
 import { UserFromGetMe } from "telegraf/types";
@@ -383,7 +383,7 @@ const parseMail = async (
         return {};
     }
     try {
-        const parsedEmail = await commonParseMail(parsedEmailContext);
+        const parsedEmail = await parseRawMail(parsedEmailContext);
         let parsedText = parsedEmail?.text || "";
         if (parsedText.length && parsedText.length > 1000) {
             parsedText = parsedEmail?.text.substring(0, 1000) + `\n\n...\n${msgs.TgMsgTooLongMsg}`;

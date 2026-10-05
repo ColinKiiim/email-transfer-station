@@ -1,0 +1,4 @@
+interface:
+  display_name: "Email Transfer Station UI Review"
+  short_description: "Risk-tiered browser review for UI changes"
+  default_prompt: "Use $email-transfer-station-ui-review to verify this UI change with the smallest sufficient browser scope."

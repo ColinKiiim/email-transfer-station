@@ -10,6 +10,7 @@ COPY worker/patches/ patches/
 RUN pnpm install --frozen-lockfile
 
 COPY worker/src/ src/
+COPY db/ /app/db/
 COPY worker/tsconfig.json ./
 ARG WRANGLER_TOML=e2e/fixtures/wrangler.toml.e2e
 COPY ${WRANGLER_TOML} wrangler.toml

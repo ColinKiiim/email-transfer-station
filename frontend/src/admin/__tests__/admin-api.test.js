@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
     createAdminApi,
     loadAdminSnapshot,
-    loadRemainingAdminMails,
+    loadAdminViewSnapshot,
     normalizeAdminSnapshot,
 } from '../admin-api'
 
@@ -147,7 +147,7 @@ describe('admin snapshot DTO', () => {
         })
     })
 
-    it('returns the first mail page immediately and streams later pages separately', async () => {
+    it('returns the first mail page immediately without preloading later pages', async () => {
         const fetcher = vi.fn(async (path) => {
             if (path === '/api/admin/mails?limit=25&offset=0&include_raw=false') {
                 return { results: [{ id: 1 }], count: 75, unread_count: 3 }
@@ -168,11 +168,24 @@ describe('admin snapshot DTO', () => {
         expect(snapshot.mailUnreadCount).toBe(3)
         expect(snapshot.domains).toEqual([{ id: 9, domain: 'example.test' }])
         expect(snapshot.errors).toEqual([])
+        // WP1 baseline: every view currently pays for the same 20-read snapshot.
+        expect(fetcher).toHaveBeenCalledTimes(20)
         expect(fetcher).not.toHaveBeenCalledWith('/api/admin/mails?limit=25&offset=25&include_raw=false')
 
-        const later = []
-        await loadRemainingAdminMails(createAdminApi(fetcher), snapshot.mailTotalCount, (rows) => later.push(...rows))
-        expect(later).toEqual([{ id: 2 }])
-        expect(fetcher).toHaveBeenCalledWith('/api/admin/mails?limit=25&offset=50&include_raw=false')
+    })
+
+    it('loads only the active feature boundary instead of the full admin snapshot', async () => {
+        const fetcher = vi.fn().mockResolvedValue({ results: [] })
+        const client = createAdminApi(fetcher)
+
+        await loadAdminViewSnapshot(client, 'authenticators')
+        expect(fetcher).not.toHaveBeenCalled()
+
+        await loadAdminViewSnapshot(client, 'identity')
+        expect(fetcher.mock.calls.map(([path]) => path)).toEqual([
+            '/api/admin/domains',
+            '/api/admin/address?limit=50&offset=0',
+            '/api/admin/users?limit=20&offset=0',
+        ])
     })
 })

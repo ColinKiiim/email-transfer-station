@@ -1,5 +1,5 @@
 import { getBooleanValue } from "../utils";
-import { commonParseMail } from "../common";
+import { parseMail } from "./mail_parser";
 import { createMimeMessage } from "mimetext";
 
 export const remove_attachment_if_need = async (
@@ -16,7 +16,7 @@ export const remove_attachment_if_need = async (
     const shouldRemoveAttachment = removeAllAttachment || removeExceedSizeAttachment;
     if (!shouldRemoveAttachment) return;
 
-    const parsedEmail = await commonParseMail(parsedEmailContext);
+    const parsedEmail = await parseMail(parsedEmailContext);
     if (!parsedEmail) return;
 
     const msg = createMimeMessage();

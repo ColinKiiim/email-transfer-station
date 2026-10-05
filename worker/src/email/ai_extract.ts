@@ -6,7 +6,7 @@
  * service links, and subscription management links from email content.
  */
 
-import { commonParseMail } from "../common";
+import { parseMail } from "./mail_parser";
 import { getBooleanValue, getJsonSetting } from "../utils";
 import { CONSTANTS } from "../constants";
 import { Context } from "hono";
@@ -193,7 +193,7 @@ export async function extractEmailInfo(
         }
 
         // Parse email to get content
-        const parsedEmail = await commonParseMail(parsedEmailContext);
+        const parsedEmail = await parseMail(parsedEmailContext);
         const emailContent = parsedEmail?.text || parsedEmail?.html || "";
 
         if (!emailContent) {

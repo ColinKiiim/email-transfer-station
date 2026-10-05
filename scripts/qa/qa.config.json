@@ -1,0 +1,45 @@
+{
+  "$schema": "./qa.config.schema.json",
+  "defaultBaseUrl": "http://127.0.0.1:4173",
+  "adminApiPrefix": "/api/admin/",
+  "routes": [
+    {
+      "id": "home",
+      "path": "/"
+    },
+    {
+      "id": "admin",
+      "path": "/admin"
+    }
+  ],
+  "viewports": {
+    "wide": {
+      "width": 1920,
+      "height": 1080
+    },
+    "desktop": {
+      "width": 1440,
+      "height": 900
+    },
+    "laptop": {
+      "width": 1280,
+      "height": 800
+    },
+    "compact": {
+      "width": 900,
+      "height": 760
+    },
+    "narrow": {
+      "width": 390,
+      "height": 844
+    }
+  },
+  "defaultViewports": [
+    "desktop",
+    "narrow"
+  ],
+  "retention": {
+    "minimumRuns": 5,
+    "days": 14
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "email-transfer-station-qa",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "qa": "node qa.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.58.2"
+  }
+}

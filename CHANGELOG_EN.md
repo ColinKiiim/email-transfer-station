@@ -6,6 +6,8 @@
 
 ### Added
 
+- Made authenticator resources independent from users and preserved direct assignments separately from saved share links; the local v0.0.18 migration removes `user_id=0` and `assignment:` sentinel records.
+- Added a lightweight Authenticator workspace where admins store TOTP entries, assign them to users, or share expiring, revocable links.
 - Added an admin console with `/admin` as its sole canonical entry and a same-origin
   `/api/admin/*` API.
 - Added a managed-domain registry, Cloudflare Email Routing activation flow, and
@@ -22,6 +24,7 @@
 
 ### Changed
 
+- Made `db/schema.sql` and historical SQL migrations the database definition source. The local `v0.0.17` upgrade reconciles authenticator table variants, preserves data, and supports retries without marking a failed migration complete. Initialization does not upgrade an existing database.
 - Changed defaults to administrator-created addresses, with anonymous creation and
   ordinary-user deletion disabled.
 - Made Pages the only frontend release surface; its Function proxies Worker APIs

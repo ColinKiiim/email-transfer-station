@@ -192,6 +192,38 @@ CREATE INDEX IF NOT EXISTS idx_user_passkeys_user_id ON user_passkeys(user_id);
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_user_passkeys_user_id_passkey_id ON user_passkeys(user_id, passkey_id);
 
+CREATE TABLE IF NOT EXISTS user_authenticators (
+    id TEXT PRIMARY KEY,
+    label TEXT NOT NULL,
+    issuer TEXT NOT NULL DEFAULT '',
+    secret_ciphertext TEXT NOT NULL,
+    secret_nonce TEXT NOT NULL,
+    algorithm TEXT NOT NULL DEFAULT 'SHA1',
+    digits INTEGER NOT NULL DEFAULT 6,
+    period INTEGER NOT NULL DEFAULT 30,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS authenticator_share_tokens (
+    id TEXT PRIMARY KEY,
+    authenticator_id TEXT NOT NULL REFERENCES user_authenticators(id) ON DELETE CASCADE,
+    token_hash TEXT NOT NULL UNIQUE,
+    expires_at DATETIME,
+    revoked_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_authenticator_share_tokens_authenticator_id ON authenticator_share_tokens(authenticator_id);
+
+CREATE TABLE IF NOT EXISTS user_authenticator_access (
+    user_id INTEGER NOT NULL,
+    authenticator_id TEXT NOT NULL REFERENCES user_authenticators(id) ON DELETE CASCADE,
+    direct_assigned INTEGER NOT NULL DEFAULT 0 CHECK (direct_assigned IN (0, 1)),
+    share_id TEXT REFERENCES authenticator_share_tokens(id) ON DELETE CASCADE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, authenticator_id)
+);
+
 CREATE TABLE IF NOT EXISTS user_verification_challenges (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     email TEXT NOT NULL,

@@ -133,6 +133,15 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
+# Root-local state and generated evidence
+/.agents/
+/.codex/
+/.playwright-cli/
+/output/
+/test-results/
+/references/
+/archive/
+
 .DS_Store
 dist/
 test/

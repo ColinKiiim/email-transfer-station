@@ -59,6 +59,11 @@ const router = createRouter({
             }
         },
         {
+            path: '/a/:token',
+            component: () => import('../views/AuthenticatorShare.vue'),
+            meta: { fullScreen: true }
+        },
+        {
             path: '/telegram_mail',
             alias: '/:lang/telegram_mail',
             component: () => import('../views/telegram/Mail.vue')

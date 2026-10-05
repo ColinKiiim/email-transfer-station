@@ -6,6 +6,8 @@
 
 ### 新增
 
+- 验证器资源改为独立于用户，直接分配与保存分享链接分别保留；本地 v0.0.18 迁移会清理 `user_id=0` 与 `assignment:` 哨兵记录。
+- 增加轻量 Authenticator 工作区，由管理员保存 TOTP 条目并分发给用户，或生成可撤销、可过期的分享链接。
 - 新增以 `/admin` 为唯一规范入口的管理控制台，以及同源 `/api/admin/*` 管理 API。
 - 新增托管域名注册表、Cloudflare Email Routing 激活流程和外部 forwarding collector
   原始收件人恢复。
@@ -17,6 +19,7 @@
 
 ### 变更
 
+- 数据库定义统一由 `db/schema.sql` 与历史 SQL 迁移提供；本地 `v0.0.17` 升级纠正验证器表结构差异，保留原数据，失败后不提前标记版本并支持重试。初始化不升级已存在的数据库。
 - 默认产品策略改为管理员创建地址优先，关闭匿名创建和普通用户删除。
 - Pages 成为唯一前端发布表面；Pages Function 通过 `BACKEND` service binding 同源
   代理 Worker API。

@@ -1,0 +1,12 @@
+<script setup>
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
+import { useScopedI18n } from '@/i18n/app'
+import { api } from '../api'
+const route=useRoute();const {t}=useScopedI18n('views.AuthenticatorShare');const message=useMessage();const item=ref(null);const expiresAt=ref('');const now=ref(Date.now());let timer
+const token=computed(()=>Array.isArray(route.params.token)?route.params.token[0]:route.params.token);const remaining=computed(()=>item.value?Math.max(0,Math.ceil(((item.value.valid_until||now.value)-now.value)/1000)):0)
+const load=async()=>{const data=await api.fetch('/open_api/authenticator_share',{method:'POST',body:JSON.stringify({token:token.value})});item.value=data.item;expiresAt.value=data.expires_at||''};const copy=async()=>{await navigator.clipboard.writeText(item.value.code);message.success(t('copied'))};const save=async()=>{await api.fetch('/user_api/authenticators/save-share',{method:'POST',body:JSON.stringify({token:token.value})});message.success(t('saved'))}
+onMounted(async()=>{try{await load()}catch(error){message.error(error.message||t('invalid'))};timer=window.setInterval(async()=>{now.value=Date.now();if(item.value&&remaining.value<=0){try{await load()}catch(error){item.value=null;message.error(error.message||t('invalid'))}}},1000)});onBeforeUnmount(()=>window.clearInterval(timer))
+</script>
+<template><main class="share-page"><section v-if="item" class="share-card"><p>{{t('kicker')}}</p><h1>{{item.label}}</h1><span>{{item.issuer}}</span><button class="code" type="button" @click="copy">{{item.code.slice(0,3)}} {{item.code.slice(3)}}</button><small>{{remaining}}s</small><button type="button" @click="save">{{t('save')}}</button><em v-if="expiresAt">{{t('expires')}} {{expiresAt}}</em></section><section v-else class="share-card"><h1>{{t('invalid')}}</h1></section></main></template>
+<style scoped>.share-page{min-height:100vh;display:grid;place-items:center;padding:24px;background:var(--ets-bg);color:var(--ets-text)}.share-card{display:grid;gap:12px;width:min(100%,420px);padding:30px;border:1px solid var(--ets-border);border-radius:16px;background:var(--ets-surface);text-align:center;box-shadow:0 20px 48px rgba(0,0,0,.35)}.share-card p,.share-card span,.share-card small,.share-card em{color:var(--ets-text-muted);font-style:normal}.code{font:700 34px ui-monospace,monospace;letter-spacing:4px;padding:16px;color:#93c5fd;background:var(--ets-surface-alt);border:1px solid var(--ets-border);border-radius:10px;cursor:pointer}</style>
