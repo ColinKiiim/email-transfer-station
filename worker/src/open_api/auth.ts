@@ -4,8 +4,35 @@ import utils, { checkCfTurnstile, getPasswords, getAdminPasswords, hashPassword,
 import i18n from '../i18n';
 import { recordAccessEvent } from '../audit';
 import { issueAdminSession } from '../admin_security';
+import { ADMIN_BROWSER_PATHS, clearAdminBrowserCookie, createAdminBrowserSession, renewAdminBrowserSession, revokeAdminBrowserSession } from '../admin_browser_session';
 
 const api = new Hono<HonoCustomType>()
+
+api.use('/open_api/*', async (c, next) => {
+    if (ADMIN_BROWSER_PATHS.has(c.req.path) && c.req.method === 'POST') {
+        c.header('Cache-Control', 'no-store');
+        if (c.req.header('Content-Type')?.split(';')[0].trim().toLowerCase() !== 'application/json'
+            || (!c.req.header('Origin') && c.req.header('Sec-Fetch-Site') === 'cross-site')) {
+            return c.text('JSON request required', 403);
+        }
+    }
+    await next();
+});
+
+api.post('/open_api/admin_session', async (c) => {
+    const session = await renewAdminBrowserSession(c);
+    if (!session) {
+        clearAdminBrowserCookie(c);
+        return c.text('Admin session expired or revoked', 401);
+    }
+    const token = await issueAdminSession(session.username, c.env.JWT_SECRET, undefined, session.id);
+    return c.json({ token, username: session.username });
+});
+
+api.post('/open_api/admin_logout', async (c) => {
+    await revokeAdminBrowserSession(c);
+    return c.json({ success: true });
+});
 
 const getAdminUsernames = (c: Context<HonoCustomType>): string[] => {
     const configured = getStringArray(c.env.ADMIN_USERNAMES);
@@ -97,13 +124,14 @@ api.post('/open_api/admin_login', async (c) => {
         });
         return c.text(msgs.NeedAdminPasswordMsg, 401)
     }
+    const browserSessionId = await createAdminBrowserSession(c, normalizedUsername);
+    const token = await issueAdminSession(normalizedUsername, c.env.JWT_SECRET, undefined, browserSessionId);
     await recordAccessEvent(c, {
         event_type: "admin.login.success",
         actor_type: "admin",
         actor_label: normalizedUsername,
         status: "success",
     });
-    const token = await issueAdminSession(normalizedUsername, c.env.JWT_SECRET);
     return c.json({ success: true, token, username: normalizedUsername })
 })
 

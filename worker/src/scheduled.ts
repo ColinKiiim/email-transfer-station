@@ -9,6 +9,7 @@ export async function scheduled(event: ScheduledEvent, env: Bindings, ctx: any) 
     console.log("Scheduled event: ", event);
     try {
         await env.DB.batch([
+            env.DB.prepare('DELETE FROM admin_browser_sessions WHERE expires_at <= unixepoch()'),
             env.DB.prepare(`DELETE FROM user_verification_challenges WHERE expires_at <= datetime('now')`),
             env.DB.prepare(`DELETE FROM inbound_mail_receipts WHERE created_at < datetime('now', '-30 day')`),
             env.DB.prepare(`DELETE FROM auth_rate_limits WHERE updated_at < datetime('now', '-1 day')`),

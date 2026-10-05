@@ -381,3 +381,9 @@ WP1–WP7 已完成；后续接手统一读取 `docs/CURRENT.md`、`docs/INDEX.m
 依据：当次本机模型目录和 [OpenAI 模型说明](https://developers.openai.com/api/docs/guides/latest-model?model=gpt-6.1-sol)、
 [推理深度说明](https://developers.openai.com/api/docs/guides/reasoning)。阶段选择是针对本任务的建议，未做模型对比实验。
 后续可用模型及选项发生变化时再核对，不把该快照视为永久配置。
+
+## 后续产品修复（2026-10-05）
+
+管理员登录已完成本地持久会话和自动续期修复，数据库当前版本为 `v0.0.19`。
+此项不改变 WP1–WP7 的完成记录；策略、官方参考与迁移边界见
+[`管理员会话说明`](../admin-sessions.md)，最终验证与未上线状态见 [`CURRENT`](../CURRENT.md)。

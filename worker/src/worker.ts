@@ -62,6 +62,7 @@ app.use('/*', async (c, next) => {
 	if (!c.req.path.startsWith("/open_api") && !c.req.path.startsWith("/telegram/") && passwords && passwords.length > 0) {
 		const auth = c.req.raw.headers.get("x-custom-auth");
 		if (!auth || !passwords.includes(auth)) {
+			c.header('x-auth-reason', 'site_password_required');
 			return c.text(msgs.CustomAuthPasswordMsg, 401)
 		}
 	}

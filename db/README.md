@@ -5,7 +5,7 @@ unchanged. `worker/src/database.ts` imports their SQL as text and orders support
 upgrades from `v0.0.2` onward. Admin routes retain authorization, confirmation,
 audit, and response handling; they contain no table definitions.
 
-The current local code expects `v0.0.18`. The v0.0.17 corrective step described in
+The current local code expects `v0.0.19`. The v0.0.17 corrective step described in
 `2026-10-05-schema-consistency.sql` rebuilds the three authenticator tables in one
 D1 batch using the definitions from `schema.sql`, then restores canonical indexes.
 Both published `v0.0.16` shapes are supported. Resource IDs, ciphertext, nonces,
@@ -14,6 +14,11 @@ new access. Unexpected columns stop the upgrade and leave the original tables
 and version intact. The v0.0.18 source migration removes the sentinel owner and
 `assignment:*` rows, preserves real links, and stores direct assignment and saved
 link sources independently in `user_authenticator_access`.
+
+The v0.0.19 upgrade adds `admin_browser_sessions` and its expiry index directly
+from `schema.sql`. From v0.0.18 this is an additive, retryable upgrade; existing
+resources and relationship shapes are unchanged. The new Worker requires the
+table for persistent administrator login. See [administrator sessions](../docs/admin-sessions.md).
 
 Each historical ALTER checks whether its column already exists. Historical
 version writes are ignored; the executor writes the current version only after

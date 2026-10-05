@@ -21,7 +21,9 @@ export const useAdminSession = ({
     const cfToken = ref('')
     const turnstileRef = ref(null)
     const loginSettingsFetched = ref(false)
-    const needsAdminLogin = computed(() => !showAdminPage.value || showAdminAuth.value)
+    const restoringAdminSession = ref(!adminAuth.value)
+    let initializingAdminSession = true
+    const needsAdminLogin = computed(() => !restoringAdminSession.value && (!showAdminPage.value || showAdminAuth.value))
 
     const fetchAdminLoginSettings = async () => {
         if (loginSettingsFetched.value) return
@@ -38,9 +40,15 @@ export const useAdminSession = ({
         }
     }
 
-    const resetAdminLogin = () => {
-        adminAuth.value = ''
-        clearAdminData()
+    const resetAdminLogin = async () => {
+        try {
+            await client.logout()
+            adminAuth.value = ''
+            showAdminAuth.value = true
+            clearAdminData()
+        } catch (error) {
+            notify(error?.message || t('failed'), 'error')
+        }
     }
 
     const authFunc = async () => {
@@ -64,13 +72,30 @@ export const useAdminSession = ({
     }
 
     const initializeAdminSession = async () => {
-        const tasks = [fetchAdminLoginSettings()]
-        if (showAdminPage.value && !showAdminAuth.value) tasks.push(refreshAdminData())
-        await Promise.all(tasks)
+        const loginSettings = fetchAdminLoginSettings()
+        try {
+            try {
+                if (!adminAuth.value) {
+                    const result = await client.restoreSession()
+                    if (!result?.token) throw new Error(t('noToken'))
+                    adminAuth.value = result.token
+                    showAdminAuth.value = false
+                }
+            } catch (error) {
+                if (error.status !== 401) notify(error?.message || t('failed'), 'error')
+            }
+            restoringAdminSession.value = false
+            const tasks = [loginSettings]
+            if (showAdminPage.value && !showAdminAuth.value) tasks.push(refreshAdminData())
+            await Promise.all(tasks)
+        } finally {
+            restoringAdminSession.value = false
+            initializingAdminSession = false
+        }
     }
 
     watch(showAdminPage, async (allowed) => {
-        if (allowed && !hasAdminData()) await refreshAdminData()
+        if (allowed && !initializingAdminSession && !hasAdminData()) await refreshAdminData()
     })
 
     watch(showAdminAuth, (value) => {
@@ -84,6 +109,7 @@ export const useAdminSession = ({
         initializeAdminSession,
         needsAdminLogin,
         resetAdminLogin,
+        restoringAdminSession,
         tmpAdminAccount,
         tmpAdminAuth,
         turnstileRef,

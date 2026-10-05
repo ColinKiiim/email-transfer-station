@@ -14,6 +14,8 @@ const createSession = (overrides = {}) => {
                 cfTurnstileSiteKey: 'fixture-site-key',
             }),
             login: vi.fn().mockResolvedValue({ token: 'fixture-session' }),
+            restoreSession: vi.fn().mockRejectedValue({ status: 401 }),
+            logout: vi.fn().mockResolvedValue({ success: true }),
         },
         adminAuth: ref(''),
         showAdminAuth: ref(false),
@@ -37,6 +39,24 @@ afterEach(() => {
 })
 
 describe('admin session state', () => {
+    it('restores a new tab before showing the login form', async () => {
+        const { dependencies, session } = createSession()
+        dependencies.client.restoreSession.mockResolvedValue({ token: 'restored-session' })
+        expect(session.needsAdminLogin.value).toBe(false)
+        expect(session.restoringAdminSession.value).toBe(true)
+        await session.initializeAdminSession()
+        expect(dependencies.adminAuth.value).toBe('restored-session')
+        expect(session.restoringAdminSession.value).toBe(false)
+        expect(dependencies.notify).not.toHaveBeenCalled()
+    })
+
+    it('shows login after definitive persistent-session expiry without reporting it as an error', async () => {
+        const { dependencies, session } = createSession()
+        await session.initializeAdminSession()
+        expect(session.needsAdminLogin.value).toBe(true)
+        expect(dependencies.adminAuth.value).toBe('')
+        expect(dependencies.notify).not.toHaveBeenCalled()
+    })
     it('loads login settings once and keeps the account hint as a fallback', async () => {
         const { dependencies, session } = createSession()
         session.tmpAdminAccount.value = ''
@@ -108,11 +128,12 @@ describe('admin session state', () => {
 
     it('clears data on logout or a renewed challenge and refreshes on authorization', async () => {
         const { dependencies, session } = createSession()
+        await session.initializeAdminSession()
         dependencies.adminAuth.value = 'fixture-session'
 
-        session.resetAdminLogin()
+        await session.resetAdminLogin()
         expect(dependencies.adminAuth.value).toBe('')
-        expect(dependencies.clearAdminData).toHaveBeenCalledTimes(1)
+        expect(dependencies.client.logout).toHaveBeenCalledTimes(1)
 
         dependencies.showAdminAuth.value = true
         await nextTick()

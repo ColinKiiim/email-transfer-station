@@ -106,7 +106,13 @@ const updateMailReadState = async (curMailId, read = true) => {
   })
 }
 
-const logout = () => {
+const logout = async () => {
+  try {
+    await api.logoutAdminSession()
+  } catch (error) {
+    message.error(error.message || 'Logout failed')
+    return
+  }
   // Clear every credential, not just this surface's. The address JWT lives in
   // localStorage and used to survive a user-portal sign-out, leaving the next
   // person on a shared browser able to open the previous user's mailbox.
