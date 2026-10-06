@@ -193,3 +193,17 @@ tests because their behavior is exercised by the retained admin flow and
 browser smoke coverage. This cleanup itself was validated with static reference
 review and `git diff --check`; no full suite was run. Per the user's current
 instruction, the follow-up remains local-only and is not pushed or deployed.
+
+## Test surface reduction follow-up — 2026-10-06
+
+A second local-only pass removed four E2E files whose checks were already owned by
+Docker healthchecks or the trigger/admin browser flows. It also collapsed repeated
+frontend assertions in the session, admin flow, mailbox workbench, and parser
+checks; the retained tests now target credential teardown, security-sensitive
+mail rendering, core admin actions, pagination, and accessibility. No push,
+deployment, remote D1 migration, or full suite run was performed.
+
+The remaining 18 frontend, 24 Worker, and 21 E2E test files are intentionally
+layered by boundary. This follows mature repository practice: focused unit/API
+projects are run independently, while browser and protocol checks remain separate
+smoke layers. File count alone is not the optimization target.

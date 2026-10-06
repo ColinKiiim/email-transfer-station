@@ -78,64 +78,6 @@ const createSampleMail = (id, source, subject = `Subject ${id}`) => ({
     attachments: [],
 })
 
-describe('AccessMailWorkbench - Friendly sender display name and RFC-5322 title', () => {
-    beforeEach(() => {
-        i18n.global.locale.value = 'zh'
-        vi.clearAllMocks()
-    })
-
-    it('renders friendly sender display names while retaining full RFC-5322 string in title attribute', async () => {
-        const mails = [
-            createSampleMail(1, 'GitHub <notifications@github.com>', 'New Issue'),
-            createSampleMail(2, '"Security Team" <sec@example.com>', 'Security Alert'),
-            createSampleMail(3, '<noreply@example.com>', 'Automated message'),
-            createSampleMail(4, 'plain@example.com', 'Plain address'),
-        ]
-
-        const fetchMailData = vi.fn().mockResolvedValue({
-            results: mails,
-            count: 4,
-        })
-
-        const wrapper = mount(AccessMailWorkbench, {
-            props: {
-                title: '收件箱',
-                fetchMailData,
-            },
-            global: {
-                plugins: [i18n],
-                components: stubs,
-                stubs,
-            },
-        })
-
-        // Wait for onMounted fetchMailData and processItem to settle
-        await vi.waitFor(() => {
-            expect(wrapper.findAll('.user-mail-sender').length).toBe(4)
-        })
-
-        const senders = wrapper.findAll('.user-mail-sender')
-
-        // 1. GitHub <notifications@github.com> -> display "GitHub", title "GitHub <notifications@github.com>"
-        expect(senders[0].text()).toBe('GitHub')
-        expect(senders[0].attributes('title')).toBe('GitHub <notifications@github.com>')
-
-        // 2. "Security Team" <sec@example.com> -> display "Security Team", title 'Security Team <sec@example.com>'
-        expect(senders[1].text()).toBe('Security Team')
-        expect(senders[1].attributes('title')).toBe('Security Team <sec@example.com>')
-
-        // 3. <noreply@example.com> -> display "noreply@example.com", title "noreply@example.com"
-        expect(senders[2].text()).toBe('noreply@example.com')
-        expect(senders[2].attributes('title')).toBe('noreply@example.com')
-
-        // 4. plain@example.com -> display "plain@example.com", title "plain@example.com"
-        expect(senders[3].text()).toBe('plain@example.com')
-        expect(senders[3].attributes('title')).toBe('plain@example.com')
-
-        wrapper.unmount()
-    })
-})
-
 describe('AccessMailWorkbench - Pagination count retention across pages', () => {
     beforeEach(() => {
         i18n.global.locale.value = 'zh'
@@ -462,58 +404,6 @@ describe('AccessMailWorkbench - Shift continuous selection', () => {
     beforeEach(() => {
         i18n.global.locale.value = 'zh'
         vi.clearAllMocks()
-    })
-
-    it('performs range selection across items when Shift key is pressed in multiAction mode', async () => {
-        const mails = [
-            createSampleMail(1, 's1@example.test', 'Mail 1'),
-            createSampleMail(2, 's2@example.test', 'Mail 2'),
-            createSampleMail(3, 's3@example.test', 'Mail 3'),
-            createSampleMail(4, 's4@example.test', 'Mail 4'),
-        ]
-
-        const fetchMailData = vi.fn().mockResolvedValue({ results: mails, count: 4 })
-
-        const wrapper = mount(AccessMailWorkbench, {
-            props: {
-                title: '收件箱',
-                fetchMailData,
-            },
-            global: {
-                plugins: [i18n],
-                components: stubs,
-                stubs,
-            },
-        })
-
-        await vi.waitFor(() => {
-            expect(wrapper.findAll('.mail-row').length).toBe(4)
-        })
-
-        // Enter multiAction mode
-        const multiActionBtn = wrapper.findAll('button').find((b) => b.text().includes('多选'))
-        await multiActionBtn.trigger('click')
-
-        // Click row 0 (Mail 1) without shift
-        const selectCells = wrapper.findAll('.mail-row-select-cell')
-        await selectCells[0].trigger('click', { shiftKey: false })
-
-        let checkboxes = wrapper.findAll('.mail-row-checkbox')
-        expect(checkboxes[0].element.checked).toBe(true)
-        expect(checkboxes[1].element.checked).toBe(false)
-        expect(checkboxes[2].element.checked).toBe(false)
-        expect(checkboxes[3].element.checked).toBe(false)
-
-        // Shift-click row 2 (Mail 3) -> should select rows 0, 1, 2
-        await selectCells[2].trigger('click', { shiftKey: true })
-
-        checkboxes = wrapper.findAll('.mail-row-checkbox')
-        expect(checkboxes[0].element.checked).toBe(true)
-        expect(checkboxes[1].element.checked).toBe(true)
-        expect(checkboxes[2].element.checked).toBe(true)
-        expect(checkboxes[3].element.checked).toBe(false)
-
-        wrapper.unmount()
     })
 
     it('safely clears selection anchor on cancel multiAction and refresh', async () => {

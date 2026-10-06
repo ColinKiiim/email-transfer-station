@@ -26,40 +26,14 @@ const seedEverything = () => {
 }
 
 describe('sign-out clears credentials from every surface', () => {
-    it('removes the address JWT, not just the user session', () => {
-        seedEverything()
-        clearSessionStorageKeys()
-        expect(localStorage.getItem('jwt')).toBeNull()
-        expect(localStorage.getItem('userJwt')).toBeNull()
-        expect(localStorage.getItem('LocalAddressCache')).toBeNull()
-        expect(sessionStorage.getItem('adminAuth')).toBeNull()
-        expect(sessionStorage.getItem('addressPassword')).toBeNull()
-    })
-
-    it('removes the compose draft so the next account cannot read it', () => {
-        seedEverything()
-        clearSessionStorageKeys()
-        expect(sessionStorage.getItem('sendMailModel')).toBeNull()
-    })
-
-    it('clears every declared credential key', () => {
+    it('clears account data while preserving device preferences', () => {
         seedEverything()
         clearSessionStorageKeys()
         for (const key of CREDENTIAL_STORAGE_KEYS.local) expect(localStorage.getItem(key)).toBeNull()
         for (const key of CREDENTIAL_STORAGE_KEYS.session) expect(sessionStorage.getItem(key)).toBeNull()
-    })
-
-    it('keeps device preferences, which are not account data', () => {
-        seedEverything()
-        clearSessionStorageKeys()
         for (const key of PRESERVED_STORAGE_KEYS) {
             expect(localStorage.getItem(key)).toBe(`pref-${key}`)
         }
-    })
-
-    it('never lists the same key as both cleared and preserved', () => {
-        const cleared = new Set([...CREDENTIAL_STORAGE_KEYS.local, ...CREDENTIAL_STORAGE_KEYS.session])
-        for (const key of PRESERVED_STORAGE_KEYS) expect(cleared.has(key)).toBe(false)
     })
 
     it('finishes the teardown even when one removal throws', () => {

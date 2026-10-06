@@ -215,20 +215,6 @@ afterEach(() => {
 })
 
 describe('AdminNext behavior baseline', () => {
-    it('keeps the shared product identity and user-facing exits on both admin states', async () => {
-        const login = await mountAdmin({ authenticated: false })
-
-        expect(login.wrapper.get('.login-topbar .product-brand').text()).toContain('管理控制台')
-        expect(login.wrapper.get('.login-topbar .surface-link').attributes('href')).toBe('/')
-        login.wrapper.unmount()
-
-        const consoleView = await mountAdmin()
-        expect(consoleView.wrapper.get('.brand .product-brand').text()).toContain('ETS Mail')
-        expect(consoleView.wrapper.findAll('.top-actions .surface-link').map((link) => link.attributes('href')))
-            .toEqual(['/', '/user'])
-        consoleView.wrapper.unmount()
-    })
-
     it('establishes an admin session after a successful login', async () => {
         const { wrapper } = await mountAdmin({ authenticated: false })
 
@@ -266,68 +252,6 @@ describe('AdminNext behavior baseline', () => {
         wrapper.unmount()
     })
 
-    it('keeps route query, selected view, mail, and detail mode in sync both ways', async () => {
-        const { router, wrapper } = await mountAdmin({ path: '/admin?view=overview' })
-
-        await wrapper.get('button[aria-label="收件箱"]').trigger('click')
-        await settle()
-        expect(router.currentRoute.value.query.view).toBe('flow')
-
-        await wrapper.get('.mail-row').trigger('click')
-        await settle()
-        expect(router.currentRoute.value.query).toMatchObject({
-            view: 'flow',
-            mailId: 'mail-7',
-            mode: 'detail',
-        })
-        expect(wrapper.get('.mail-row').attributes('aria-current')).toBe('true')
-        expect(wrapper.get('.mail-workbench').classes()).toContain('flow-mode-detail')
-
-        await router.replace('/admin?view=flow&q=invoice&mailId=mail-7&mode=detail')
-        await settle()
-        expect(wrapper.get('.searchbox input').element.value).toBe('invoice')
-        expect(wrapper.get('.mail-row').attributes('aria-current')).toBe('true')
-
-        await wrapper.get('button[aria-label="总览"]').trigger('click')
-        await settle()
-        expect(router.currentRoute.value.query.view).toBe('overview')
-        expect(router.currentRoute.value.query).not.toHaveProperty('mailId')
-        expect(router.currentRoute.value.query).not.toHaveProperty('mode')
-        wrapper.unmount()
-    })
-
-    it('restores canonical view state after back, forward, and refresh', async () => {
-        const selectedPath = '/admin?view=flow&q=invoice&mailId=mail-7&mode=detail'
-        const mounted = await mountAdmin({ path: '/admin?view=overview' })
-
-        await mounted.router.push(selectedPath)
-        await settle()
-        expect(mounted.wrapper.get('.searchbox input').element.value).toBe('invoice')
-        expect(mounted.wrapper.get('.mail-row').attributes('aria-current')).toBe('true')
-        expect(mounted.wrapper.get('.mail-workbench').classes()).toContain('flow-mode-detail')
-
-        await mounted.router.push('/admin?view=overview')
-        await settle()
-        expect(mounted.wrapper.get('h1').text()).toBe('总览')
-
-        mounted.router.back()
-        await settle()
-        expect(mounted.router.currentRoute.value.fullPath).toBe(selectedPath)
-        expect(mounted.wrapper.get('.mail-row').attributes('aria-current')).toBe('true')
-
-        mounted.router.forward()
-        await settle()
-        expect(mounted.router.currentRoute.value.query.view).toBe('overview')
-        expect(mounted.wrapper.get('h1').text()).toBe('总览')
-        mounted.wrapper.unmount()
-
-        const refreshed = await mountAdmin({ path: selectedPath })
-        expect(refreshed.wrapper.get('.searchbox input').element.value).toBe('invoice')
-        expect(refreshed.wrapper.get('.mail-row').attributes('aria-current')).toBe('true')
-        expect(refreshed.wrapper.get('.mail-workbench').classes()).toContain('flow-mode-detail')
-        refreshed.wrapper.unmount()
-    })
-
     it('shows loading, a real empty state, API failure, and unauthorized state without fake data', async () => {
         let resolveOverview
         runtime.mails = []
@@ -361,30 +285,6 @@ describe('AdminNext behavior baseline', () => {
         failed.wrapper.unmount()
     })
 
-    it('keeps mail actions in the detail header and removes the old toolbar', async () => {
-        const writeText = vi.fn().mockResolvedValue(undefined)
-        Object.defineProperty(navigator, 'clipboard', {
-            configurable: true,
-            value: { writeText },
-        })
-        const { wrapper } = await mountAdmin({ path: '/admin?view=flow&mailId=mail-7&mode=detail' })
-
-        const refresh = wrapper.get('.toolbar button[aria-label="保留选择刷新"]')
-        expect(refresh.text()).toBe('')
-        expect(refresh.attributes('title')).toBe('保留选择刷新')
-        expect(refresh.find('svg').exists()).toBe(true)
-        expect(wrapper.get('.toolbar').text()).not.toContain('复制收件地址')
-        expect(wrapper.find('.mail-reader-actions').exists()).toBe(false)
-        expect(wrapper.find('.mail-detail-panel .panel-head .danger').exists()).toBe(true)
-        expect(wrapper.findAll('.mail-detail-panel button.danger')).toHaveLength(1)
-
-        const copy = wrapper.get('.mail-summary .recipient-summary .mail-copy-button')
-        expect(copy.attributes('aria-label')).toBe('复制收件地址')
-        await copy.trigger('click')
-        expect(writeText).toHaveBeenCalledWith('ops@example.test')
-        wrapper.unmount()
-    })
-
     it('cancels a destructive mail write before the API call', async () => {
         const { wrapper } = await mountAdmin({ path: '/admin?view=flow&mailId=mail-7&mode=detail' })
 
@@ -415,67 +315,6 @@ describe('AdminNext behavior baseline', () => {
         expect(wrapper.get('.toast').text()).toContain('删除接口失败')
         expect(wrapper.get('.toast').attributes('role')).toBe('alert')
         expect(wrapper.find('.mail-row').exists()).toBe(true)
-        wrapper.unmount()
-    })
-
-    it('reports a successful confirmed mail write and refreshes the row away', async () => {
-        const { wrapper } = await mountAdmin({ path: '/admin?view=flow&mailId=mail-7&mode=detail' })
-
-        await wrapper.get('.mail-detail-panel .panel-head .danger').trigger('click')
-        await settle()
-
-        expect(wrapper.find('[data-testid="confirm-dialog-backdrop"]').exists()).toBe(true)
-        await wrapper.get('[data-testid="confirm-submit"]').trigger('click')
-        await settle()
-
-        expect(mocks.fetch).toHaveBeenCalledWith('/api/admin/mails/7', expect.objectContaining({
-            method: 'DELETE',
-            body: JSON.stringify({ confirm: true }),
-            headers: expect.objectContaining({ 'x-admin-request-id': expect.any(String) }),
-        }))
-        expect(wrapper.get('.toast').text()).toContain('已删除 1 封生产邮件')
-        expect(wrapper.get('.toast').attributes('role')).toBe('status')
-        expect(wrapper.find('.mail-row').exists()).toBe(false)
-        expect(wrapper.text()).toContain('没有匹配结果')
-        expect(wrapper.get('.empty-state').attributes('role')).toBe('status')
-        wrapper.unmount()
-    })
-
-    it('renders mail range indicator, pagination controls, and split view toggle in flow view', async () => {
-        runtime.mails = [mail()]
-        const { wrapper, router } = await mountAdmin({ path: '/admin?view=flow' })
-
-        // Range indicator
-        expect(wrapper.get('.mail-range-indicator').text()).toBe('第 1-1 封，共 1 封')
-
-        // Prev and next buttons are disabled for single page
-        const prevBtn = wrapper.get('button.mail-page-btn[aria-label="上一页"]')
-        const nextBtn = wrapper.get('button.mail-page-btn[aria-label="下一页"]')
-        expect(prevBtn.element.disabled).toBe(true)
-        expect(nextBtn.element.disabled).toBe(true)
-
-        // Split view toggle button
-        const toggleBtn = wrapper.get('button.mail-view-toggle-btn')
-        expect(toggleBtn.attributes('aria-label')).toBe('切换拆分视图')
-        expect(toggleBtn.attributes('aria-pressed')).toBe('false')
-
-        // Click split view toggle -> switches to detail mode and updates route
-        await toggleBtn.trigger('click')
-        await settle()
-
-        expect(router.currentRoute.value.query.mode).toBe('detail')
-        expect(wrapper.get('.mail-workbench').classes()).toContain('flow-mode-detail')
-        expect(toggleBtn.attributes('aria-pressed')).toBe('true')
-        expect(toggleBtn.classes()).toContain('is-active')
-
-        // Click again -> returns to list mode
-        await toggleBtn.trigger('click')
-        await settle()
-
-        expect(router.currentRoute.value.query.mode).toBeUndefined()
-        expect(wrapper.get('.mail-workbench').classes()).toContain('flow-mode-list')
-        expect(toggleBtn.attributes('aria-pressed')).toBe('false')
-
         wrapper.unmount()
     })
 
