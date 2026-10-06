@@ -396,7 +396,7 @@ defineExpose({
                     {{ t('delete') }}
                 </button>
             </div>
-            <div class="inner-pad detail-pane-body">
+            <div class="inner-pad detail-pane-body" :class="{ 'is-reader-empty': model.currentRail.empty }">
                 <AdminEmptyState v-if="model.currentRail.empty" class="reader-empty"
                     :title="model.currentRail.title" :description="model.currentRail.subtitle" />
                 <template v-else>

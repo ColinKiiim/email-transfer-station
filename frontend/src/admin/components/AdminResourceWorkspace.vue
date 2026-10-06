@@ -3,7 +3,6 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 
 import { cellText, formatNumber, statusClass } from '../admin-formatters'
-import { NEmpty } from 'naive-ui'
 import AdminEmptyState from './AdminEmptyState.vue'
 
 const props = defineProps({
@@ -16,9 +15,11 @@ const { t } = useScopedI18n('admin.resource')
 
 const activeMenuAddressId = ref(null)
 const activeMenuDomainId = ref(null)
+const activeMenuUserId = ref(null)
 
 const toggleAddressMenu = (addressId) => {
     activeMenuDomainId.value = null
+    activeMenuUserId.value = null
     activeMenuAddressId.value = activeMenuAddressId.value === addressId ? null : addressId
 }
 
@@ -28,6 +29,7 @@ const closeAddressMenu = () => {
 
 const toggleDomainMenu = (domainId) => {
     activeMenuAddressId.value = null
+    activeMenuUserId.value = null
     activeMenuDomainId.value = activeMenuDomainId.value === domainId ? null : domainId
 }
 
@@ -35,19 +37,30 @@ const closeDomainMenu = () => {
     activeMenuDomainId.value = null
 }
 
+const toggleUserMenu = (userId) => {
+    activeMenuAddressId.value = null
+    activeMenuDomainId.value = null
+    activeMenuUserId.value = activeMenuUserId.value === userId ? null : userId
+}
+
+const closeUserMenu = () => {
+    activeMenuUserId.value = null
+}
+
 const closeAllMenus = () => {
     activeMenuAddressId.value = null
     activeMenuDomainId.value = null
+    activeMenuUserId.value = null
 }
 
 const handleDocumentClick = (event) => {
-    if ((activeMenuAddressId.value !== null || activeMenuDomainId.value !== null) && !event.target?.closest?.('.action-dropdown')) {
+    if ((activeMenuAddressId.value !== null || activeMenuDomainId.value !== null || activeMenuUserId.value !== null) && !event.target?.closest?.('.action-dropdown')) {
         closeAllMenus()
     }
 }
 
 const handleDocumentKeydown = (event) => {
-    if (event.key === 'Escape' && (activeMenuAddressId.value !== null || activeMenuDomainId.value !== null)) {
+    if (event.key === 'Escape' && (activeMenuAddressId.value !== null || activeMenuDomainId.value !== null || activeMenuUserId.value !== null)) {
         closeAllMenus()
     }
 }
@@ -254,24 +267,8 @@ const scrollToChannels = (event) => {
         <section v-for="panel in model.activePanels" :key="panel.id" class="panel"
             :id="model.activeView === 'delivery' && panel.id === 'channels' ? 'delivery-channels' : undefined"
             :class="[panel.layout, `panel-${panel.id}`]">
-            <div class="panel-head" :class="{ 'panel-head-filter': panel.id === 'addresses' }">
-                <!-- Addresses View: Direct Domain Filter Pills on the left -->
-                <div v-if="panel.id === 'addresses'" class="domain-filter-bar">
-                    <button type="button" class="domain-filter-pill"
-                        :class="{ 'is-active': !model.ui.domain || model.ui.domain === 'all' }"
-                        @click="actions.setFilterDomain('all')">
-                        {{ t('allFilter') }} ({{ model.addressRows.length }})
-                    </button>
-                    <button v-for="domainOpt in addressDomainStats" :key="domainOpt.domain"
-                        type="button" class="domain-filter-pill"
-                        :class="{ 'is-active': model.ui.domain === domainOpt.domain }"
-                        @click="actions.setFilterDomain(domainOpt.domain)">
-                        @{{ domainOpt.domain }} ({{ domainOpt.count }})
-                    </button>
-                </div>
-
-                <!-- Other Panels: Clean Title + Count Badge -->
-                <div v-else class="panel-head-title">
+            <div class="panel-head">
+                <div class="panel-head-title">
                     <h2>{{ panel.title }}</h2>
                     <span v-if="panel.rows && panel.rows.length" class="panel-badge-count">{{ panel.rows.length }}</span>
                     <p v-if="panel.note">{{ panel.note }}</p>
@@ -295,6 +292,21 @@ const scrollToChannels = (event) => {
                         {{ t('healthCheck') }}
                     </button>
                 </div>
+            </div>
+
+            <!-- Addresses View: Domain Filter Pills sub-toolbar -->
+            <div v-if="panel.id === 'addresses'" class="domain-filter-bar">
+                <button type="button" class="domain-filter-pill"
+                    :class="{ 'is-active': !model.ui.domain || model.ui.domain === 'all' }"
+                    @click="actions.setFilterDomain('all')">
+                    {{ t('allFilter') }} ({{ model.addressRows.length }})
+                </button>
+                <button v-for="domainOpt in addressDomainStats" :key="domainOpt.domain"
+                    type="button" class="domain-filter-pill"
+                    :class="{ 'is-active': model.ui.domain === domainOpt.domain }"
+                    @click="actions.setFilterDomain(domainOpt.domain)">
+                    @{{ domainOpt.domain }} ({{ domainOpt.count }})
+                </button>
             </div>
 
             <div class="table-wrap">
@@ -339,22 +351,46 @@ const scrollToChannels = (event) => {
                                 </span>
 
                                 <div v-else-if="column.type === 'userActions'" class="row-actions user-actions cell-actions" @click.stop>
-                                    <button class="btn-action" type="button" :disabled="!row.sourceId || !!model.actionBusy"
-                                        @click="actions.handleUserRowAction(row, 'reset-password')" :title="t('resetPassword')">
-                                        {{ t('resetPassword') }}
-                                    </button>
-                                    <button class="btn-action" type="button" :disabled="!row.sourceId || !!model.actionBusy"
-                                        @click="actions.handleUserRowAction(row, 'edit-role')" :title="t('editRole')">
-                                        {{ t('editRole') }}
-                                    </button>
-                                    <button class="btn-action" type="button" :disabled="!row.sourceId || !!model.actionBusy"
+                                    <button class="btn-action primary" type="button" :disabled="!row.sourceId || !!model.actionBusy"
                                         @click="actions.handleUserRowAction(row, 'user-addresses')" :title="t('manageAddresses')">
                                         {{ t('manageAddresses') }}
                                     </button>
-                                    <button class="btn-action danger" type="button" :disabled="!row.sourceId || !!model.actionBusy"
-                                        @click="actions.handleUserRowAction(row, 'delete')" :title="t('deleteUser')">
-                                        {{ t('delete') }}
-                                    </button>
+                                    <div class="action-dropdown" :class="{ 'is-open': activeMenuUserId === row.id }">
+                                        <button class="btn-action btn-action-more" type="button"
+                                            :aria-expanded="activeMenuUserId === row.id ? 'true' : 'false'"
+                                            aria-haspopup="menu"
+                                            :aria-label="t('moreActions')"
+                                            :title="t('moreActions')"
+                                            @click.stop="toggleUserMenu(row.id)">
+                                            {{ t('more') }}
+                                            <span class="dropdown-arrow" aria-hidden="true">
+                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                    <polyline points="6 9 12 15 18 9" />
+                                                </svg>
+                                            </span>
+                                        </button>
+                                        <div v-show="activeMenuUserId === row.id" class="action-dropdown-menu" role="menu"
+                                            :aria-label="t('moreActions')">
+                                            <button class="action-menu-item" role="menuitem" type="button"
+                                                :disabled="!row.sourceId || !!model.actionBusy"
+                                                :title="t('resetPassword')"
+                                                @click="actions.handleUserRowAction(row, 'reset-password'); closeUserMenu()">
+                                                {{ t('resetPassword') }}
+                                            </button>
+                                            <button class="action-menu-item" role="menuitem" type="button"
+                                                :disabled="!row.sourceId || !!model.actionBusy"
+                                                :title="t('editRole')"
+                                                @click="actions.handleUserRowAction(row, 'edit-role'); closeUserMenu()">
+                                                {{ t('editRole') }}
+                                            </button>
+                                            <button class="action-menu-item danger" role="menuitem" type="button"
+                                                :disabled="!row.sourceId || !!model.actionBusy"
+                                                :title="t('deleteUser')"
+                                                @click="actions.handleUserRowAction(row, 'delete'); closeUserMenu()">
+                                                {{ t('delete') }}
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div v-else-if="column.type === 'addressActions'" class="row-actions address-actions cell-actions" @click.stop>
@@ -374,7 +410,11 @@ const scrollToChannels = (event) => {
                                             :title="t('moreActions')"
                                             @click.stop="toggleAddressMenu(row.id)">
                                             {{ t('more') }}
-                                            <span class="dropdown-arrow" aria-hidden="true">▾</span>
+                                            <span class="dropdown-arrow" aria-hidden="true">
+                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                    <polyline points="6 9 12 15 18 9" />
+                                                </svg>
+                                            </span>
                                         </button>
                                         <div v-show="activeMenuAddressId === row.id" class="action-dropdown-menu" role="menu"
                                             :aria-label="t('moreActions')">
@@ -432,7 +472,11 @@ const scrollToChannels = (event) => {
                                             :title="t('moreActions')"
                                             @click.stop="toggleDomainMenu(row.id)">
                                             {{ t('more') }}
-                                            <span class="dropdown-arrow" aria-hidden="true">▾</span>
+                                            <span class="dropdown-arrow" aria-hidden="true">
+                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                    <polyline points="6 9 12 15 18 9" />
+                                                </svg>
+                                            </span>
                                         </button>
                                         <div v-show="activeMenuDomainId === row.id" class="action-dropdown-menu" role="menu"
                                             :aria-label="t('moreActions')">
@@ -492,16 +536,14 @@ const scrollToChannels = (event) => {
                             <td :colspan="panel.columns.length">
                                 <AdminEmptyState v-if="model.hasActiveFilters" :action-label="t('clearFilters')"
                                     @action="actions.handleAction('reset-filters')" />
-                                <div v-else-if="model.activeView === 'delivery' && (panel.id === 'sender' || panel.id === 'sendbox')"
-                                    class="delivery-empty-state" role="status">
-                                    <NEmpty :description="panel.id === 'sender' ? t('emptySenderDesc') : t('emptySendboxDesc')" size="small">
-                                        <template #extra>
-                                            <a href="#delivery-channels" class="empty-guide-link" @click="scrollToChannels">
-                                                {{ t('configureChannelsLink') }} &rarr;
-                                            </a>
-                                        </template>
-                                    </NEmpty>
-                                </div>
+                                <AdminEmptyState v-else-if="model.activeView === 'delivery' && (panel.id === 'sender' || panel.id === 'sendbox')"
+                                    :description="panel.id === 'sender' ? t('emptySenderDesc') : t('emptySendboxDesc')">
+                                    <template #extra>
+                                        <a href="#delivery-channels" class="empty-guide-link" @click="scrollToChannels">
+                                            {{ t('configureChannelsLink') }} &rarr;
+                                        </a>
+                                    </template>
+                                </AdminEmptyState>
                                 <AdminEmptyState v-else />
                             </td>
                         </tr>
