@@ -78,19 +78,22 @@ defineExpose({
                     </label>
 
                     <div class="top-actions">
-                        <ProductSurfaceLinks compact :items="surfaceItems" :aria-label="t('surfaceLinksLabel')" />
+                        <ProductSurfaceLinks :items="surfaceItems" :aria-label="t('surfaceLinksLabel')" />
                         <AppUtilityMenu />
+                        <div class="topbar-divider" role="separator"></div>
                         <span class="sync-state" :class="{ 'is-loading': model.ui.syncing }" role="status" aria-live="polite">
                             {{ model.syncLabel }}
                         </span>
-                        <button class="btn" type="button" @click="actions.resetAdminLogin">{{ t('signOut') }}</button>
-                        <button class="btn" type="button" @click="actions.handleAction('refresh')">
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                                <component :is="shape.tag" v-for="(shape, index) in shapeList('refresh')" :key="index"
-                                    v-bind="shape.attrs" />
-                            </svg>
-                            {{ t('sync') }}
-                        </button>
+                        <div class="topbar-action-group">
+                            <button class="btn btn-sync" type="button" @click="actions.handleAction('refresh')">
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                    <component :is="shape.tag" v-for="(shape, index) in shapeList('refresh')" :key="index"
+                                        v-bind="shape.attrs" />
+                                </svg>
+                                {{ t('sync') }}
+                            </button>
+                            <button class="btn btn-signout" type="button" @click="actions.resetAdminLogin">{{ t('signOut') }}</button>
+                        </div>
                     </div>
                 </div>
             </header>
@@ -120,9 +123,12 @@ defineExpose({
                 </section>
             </nav>
 
-            <div class="sidebar-foot">
-                <span class="health-dot">Worker / D1 {{ model.workerStatusLabel }}</span>
-                <span class="mono">DB_VERSION {{ model.dbVersionLabel }}</span>
+            <div class="sidebar-foot" :title="`Worker / D1 ${model.workerStatusLabel} · DB_VERSION ${model.dbVersionLabel}`">
+                <span class="health-dot">
+                    <span class="health-indicator-dot" aria-hidden="true"></span>
+                    <span class="foot-text">Worker / D1 {{ model.workerStatusLabel }}</span>
+                </span>
+                <span class="mono foot-text">DB_VERSION {{ model.dbVersionLabel }}</span>
             </div>
         </aside>
 

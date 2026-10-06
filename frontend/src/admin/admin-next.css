@@ -277,7 +277,7 @@ body:has(.admin-next) .n-message-container {
     align-items: center;
     min-width: 0;
     background: var(--surface);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    border-bottom: 1px solid var(--border);
 }
 
 .admin-next-host button,
@@ -335,7 +335,8 @@ body:has(.admin-next) .n-message-container {
     padding: 12px 12px 18px;
     background: var(--surface);
     color: var(--fg);
-    box-shadow: 1px 0 0 var(--border);
+    border-right: 1px solid var(--border);
+    box-sizing: border-box;
 }
 
 .admin-next-host .brand {
@@ -476,13 +477,14 @@ body:has(.admin-next) .n-message-container {
     align-items: flex-start;
     gap: 6px;
     padding: 10px 14px;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    background: var(--surface-soft);
+    border: 1px solid var(--border);
     color: var(--muted);
     font-size: 11px;
     line-height: 1.4;
     min-width: 0;
+    cursor: default;
 }
 
 .admin-next-host .sidebar-foot .health-dot {
@@ -494,6 +496,15 @@ body:has(.admin-next) .n-message-container {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.admin-next-host .sidebar-foot .health-indicator-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: var(--success);
+    flex-shrink: 0;
 }
 
 .admin-next-host .sidebar-foot .mono {
@@ -513,8 +524,22 @@ body:has(.admin-next) .n-message-container {
     overflow: visible;
 }
 
-.admin-next-host .is-sidebar-collapsed .nav-group-title,
+.admin-next-host .is-sidebar-collapsed .nav-group-title {
+    display: none;
+}
+
 .admin-next-host .is-sidebar-collapsed .sidebar-foot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 0;
+    width: 44px;
+    margin: 0 auto;
+    border-radius: 999px;
+}
+
+.admin-next-host .is-sidebar-collapsed .sidebar-foot .foot-text {
     display: none;
 }
 
@@ -691,30 +716,57 @@ body:has(.admin-next) .n-message-container {
 .admin-next-host .kbd {
     border-radius: 6px;
     padding: 2px 6px;
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--surface-soft);
+    border: 1px solid var(--border);
     color: var(--muted);
     font-size: 11px;
-    font-weight: 600;
+    font-weight: 500;
     flex-shrink: 0;
 }
 
 .admin-next-host .top-actions {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     flex-shrink: 0;
+    justify-content: flex-end;
+}
+
+.admin-next-host .topbar-divider {
+    width: 1px;
+    height: 18px;
+    background: var(--border);
+    margin: 0 4px;
+}
+
+.admin-next-host .topbar-action-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .admin-next-host .top-actions .btn {
-    min-height: 36px;
-    height: 36px;
-    border-radius: 9999px;
-    padding: 0 14px;
+    min-height: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm, 6px);
+    padding: 0 12px;
     font-size: 13px;
+    font-weight: 500;
 }
 
+.admin-next-host .top-actions .btn.btn-signout {
+    background: transparent;
+    color: var(--muted);
+    border-color: transparent;
+    box-shadow: none;
+}
 
-.admin-next-host .top-actions,
+.admin-next-host .top-actions .btn.btn-signout:hover {
+    background: var(--surface-soft);
+    color: var(--danger);
+    border-color: var(--border);
+}
+
 .admin-next-host .toolbar,
 .admin-next-host .tag-row,
 .admin-next-host .modal-actions {
@@ -722,10 +774,6 @@ body:has(.admin-next) .n-message-container {
     flex-wrap: wrap;
     gap: 8px;
     align-items: center;
-}
-
-.admin-next-host .top-actions {
-    justify-content: flex-end;
 }
 
 .admin-next-host .sync-state {
@@ -1151,19 +1199,21 @@ body:has(.admin-next) .n-message-container {
 
 .admin-next-host .column-resizer {
     align-self: stretch;
-    width: 4px;
+    width: 6px;
     min-height: 0;
     border: 0;
-    border-radius: 999px;
     padding: 0;
     background: transparent;
     cursor: col-resize;
     box-shadow: none;
+    position: relative;
+    z-index: 5;
+    transition: background-color 140ms ease;
 }
 
 .admin-next-host .column-resizer:hover,
 .admin-next-host .column-resizer:focus-visible {
-    background: color-mix(in oklch, var(--accent) 18%, transparent);
+    background: color-mix(in oklch, var(--accent) 24%, transparent);
     outline: none;
 }
 
@@ -1172,8 +1222,7 @@ body:has(.admin-next) .n-message-container {
     width: 1px;
     height: 100%;
     margin: 0 auto;
-    border-radius: 999px;
-    background: color-mix(in oklch, var(--border-strong) 70%, transparent);
+    background: var(--border);
     content: "";
 }
 
