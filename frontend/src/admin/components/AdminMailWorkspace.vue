@@ -192,7 +192,11 @@ defineExpose({
                             :aria-label="t('selectionOptions')"
                             :aria-expanded="showSelectMenu"
                             @click.stop="showSelectMenu = !showSelectMenu">
-                            <span class="dropdown-arrow">▼</span>
+                            <span class="dropdown-arrow" aria-hidden="true">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="6 9 12 15 18 9" />
+                                </svg>
+                            </span>
                         </button>
                         <div v-show="showSelectMenu" class="mail-select-menu">
                             <button type="button" class="select-option" @click="handleSelectOption('all')">
@@ -249,7 +253,11 @@ defineExpose({
                             <button type="button" class="filter-chip domain-chip" :class="{ 'is-active': model.ui.domain !== 'all' }"
                                 @click.stop="showDomainMenu = !showDomainMenu">
                                 {{ selectedDomainLabel }}
-                                <span class="dropdown-arrow">▼</span>
+                                <span class="dropdown-arrow" aria-hidden="true">
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="6 9 12 15 18 9" />
+                                    </svg>
+                                </span>
                             </button>
                             <div v-show="showDomainMenu" class="domain-dropdown-menu">
                                 <button type="button" class="domain-option" :class="{ 'is-selected': model.ui.domain === 'all' }"

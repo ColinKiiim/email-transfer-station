@@ -125,7 +125,6 @@ defineExpose({
 
             <div class="sidebar-foot" :title="`Worker / D1 ${model.workerStatusLabel} · DB_VERSION ${model.dbVersionLabel}`">
                 <span class="health-dot">
-                    <span class="health-indicator-dot" aria-hidden="true"></span>
                     <span class="foot-text">Worker / D1 {{ model.workerStatusLabel }}</span>
                 </span>
                 <span class="mono foot-text">DB_VERSION {{ model.dbVersionLabel }}</span>

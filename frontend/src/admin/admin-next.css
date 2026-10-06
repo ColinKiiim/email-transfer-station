@@ -375,7 +375,7 @@ body:has(.admin-next) .n-message-container {
 }
 
 .admin-next-host .sidebar-toggle:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--surface-hover);
     color: var(--fg);
 }
 
@@ -397,9 +397,8 @@ body:has(.admin-next) .n-message-container {
     padding: 6px 16px 4px;
     color: var(--muted);
     font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: -0.01em;
     opacity: 0.65;
 }
 
@@ -424,18 +423,18 @@ body:has(.admin-next) .n-message-container {
 }
 
 .admin-next-host .nav-link.is-active {
-    background: rgba(59, 130, 246, 0.16);
-    color: #60a5fa;
+    background: var(--accent-subtle);
+    color: var(--accent);
     font-weight: 600;
 }
 
 .admin-next-host .nav-link.is-active svg {
-    color: #60a5fa;
+    color: var(--accent);
 }
 
 @media (hover: hover) {
     .admin-next-host .nav-link:hover:not(.is-active) {
-        background: rgba(255, 255, 255, 0.06);
+        background: var(--surface-hover);
         color: var(--fg);
     }
 }
@@ -455,10 +454,10 @@ body:has(.admin-next) .n-message-container {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: rgba(59, 130, 246, 0.22);
-    color: #93c5fd;
+    background: var(--accent-subtle);
+    color: var(--accent);
     font-size: 11px;
-    font-weight: 700;
+    font-weight: 600;
     font-variant-numeric: tabular-nums;
 }
 
@@ -467,8 +466,8 @@ body:has(.admin-next) .n-message-container {
     width: 7px;
     height: 7px;
     border-radius: 999px;
-    background: #60a5fa;
-    box-shadow: 0 0 6px rgba(96, 165, 250, 0.6);
+    background: var(--accent);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--accent) 50%, transparent);
 }
 
 .admin-next-host .sidebar-foot {
@@ -496,15 +495,6 @@ body:has(.admin-next) .n-message-container {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-}
-
-.admin-next-host .sidebar-foot .health-indicator-dot {
-    display: inline-block;
-    width: 7px;
-    height: 7px;
-    border-radius: 999px;
-    background: var(--success);
-    flex-shrink: 0;
 }
 
 .admin-next-host .sidebar-foot .mono {
@@ -678,16 +668,16 @@ body:has(.admin-next) .n-message-container {
     width: 100%;
     border-radius: 24px;
     padding: 0 18px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--surface-soft);
+    border: 1px solid var(--border);
     box-shadow: none;
     transition: all 150ms ease;
 }
 
 .admin-next-host .searchbox:focus-within {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(59, 130, 246, 0.5);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    background: var(--surface);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-subtle);
 }
 
 .admin-next-host .searchbox svg {
@@ -1141,9 +1131,9 @@ body:has(.admin-next) .n-message-container {
     overflow-y: auto;
     border-radius: var(--radius);
     padding: 6px;
-    background: #1e222b;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-pop);
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -1158,7 +1148,7 @@ body:has(.admin-next) .n-message-container {
     border-radius: var(--radius-sm);
     border: 0;
     background: transparent;
-    color: #e6edf3;
+    color: var(--fg);
     font-size: 13px;
     cursor: pointer;
     text-align: left;
@@ -1167,19 +1157,19 @@ body:has(.admin-next) .n-message-container {
 
 .admin-next-host .domain-option:hover,
 .admin-next-host .domain-option:focus {
-    background: rgba(96, 165, 250, 0.16);
-    color: #ffffff;
+    background: var(--surface-hover);
+    color: var(--fg);
 }
 
 .admin-next-host .domain-option.is-selected {
-    background: rgba(96, 165, 250, 0.25);
-    color: #60a5fa;
+    background: var(--accent-subtle);
+    color: var(--accent);
     font-weight: 600;
 }
 
 .admin-next-host .domain-option b {
     font-size: 11px;
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--muted);
     font-weight: normal;
 }
 
@@ -1191,13 +1181,13 @@ body:has(.admin-next) .n-message-container {
     padding: 4px 10px;
     font-size: 12px;
     border-radius: var(--radius-sm);
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--surface-soft);
+    border: 1px solid var(--border);
     color: var(--fg);
 }
 
 .admin-next-host .detail-back-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--surface-hover);
 }
 
 .admin-next-host .mail-workbench > .panel {
@@ -1551,13 +1541,13 @@ body:has(.admin-next) .n-message-container {
 .admin-next-host .mail-view-toggle-btn:hover:not(:disabled) {
     background: color-mix(in oklch, var(--fg) 10%, transparent);
     color: var(--fg);
-    border-color: rgba(255, 255, 255, 0.1);
+    border-color: var(--border);
 }
 
 .admin-next-host .mail-view-toggle-btn.is-active {
-    background: rgba(59, 130, 246, 0.16);
-    color: #60a5fa;
-    border-color: rgba(59, 130, 246, 0.35);
+    background: var(--accent-subtle);
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
 .admin-next-host .mail-page-btn:focus-visible,
@@ -1603,9 +1593,9 @@ body:has(.admin-next) .n-message-container {
 }
 
 .admin-next-host .filter-chip.is-active {
-    background: rgba(59, 130, 246, 0.16);
-    color: #60a5fa;
-    border-color: rgba(59, 130, 246, 0.4);
+    background: var(--accent-subtle);
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 40%, transparent);
     font-weight: 600;
 }
 
@@ -2018,9 +2008,9 @@ body:has(.admin-next) .n-message-container {
 }
 
 .admin-next-host .mail-copy-button:hover {
-    color: #60a5fa !important;
+    color: var(--accent) !important;
     opacity: 1;
-    background: rgba(255, 255, 255, 0.1) !important;
+    background: var(--surface-hover) !important;
 }
 
 .admin-next-host .mail-copy-button svg {
@@ -2055,7 +2045,7 @@ body:has(.admin-next) .n-message-container {
     margin: 0;
     font-size: 18px;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--fg);
     line-height: 1.35;
     word-break: break-word;
 }
@@ -2076,8 +2066,8 @@ body:has(.admin-next) .n-message-container {
     padding: 12px 14px;
     margin-bottom: 14px;
     border-radius: var(--radius);
-    background: rgba(255, 255, 255, 0.025);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: var(--surface-soft);
+    border: 1px solid var(--border);
 }
 
 .admin-next-host .sender-avatar {
@@ -2113,7 +2103,7 @@ body:has(.admin-next) .n-message-container {
 .admin-next-host .sender-name {
     font-size: 14px;
     font-weight: 600;
-    color: #ffffff;
+    color: var(--fg);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -2121,7 +2111,7 @@ body:has(.admin-next) .n-message-container {
 
 .admin-next-host .sender-time {
     font-size: 12px;
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--muted);
     white-space: nowrap;
 }
 
@@ -2210,9 +2200,9 @@ body:has(.admin-next) .n-message-container {
     margin: 0;
     border-radius: var(--radius-sm);
     padding: 16px;
-    background: #181b22;
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    color: #e6edf3;
+    background: var(--surface-soft);
+    border: 1px solid var(--border);
+    color: var(--fg);
     overflow: auto;
     min-height: 360px;
     box-sizing: border-box;
@@ -2222,8 +2212,8 @@ body:has(.admin-next) .n-message-container {
     display: flex;
     flex-direction: column;
     gap: 14px;
-    background: #181b22;
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: var(--surface-soft);
+    border: 1px solid var(--border);
     min-height: 360px;
     pointer-events: none;
     user-select: none;
@@ -2233,7 +2223,7 @@ body:has(.admin-next) .n-message-container {
 .admin-next-host .mail-body-skeleton .skeleton-line {
     height: 14px;
     border-radius: 4px;
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--surface-hover);
     animation: mail-skeleton-pulse 1.6s ease-in-out infinite;
 }
 
@@ -2241,7 +2231,7 @@ body:has(.admin-next) .n-message-container {
     width: 42%;
     height: 18px;
     margin-bottom: 6px;
-    background: rgba(255, 255, 255, 0.12);
+    background: var(--border);
 }
 
 .admin-next-host .mail-body-skeleton .skeleton-line-short {
@@ -2280,7 +2270,7 @@ body:has(.admin-next) .n-message-container {
 
 .admin-next-host .html-body {
     max-height: none;
-    background: #181b22;
+    background: var(--surface-soft);
 }
 
 .admin-next-host .html-body :deep(.mail-content-renderer) {
@@ -2439,7 +2429,7 @@ body:has(.admin-next) .n-message-container {
     color: var(--muted);
     font-size: 12px;
     font-weight: 500;
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--surface-soft);
     border-top: none;
     border-bottom: 1px solid var(--border);
 }
@@ -2448,9 +2438,12 @@ body:has(.admin-next) .n-message-container {
     cursor: pointer;
 }
 
-.admin-next-host tr[tabindex]:hover,
+.admin-next-host tr[tabindex]:hover {
+    background: var(--surface-hover);
+}
+
 .admin-next-host tr.is-selected {
-    background: rgba(255, 255, 255, 0.035);
+    background: var(--accent-subtle);
 }
 
 .admin-next-host .num {
@@ -2984,7 +2977,7 @@ body:has(.admin-next) .n-message-container {
 
 .admin-next-host .field-password-toggle:hover {
     color: var(--fg);
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--surface-hover);
 }
 
 .admin-next-host .field-password-toggle svg {
@@ -3677,15 +3670,17 @@ body:has(.admin-next) .n-message-container {
 .admin-next-host .card-badge {
     border-radius: 9999px;
     padding: 2px 8px;
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--surface-soft);
+    border: 1px solid var(--border);
     color: var(--muted);
     font-size: 11px;
     font-weight: 600;
 }
 
 .admin-next-host .card-badge.is-unread {
-    background: rgba(59, 130, 246, 0.2);
-    color: #60a5fa;
+    background: var(--accent-subtle);
+    border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+    color: var(--accent);
 }
 
 .admin-next-host .card-main {
@@ -3735,10 +3730,10 @@ body:has(.admin-next) .n-message-container {
 
 .admin-next-host .overview-stream-panel,
 .admin-next-host .overview-health-panel {
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    border-radius: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
     background: var(--surface);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    box-shadow: var(--shadow-surface);
 }
 
 .admin-next-host .kv-grid {
