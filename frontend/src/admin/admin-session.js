@@ -16,7 +16,7 @@ export const useAdminSession = ({
     refreshAdminData,
     notify,
 }) => {
-    const tmpAdminAccount = ref('admin')
+    const tmpAdminAccount = ref('')
     const tmpAdminAuth = ref('')
     const cfToken = ref('')
     const turnstileRef = ref(null)

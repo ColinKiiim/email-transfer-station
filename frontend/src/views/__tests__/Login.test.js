@@ -98,7 +98,7 @@ describe('Login component anonymous address creation cue', () => {
         newAddressPath: vi.fn(),
     }
 
-    it('shows anonymousDisabledNotice when guest user cannot create anonymous address', async () => {
+    it('does not render nag alert banners when anonymous creation is disabled', async () => {
         state.openSettings.value.enableUserCreateEmail = true
         state.openSettings.value.disableAnonymousUserCreateEmail = true
         state.userSettings.value.user_email = ''
@@ -108,13 +108,14 @@ describe('Login component anonymous address creation cue', () => {
             global: { plugins: [i18n, router], stubs },
         })
 
+        // Under Apple HIG, redundant nag alert banners are eliminated
         const alerts = wrapper.findAll('.n-alert-stub')
-        expect(alerts.length).toBe(1)
-        expect(alerts[0].text()).toContain('当前系统未开放匿名创建地址，请使用现有账户登录或在用户中心绑定')
-        expect(wrapper.text()).not.toContain('创建新邮箱')
+        expect(alerts.length).toBe(0)
+        expect(wrapper.text()).not.toContain('当前系统未开放匿名创建地址')
+        expect(wrapper.text()).not.toContain('新建邮箱')
     })
 
-    it('shows localized English notice when locale is en and anonymous creation is disabled', async () => {
+    it('does not render nag alert in English locale either', async () => {
         i18n.global.locale.value = 'en'
         state.openSettings.value.enableUserCreateEmail = false
         state.userSettings.value.user_email = ''
@@ -125,11 +126,11 @@ describe('Login component anonymous address creation cue', () => {
         })
 
         const alerts = wrapper.findAll('.n-alert-stub')
-        expect(alerts.length).toBe(1)
-        expect(alerts[0].text()).toContain('Anonymous address creation is unavailable')
+        expect(alerts.length).toBe(0)
+        expect(wrapper.text()).not.toContain('Anonymous address creation is unavailable')
     })
 
-    it('does not show anonymousDisabledNotice when anonymous address creation is enabled', async () => {
+    it('shows register option in segmented control when address creation is enabled', async () => {
         state.openSettings.value.enableUserCreateEmail = true
         state.openSettings.value.disableAnonymousUserCreateEmail = false
         state.userSettings.value.user_email = ''
@@ -144,7 +145,7 @@ describe('Login component anonymous address creation cue', () => {
         expect(wrapper.text()).toContain('创建新邮箱')
     })
 
-    it('shows bindUserInfo instead for signed-in users', async () => {
+    it('keeps form clean without nag alert for signed-in users', async () => {
         state.openSettings.value.enableUserCreateEmail = true
         state.openSettings.value.disableAnonymousUserCreateEmail = true
         state.userSettings.value.user_email = 'member@example.com'
@@ -155,8 +156,33 @@ describe('Login component anonymous address creation cue', () => {
         })
 
         const alerts = wrapper.findAll('.n-alert-stub')
-        expect(alerts.length).toBe(1)
-        expect(alerts[0].text()).toContain('已登录用户, 登录未绑定邮箱或创建新邮箱地址将绑定到当前用户')
-        expect(alerts[0].text()).not.toContain('当前系统未开放匿名创建地址')
+        expect(alerts.length).toBe(0)
+        expect(wrapper.text()).not.toContain('当前系统未开放匿名创建地址')
+    })
+
+    it('hides password login and renders credential login when enableAddressPassword is false', async () => {
+        state.openSettings.value.enableAddressPassword = false
+        state.openSettings.value.enableUserCreateEmail = false
+
+        const wrapper = mount(Login, {
+            props: defaultProps,
+            global: { plugins: [i18n, router], stubs },
+        })
+
+        expect(wrapper.text()).not.toContain('密码登录')
+        expect(wrapper.find('textarea#mailbox-login-credential').exists()).toBe(true)
+        expect(wrapper.find('input#mailbox-login-password').exists()).toBe(false)
+    })
+
+    it('shows password login when enableAddressPassword is true', async () => {
+        state.openSettings.value.enableAddressPassword = true
+
+        const wrapper = mount(Login, {
+            props: defaultProps,
+            global: { plugins: [i18n, router], stubs },
+        })
+
+        expect(wrapper.text()).toContain('密码登录')
+        expect(wrapper.find('input#mailbox-login-email').exists()).toBe(true)
     })
 })

@@ -1,9 +1,11 @@
 <script setup>
 import { useScopedI18n } from '@/i18n/app'
 import { onMounted, ref } from 'vue'
+import { useMessage } from 'naive-ui'
 
 import { useGlobalState } from '../../store'
 import { api } from '../../api'
+import SettingsCardShell from '../../components/SettingsCardShell.vue'
 
 const message = useMessage()
 const sourcePrefix = ref("")
@@ -13,7 +15,6 @@ const subject = ref("")
 const name = ref("")
 
 const { settings } = useGlobalState()
-
 
 const { t } = useScopedI18n('views.index.AutoReply')
 
@@ -56,57 +57,51 @@ onMounted(async () => {
 </script>
 
 <template>
-    <div class="center">
-        <n-card :bordered="false" embedded v-if="settings.address" :title='t("settings")'>
-            <div class="left">
-                <n-form-item :label="t('enableAutoReply')" label-placement="left">
-                    <n-switch v-model:value="enableAutoReply" />
-                </n-form-item>
-                <n-form-item :label="t('name')" label-placement="left">
-                    <n-input :disabled="!enableAutoReply" v-model:value="name" />
-                </n-form-item>
-                <n-form-item :label="t('sourcePrefix')" label-placement="left">
-                    <n-input :disabled="!enableAutoReply" v-model:value="sourcePrefix"
-                        :placeholder="t('sourcePrefixPlaceholder')" />
-                </n-form-item>
-                <n-form-item :label="t('subject')" label-placement="left">
-                    <n-input :disabled="!enableAutoReply" v-model:value="subject" />
-                </n-form-item>
-                <n-form-item :label="t('autoReply')" label-placement="left">
-                    <n-input :disabled="!enableAutoReply" type="textarea" v-model:value="autoReplyMessage" />
-                </n-form-item>
-                <n-flex justify="end" class="action-row">
-                    <n-button type="primary" @click="saveData">{{ t('save') }}</n-button>
-                </n-flex>
-            </div>
-        </n-card>
+    <div class="settings-page-wrapper" v-if="settings.address">
+        <div class="settings-container">
+            <SettingsCardShell :title="t('settings')">
+                <div class="settings-form">
+                    <n-form-item :label="t('enableAutoReply')">
+                        <n-switch v-model:value="enableAutoReply" :round="false" />
+                    </n-form-item>
+                    <n-form-item :label="t('name')">
+                        <n-input :disabled="!enableAutoReply" v-model:value="name" />
+                    </n-form-item>
+                    <n-form-item :label="t('sourcePrefix')">
+                        <n-input :disabled="!enableAutoReply" v-model:value="sourcePrefix"
+                            :placeholder="t('sourcePrefixPlaceholder')" />
+                    </n-form-item>
+                    <n-form-item :label="t('subject')">
+                        <n-input :disabled="!enableAutoReply" v-model:value="subject" />
+                    </n-form-item>
+                    <n-form-item :label="t('autoReply')">
+                        <n-input :disabled="!enableAutoReply" type="textarea" :autosize="{ minRows: 4 }" v-model:value="autoReplyMessage" />
+                    </n-form-item>
+                    <n-flex justify="end" class="action-row">
+                        <n-button type="primary" @click="saveData">{{ t('save') }}</n-button>
+                    </n-flex>
+                </div>
+            </SettingsCardShell>
+        </div>
     </div>
 </template>
 
 <style scoped>
-.n-card {
-    max-width: min(100%, 1080px);
-    width: 100%;
-}
-
-.n-button {
-    text-align: left;
-}
-
-.center {
+.settings-page-wrapper {
     display: flex;
-    text-align: center;
-    place-items: center;
     justify-content: center;
+    padding: 8px 0 24px 0;
 }
 
-.left {
-    text-align: left;
-    place-items: left;
-    justify-content: left;
+.settings-container {
+    max-width: 680px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
 }
 
 .action-row {
-    margin-top: 12px;
+    margin-top: 16px;
 }
 </style>

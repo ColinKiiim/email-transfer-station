@@ -3,6 +3,9 @@ import { computed, useSlots } from 'vue'
 
 import AppUtilityMenu from './AppUtilityMenu.vue'
 import ProductBrand from './ProductBrand.vue'
+import { useGlobalState } from '../store'
+
+const { isDark, toggleDark } = useGlobalState()
 
 const props = defineProps({
   title: {
@@ -109,6 +112,18 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
         </div>
         <div class="top-actions">
           <slot name="actions" />
+          <button type="button" class="access-icon-action" :aria-label="isDark ? '切换浅色模式' : '切换深色模式'"
+            :title="isDark ? '切换浅色模式' : '切换深色模式'" @click="toggleDark">
+            <svg v-if="isDark" viewBox="0 0 24 24" class="theme-icon" aria-hidden="true">
+              <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8" />
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"
+                stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+            </svg>
+            <svg v-else viewBox="0 0 24 24" class="theme-icon" aria-hidden="true">
+              <path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"
+                fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
           <AppUtilityMenu />
         </div>
       </header>
@@ -149,9 +164,7 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
   width: 100%;
   height: 100dvh;
   min-height: 0;
-  background:
-    linear-gradient(180deg, var(--ets-surface-alt), var(--ets-bg)),
-    var(--access-bg);
+  background: var(--access-bg);
   color: var(--access-text);
   text-align: left;
   -webkit-font-smoothing: antialiased;
@@ -377,6 +390,36 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
   justify-content: flex-end;
   align-items: center;
   min-width: 0;
+}
+
+.access-icon-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--ets-radius-sm, 6px);
+  border: 1px solid var(--ets-border);
+  background: var(--ets-surface);
+  color: var(--ets-text-muted);
+  cursor: pointer;
+  transition: background var(--ets-motion-fast), color var(--ets-motion-fast), border-color var(--ets-motion-fast);
+}
+
+.access-icon-action:hover {
+  background: var(--ets-hover);
+  color: var(--ets-text-strong);
+  border-color: var(--ets-border-strong);
+}
+
+.access-icon-action:focus-visible {
+  outline: 2px solid var(--ets-focus-ring);
+  outline-offset: 2px;
+}
+
+.theme-icon {
+  width: 16px;
+  height: 16px;
 }
 
 .access-commandbar {

@@ -1,17 +1,13 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 
-import AppUtilityMenu from '../../components/AppUtilityMenu.vue'
-import ProductBrand from '../../components/ProductBrand.vue'
-import ProductSurfaceLinks from '../../components/ProductSurfaceLinks.vue'
+import AppTopbar from '../../components/AppTopbar.vue'
+import AuthCardShell from '../../components/AuthCardShell.vue'
+import ApplePasswordInput from '../../components/ApplePasswordInput.vue'
 import Turnstile from '../../components/Turnstile.vue'
-import { getRouterPathWithLang } from '../../utils'
 
-const { t, locale } = useScopedI18n('admin.login')
-const surfaceItems = computed(() => [
-    { id: 'home', label: t('home'), to: getRouterPathWithLang('/', locale.value) },
-])
+const { t } = useScopedI18n('admin.login')
 
 const account = defineModel('account', { type: String, default: '' })
 const password = defineModel('password', { type: String, default: '' })
@@ -35,41 +31,31 @@ defineExpose({
 
 <template>
     <section class="admin-next login-page" aria-labelledby="admin-auth-title">
-        <header class="login-topbar">
-            <ProductBrand :context-label="t('contextLabel')" />
-            <div class="login-top-actions">
-                <ProductSurfaceLinks :items="surfaceItems" :aria-label="t('surfaceLinksLabel')" />
-                <AppUtilityMenu />
-            </div>
-        </header>
+        <AppTopbar />
         <div class="login-shell">
-            <form class="login-card" @submit.prevent="emit('submit')">
-                <div class="auth-brand-badge">
+            <AuthCardShell :title="t('title')" title-id="admin-auth-title">
+                <template #badge>
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                         <path d="M12 2 3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z" fill="none" stroke="currentColor" stroke-width="2" />
                         <path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-width="2" />
                     </svg>
-                </div>
-                <div class="login-copy">
-                    <h1 id="admin-auth-title">{{ t('title') }}</h1>
-                    <p>{{ t('description') }}</p>
-                </div>
-                <div class="form-grid">
-                    <label class="form-field full">
-                        <span>{{ t('account') }}</span>
-                        <input v-model="account" class="field" type="text" autocomplete="username"
-                            autocapitalize="none" spellcheck="false" placeholder="admin" />
-                    </label>
-                    <label class="form-field full">
-                        <span>{{ t('password') }}</span>
-                        <input v-model="password" class="field" type="password" autocomplete="current-password" placeholder="••••••••" />
-                    </label>
-                </div>
-                <Turnstile ref="turnstile" v-if="openSettings.enableGlobalTurnstileCheck" v-model:value="cfToken" />
-                <button class="btn primary login-submit" type="submit" :disabled="loading">
-                    {{ loading ? t('submitting') : t('submit') }}
-                </button>
-            </form>
+                </template>
+                <form class="auth-form" @submit.prevent="emit('submit')">
+                    <div class="auth-field">
+                        <label class="auth-label" for="admin-account-input">{{ t('account') }}</label>
+                        <input id="admin-account-input" v-model="account" class="auth-input" type="text" autocomplete="username"
+                            autocapitalize="none" spellcheck="false" />
+                    </div>
+                    <div class="auth-field">
+                        <label class="auth-label" for="admin-password-input">{{ t('password') }}</label>
+                        <ApplePasswordInput id="admin-password-input" v-model="password" autocomplete="current-password" />
+                    </div>
+                    <Turnstile ref="turnstile" v-if="openSettings.enableGlobalTurnstileCheck" v-model:value="cfToken" />
+                    <button class="auth-submit-btn" type="submit" :disabled="loading">
+                        {{ loading ? t('submitting') : t('submit') }}
+                    </button>
+                </form>
+            </AuthCardShell>
         </div>
     </section>
 </template>

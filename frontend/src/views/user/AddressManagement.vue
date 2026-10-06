@@ -2,7 +2,7 @@
 import { ref, h, onMounted, computed, watch } from 'vue';
 import { useScopedI18n } from '@/i18n/app'
 import { useRouter } from 'vue-router';
-import { NBadge, NPopconfirm, NButton } from 'naive-ui'
+import { NBadge, NPopconfirm, NButton, useMessage } from 'naive-ui'
 
 import { useGlobalState } from '../../store'
 import { api } from '../../api'
@@ -122,7 +122,7 @@ const columns = computed(() => [
         key: "mail_count",
         render(row) {
             return h(NBadge, {
-                value: row.mail_count,
+                value: row.mail_count ?? 0,
                 'show-zero': true,
                 max: 99,
                 type: "success"
@@ -134,7 +134,7 @@ const columns = computed(() => [
         key: "send_count",
         render(row) {
             return h(NBadge, {
-                value: row.send_count,
+                value: row.send_count ?? 0,
                 'show-zero': true,
                 max: 99,
                 type: "success"
@@ -221,9 +221,6 @@ onMounted(async () => {
                 </n-button>
             </template>
         </n-modal>
-        <n-alert class="portal-tip" type="info" :show-icon="false" :bordered="false">
-            {{ canCreateOrBindAddress ? t('portalTipWithCreate') : t('portalTipAssignedOnly') }}
-        </n-alert>
         <n-tabs type="segment">
             <n-tab-pane name="address" :tab="t('assignedAddress')">
                 <div class="address-table-scroll">

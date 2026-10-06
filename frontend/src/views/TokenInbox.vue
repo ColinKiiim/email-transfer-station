@@ -136,7 +136,6 @@ onMounted(resolveToken)
       v-else-if="shareJwt"
       :key="mailBoxKey"
       :title="t('mailbox')"
-      :description="t('workbenchDescription')"
       :show-e-mail-to="false"
       :show-reply="false"
       :show-save-s3="false"

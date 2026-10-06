@@ -104,7 +104,6 @@ const scrollToChannels = (event) => {
                     <strong class="card-value">{{ formatNumber(model.mailRows.length) }}</strong>
                     <span class="card-unit">{{ t('mailUnit') }}</span>
                 </div>
-                <p class="card-desc">{{ t('flowDesc', { count: formatNumber(model.mailRows.length) }) }}</p>
                 <div class="card-action">
                     <span>{{ t('openFlow') }} &rarr;</span>
                 </div>
@@ -118,7 +117,6 @@ const scrollToChannels = (event) => {
                     <strong class="card-value">{{ formatNumber(model.domainRows.length) }}</strong>
                     <span class="card-unit">{{ t('domainUnit') }}</span>
                 </div>
-                <p class="card-desc">{{ t('routingDesc') }}</p>
                 <div class="card-action">
                     <span>{{ t('manageDomains') }} &rarr;</span>
                 </div>
@@ -132,7 +130,6 @@ const scrollToChannels = (event) => {
                     <strong class="card-value">{{ formatNumber(model.addressRows.length) }}</strong>
                     <span class="card-unit">{{ t('addressUnit') }}</span>
                 </div>
-                <p class="card-desc">{{ t('identityDesc') }}</p>
                 <div class="card-action">
                     <span>{{ t('manageAddressesOverview') }} &rarr;</span>
                 </div>
@@ -150,7 +147,6 @@ const scrollToChannels = (event) => {
                     <strong class="card-value mono">{{ model.dbVersionLabel }}</strong>
                     <span class="card-unit">{{ t('dbVersionUnit') }}</span>
                 </div>
-                <p class="card-desc">{{ t('opsDesc') }}</p>
                 <div class="card-action">
                     <span>{{ t('viewOps') }} &rarr;</span>
                 </div>
@@ -163,7 +159,6 @@ const scrollToChannels = (event) => {
                 <div class="panel-head">
                     <div>
                         <h2>{{ t('recentActivity') }}</h2>
-                        <p>{{ t('recentActivityDesc') }}</p>
                     </div>
                     <button class="btn small" type="button" @click="actions.setView('flow')">
                         {{ t('openFlow') }}

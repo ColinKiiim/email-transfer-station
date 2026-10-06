@@ -1,12 +1,16 @@
-﻿<script setup>
+<script setup>
 import { ref } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 import { useRouter } from 'vue-router'
+import { useMessage } from 'naive-ui'
 
 import { useGlobalState } from '../../store'
 import { clearSessionStorageKeys } from '../../utils/session'
 import { api } from '../../api'
 import { getRouterPathWithLang } from '../../utils'
+import SettingsCardShell from '../../components/SettingsCardShell.vue'
+import SettingsItemRow from '../../components/SettingsItemRow.vue'
+import DestructiveConfirmModal from '../../components/DestructiveConfirmModal.vue'
 
 const {
     jwt, settings, showAddressCredential, loading, openSettings
@@ -22,6 +26,16 @@ const showChangePassword = ref(false)
 const newPassword = ref('')
 const confirmPassword = ref('')
 const { locale, t } = useScopedI18n('views.index.AccountSettings')
+
+const copyAddress = async () => {
+    if (!settings.value?.address) return
+    try {
+        await navigator.clipboard.writeText(settings.value.address)
+        message.success(t('success') || '已复制')
+    } catch {
+        message.error('复制失败')
+    }
+}
 
 const logout = async () => {
     try {
@@ -87,15 +101,16 @@ const changePassword = async () => {
         // Changing the password revokes every Address JWT issued against the old
         // one, including this tab's. The worker returns a replacement so the
         // current session continues; other devices are signed out as intended.
-        const result = await api.fetch(`/api/address_change_password`, {
+        const res = await api.fetch(`/api/change_password`, {
             method: 'POST',
             body: JSON.stringify({
-                new_password: newPassword.value,
-                password_format: 'plain'
+                password: newPassword.value
             })
         });
-        if (result?.jwt) jwt.value = result.jwt;
-        message.success(t("passwordChanged"));
+        if (typeof res?.jwt === 'string' && res.jwt.length > 0) {
+            jwt.value = res.jwt;
+        }
+        message.success(t("success"));
         newPassword.value = '';
         confirmPassword.value = '';
         showChangePassword.value = false;
@@ -106,84 +121,126 @@ const changePassword = async () => {
 </script>
 
 <template>
-    <div class="center" v-if="settings.address">
-        <n-card :bordered="false" embedded class="account-card">
-            <n-button @click="showAddressCredential = true" type="primary" secondary block strong>
-                {{ t('showAddressCredential') }}
-            </n-button>
-            <n-button v-if="openSettings?.enableAddressPassword" @click="showChangePassword = true" type="info" secondary block strong>
-                {{ t('changePassword') }}
-            </n-button>
-            <n-button v-if="openSettings.enableUserDeleteEmail" @click="showClearInbox = true" type="warning" secondary
-                block strong>
-                {{ t('clearInbox') }}
-            </n-button>
-            <n-button v-if="openSettings.enableUserDeleteEmail" @click="showClearSentItems = true" type="warning"
-                secondary block strong>
-                {{ t('clearSentItems') }}
-            </n-button>
-            <n-button @click="showLogout = true" secondary block strong>
-                {{ t('logout') }}
-            </n-button>
-            <n-divider v-if="openSettings.enableUserDeleteEmail" />
-            <n-button v-if="openSettings.enableUserDeleteEmail" @click="showDeleteAccount = true" type="error" secondary
-                block strong>
-                {{ t('deleteAccount') }}
-            </n-button>
-        </n-card>
+    <div class="settings-page-wrapper" v-if="settings.address">
+        <div class="settings-container">
+            <!-- Mailbox Profile Summary Card -->
+            <SettingsCardShell class="mailbox-identity-card">
+                <div class="identity-info">
+                    <div class="identity-avatar">✉</div>
+                    <div class="identity-meta">
+                        <span class="identity-label">{{ t('currentAddress') || '当前临时邮箱' }}</span>
+                        <div class="identity-address-row">
+                            <strong class="identity-address">{{ settings.address }}</strong>
+                            <n-button @click="copyAddress" text size="tiny" class="copy-btn">
+                                📋
+                            </n-button>
+                        </div>
+                    </div>
+                </div>
+            </SettingsCardShell>
 
-        <n-modal v-model:show="showLogout" preset="dialog" :title="t('logout')">
-            <p>{{ t('logoutConfirm') }}</p>
-            <template #action>
-                <n-space justify="end">
-                    <n-button @click="showLogout = false" size="small" tertiary>
-                        {{ t('cancel') || '取消' }}
+            <!-- Section 1: Security & Credentials -->
+            <SettingsCardShell :title="t('security') || '凭据与安全'">
+                <SettingsItemRow :title="t('showAddressCredential')">
+                    <n-button @click="showAddressCredential = true" secondary size="small" type="primary">
+                        {{ t('view') || '查看凭据' }}
                     </n-button>
-                    <n-button :loading="loading" @click="logout" size="small" type="warning">
-                        {{ t('logout') }}
+                </SettingsItemRow>
+                <SettingsItemRow
+                    v-if="openSettings?.enableAddressPassword"
+                    :title="t('changePassword')"
+                >
+                    <n-button @click="showChangePassword = true" secondary size="small">
+                        {{ t('edit') || '修改密码' }}
                     </n-button>
-                </n-space>
-            </template>
-        </n-modal>
-        <n-modal v-model:show="showDeleteAccount" preset="dialog" :title="t('deleteAccount')">
-            <p>{{ t('deleteAccountConfirm') }}</p>
-            <template #action>
-                <n-space justify="end">
-                    <n-button @click="showDeleteAccount = false" size="small" tertiary>
-                        {{ t('cancel') || '取消' }}
-                    </n-button>
-                    <n-button :loading="loading" @click="deleteAccount" size="small" type="error">
-                        {{ t('deleteAccount') }}
-                    </n-button>
-                </n-space>
-            </template>
-        </n-modal>
-        <n-modal v-model:show="showClearInbox" preset="dialog" :title="t('clearInbox')">
-            <p>{{ t('clearInboxConfirm') }}</p>
-            <template #action>
-                <n-space justify="end">
-                    <n-button @click="showClearInbox = false" size="small" tertiary>
-                        {{ t('cancel') || '取消' }}
-                    </n-button>
-                    <n-button :loading="loading" @click="clearInbox" size="small" type="warning">
+                </SettingsItemRow>
+            </SettingsCardShell>
+
+            <!-- Section 2: Data & Session -->
+            <SettingsCardShell :title="t('dataManagement') || '邮件与会话'">
+                <SettingsItemRow
+                    v-if="openSettings.enableUserDeleteEmail"
+                    :title="t('clearInbox')"
+                >
+                    <n-button @click="showClearInbox = true" secondary size="small" type="warning">
                         {{ t('clearInbox') }}
                     </n-button>
-                </n-space>
-            </template>
-        </n-modal>
-        <n-modal v-model:show="showClearSentItems" preset="dialog" :title="t('clearSentItems')">
-            <p>{{ t('clearSentItemsConfirm') }}</p>
-            <template #action>
-                <n-space justify="end">
-                    <n-button @click="showClearSentItems = false" size="small" tertiary>
-                        {{ t('cancel') || '取消' }}
-                    </n-button>
-                    <n-button :loading="loading" @click="clearSentItems" size="small" type="warning">
+                </SettingsItemRow>
+                <SettingsItemRow
+                    v-if="openSettings.enableUserDeleteEmail"
+                    :title="t('clearSentItems')"
+                >
+                    <n-button @click="showClearSentItems = true" secondary size="small" type="warning">
                         {{ t('clearSentItems') }}
                     </n-button>
-                </n-space>
-            </template>
-        </n-modal>
+                </SettingsItemRow>
+                <SettingsItemRow :title="t('logout')">
+                    <n-button @click="showLogout = true" secondary size="small">
+                        {{ t('logout') }}
+                    </n-button>
+                </SettingsItemRow>
+            </SettingsCardShell>
+
+            <!-- Section 3: Danger Zone -->
+            <SettingsCardShell
+                v-if="openSettings.enableUserDeleteEmail"
+                :title="t('dangerZone') || '危险区域'"
+                :danger="true"
+            >
+                <SettingsItemRow
+                    :title="t('deleteAccount')"
+                    :danger="true"
+                >
+                    <n-button @click="showDeleteAccount = true" type="error" secondary size="small">
+                        {{ t('deleteAccount') }}
+                    </n-button>
+                </SettingsItemRow>
+            </SettingsCardShell>
+        </div>
+
+        <DestructiveConfirmModal
+            v-model:show="showLogout"
+            :title="t('logout')"
+            :content="t('logoutConfirm')"
+            :confirm-text="t('logout')"
+            :cancel-text="t('cancel') || '取消'"
+            type="warning"
+            :loading="loading"
+            @confirm="logout"
+        />
+
+        <DestructiveConfirmModal
+            v-model:show="showDeleteAccount"
+            :title="t('deleteAccount')"
+            :content="t('deleteAccountConfirm')"
+            :confirm-text="t('deleteAccount')"
+            :cancel-text="t('cancel') || '取消'"
+            type="error"
+            :loading="loading"
+            @confirm="deleteAccount"
+        />
+
+        <DestructiveConfirmModal
+            v-model:show="showClearInbox"
+            :title="t('clearInbox')"
+            :content="t('clearInboxConfirm')"
+            :confirm-text="t('clearInbox')"
+            :cancel-text="t('cancel') || '取消'"
+            type="warning"
+            :loading="loading"
+            @confirm="clearInbox"
+        />
+
+        <DestructiveConfirmModal
+            v-model:show="showClearSentItems"
+            :title="t('clearSentItems')"
+            :content="t('clearSentItemsConfirm')"
+            :confirm-text="t('clearSentItems')"
+            :cancel-text="t('cancel') || '取消'"
+            type="warning"
+            :loading="loading"
+            @confirm="clearSentItems"
+        />
 
         <n-modal v-model:show="showChangePassword" preset="dialog" :title="t('changePassword')">
             <n-form :model="{ newPassword, confirmPassword }">
@@ -206,18 +263,71 @@ const changePassword = async () => {
 </template>
 
 <style scoped>
-.center {
+.settings-page-wrapper {
     display: flex;
     justify-content: center;
+    padding: 8px 0 24px 0;
 }
 
-.account-card {
-    max-width: 800px;
-    text-align: left;
+.settings-container {
+    max-width: 680px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
 }
 
-.n-button {
-    margin-top: 14px;
+.mailbox-identity-card {
+    background: linear-gradient(135deg, var(--ets-surface-card, #ffffff), var(--ets-brand-soft, #f0f7ff));
+    border-color: var(--ets-border-strong, #d1d5db);
 }
 
+.identity-info {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.identity-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: var(--ets-brand, #2563eb);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.identity-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.identity-label {
+    font-size: 12px;
+    color: var(--ets-text-muted, #6b7280);
+}
+
+.identity-address-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.identity-address {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ets-text-strong, #111827);
+    word-break: break-all;
+}
+
+.copy-btn {
+    cursor: pointer;
+    font-size: 13px;
+}
 </style>

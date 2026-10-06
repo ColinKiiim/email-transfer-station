@@ -329,10 +329,6 @@ onBeforeUnmount(() => {
                     </label>
                 </template>
                 <template v-else-if="model.actionModal === 'new-address' || model.actionModal === 'quick-create'">
-                    <div id="action-modal-description" class="notice modal-notice">
-                        <strong>{{ t('productionAddressTitle') }}</strong>
-                        <span>{{ t('productionAddressNote') }}</span>
-                    </div>
                     <div class="form-grid">
                         <label class="form-field">
                             <span>{{ t('addressName') }}</span>
@@ -363,10 +359,6 @@ onBeforeUnmount(() => {
                     </div>
                 </template>
                 <template v-else-if="model.actionModal === 'share-package'">
-                    <div id="action-modal-description" class="notice modal-notice">
-                        <strong>{{ t('readOnlyAccessTitle') }}</strong>
-                        <span>{{ t('readOnlyAccessNote') }}</span>
-                    </div>
                     <div class="form-grid">
                         <label class="form-field full">
                             <span>{{ t('address') }}</span>
@@ -386,10 +378,6 @@ onBeforeUnmount(() => {
                     </div>
                 </template>
                 <template v-else-if="model.actionModal === 'new-user'">
-                    <div id="action-modal-description" class="notice modal-notice">
-                        <strong>{{ t('modalNewUser') }}</strong>
-                        <span>{{ t('modalNewUserNote') }}</span>
-                    </div>
                     <div class="form-grid">
                         <label class="form-field full">
                             <span>{{ t('email') }}</span>
@@ -400,7 +388,7 @@ onBeforeUnmount(() => {
                             <span>{{ t('password') }}</span>
                             <div class="field-password-wrap">
                                 <input v-model="model.userCreateForm.password" data-testid="user-password"
-                                    class="field" :type="showNewUserPassword ? 'text' : 'password'" placeholder="••••••••" autocomplete="new-password" required />
+                                    class="field" :type="showNewUserPassword ? 'text' : 'password'" autocomplete="new-password" required />
                                 <button type="button" class="field-password-toggle" :aria-label="showNewUserPassword ? 'Hide password' : 'Show password'" @click="showNewUserPassword = !showNewUserPassword">
                                     <svg v-if="showNewUserPassword" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
@@ -426,10 +414,6 @@ onBeforeUnmount(() => {
                     </div>
                 </template>
                 <template v-else-if="model.actionModal === 'reset-password'">
-                    <div id="action-modal-description" class="notice modal-notice">
-                        <strong>{{ t('modalResetPassword') }}</strong>
-                        <span>{{ t('modalResetPasswordNote') }}</span>
-                    </div>
                     <div class="form-grid">
                         <label class="form-field full">
                             <span>{{ t('user') }}</span>
@@ -439,7 +423,7 @@ onBeforeUnmount(() => {
                             <span>{{ t('newPassword') }}</span>
                             <div class="field-password-wrap">
                                 <input v-model="model.userResetPasswordForm.password" data-testid="user-new-password" data-autofocus
-                                    class="field" :type="showResetPassword ? 'text' : 'password'" placeholder="••••••••" autocomplete="new-password" required />
+                                    class="field" :type="showResetPassword ? 'text' : 'password'" autocomplete="new-password" required />
                                 <button type="button" class="field-password-toggle" :aria-label="showResetPassword ? 'Hide password' : 'Show password'" @click="showResetPassword = !showResetPassword">
                                     <svg v-if="showResetPassword" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
@@ -455,10 +439,6 @@ onBeforeUnmount(() => {
                     </div>
                 </template>
                 <template v-else-if="model.actionModal === 'edit-role'">
-                    <div id="action-modal-description" class="notice modal-notice">
-                        <strong>{{ t('modalEditRole') }}</strong>
-                        <span>{{ t('modalEditRoleNote') }}</span>
-                    </div>
                     <div class="form-grid">
                         <label class="form-field full">
                             <span>{{ t('user') }}</span>
@@ -477,10 +457,6 @@ onBeforeUnmount(() => {
                     </div>
                 </template>
                 <template v-else-if="model.actionModal === 'user-addresses'">
-                    <div id="action-modal-description" class="notice modal-notice">
-                        <strong>{{ t('modalUserAddresses') }}</strong>
-                        <span>{{ t('modalUserAddressesNote') }}</span>
-                    </div>
                     <div class="user-addresses-wrap">
                         <div class="form-field full">
                             <span>{{ t('user') }}</span>

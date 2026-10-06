@@ -14,6 +14,8 @@ import UserSettingsPage from './user/UserSettings.vue'
 import UserAuthenticators from './user/UserAuthenticators.vue'
 import BindAddress from './user/BindAddress.vue'
 import UserLogin from './user/UserLogin.vue'
+import AuthCardShell from '../components/AuthCardShell.vue'
+import AppTopbar from '../components/AppTopbar.vue'
 
 const message = useMessage()
 const {
@@ -30,6 +32,8 @@ const addressFilter = ref('')
 const addressFilterOptions = ref([])
 const addressesLoaded = ref(false)
 const userOpenSettingsWarning = ref('')
+const showLogoutConfirm = ref(false)
+const logoutLoading = ref(false)
 
 const isSignedIn = computed(() => !!userSettings.value.user_email)
 const roleLabel = computed(() => userSettings.value.user_role?.role || t('noRole'))
@@ -169,7 +173,19 @@ onMounted(async () => {
 </script>
 
 <template>
+  <div v-if="!isSignedIn" class="user-guest-page">
+    <AppTopbar />
+    <div class="user-guest-shell">
+      <AuthCardShell :title="t('loginHeading')">
+        <div class="login-panel">
+          <UserLogin />
+        </div>
+      </AuthCardShell>
+    </div>
+  </div>
+
   <AccessShell
+    v-else
     :title="shellTitle"
     :kicker="shellKicker"
     :brand-context="t('brandContext')"
@@ -183,44 +199,22 @@ onMounted(async () => {
   >
     <template #actions>
       <ProductSurfaceLinks :items="surfaceItems" :aria-label="t('surfaceLinksLabel')" />
-      <n-button v-if="isSignedIn" tertiary @click="fetchAddressOptions">
+      <n-button tertiary @click="fetchAddressOptions">
         {{ t('refreshAddresses') }}
       </n-button>
-      <n-button v-if="isSignedIn" tertiary type="error" @click="logout">
+      <n-button tertiary type="error" @click="showLogoutConfirm = true">
         {{ t('signOut') }}
       </n-button>
     </template>
 
     <template #rail-footer>
-      <div v-if="isSignedIn" class="user-rail-summary">
+      <div class="user-rail-summary">
         <span>{{ t('accessScope') }}</span>
         <strong>{{ t('addressCount', { count: addressFilterOptions.length || 0 }) }}</strong>
-        <p>{{ openSettings.enableUserDeleteEmail ? t('deleteAllowed') : t('deleteRestricted') }}</p>
       </div>
     </template>
 
-    <section v-if="!isSignedIn" class="login-layout">
-      <div class="auth-card">
-        <div class="auth-card-header">
-          <div class="auth-brand-badge">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M4 6h16v12H4z" fill="none" stroke="currentColor" stroke-width="2" />
-              <path d="m4 7 8 6 8-6" fill="none" stroke="currentColor" stroke-width="2" />
-            </svg>
-          </div>
-          <h2>{{ t('loginHeading') }}</h2>
-          <p>{{ t('loginDescription') }}</p>
-        </div>
-        <p v-if="userOpenSettingsWarning" class="inline-warning">
-          {{ t('localPreviewWarning') }}
-        </p>
-        <div class="login-panel">
-          <UserLogin />
-        </div>
-      </div>
-    </section>
-
-    <section v-else-if="!userSettings.fetched || !userOpenSettings.fetched" class="access-card">
+    <section v-if="!userSettings.fetched || !userOpenSettings.fetched" class="access-card">
       <n-skeleton text :repeat="8" />
     </section>
 
@@ -228,7 +222,6 @@ onMounted(async () => {
       v-else-if="userTab === 'user_mail_box_tab'"
       v-model:address-filter="addressFilter"
       :title="t('myInbox')"
-      :description="t('inboxDescription')"
       :address-options="addressFilterOptions"
       :show-address-filter="true"
       :enable-user-delete-email="openSettings.enableUserDeleteEmail"
@@ -270,6 +263,20 @@ onMounted(async () => {
       <BindAddress />
     </section>
   </AccessShell>
+
+    <n-modal v-model:show="showLogoutConfirm" preset="dialog" :title="t('signOut')">
+      <p>{{ t('logoutConfirm') }}</p>
+      <template #action>
+        <n-space justify="end">
+          <n-button size="small" tertiary @click="showLogoutConfirm = false">
+            {{ t('cancel') }}
+          </n-button>
+          <n-button size="small" type="error" :loading="logoutLoading" @click="logout">
+            {{ t('signOut') }}
+          </n-button>
+        </n-space>
+      </template>
+    </n-modal>
 </template>
 
 <style scoped>
@@ -328,62 +335,7 @@ onMounted(async () => {
   text-wrap: balance;
 }
 
-.login-layout {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 100%;
-  height: 100%;
-  padding: 20px 16px;
-  box-sizing: border-box;
-}
 
-.auth-card {
-  width: min(100%, 460px);
-  border-radius: 16px;
-  padding: 32px 28px;
-  background: var(--ets-surface);
-  border: 1px solid var(--ets-border);
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.4);
-}
-
-.auth-card-header {
-  text-align: center;
-  margin-bottom: 24px;
-}
-
-.auth-brand-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #3b82f6, #6366f1);
-  color: #ffffff;
-  margin-bottom: 12px;
-  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
-}
-
-.auth-brand-badge svg {
-  width: 24px;
-  height: 24px;
-}
-
-.auth-card-header h2 {
-  margin: 0;
-  color: var(--ets-text-strong);
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
-
-.auth-card-header p {
-  margin: 6px 0 0;
-  color: var(--ets-text-muted);
-  font-size: 13.5px;
-  line-height: 1.5;
-}
 
 .inline-warning {
   border-radius: 8px;
@@ -408,5 +360,24 @@ onMounted(async () => {
 .access-card :deep(.n-card),
 .login-panel :deep(.n-card) {
   background: transparent;
+}
+
+.user-guest-page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100dvh;
+  min-height: 100dvh;
+  background: var(--ets-bg);
+  overflow: hidden;
+}
+
+.user-guest-shell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+  box-sizing: border-box;
 }
 </style>

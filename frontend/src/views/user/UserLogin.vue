@@ -1,6 +1,6 @@
 <script setup>
 import { useMessage } from 'naive-ui'
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useScopedI18n } from '@/i18n/app'
 
 import { api } from '../../api';
@@ -10,9 +10,11 @@ import { createOAuthAttempt } from '../../security/oauth-state';
 import { sanitizeOAuthIcon } from '../../security/safe-html';
 
 import Turnstile from '../../components/Turnstile.vue';
+import AppleSegmentedControl from '../../components/AppleSegmentedControl.vue';
+import ApplePasswordInput from '../../components/ApplePasswordInput.vue';
 
 const {
-    userJwt, userOpenSettings, openSettings
+    userJwt, userOpenSettings, openSettings, loading
 } = useGlobalState()
 const message = useMessage();
 
@@ -32,6 +34,11 @@ const signupTurnstileRef = ref(null)
 const resetTurnstileRef = ref(null)
 const loginTurnstileRef = ref(null)
 
+const segmentedOptions = computed(() => [
+    { value: 'signin', label: t('login') },
+    { value: 'signup', label: t('register') },
+]);
+
 const emailLogin = async () => {
     if (!user.value.email || !user.value.password) {
         message.error(t('pleaseInput'));
@@ -42,7 +49,6 @@ const emailLogin = async () => {
             method: "POST",
             body: JSON.stringify({
                 email: user.value.email,
-                // hash password
                 password: await hashPassword(user.value.password),
                 cf_token: loginCfToken.value
             })
@@ -116,7 +122,6 @@ const emailSignup = async () => {
             method: "POST",
             body: JSON.stringify({
                 email: user.value.email,
-                // hash password
                 password: await hashPassword(user.value.password),
                 code: user.value.code,
                 cf_token: showModal.value ? resetCfToken.value : signupCfToken.value
@@ -137,124 +142,122 @@ const oauth2Login = async (clientID) => {
         const attempt = createOAuthAttempt({ clientID });
         const query = new URLSearchParams(attempt).toString();
         const res = await api.fetch(`/user_api/oauth2/login_url?${query}`);
-        // redirect to oauth2 login page
         location.href = res.url;
     } catch (error) {
         message.error(error.message || "login failed");
     }
 };
-
-onMounted(async () => {
-
-});
 </script>
 
 <template>
     <div class="user-auth-wrapper">
-        <n-tabs v-model:value="tabValue" size="large" justify-content="space-evenly" class="auth-tabs">
-            <n-tab-pane name="signin" :tab="t('login')">
-                <n-form class="auth-form">
-                    <n-form-item-row :label="t('email')" required>
-                        <n-input v-model:value="user.email" placeholder="name@domain.com" size="large" />
-                    </n-form-item-row>
-                    <n-form-item-row :label="t('password')" required>
-                        <n-input v-model:value="user.password" type="password" show-password-on="click"
-                            placeholder="••••••••" size="large" @keyup.enter="emailLogin" />
-                    </n-form-item-row>
-                    <Turnstile ref="loginTurnstileRef" v-if="openSettings.enableGlobalTurnstileCheck" v-model:value="loginCfToken" />
+        <AppleSegmentedControl
+            v-if="userOpenSettings.enable"
+            v-model="tabValue"
+            :options="segmentedOptions"
+            :aria-label="t('login')"
+        />
 
-                    <div class="auth-action-row">
-                        <n-button @click="emailLogin" type="primary" block size="large" class="submit-btn" strong>
-                            {{ t('login') }}
-                        </n-button>
-                    </div>
+        <form v-if="tabValue === 'signin'" class="auth-form" @submit.prevent="emailLogin">
+            <div class="auth-field">
+                <label class="auth-label" for="user-login-email">{{ t('email') }}</label>
+                <input id="user-login-email" v-model="user.email" class="auth-input" type="email" autocomplete="username"
+                    placeholder="name@domain.com" />
+            </div>
+            <div class="auth-field">
+                <label class="auth-label" for="user-login-password">{{ t('password') }}</label>
+                <ApplePasswordInput id="user-login-password" v-model="user.password"
+                    autocomplete="current-password" />
+            </div>
 
-                    <div class="auth-aux-row">
-                        <n-button @click="showModal = true" type="info" quaternary size="small" class="forgot-btn">
-                            {{ t('forgotPassword') }}
-                        </n-button>
-                    </div>
+            <Turnstile ref="loginTurnstileRef" v-if="openSettings.enableGlobalTurnstileCheck" v-model:value="loginCfToken" />
 
-                    <div v-if="userOpenSettings.oauth2ClientIDs?.length" class="auth-separator">
-                        <span>{{ t('or') || '或' }}</span>
-                    </div>
+            <button class="auth-submit-btn" type="submit" :disabled="loading">
+                {{ t('login') }}
+            </button>
 
-                    <div v-if="userOpenSettings.oauth2ClientIDs?.length" class="auth-alt-methods">
-                        <n-button @click="oauth2Login(item.clientID)" v-for="item in userOpenSettings.oauth2ClientIDs"
-                            :key="item.clientID" block secondary size="large" class="oauth-btn" strong>
-                            <template #icon v-if="item.icon">
-                                <span class="oauth2-icon" v-html="sanitizeOAuthIcon(item.icon)"></span>
-                            </template>
-                            {{ t('loginWith', { provider: item.name }) }}
-                        </n-button>
-                    </div>
-                </n-form>
-            </n-tab-pane>
-            <n-tab-pane v-if="userOpenSettings.enable" name="signup" :tab="t('register')">
-                <n-form class="auth-form">
-                    <n-form-item-row :label="t('email')" required>
-                        <n-input v-model:value="user.email" placeholder="name@domain.com" size="large" />
-                    </n-form-item-row>
-                    <n-form-item-row :label="t('password')" required>
-                        <n-input v-model:value="user.password" type="password" show-password-on="click"
-                            placeholder="••••••••" size="large" @keyup.enter="emailSignup" />
-                    </n-form-item-row>
-                    <Turnstile ref="signupTurnstileRef" v-if="userOpenSettings.enableMailVerify" v-model:value="signupCfToken" />
-                    <n-form-item-row v-if="userOpenSettings.enableMailVerify" :label="t('verifyCode')" required>
-                        <n-input-group size="large">
-                            <n-input v-model:value="user.code" placeholder="000000" />
-                            <n-button @click="sendVerificationCode" type="primary" ghost
-                                :disabled="verifyCodeTimeout > 0">
-                                {{ verifyCodeTimeout > 0 ? t('waitforVerifyCode', { timeout: verifyCodeTimeout })
-                                    : t('sendVerificationCode') }}
-                            </n-button>
-                        </n-input-group>
-                    </n-form-item-row>
-                    <Turnstile ref="signupTurnstileRef" v-if="!userOpenSettings.enableMailVerify" v-model:value="signupCfToken" />
+            <div class="auth-aux-row">
+                <button type="button" class="auth-aux-link forgot-btn" @click="showModal = true">
+                    {{ t('forgotPassword') }}
+                </button>
+            </div>
 
-                    <div class="auth-action-row">
-                        <n-button @click="emailSignup" type="primary" block size="large" class="submit-btn" strong>
-                            {{ t('register') }}
-                        </n-button>
-                    </div>
-                </n-form>
-            </n-tab-pane>
-        </n-tabs>
-        <n-modal v-model:show="showModal" style="max-width: 520px;" preset="card" :title="t('forgotPassword')">
-            <n-form v-if="userOpenSettings.enable && userOpenSettings.enableMailVerify">
-                <n-form-item-row :label="t('email')" required>
-                    <n-input v-model:value="user.email" placeholder="name@domain.com" />
-                </n-form-item-row>
-                <n-form-item-row :label="t('password')" required>
-                    <n-input v-model:value="user.password" type="password" show-password-on="click"
-                        placeholder="••••••••" @keyup.enter="emailSignup" />
-                </n-form-item-row>
+            <div v-if="userOpenSettings.oauth2ClientIDs?.length" class="auth-separator">
+                <span>{{ t('or') || '或' }}</span>
+            </div>
+
+            <div v-if="userOpenSettings.oauth2ClientIDs?.length" class="auth-alt-methods">
+                <button type="button" @click="oauth2Login(item.clientID)" v-for="item in userOpenSettings.oauth2ClientIDs"
+                    :key="item.clientID" class="oauth-btn">
+                    <span v-if="item.icon" class="oauth2-icon" v-html="sanitizeOAuthIcon(item.icon)"></span>
+                    <span>{{ t('loginWith', { provider: item.name }) }}</span>
+                </button>
+            </div>
+        </form>
+
+        <form v-else-if="tabValue === 'signup' && userOpenSettings.enable" class="auth-form" @submit.prevent="emailSignup">
+            <div class="auth-field">
+                <label class="auth-label" for="user-signup-email">{{ t('email') }}</label>
+                <input id="user-signup-email" v-model="user.email" class="auth-input" type="email" autocomplete="username"
+                    placeholder="name@domain.com" />
+            </div>
+            <div class="auth-field">
+                <label class="auth-label" for="user-signup-password">{{ t('password') }}</label>
+                <ApplePasswordInput id="user-signup-password" v-model="user.password"
+                    autocomplete="new-password" />
+            </div>
+
+            <Turnstile ref="signupTurnstileRef" v-if="userOpenSettings.enableMailVerify" v-model:value="signupCfToken" />
+
+            <div v-if="userOpenSettings.enableMailVerify" class="auth-field">
+                <label class="auth-label" for="user-signup-code">{{ t('verifyCode') }}</label>
+                <div style="display: flex; gap: 8px;">
+                    <input id="user-signup-code" v-model="user.code" class="auth-input" type="text" placeholder="000000" style="flex: 1;" />
+                    <button type="button" class="auth-submit-btn" style="width: auto; padding: 0 14px; margin-top: 0; font-size: 13px; white-space: nowrap;"
+                        :disabled="verifyCodeTimeout > 0" @click="sendVerificationCode">
+                        {{ verifyCodeTimeout > 0 ? t('waitforVerifyCode', { timeout: verifyCodeTimeout }) : t('sendVerificationCode') }}
+                    </button>
+                </div>
+            </div>
+
+            <Turnstile ref="signupTurnstileRef" v-if="!userOpenSettings.enableMailVerify" v-model:value="signupCfToken" />
+
+            <button class="auth-submit-btn" type="submit" :disabled="loading">
+                {{ t('register') }}
+            </button>
+        </form>
+
+        <n-modal v-model:show="showModal" style="max-width: 480px;" preset="card" :title="t('forgotPassword')">
+            <form v-if="userOpenSettings.enable && userOpenSettings.enableMailVerify" class="auth-form" @submit.prevent="emailSignup">
+                <div class="auth-field">
+                    <label class="auth-label" for="modal-reset-email">{{ t('email') }}</label>
+                    <input id="modal-reset-email" v-model="user.email" class="auth-input" type="email" placeholder="name@domain.com" />
+                </div>
+                <div class="auth-field">
+                    <label class="auth-label" for="modal-reset-password">{{ t('password') }}</label>
+                    <ApplePasswordInput id="modal-reset-password" v-model="user.password"
+                        autocomplete="new-password" />
+                </div>
                 <Turnstile ref="resetTurnstileRef" v-model:value="resetCfToken" />
-                <n-form-item-row :label="t('verifyCode')" required>
-                    <n-input-group>
-                        <n-input v-model:value="user.code" placeholder="000000" />
-                        <n-button @click="sendVerificationCode" style="margin-bottom: 0" type="primary" ghost
-                            :disabled="verifyCodeTimeout > 0">
-                            {{ verifyCodeTimeout > 0 ? t('waitforVerifyCode', { timeout: verifyCodeTimeout })
-                                : t('sendVerificationCode') }}
-                        </n-button>
-                    </n-input-group>
-                </n-form-item-row>
-                <n-button @click="emailSignup" type="primary" block secondary strong>
+                <div class="auth-field">
+                    <label class="auth-label" for="modal-reset-code">{{ t('verifyCode') }}</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input id="modal-reset-code" v-model="user.code" class="auth-input" type="text" placeholder="000000" style="flex: 1;" />
+                        <button type="button" class="auth-submit-btn" style="width: auto; padding: 0 14px; margin-top: 0; font-size: 13px;"
+                            :disabled="verifyCodeTimeout > 0" @click="sendVerificationCode">
+                            {{ verifyCodeTimeout > 0 ? t('waitforVerifyCode', { timeout: verifyCodeTimeout }) : t('sendVerificationCode') }}
+                        </button>
+                    </div>
+                </div>
+                <button class="auth-submit-btn" type="submit">
                     {{ t('resetPassword') }}
-                </n-button>
-            </n-form>
+                </button>
+            </form>
             <n-alert v-else :show-icon="false" :bordered="false">
-                <span>
-                    {{ t('cannotForgotPassword') }}
-                </span>
+                <span>{{ t('cannotForgotPassword') }}</span>
             </n-alert>
             <template #footer>
-                <n-space justify="end">
-                    <n-button @click="showModal = false" size="small" tertiary>
-                        {{ t('close') }}
-                    </n-button>
-                </n-space>
+                <n-button @click="showModal = false">{{ t('close') }}</n-button>
             </template>
         </n-modal>
     </div>
@@ -263,38 +266,9 @@ onMounted(async () => {
 <style scoped>
 .user-auth-wrapper {
     width: 100%;
-}
-
-.auth-tabs :deep(.n-tabs-nav) {
-    margin-bottom: 18px;
-}
-
-.auth-form {
+    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 4px;
-}
-
-.auth-action-row {
-    margin-top: 12px;
-}
-
-.submit-btn {
-    height: 42px;
-    font-size: 15px;
-    font-weight: 700;
-    border-radius: 8px;
-}
-
-.auth-aux-row {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 6px;
-}
-
-.forgot-btn {
-    font-size: 12.5px;
-    color: var(--ets-text-muted);
 }
 
 .auth-separator {
@@ -321,19 +295,29 @@ onMounted(async () => {
 .auth-alt-methods {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
 }
 
 .oauth-btn {
-    height: 40px;
-    border-radius: 8px;
+    width: 100%;
+    height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: var(--ets-radius-md, 8px);
+    font: inherit;
     font-size: 14px;
-    background: rgba(255, 255, 255, 0.04);
+    font-weight: 500;
+    color: var(--ets-text);
+    background: var(--ets-surface-sunken, rgba(0, 0, 0, 0.04));
     border: 1px solid var(--ets-border);
+    cursor: pointer;
+    transition: background var(--ets-motion-fast, 120ms) ease;
 }
 
 .oauth-btn:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--ets-hover);
 }
 
 .oauth2-icon {

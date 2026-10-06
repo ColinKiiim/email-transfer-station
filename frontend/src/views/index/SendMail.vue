@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import '@wangeditor/editor/dist/css/style.css'
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
 import { useScopedI18n } from '@/i18n/app'
@@ -15,6 +15,11 @@ const message = useMessage()
 const isPreview = ref(false)
 const editorRef = shallowRef()
 const sending = ref(false)
+const validationErrors = ref({
+    toMail: false,
+    subject: false,
+    content: false,
+})
 
 const { settings, sendMailModel, indexTab, userSettings } = useGlobalState()
 
@@ -59,19 +64,28 @@ const send = async () => {
         return
     }
 
+    validationErrors.value = {
+        toMail: false,
+        subject: false,
+        content: false,
+    }
+
     const subject = `${sendMailModel.value.subject ?? ''}`.trim()
     const toMail = `${sendMailModel.value.toMail ?? ''}`.trim()
     const content = `${sendMailModel.value.content ?? ''}`
 
-    if (!subject) {
-        message.error(t('subjectEmpty'))
-        return
-    }
     if (!toMail) {
+        validationErrors.value.toMail = true
         message.error(t('toMailEmpty'))
         return
     }
+    if (!subject) {
+        validationErrors.value.subject = true
+        message.error(t('subjectEmpty'))
+        return
+    }
     if (!hasSendMailContent(content, sendMailModel.value.contentType)) {
+        validationErrors.value.content = true
         message.error(t('contentEmpty'))
         return
     }
@@ -159,76 +173,126 @@ onMounted(async () => {
 </script>
 
 <template>
-    <div class="center" v-if="settings.address">
-        <n-card :bordered="false" embedded>
-            <div v-if="!settings.send_balance || settings.send_balance <= 0">
-                <n-alert type="warning" :show-icon="false" :bordered="false">
-                    {{ t('requestAccessTip') }}
-                    <n-button type="primary" tertiary @click="requestAccess" size="small">{{ t('requestAccess') }}</n-button>
-                </n-alert>
-                <AdminContact />
-            </div>
-            <div v-else>
-                <n-alert type="info" :show-icon="false" :bordered="false" closable>
-                    {{ t('send_balance') }}: {{ settings.send_balance }}
-                </n-alert>
-                <div class="left">
-                    <n-form :model="sendMailModel">
-                        <n-form-item :label="t('fromName')" label-placement="top">
-                            <n-input-group>
-                                <n-input v-model:value="sendMailModel.fromName" />
-                                <n-input :value="settings.address" disabled />
-                            </n-input-group>
-                        </n-form-item>
-                        <div class="recipient-grid">
-                            <n-form-item :label="t('recipientName')" label-placement="top">
-                                <n-input v-model:value="sendMailModel.toName" />
-                            </n-form-item>
-                            <n-form-item :label="t('recipientEmail')" label-placement="top">
-                                <n-input v-model:value="sendMailModel.toMail" />
-                            </n-form-item>
+    <div class="sendmail-page-wrapper" v-if="settings.address">
+        <div class="sendmail-container">
+            <div class="sendmail-card">
+                <div v-if="!settings.send_balance || settings.send_balance <= 0">
+                    <div class="sendmail-header">
+                        <h3 class="sendmail-title">{{ t('sendmail') || '发送邮件' }}</h3>
+                    </div>
+                    <n-alert type="warning" :show-icon="false" :bordered="false" class="sendmail-alert">
+                        <span>{{ t('send_balance') }}: 0</span>
+                        <n-button type="primary" tertiary @click="requestAccess" size="small">{{ t('requestAccess') }}</n-button>
+                    </n-alert>
+                    <AdminContact />
+                </div>
+                <div v-else>
+                    <div class="sendmail-header">
+                        <div class="header-title-row">
+                            <h3 class="sendmail-title">{{ t('sendmail') || '发送邮件' }}</h3>
+                            <n-tag type="info" size="small" round :bordered="false" class="balance-tag">
+                                {{ t('send_balance') }}: {{ settings.send_balance }}
+                            </n-tag>
                         </div>
-                        <n-form-item :label="t('subject')" label-placement="top">
-                            <n-input v-model:value="sendMailModel.subject" />
-                        </n-form-item>
-                        <n-form-item :label="t('options')" label-placement="top">
-                            <n-radio-group v-model:value="sendMailModel.contentType">
-                                <n-radio-button v-for="option in contentTypes" :key="option.value" :value="option.value"
-                                    :label="option.label" />
-                            </n-radio-group>
-                            <n-button v-if="sendMailModel.contentType != 'text'" @click="isPreview = !isPreview"
-                                style="margin-left: 10px;">
-                                {{ isPreview ? t('edit') : t('preview') }}
-                            </n-button>
-                        </n-form-item>
-                        <n-form-item :label="t('content')" label-placement="top">
-                            <div v-if="isPreview" class="sendmail-preview-wrap">
-                                <ShadowHtmlComponent :htmlContent="sendMailModel.content || ''" />
+                    </div>
+                    <div class="sendmail-form-wrap">
+                        <n-form :model="sendMailModel">
+                            <n-form-item :label="t('fromName')" label-placement="top">
+                                <n-input-group>
+                                    <n-input v-model:value="sendMailModel.fromName" />
+                                    <n-input :value="settings.address" disabled />
+                                </n-input-group>
+                            </n-form-item>
+                            <div class="recipient-grid">
+                                <n-form-item :label="t('recipientName')" label-placement="top">
+                                    <n-input v-model:value="sendMailModel.toName" />
+                                </n-form-item>
+                                <n-form-item :label="t('recipientEmail')" label-placement="top">
+                                    <n-input v-model:value="sendMailModel.toMail" :status="validationErrors.toMail ? 'error' : undefined" @update:value="validationErrors.toMail = false" />
+                                </n-form-item>
                             </div>
-                            <div v-else-if="sendMailModel.contentType == 'rich'" class="wangeditor-container">
-                                <Toolbar class="wangeditor-toolbar" :defaultConfig="toolbarConfig"
-                                    :editor="editorRef" mode="default" />
-                                <Editor class="wangeditor-editor" style="height: 500px; overflow-y: hidden;" v-model="sendMailModel.content"
-                                    :defaultConfig="editorConfig" mode="default" @onCreated="handleCreated" />
+                            <n-form-item :label="t('subject')" label-placement="top">
+                                <n-input v-model:value="sendMailModel.subject" :status="validationErrors.subject ? 'error' : undefined" @update:value="validationErrors.subject = false" />
+                            </n-form-item>
+                            <n-form-item :label="t('options')" label-placement="top">
+                                <n-radio-group v-model:value="sendMailModel.contentType">
+                                    <n-radio-button v-for="option in contentTypes" :key="option.value" :value="option.value"
+                                        :label="option.label" />
+                                </n-radio-group>
+                                <n-button v-if="sendMailModel.contentType != 'text'" @click="isPreview = !isPreview"
+                                    style="margin-left: 10px;">
+                                    {{ isPreview ? t('edit') : t('preview') }}
+                                </n-button>
+                            </n-form-item>
+                            <n-form-item :label="t('content')" label-placement="top">
+                                <div v-if="isPreview" class="sendmail-preview-wrap">
+                                    <ShadowHtmlComponent :htmlContent="sendMailModel.content || ''" />
+                                </div>
+                                <div v-else-if="sendMailModel.contentType == 'rich'" class="wangeditor-container">
+                                    <Toolbar class="wangeditor-toolbar" :defaultConfig="toolbarConfig"
+                                        :editor="editorRef" mode="default" />
+                                    <Editor class="wangeditor-editor" style="height: 500px; overflow-y: hidden;" v-model="sendMailModel.content"
+                                        :defaultConfig="editorConfig" mode="default" @onCreated="handleCreated" />
+                                </div>
+                                <n-input v-else type="textarea" v-model:value="sendMailModel.content" :status="validationErrors.content ? 'error' : undefined" @update:value="validationErrors.content = false" :autosize="{
+                                    minRows: 4
+                                }" />
+                            </n-form-item>
+                            <div class="sendmail-action-row">
+                                <n-button type="primary" size="medium" :loading="sending" :disabled="sending" @click="send">{{ t('send') }}</n-button>
                             </div>
-                            <n-input v-else type="textarea" v-model:value="sendMailModel.content" :autosize="{
-                                minRows: 3
-                            }" />
-                        </n-form-item>
-                        <n-flex justify="end" class="action-row">
-                            <n-button type="primary" :loading="sending" :disabled="sending" @click="send">{{ t('send') }}</n-button>
-                        </n-flex>
-                    </n-form>
+                        </n-form>
+                    </div>
                 </div>
             </div>
-        </n-card>
+        </div>
     </div>
 </template>
 
 <style scoped>
-.n-card {
-    max-width: min(100%, 1080px);
+.sendmail-page-wrapper {
+    display: flex;
+    justify-content: center;
+    padding: 12px 0 24px;
+}
+
+.sendmail-container {
+    max-width: 760px;
     width: 100%;
+}
+
+.sendmail-card {
+    background: var(--ets-surface-card);
+    border: 1px solid var(--ets-border);
+    border-radius: var(--ets-radius-lg, 10px);
+    padding: 24px;
+    box-shadow: var(--ets-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.04));
+    box-sizing: border-box;
+    text-align: left;
+}
+
+.sendmail-header {
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--ets-border);
+}
+
+.header-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.sendmail-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ets-text-strong);
+}
+
+.sendmail-alert {
+    margin-bottom: 16px;
 }
 
 .wangeditor-container {
@@ -273,28 +337,6 @@ onMounted(async () => {
     box-sizing: border-box;
 }
 
-.n-button {
-    text-align: left;
-    margin-right: 10px;
-}
-
-.center {
-    display: flex;
-    text-align: center;
-    place-items: center;
-    justify-content: center;
-}
-
-.left {
-    text-align: left;
-    place-items: left;
-    justify-content: left;
-}
-
-.n-alert {
-    margin-bottom: 10px;
-}
-
 .recipient-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -308,7 +350,9 @@ onMounted(async () => {
     }
 }
 
-.action-row {
+.sendmail-action-row {
     margin-top: 16px;
+    display: flex;
+    justify-content: flex-end;
 }
 </style>

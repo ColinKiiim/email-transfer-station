@@ -1,36 +1,44 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
-import { useRouter } from 'vue-router'
 
 import { useGlobalState } from '../../store'
 import Login from '../common/Login.vue'
+import SettingsCardShell from '../../components/SettingsCardShell.vue'
 
-const { userJwt, userSettings, } = useGlobalState()
+const { userSettings } = useGlobalState()
 
 const { t } = useScopedI18n('views.user.BindAddress')
 
-const fetchData = async () => {
-}
-
 onMounted(async () => {
-    await fetchData()
 })
 </script>
 
 <template>
-    <div class="center" v-if="userSettings.user_email">
-        <n-card :bordered="false" embedded style="max-width: 600px;">
-            <Login />
-        </n-card>
+    <div class="bind-page-wrapper" v-if="userSettings.user_email">
+        <div class="bind-container">
+            <SettingsCardShell :title="t('title')">
+                <div class="bind-card-body">
+                    <Login />
+                </div>
+            </SettingsCardShell>
+        </div>
     </div>
 </template>
 
 <style scoped>
-.center {
+.bind-page-wrapper {
     display: flex;
-    text-align: center;
-    place-items: center;
     justify-content: center;
+    padding: 12px 16px 32px 16px;
+}
+
+.bind-container {
+    width: 100%;
+    max-width: 600px;
+}
+
+.bind-card-body {
+    width: 100%;
 }
 </style>

@@ -60,23 +60,23 @@ const refresh = async () => {
     const { results, count: totalCount } = await props.fetchMailData(
       pageSize.value, (page.value - 1) * pageSize.value
     );
-    data.value = results.map((item) => {
+    data.value = (results || []).map((item) => {
       try {
-        const data = JSON.parse(item.raw);
-        if (data.version == "v2") {
-          item.to_mail = data.to_name ? `${data.to_name} <${data.to_mail}>` : data.to_mail;
-          item.subject = data.subject;
-          item.is_html = data.is_html;
-          item.content = data.content;
-          item.raw = JSON.stringify(data, null, 2);
+        const rawData = JSON.parse(item.raw);
+        if (rawData.version == "v2") {
+          item.to_mail = rawData.to_name ? `${rawData.to_name} <${rawData.to_mail}>` : rawData.to_mail;
+          item.subject = rawData.subject;
+          item.is_html = rawData.is_html;
+          item.content = rawData.content;
+          item.raw = JSON.stringify(rawData, null, 2);
         } else {
-          item.to_mail = data?.personalizations?.map(
+          item.to_mail = rawData?.personalizations?.map(
             (p) => p.to?.map((t) => t.email).join(',')
           ).join(';');
-          item.subject = data.subject;
-          item.is_html = (data.content[0]?.type != 'text/plain');
-          item.content = data.content[0]?.value;
-          item.raw = JSON.stringify(data, null, 2);
+          item.subject = rawData.subject;
+          item.is_html = (rawData.content?.[0]?.type != 'text/plain');
+          item.content = rawData.content?.[0]?.value;
+          item.raw = JSON.stringify(rawData, null, 2);
         }
       } catch (error) {
         console.log(error);
@@ -96,11 +96,15 @@ const refresh = async () => {
 };
 
 const clickRow = async (row) => {
+  if (multiActionMode.value) {
+    row.checked = !row.checked;
+    return;
+  }
   curMail.value = row;
 };
 
 const mailItemClass = (row) => {
-  return curMail.value && row.id == curMail.value.id ? (isDark.value ? 'overlay overlay-dark-backgroud' : 'overlay overlay-light-backgroud') : '';
+  return curMail.value && row.id == curMail.value.id ? 'mail-row-active' : '';
 };
 
 const onSpiltSizeChange = (size) => {
@@ -142,6 +146,8 @@ const multiActionSelectAll = (checked) => {
   });
 }
 
+const selectedCount = computed(() => data.value.filter((item) => item.checked).length)
+
 const multiActionDeleteMail = async () => {
   try {
     loading.value = true;
@@ -178,157 +184,158 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div>
-    <div v-if="!isMobile" class="left">
-      <div style="margin-bottom: 10px;">
-        <n-space v-if="multiActionMode">
-          <n-button @click="multiActionModeClick(false)" tertiary>
-            {{ t('cancelMultiAction') }}
-          </n-button>
-          <n-button @click="multiActionSelectAll(true)" tertiary>
-            {{ t('selectAll') }}
-          </n-button>
-          <n-button @click="multiActionSelectAll(false)" tertiary>
-            {{ t('unselectAll') }}
-          </n-button>
-          <n-popconfirm v-if="enableUserDeleteEmail" @positive-click="multiActionDeleteMail">
-            <template #trigger>
-              <n-button tertiary type="error">{{ t('delete') }}</n-button>
-            </template>
-            {{ t('deleteMailTip') }}
-          </n-popconfirm>
-        </n-space>
-        <n-space v-else>
-          <n-button v-if="showMultiActionMode" @click="multiActionModeClick(true)" type="primary" tertiary>
-            {{ t('multiAction') }}
-          </n-button>
-          <div style="display: inline-block; margin-right: 10px;">
-            <n-pagination v-model:page="page" v-model:page-size="pageSize" :item-count="count"
-              :page-sizes="[20, 50, 100]" show-size-picker />
-          </div>
-          <n-button @click="refresh" type="primary" tertiary>
-            {{ t('refresh') }}
-          </n-button>
-        </n-space>
+  <div class="sendbox-wrapper">
+    <div v-if="!isMobile" class="sendbox-desktop">
+      <div class="sendbox-toolbar">
+        <div class="toolbar-left">
+          <template v-if="multiActionMode">
+            <n-button size="small" @click="multiActionModeClick(false)" tertiary>
+              {{ t('cancelMultiAction') }}
+            </n-button>
+            <n-button size="small" @click="multiActionSelectAll(true)" tertiary>
+              {{ t('selectAll') }}
+            </n-button>
+            <n-button size="small" @click="multiActionSelectAll(false)" tertiary :disabled="selectedCount === 0">
+              {{ t('unselectAll') }}
+            </n-button>
+            <n-tag v-if="selectedCount > 0" size="small" type="info" :bordered="false" round>
+              {{ t('selectedCount', { count: selectedCount }) }}
+            </n-tag>
+            <n-popconfirm v-if="enableUserDeleteEmail" @positive-click="multiActionDeleteMail" :disabled="selectedCount === 0">
+              <template #trigger>
+                <n-button size="small" tertiary type="error" :disabled="selectedCount === 0">{{ t('delete') }}</n-button>
+              </template>
+              {{ t('deleteMailTip') }}
+            </n-popconfirm>
+          </template>
+          <template v-else>
+            <n-button v-if="showMultiActionMode" size="small" @click="multiActionModeClick(true)" type="primary" tertiary>
+              {{ t('multiAction') }}
+            </n-button>
+            <n-button size="small" @click="refresh" type="primary" tertiary>
+              {{ t('refresh') }}
+            </n-button>
+          </template>
+        </div>
+        <div class="toolbar-right">
+          <n-pagination v-model:page="page" v-model:page-size="pageSize" :item-count="count"
+            :page-sizes="[20, 50, 100]" show-size-picker size="small" />
+        </div>
       </div>
+
       <n-split direction="horizontal" :max="0.75" :min="0.25" :default-size="mailboxSplitSize"
-        :on-update:size="onSpiltSizeChange">
+        :on-update:size="onSpiltSizeChange" class="sendbox-split">
         <template #1>
-          <div style="overflow: auto; min-height: 60vh; max-height: 100vh;">
-            <n-list hoverable clickable>
-              <n-list-item v-for="row in data" v-bind:key="row.id" @click="() => clickRow(row)"
-                :class="mailItemClass(row)">
-                <template #prefix v-if="multiActionMode">
-                  <n-checkbox v-model:checked="row.checked" />
-                </template>
-                <n-thing :title="row.subject">
-                  <template #description>
-                    <n-tag type="info">
-                      ID: {{ row.id }}
-                    </n-tag>
-                    <n-tag type="info">
-                      {{ utcToLocalDate(row.created_at, useUTCDate) }}
-                    </n-tag>
-                    <n-tag v-if="showEMailFrom" type="info">
-                      FROM: {{ row.address }}
-                    </n-tag>
-                    <n-tag type="info">
-                      TO: {{ row.to_mail }}
-                    </n-tag>
-                  </template>
-                </n-thing>
+          <div class="sendbox-list-scroll">
+            <n-empty v-if="data.length === 0" class="empty-list" :description="t('emptySent')" />
+            <n-list v-else hoverable clickable class="sendbox-list">
+              <n-list-item v-for="row in data" :key="row.id" @click="() => clickRow(row)"
+                class="sendbox-mail-row" :class="mailItemClass(row)">
+                <div class="mail-row-content">
+                  <div v-if="multiActionMode" class="row-checkbox">
+                    <n-checkbox v-model:checked="row.checked" @click.stop />
+                  </div>
+                  <div class="row-main">
+                    <div class="row-head">
+                      <span class="row-recipient" :title="row.to_mail">
+                        <strong>TO:</strong> {{ row.to_mail }}
+                      </span>
+                      <span class="row-meta">
+                        <span class="row-id">#{{ row.id }}</span>
+                        <span class="row-date">{{ utcToLocalDate(row.created_at, useUTCDate) }}</span>
+                      </span>
+                    </div>
+                    <div class="row-body">
+                      <span class="row-subject">{{ row.subject || '(无主题)' }}</span>
+                      <span class="row-preview" v-if="row.content">
+                        - {{ row.content.replace(/<[^>]*>/g, '').slice(0, 80) }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </n-list-item>
             </n-list>
           </div>
         </template>
         <template #2>
-          <n-card :bordered="false" embedded v-if="curMail" class="mail-item" :title="curMail.subject"
-            style="overflow: auto; max-height: 100vh;">
-            <n-space>
-              <n-tag type="info">
-                ID: {{ curMail.id }}
-              </n-tag>
-              <n-tag type="info">
-                {{ utcToLocalDate(curMail.created_at, useUTCDate) }}
-              </n-tag>
-              <n-tag type="info">
-                FROM: {{ curMail.address }}
-              </n-tag>
-              <n-tag type="info">
-                TO: {{ curMail.to_mail }}
-              </n-tag>
-              <n-button size="small" tertiary type="info" @click="showCode = !showCode">
-                {{ t('showCode') }}
-              </n-button>
-              <n-popconfirm v-if="enableUserDeleteEmail" @positive-click="deleteMail">
-                <template #trigger>
-                  <n-button tertiary type="error" size="small">{{ t('delete') }}</n-button>
-                </template>
-                {{ t('deleteMailTip') }}
-              </n-popconfirm>
-            </n-space>
-            <pre v-if="showCode" style="margin-top: 10px;">{{ curMail.raw }}</pre>
-            <pre v-else-if="!curMail.is_html" style="margin-top: 10px;">{{ curMail.content }}</pre>
-            <ShadowHtmlComponent v-else :htmlContent="curMail.content || ''" :isDark="isDark" style="margin-top: 10px;" />
-          </n-card>
-          <n-card :bordered="false" embedded class="mail-item" v-else>
+          <div v-if="curMail" class="sendbox-detail-panel">
+            <div class="detail-head">
+              <div class="detail-header-info">
+                <h2 class="detail-subject">{{ curMail.subject || '(无主题)' }}</h2>
+                <div class="detail-meta-row">
+                  <span class="meta-tag"><strong>ID:</strong> #{{ curMail.id }}</span>
+                  <span class="meta-tag"><strong>时间:</strong> {{ utcToLocalDate(curMail.created_at, useUTCDate) }}</span>
+                  <span class="meta-tag" v-if="curMail.address"><strong>发件人:</strong> {{ curMail.address }}</span>
+                  <span class="meta-tag"><strong>收件人:</strong> {{ curMail.to_mail }}</span>
+                </div>
+              </div>
+              <div class="detail-actions">
+                <n-button size="small" tertiary type="info" @click="showCode = !showCode">
+                  {{ t('showCode') }}
+                </n-button>
+                <n-popconfirm v-if="enableUserDeleteEmail" @positive-click="deleteMail">
+                  <template #trigger>
+                    <n-button tertiary type="error" size="small">{{ t('delete') }}</n-button>
+                  </template>
+                  {{ t('deleteMailTip') }}
+                </n-popconfirm>
+                <n-button size="small" quaternary @click="curMail = null">
+                  ✕
+                </n-button>
+              </div>
+            </div>
+            <div class="detail-body-card">
+              <pre v-if="showCode" class="raw-code">{{ curMail.raw }}</pre>
+              <pre v-else-if="!curMail.is_html" class="plain-body">{{ curMail.content }}</pre>
+              <ShadowHtmlComponent v-else :htmlContent="curMail.content || ''" :isDark="isDark" />
+            </div>
+          </div>
+          <div class="empty-detail" v-else>
             <n-result status="info" :title="count === 0 ? t('emptySent') : t('pleaseSelectMail')">
               <template #icon>
-                <n-icon :component="SendRound" :size="100" />
+                <n-icon :component="SendRound" :size="72" />
               </template>
             </n-result>
-          </n-card>
+          </div>
         </template>
       </n-split>
     </div>
-    <div class="left" v-else>
-      <div class="center">
-        <div style="display: inline-block; margin-right: 10px;">
-          <n-pagination v-model:page="page" v-model:page-size="pageSize" :item-count="count" simple size="small" />
-        </div>
-        <n-button @click="refresh" size="small" type="primary">
+
+    <!-- Mobile view -->
+    <div class="sendbox-mobile" v-else>
+      <div class="mobile-toolbar">
+        <n-pagination v-model:page="page" v-model:page-size="pageSize" :item-count="count" simple size="small" />
+        <n-button @click="refresh" size="small" type="primary" tertiary>
           {{ t('refresh') }}
         </n-button>
       </div>
-      <div style="overflow: auto; min-height: 60vh; max-height: 100vh;">
-        <n-list hoverable clickable>
-          <n-list-item v-for="row in data" v-bind:key="row.id" @click="() => clickRow(row)">
-            <n-thing :title="row.subject">
-              <template #description>
-                <n-tag type="info">
-                  ID: {{ row.id }}
-                </n-tag>
-                <n-tag type="info">
-                  {{ utcToLocalDate(row.created_at, useUTCDate) }}
-                </n-tag>
-                <n-tag v-if="showEMailFrom" type="info">
-                  FROM: {{ row.address }}
-                </n-tag>
-                <n-tag type="info">
-                  TO: {{ row.to_mail }}
-                </n-tag>
-              </template>
-            </n-thing>
+      <div class="sendbox-list-scroll">
+        <n-empty v-if="data.length === 0" class="empty-list" :description="t('emptySent')" />
+        <n-list v-else hoverable clickable class="sendbox-list">
+          <n-list-item v-for="row in data" :key="row.id" @click="() => clickRow(row)" class="sendbox-mail-row">
+            <div class="row-main">
+              <div class="row-head">
+                <span class="row-recipient"><strong>TO:</strong> {{ row.to_mail }}</span>
+                <span class="row-meta">
+                  <span class="row-id">#{{ row.id }}</span>
+                </span>
+              </div>
+              <div class="row-body">
+                <span class="row-subject">{{ row.subject || '(无主题)' }}</span>
+              </div>
+            </div>
           </n-list-item>
         </n-list>
       </div>
-      <n-drawer v-model:show="curMail" width="100%" placement="bottom"
-        style="height: 80vh;">
+      <n-drawer v-model:show="curMail" width="100%" placement="bottom" style="height: 82vh;">
         <n-drawer-content :title="curMail ? curMail.subject : ''" closable>
-          <n-card :bordered="false" embedded style="overflow: auto;">
-            <n-space>
-              <n-tag type="info">
-                ID: {{ curMail.id }}
-              </n-tag>
-              <n-tag type="info">
-                {{ utcToLocalDate(curMail.created_at, useUTCDate) }}
-              </n-tag>
-              <n-tag type="info">
-                FROM: {{ curMail.address }}
-              </n-tag>
-              <n-tag type="info">
-                TO: {{ curMail.to_mail }}
-              </n-tag>
+          <div v-if="curMail" class="mobile-detail-content">
+            <div class="detail-meta-row" style="margin-bottom: 12px;">
+              <span class="meta-tag"><strong>ID:</strong> #{{ curMail.id }}</span>
+              <span class="meta-tag"><strong>时间:</strong> {{ utcToLocalDate(curMail.created_at, useUTCDate) }}</span>
+              <span class="meta-tag"><strong>收件人:</strong> {{ curMail.to_mail }}</span>
+            </div>
+            <div style="margin-bottom: 14px; display: flex; gap: 8px;">
               <n-button size="small" tertiary type="info" @click="showCode = !showCode">
                 {{ t('showCode') }}
               </n-button>
@@ -338,11 +345,13 @@ onMounted(async () => {
                 </template>
                 {{ t('deleteMailTip') }}
               </n-popconfirm>
-            </n-space>
-            <pre v-if="showCode" style="margin-top: 10px;">{{ curMail.raw }}</pre>
-            <pre v-else-if="!curMail.is_html" style="margin-top: 10px;">{{ curMail.content }}</pre>
-            <ShadowHtmlComponent v-else :htmlContent="curMail.content || ''" :isDark="isDark" style="margin-top: 10px;" />
-          </n-card>
+            </div>
+            <div class="detail-body-card">
+              <pre v-if="showCode" class="raw-code">{{ curMail.raw }}</pre>
+              <pre v-else-if="!curMail.is_html" class="plain-body">{{ curMail.content }}</pre>
+              <ShadowHtmlComponent v-else :htmlContent="curMail.content || ''" :isDark="isDark" />
+            </div>
+          </div>
         </n-drawer-content>
       </n-drawer>
     </div>
@@ -350,34 +359,225 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.left {
+.sendbox-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.sendbox-desktop {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.sendbox-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  background: var(--ets-surface-card);
+  border: 1px solid var(--ets-border);
+  border-radius: var(--ets-radius-md);
+  box-shadow: var(--ets-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.04));
+}
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sendbox-split {
+  flex: 1;
+  min-height: 0;
+  border: 1px solid var(--ets-border);
+  border-radius: var(--ets-radius-md);
+  background: var(--ets-surface);
+  overflow: hidden;
+}
+
+.sendbox-list-scroll {
+  overflow-y: auto;
+  height: 100%;
+  background: var(--ets-surface);
+}
+
+.sendbox-mail-row {
+  border-left: 3px solid transparent;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background-color var(--ets-motion-fast), border-left-color var(--ets-motion-fast);
+}
+
+.sendbox-mail-row:hover {
+  background-color: var(--ets-hover);
+}
+
+.mail-row-active {
+  border-left: 3px solid var(--ets-brand) !important;
+  background-color: var(--ets-selected, #e8f0fe) !important;
+}
+
+html.dark .mail-row-active {
+  background-color: var(--ets-selected, #1c3550) !important;
+}
+
+.mail-row-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.row-recipient {
+  font-size: 13px;
+  color: var(--ets-text-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
+}
+
+.row-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--ets-text-muted);
+  font-family: var(--ets-font-mono, monospace);
+  flex-shrink: 0;
+}
+
+.row-body {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row-subject {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ets-text);
+  flex-shrink: 0;
+}
+
+.row-preview {
+  font-size: 12.5px;
+  color: var(--ets-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sendbox-detail-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  padding: 16px 20px;
+  box-sizing: border-box;
   text-align: left;
 }
 
-.center {
-  text-align: center;
+.detail-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--ets-border);
 }
 
-.overlay {
-  width: 100%;
-  height: 100%;
-  z-index: 1000;
+.detail-subject {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ets-text-strong);
+  margin: 0 0 8px 0;
 }
 
-.overlay-dark-backgroud {
-  background-color: rgba(255, 255, 255, 0.1);
+.detail-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 12.5px;
+  color: var(--ets-text-muted);
 }
 
-.overlay-light-backgroud {
-  background-color: rgba(0, 0, 0, 0.1);
+.meta-tag {
+  background: var(--ets-surface-alt);
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--ets-border);
 }
 
-.mail-item {
-  height: 100%;
+.detail-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
-pre {
+.detail-body-card {
+  flex: 1;
+  background: var(--ets-surface-card);
+  border: 1px solid var(--ets-border);
+  border-radius: var(--ets-radius-md);
+  padding: 16px;
+}
+
+.plain-body,
+.raw-code {
+  font-family: inherit;
   white-space: pre-wrap;
-  word-wrap: break-word;
+  word-break: break-word;
+  margin: 0;
+  color: var(--ets-text);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.empty-detail {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: var(--ets-text-muted);
+}
+
+.mobile-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
 }
 </style>

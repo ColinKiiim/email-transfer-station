@@ -30,6 +30,7 @@
     --ets-bg: #f3f6fb;
     --ets-bg-elevated: #ffffff;
     --ets-surface: #ffffff;
+    --ets-surface-card: #ffffff;
     --ets-surface-alt: #f7f9fc;
     --ets-surface-sunken: #eef2f8;
     --ets-scrim: rgba(11, 22, 38, 0.44);
@@ -107,6 +108,14 @@
     --ets-radius-lg: 12px;
     --ets-radius-pill: 999px;
 
+    /* Layout & Surface Geometry */
+    --ets-header-height: 56px;
+    --ets-sidebar-width: 240px;
+    --ets-sidebar-collapsed-width: 68px;
+    --ets-content-max-width: 1400px;
+    --ets-glass-bg: rgba(255, 255, 255, 0.88);
+    --ets-glass-border: rgba(225, 228, 233, 0.85);
+
     /* Type */
     --ets-font-ui: "Segoe UI Variable", "Segoe UI", "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", "Helvetica Neue", Arial, sans-serif;
     --ets-font-mono: "Cascadia Mono", "SFMono-Regular", "Consolas", "Liberation Mono", "Menlo", monospace;
@@ -136,6 +145,7 @@ html.dark {
     --ets-bg: #16181c;
     --ets-bg-elevated: #202226;
     --ets-surface: #202226;
+    --ets-surface-card: #22252a;
     --ets-surface-alt: #26282d;
     --ets-surface-sunken: #1a1c20;
     --ets-scrim: rgba(0, 0, 0, 0.62);
@@ -172,6 +182,9 @@ html.dark {
     --ets-on-inverted: #16181c;
 
     --ets-mail-canvas: var(--ets-surface);
+
+    --ets-glass-bg: rgba(32, 34, 38, 0.88);
+    --ets-glass-border: rgba(51, 54, 59, 0.85);
 
     --ets-shadow-hairline: 0 0 0 1px var(--ets-border);
     --ets-shadow-card:

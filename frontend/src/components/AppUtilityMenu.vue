@@ -63,12 +63,15 @@ const switchTheme = () => {
 const switchLanguage = async (value) => {
     close()
     if (!isSupportedLocale(value) || value === locale.value) return
+    preferredLocale.value = value
+    locale.value = value
     const target = replaceLocaleInFullPath(route.fullPath, value)
-    try {
-        await router.push({ path: target, force: true })
-        preferredLocale.value = value
-    } catch (error) {
-        console.error('Failed to switch locale', error)
+    if (target !== route.fullPath) {
+        try {
+            await router.push({ path: target, force: true })
+        } catch (error) {
+            console.error('Failed to switch locale', error)
+        }
     }
 }
 </script>
@@ -115,14 +118,14 @@ const switchLanguage = async (value) => {
 .utility-trigger {
     display: grid;
     place-items: center;
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     border: 0;
-    border-radius: var(--ets-radius-sm);
+    border-radius: var(--ets-radius-sm, 6px);
     background: transparent;
     color: var(--ets-text-muted);
     cursor: pointer;
-    transition: background-color var(--ets-motion-fast) var(--ets-motion-ease);
+    transition: background-color var(--ets-motion-fast) var(--ets-motion-ease), color var(--ets-motion-fast) var(--ets-motion-ease);
 }
 
 .utility-trigger:hover {

@@ -7,6 +7,7 @@ import { User, ExchangeAlt } from '@vicons/fa'
 import { useGlobalState } from '../../store'
 import { api } from '../../api'
 import Login from '../common/Login.vue'
+import AuthCardShell from '../../components/AuthCardShell.vue'
 import TelegramAddress from './TelegramAddress.vue'
 import LocalAddress from './LocalAddress.vue'
 import AddressManagement from '../user/AddressManagement.vue'
@@ -46,8 +47,8 @@ watch(
                 <n-skeleton text :repeat="4" />
             </n-card>
         </div>
-        <div v-else-if="settings.address">
-            <n-alert type="info" :show-icon="false" :bordered="false">
+        <div v-else-if="settings.address" class="address-toolbar-wrapper">
+            <div class="address-toolbar-panel">
                 <AddressSelect>
                     <template #actions>
                         <n-button class="address-manage" size="small" tertiary type="primary"
@@ -57,7 +58,7 @@ watch(
                         </n-button>
                     </template>
                 </AddressSelect>
-            </n-alert>
+            </div>
         </div>
         <div v-else-if="isTelegram">
             <TelegramAddress />
@@ -67,35 +68,23 @@ watch(
                 <AddressManagement />
             </n-card>
         </div>
-        <div v-else class="auth-center-shell">
-            <div class="auth-card">
-                <div class="auth-brand-badge">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M4 6h16v12H4z" fill="none" stroke="currentColor" stroke-width="2" />
-                        <path d="m4 7 8 6 8-6" fill="none" stroke="currentColor" stroke-width="2" />
-                    </svg>
-                </div>
-                <div class="auth-card-header">
-                    <h2>{{ t('mailboxAccess') }}</h2>
-                    <p>{{ t('mailboxAccessDesc') }}</p>
-                </div>
-                <n-alert v-if="jwt" type="warning" :show-icon="false" :bordered="false" closable style="margin-bottom: 14px;">
+        <AuthCardShell
+            v-else
+            :title="t('mailboxAccess')"
+        >
+            <template v-if="jwt" #alert>
+                <n-alert type="warning" :show-icon="false" :bordered="false" closable style="margin-bottom: 14px;">
                     <span>{{ t('fetchAddressError') }}</span>
                 </n-alert>
-                <Login />
-                <div v-if="showUserEntry" class="auth-user-portal-entry">
-                    <div class="auth-separator">
-                        <span>{{ t('or') || '或' }}</span>
-                    </div>
-                    <n-button @click="onUserLogin" type="primary" block secondary size="large" class="user-portal-btn" strong>
-                        <template #icon>
-                            <n-icon :component="User" />
-                        </template>
-                        {{ t('userLogin') }}
-                    </n-button>
-                </div>
-            </div>
-        </div>
+            </template>
+            <Login />
+            <template v-if="showUserEntry" #footer>
+                <button type="button" class="auth-aux-link" @click="onUserLogin">
+                    <n-icon :component="User" />
+                    <span>{{ t('userLogin') || '前往用户中心登录' }} &rarr;</span>
+                </button>
+            </template>
+        </AuthCardShell>
         <AddressCredentialModal v-model:show="showAddressCredential" :address="settings.address" :jwt="jwt"
             :address-password="addressPassword" />
         <n-modal v-model:show="showAddressManage" preset="card" :title="t('addressManage')"
@@ -108,10 +97,24 @@ watch(
 </template>
 
 <style scoped>
-.n-alert {
-    margin-top: 10px;
-    margin-bottom: 10px;
-    text-align: center;
+.address-toolbar-wrapper {
+    width: 100%;
+    padding: 8px 16px 4px;
+    box-sizing: border-box;
+}
+
+.address-toolbar-panel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 16px;
+    margin: 0 auto;
+    max-width: 900px;
+    background: var(--ets-surface);
+    border: 1px solid var(--ets-border);
+    border-radius: var(--ets-radius-lg, 12px);
+    box-shadow: var(--ets-shadow-card);
+    transition: all var(--ets-motion-fast, 120ms);
 }
 
 .center {
@@ -131,18 +134,18 @@ watch(
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: calc(100vh - 60px);
+    min-height: calc(100vh - var(--ets-header-height, 56px) - 40px);
     padding: 24px 16px;
     box-sizing: border-box;
 }
 
 .auth-card {
     width: min(100%, 460px);
-    border-radius: 16px;
+    border-radius: var(--ets-radius-lg, 12px);
     padding: 32px 28px;
     background: var(--ets-surface);
     border: 1px solid var(--ets-border);
-    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.4);
+    box-shadow: var(--ets-shadow-overlay, 0 12px 32px -8px rgba(11, 22, 38, 0.16));
     text-align: center;
 }
 
@@ -152,11 +155,11 @@ watch(
     justify-content: center;
     width: 48px;
     height: 48px;
-    border-radius: 12px;
-    background: linear-gradient(135deg, #3b82f6, #6366f1);
-    color: #ffffff;
+    border-radius: var(--ets-radius-md, 8px);
+    background: var(--ets-brand-soft);
+    color: var(--ets-brand);
     margin-bottom: 12px;
-    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
+    box-shadow: var(--ets-shadow-card);
 }
 
 .auth-brand-badge svg {
@@ -167,7 +170,7 @@ watch(
 .auth-card-header h2 {
     margin: 0;
     color: var(--ets-text-strong);
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 700;
     letter-spacing: -0.01em;
 }
@@ -179,36 +182,30 @@ watch(
     line-height: 1.5;
 }
 
-.auth-separator {
+.auth-user-portal-entry {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--ets-divider, var(--ets-border));
     display: flex;
+    justify-content: center;
+}
+
+.user-portal-link {
+    display: inline-flex;
     align-items: center;
-    text-align: center;
-    margin: 18px 0 12px;
-    color: var(--ets-text-muted);
-    font-size: 12px;
+    gap: 7px;
+    border: 0;
+    background: transparent;
+    color: var(--ets-brand);
+    font: 600 13px/1.4 var(--ets-font-ui);
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: var(--ets-radius-sm, 6px);
+    transition: background-color var(--ets-motion-fast), color var(--ets-motion-fast);
 }
 
-.auth-separator::before,
-.auth-separator::after {
-    content: '';
-    flex: 1;
-    border-bottom: 1px solid var(--ets-border);
-}
-
-.auth-separator span {
-    padding: 0 12px;
-    opacity: 0.6;
-}
-
-.user-portal-btn {
-    height: 40px;
-    border-radius: 8px;
-    font-size: 14px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid var(--ets-border);
-}
-
-.user-portal-btn:hover {
-    background: rgba(255, 255, 255, 0.08);
+.user-portal-link:hover {
+    background: var(--ets-brand-soft);
+    color: var(--ets-brand-hover);
 }
 </style>

@@ -119,9 +119,6 @@ const columns = [
 
 <template>
     <div>
-        <n-alert type="warning" :show-icon="false" :bordered="false">
-            <span>{{ t('tip') }}</span>
-        </n-alert>
         <n-tabs type="segment" v-model:value="tabValue">
             <n-tab-pane name="address" :tab="t('address')">
                 <div class="address-table-scroll">

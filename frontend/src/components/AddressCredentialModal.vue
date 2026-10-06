@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 
@@ -109,9 +109,6 @@ const copyText = async (text) => {
 <template>
   <n-modal v-model:show="modalShow" preset="card" :title="t('title')"
     style="width: min(760px, calc(100vw - 32px));">
-    <n-alert type="info" :show-icon="false" :bordered="false">
-      {{ t('tip') }}
-    </n-alert>
     <section class="credential-panel">
       <h3 class="credential-title">{{ t('addressCredential') }}</h3>
       <div class="credential-section">
@@ -135,20 +132,25 @@ const copyText = async (text) => {
         </div>
         <div class="credential-field" v-if="addressPassword">
           <span class="credential-label">{{ t('addressPassword') }}</span>
-          <code class="credential-code">{{ addressPassword }}</code>
+          <div class="credential-copy-row">
+            <code class="credential-code">{{ addressPassword }}</code>
+            <n-button size="tiny" tertiary type="primary" @click="copyText(addressPassword)">
+              {{ t('copySection') }}
+            </n-button>
+          </div>
         </div>
       </div>
     </section>
 
     <n-collapse accordion class="credential-collapse">
       <n-collapse-item v-if="showAgent" name="agent" :title="t('agentAccess')">
-        <template #header-extra>
-          <n-button size="tiny" tertiary type="primary" @click.stop="copyText(agentText)">
-            {{ t('copySection') }}
-          </n-button>
-        </template>
         <div class="credential-section">
-          <p class="credential-tip">{{ t('agentAccessTip') }}</p>
+          <div class="credential-section-top">
+            <span class="credential-label">{{ t('agentAccess') }}</span>
+            <n-button size="tiny" secondary type="primary" @click="copyText(agentText)">
+              {{ t('copySection') }}
+            </n-button>
+          </div>
           <div class="credential-field">
             <span class="credential-label">{{ t('apiBase') }}</span>
             <code class="credential-code">{{ apiBaseUrl }}</code>
@@ -167,13 +169,13 @@ const copyText = async (text) => {
       </n-collapse-item>
 
       <n-collapse-item v-if="showSmtpImap" name="smtp-imap" :title="t('smtpImapAccess')">
-        <template #header-extra>
-          <n-button size="tiny" tertiary type="primary" @click.stop="copyText(smtpImapText)">
-            {{ t('copySection') }}
-          </n-button>
-        </template>
         <div class="credential-section">
-          <p class="credential-tip">{{ t('smtpImapTip') }}</p>
+          <div class="credential-section-top">
+            <span class="credential-label">{{ t('smtpImapAccess') }}</span>
+            <n-button size="tiny" secondary type="primary" @click="copyText(smtpImapText)">
+              {{ t('copySection') }}
+            </n-button>
+          </div>
           <div class="credential-grid">
             <div class="credential-field">
               <span class="credential-label">{{ t('smtpHost') }}</span>
@@ -208,27 +210,24 @@ const copyText = async (text) => {
       </n-collapse-item>
 
       <n-collapse-item name="credential-link" :title="t('autoLoginLink')">
-        <template #header-extra>
-          <n-button size="tiny" tertiary type="primary" @click.stop="copyText(autoLoginUrl)">
-            {{ t('copySection') }}
-          </n-button>
-        </template>
         <div class="credential-section">
-          <p class="credential-tip">{{ t('autoLoginLinkTip') }}</p>
-          <div class="credential-field">
+          <div class="credential-copy-row">
             <code class="credential-code">{{ autoLoginUrl }}</code>
+            <n-button size="tiny" secondary type="primary" @click="copyText(autoLoginUrl)">
+              {{ t('copySection') }}
+            </n-button>
           </div>
         </div>
       </n-collapse-item>
 
       <n-collapse-item name="recipient-share" :title="t('recipientShare')">
-        <template #header-extra>
-          <n-button size="tiny" tertiary type="primary" @click.stop="copyText(shareMessageText)">
-            {{ t('copySection') }}
-          </n-button>
-        </template>
         <div class="credential-section">
-          <p class="credential-tip">{{ t('recipientShareTip') }}</p>
+          <div class="credential-section-top">
+            <span class="credential-label">{{ t('recipientShare') }}</span>
+            <n-button size="tiny" secondary type="primary" @click="copyText(shareMessageText)">
+              {{ t('copySection') }}
+            </n-button>
+          </div>
           <pre class="credential-code credential-code-block">{{ shareMessageText }}</pre>
         </div>
       </n-collapse-item>
@@ -236,7 +235,6 @@ const copyText = async (text) => {
     <div v-if="$slots.actions" class="credential-security-actions">
       <div>
         <h3 class="credential-security-title">{{ t('securityActions') }}</h3>
-        <p class="credential-security-tip">{{ t('securityActionsTip') }}</p>
       </div>
       <div class="credential-actions">
         <slot name="actions" />
@@ -273,6 +271,13 @@ const copyText = async (text) => {
   margin: 0;
   color: var(--n-text-color-2);
   line-height: 1.6;
+}
+
+.credential-section-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .credential-grid {

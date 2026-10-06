@@ -8,8 +8,39 @@ import Components from 'unplugin-vue-components/vite'
 import { NaiveUiResolver } from 'unplugin-vue-components/resolvers'
 import wasm from "vite-plugin-wasm";
 
+const apiTarget = process.env.VITE_PROXY_TARGET || 'https://mail-api.20030405.xyz';
+
 // https://vitejs.dev/config/
 export default defineConfig({
+  server: {
+    proxy: {
+      '/api': {
+        target: apiTarget,
+        changeOrigin: true,
+        headers: { Origin: apiTarget },
+      },
+      '/open_api': {
+        target: apiTarget,
+        changeOrigin: true,
+        headers: { Origin: apiTarget },
+      },
+      '/user_api': {
+        target: apiTarget,
+        changeOrigin: true,
+        headers: { Origin: apiTarget },
+      },
+      '/telegram': {
+        target: apiTarget,
+        changeOrigin: true,
+        headers: { Origin: apiTarget },
+      },
+      '/external': {
+        target: apiTarget,
+        changeOrigin: true,
+        headers: { Origin: apiTarget },
+      },
+    },
+  },
   build: {
     outDir: './dist',
   },

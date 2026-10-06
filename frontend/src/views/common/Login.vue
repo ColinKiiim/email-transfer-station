@@ -1,11 +1,12 @@
 <script setup>
-import { ref, onMounted, computed, nextTick, watch } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 import { useRouter } from 'vue-router'
-import { NewLabelOutlined, EmailOutlined } from '@vicons/material'
 
 import AdminContact from '../common/AdminContact.vue'
 import Turnstile from '../../components/Turnstile.vue'
+import AppleSegmentedControl from '../../components/AppleSegmentedControl.vue'
+import ApplePasswordInput from '../../components/ApplePasswordInput.vue'
 
 import { useGlobalState } from '../../store'
 import { api } from '../../api'
@@ -43,7 +44,9 @@ const {
     showAddressCredential, userSettings, addressPassword
 } = useGlobalState()
 
-const tabValue = ref('signin')
+const { locale, t } = useScopedI18n('views.common.Login')
+
+const activeMode = ref(openSettings.value?.enableAddressPassword ? 'password' : 'credential') // 'password', 'credential', or 'register'
 const credential = ref('')
 const emailName = ref("")
 const emailDomain = ref("")
@@ -51,22 +54,55 @@ const cfToken = ref("")
 const enableRandomSubdomain = ref(false)
 const loginCfToken = ref("")
 const loginTurnstileRef = ref(null)
-const loginMethod = ref('credential') // 'credential' or 'password'
 const loginAddress = ref('')
 const loginPassword = ref('')
 
+const showAddressPasswordOption = computed(() => {
+    return Boolean(openSettings.value?.enableAddressPassword);
+});
+
+const showNewAddressOption = computed(() => {
+    if (openSettings.value.disableAnonymousUserCreateEmail
+        && !userSettings.value.user_email
+    ) {
+        return false;
+    }
+    if (userSettings.value.user_email && userSettings.value.can_create_address === false) {
+        return false;
+    }
+    return openSettings.value.enableUserCreateEmail;
+});
+
+const segmentedOptions = computed(() => {
+    const opts = [];
+    if (showAddressPasswordOption.value) {
+        opts.push({ value: 'password', label: t('passwordLogin') || '密码登录' });
+    }
+    opts.push({ value: 'credential', label: t('credentialLogin') || '凭据登录' });
+    if (showNewAddressOption.value) {
+        opts.push({ value: 'register', label: t('getNewEmail') || '新建邮箱' });
+    }
+    return opts;
+});
+
 // 根据 openSettings 初始化登录方式
 const initLoginMethod = () => {
-    if (openSettings.value?.enableAddressPassword) {
-        loginMethod.value = 'password';
+    if (showAddressPasswordOption.value) {
+        activeMode.value = 'password';
     } else {
-        loginMethod.value = 'credential';
+        activeMode.value = 'credential';
     }
 }
 
+const loginAndBindTag = computed(() => {
+    if (userSettings.value.user_email) {
+        return t('loginAndBind')
+    }
+    return t('login')
+})
+
 const login = async () => {
-    if (loginMethod.value === 'password') {
-        // Password login
+    if (activeMode.value === 'password') {
         if (!loginAddress.value || !loginPassword.value) {
             message.error(t('emailPasswordRequired'));
             return;
@@ -121,15 +157,6 @@ const login = async () => {
     }
 }
 
-const { locale, t } = useScopedI18n('views.common.Login')
-
-const loginAndBindTag = computed(() => {
-    if (userSettings.value.user_email) {
-        return t('loginAndBind')
-    }
-    return t('login')
-})
-
 const addressRegex = computed(() => {
     try {
         if (openSettings.value.addressRegex) {
@@ -150,7 +177,6 @@ const generateName = async () => {
             .replaceAll('-', '')
             .replace(addressRegex.value, '')
             .toLowerCase();
-        // support maxAddressLen
         if (emailName.value.length > openSettings.value.maxAddressLen) {
             emailName.value = emailName.value.slice(0, openSettings.value.maxAddressLen);
         }
@@ -163,7 +189,6 @@ const generateName = async () => {
 
 const newEmail = async () => {
     try {
-        // If custom names are disabled, send empty name to trigger backend auto-generation
         const nameToSend = openSettings.value.disableCustomAddressName ? "" : emailName.value;
         const res = await props.newAddressPath(
             nameToSend,
@@ -187,11 +212,9 @@ const newEmail = async () => {
 };
 
 const addressPrefix = computed(() => {
-    // if user has role, return role prefix
     if (userSettings.value?.user_role) {
         return userSettings.value.user_role.prefix || "";
     }
-    // if user has no role, return default prefix
     return openSettings.value.prefix;
 });
 
@@ -209,7 +232,6 @@ watch(canUseRandomSubdomain, (enabled) => {
 });
 
 const domainsOptions = computed(() => {
-    // if user has role, return role domains
     if (userSettings.value.user_role) {
         const allDomains = userSettings.value.user_role.domains;
         if (!allDomains) return openSettings.value.domains;
@@ -217,60 +239,30 @@ const domainsOptions = computed(() => {
             return allDomains.includes(domain.value);
         });
     }
-    // if user has no role, return default domains
     if (!openSettings.value.defaultDomains) {
         return openSettings.value.domains;
     }
-    // if user has no role and no default domains, return all domains
     return openSettings.value.domains.filter((domain) => {
         return openSettings.value.defaultDomains.includes(domain.value);
     });
 });
 
-const showNewAddressTab = computed(() => {
-    if (openSettings.value.disableAnonymousUserCreateEmail
-        && !userSettings.value.user_email
-    ) {
-        return false;
+watch(showNewAddressOption, (visible) => {
+    if (!visible && activeMode.value === 'register') {
+        activeMode.value = showAddressPasswordOption.value ? 'password' : 'credential';
     }
-    if (userSettings.value.user_email && userSettings.value.can_create_address === false) {
-        return false;
+});
+
+watch(showAddressPasswordOption, (visible) => {
+    if (!visible && activeMode.value === 'password') {
+        activeMode.value = 'credential';
+    } else if (visible && activeMode.value === 'credential') {
+        activeMode.value = 'password';
     }
-    return openSettings.value.enableUserCreateEmail;
-});
-
-const showAnonymousDisabledNotice = computed(() => {
-    if (userSettings.value.user_email) return false;
-    if (!openSettings.value.fetched) return false;
-    return !showNewAddressTab.value;
-});
-
-const availableTabs = computed(() => [
-    { value: 'signin', label: loginAndBindTag.value },
-    ...(showNewAddressTab.value ? [{ value: 'register', label: t('getNewEmail') }] : []),
-    { value: 'help', label: t('help') },
-]);
-
-const onTabKeydown = async (event, index) => {
-    const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End'];
-    if (!keys.includes(event.key)) return;
-    event.preventDefault();
-    const last = availableTabs.value.length - 1;
-    const nextIndex = event.key === 'Home' ? 0
-        : event.key === 'End' ? last
-            : event.key === 'ArrowLeft' ? (index + last) % availableTabs.value.length
-                : (index + 1) % availableTabs.value.length;
-    tabValue.value = availableTabs.value[nextIndex].value;
-    await nextTick();
-    document.getElementById(`login-tab-${tabValue.value}`)?.focus();
-};
-
-watch(showNewAddressTab, (visible) => {
-    if (!visible && tabValue.value === 'register') tabValue.value = 'signin';
-});
+}, { immediate: true });
 
 onMounted(async () => {
-    if (!openSettings.value.domains || openSettings.value.domains.length === 0) {
+    if (!openSettings.value.fetched) {
         await api.getOpenSettings(message, notification);
     }
     emailDomain.value = domainsOptions.value ? domainsOptions.value[0]?.value : "";
@@ -279,235 +271,116 @@ onMounted(async () => {
 </script>
 
 <template>
-    <div>
-        <n-alert v-if="userSettings.user_email" :show-icon="false" :bordered="false" closable>
-            <span>{{ t('bindUserInfo') }}</span>
-        </n-alert>
-        <n-alert v-else-if="showAnonymousDisabledNotice" :show-icon="false" :bordered="false">
-            <span>{{ t('anonymousDisabledNotice') }}</span>
-        </n-alert>
-        <div>
-            <div class="login-tab-list" role="tablist" :aria-label="loginAndBindTag">
-                <button v-for="(tab, index) in availableTabs" :id="`login-tab-${tab.value}`" :key="tab.value"
-                    type="button" role="tab" class="login-tab" :class="{ active: tabValue === tab.value }"
-                    :aria-selected="tabValue === tab.value" :aria-controls="`login-panel-${tab.value}`"
-                    :tabindex="tabValue === tab.value ? 0 : -1" @click="tabValue = tab.value"
-                    @keydown="onTabKeydown($event, index)">
-                    {{ tab.label }}
+    <div class="mailbox-login-container">
+        <AppleSegmentedControl
+            v-if="segmentedOptions.length > 1"
+            v-model="activeMode"
+            :options="segmentedOptions"
+            :aria-label="t('mailboxAccess') || '邮箱访问'"
+        />
+
+        <form v-if="activeMode === 'password' && showAddressPasswordOption" class="auth-form" @submit.prevent="login">
+            <div class="auth-field">
+                <label class="auth-label" for="mailbox-login-email">{{ t('email') }}</label>
+                <input id="mailbox-login-email" v-model="loginAddress" class="auth-input" type="text"
+                    autocomplete="username" placeholder="name@domain.com" />
+            </div>
+            <div class="auth-field">
+                <label class="auth-label" for="mailbox-login-password">{{ t('password') }}</label>
+                <ApplePasswordInput id="mailbox-login-password" v-model="loginPassword"
+                    autocomplete="current-password" />
+            </div>
+
+            <Turnstile ref="loginTurnstileRef" v-if="openSettings.enableGlobalTurnstileCheck" v-model:value="loginCfToken" />
+
+            <button class="auth-submit-btn" type="submit" :disabled="loading">
+                {{ loginAndBindTag }}
+            </button>
+        </form>
+
+        <form v-else-if="activeMode === 'credential'" class="auth-form" @submit.prevent="login">
+            <div class="auth-field">
+                <label class="auth-label" for="mailbox-login-credential">{{ t('credential') }}</label>
+                <textarea id="mailbox-login-credential" v-model="credential" class="auth-input"
+                    :placeholder="t('credentialInput') || '请输入已保存的邮箱地址凭据'" rows="3"></textarea>
+            </div>
+
+            <Turnstile ref="loginTurnstileRef" v-if="openSettings.enableGlobalTurnstileCheck" v-model:value="loginCfToken" />
+
+            <button class="auth-submit-btn" type="submit" :disabled="loading">
+                {{ loginAndBindTag }}
+            </button>
+        </form>
+
+        <form v-else-if="activeMode === 'register' && showNewAddressOption" class="auth-form" @submit.prevent="newEmail">
+            <div class="auth-field">
+                <label class="auth-label">{{ t('email') }}</label>
+                <div class="register-input-group">
+                    <span v-if="addressPrefix" class="prefix-tag">{{ addressPrefix }}</span>
+                    <input v-if="!openSettings.disableCustomAddressName" v-model="emailName" class="auth-input"
+                        placeholder="name" style="flex: 1;" />
+                    <input v-else :value="t('autoGeneratedName')" disabled class="auth-input" style="flex: 1;" />
+                    <span class="at-tag">@</span>
+                    <select v-model="emailDomain" class="auth-input domain-select">
+                        <option v-for="d in domainsOptions" :key="d.value" :value="d.value">
+                            {{ d.label || d.value }}
+                        </option>
+                    </select>
+                </div>
+            </div>
+
+            <div v-if="!openSettings.disableCustomAddressName" class="auth-aux-row">
+                <button type="button" class="auth-aux-link" :disabled="generateNameLoading" @click="generateName">
+                    🎲 {{ t('generateName') }}
                 </button>
             </div>
-            <section v-if="tabValue === 'signin'" id="login-panel-signin" role="tabpanel"
-                aria-labelledby="login-tab-signin" class="login-tab-panel">
-                <n-form>
-                           <div v-if="loginMethod === 'password'">
-                        <n-form-item-row :label="t('email')" :label-props="{ for: 'address-login-email' }" required>
-                            <n-input v-model:value="loginAddress" placeholder="name@domain.com" size="large"
-                                :input-props="{ id: 'address-login-email', autocomplete: 'username' }" />
-                        </n-form-item-row>
-                        <n-form-item-row :label="t('password')" :label-props="{ for: 'address-login-password' }" required>
-                            <n-input v-model:value="loginPassword" type="password" show-password-on="click" placeholder="••••••••" size="large"
-                                :input-props="{ id: 'address-login-password', autocomplete: 'current-password' }"
-                                @keyup.enter="login" />
-                        </n-form-item-row>
-                    </div>
 
-                    <div v-else>
-                        <n-form-item-row :label="t('credential')" :label-props="{ for: 'address-login-credential' }" required>
-                            <n-input v-model:value="credential" type="textarea" :autosize="{ minRows: 3 }" placeholder="ey..."
-                                :input-props="{ id: 'address-login-credential', autocomplete: 'off' }" />
-                        </n-form-item-row>
-                    </div>
+            <div v-if="canUseRandomSubdomain" class="random-subdomain-row">
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                    <input type="checkbox" v-model="enableRandomSubdomain" />
+                    <span>{{ t('enableRandomSubdomain') }}</span>
+                </label>
+            </div>
 
-                    <Turnstile ref="loginTurnstileRef" v-if="openSettings.enableGlobalTurnstileCheck"
-                        v-model:value="loginCfToken" />
+            <Turnstile v-model:value="cfToken" />
 
-                    <div class="switch-login-row">
-                        <button type="button" class="switch-method-link"
-                            @click="loginMethod === 'password' ? loginMethod = 'credential' : loginMethod = 'password'">
-                            {{ loginMethod === 'password' ? t('credentialLogin') : t('passwordLogin') }}
-                        </button>
-                    </div>
-
-                    <n-button @click="login" :loading="loading" type="primary" block size="large" class="main-submit-btn" strong>
-                        <template #icon>
-                            <n-icon :component="EmailOutlined" />
-                        </template>
-                        {{ loginAndBindTag }}
-                    </n-button>
-                    <n-button v-if="showNewAddressTab" @click="tabValue = 'register'" block secondary size="large" class="alt-action-btn" strong>
-                        <template #icon>
-                            <n-icon :component="NewLabelOutlined" />
-                        </template>
-                        {{ t('getNewEmail') }}
-                    </n-button>
-                </n-form>
-            </section>
-            <section v-else-if="tabValue === 'register' && showNewAddressTab" id="login-panel-register"
-                role="tabpanel" aria-labelledby="login-tab-register" class="login-tab-panel">
-                <n-spin :show="generateNameLoading">
-                    <n-form class="register-form">
-                        <n-alert v-if="!openSettings.disableCustomAddressName" type="info" :show-icon="false" :bordered="false" class="register-rule-alert">
-                            <span>{{ t('getNewEmailTip2') }} · {{ t('getNewEmailTip3') }}</span>
-                        </n-alert>
-                        <div class="register-address-input-wrap">
-                            <n-input-group size="large">
-                                <n-input-group-label v-if="addressPrefix">
-                                    {{ addressPrefix }}
-                                </n-input-group-label>
-                                <n-input v-if="!openSettings.disableCustomAddressName" v-model:value="emailName" show-count
-                                    :minlength="openSettings.minAddressLen" :maxlength="openSettings.maxAddressLen" placeholder="name" />
-                                <n-input v-else :value="t('autoGeneratedName')" disabled />
-                                <n-input-group-label>@</n-input-group-label>
-                                <n-select v-model:value="emailDomain" :consistent-menu-width="false"
-                                    :options="domainsOptions" style="min-width: 130px;" />
-                            </n-input-group>
-                        </div>
-                        <div v-if="!openSettings.disableCustomAddressName" class="register-generate-row">
-                            <n-button @click="generateName" size="small" tertiary type="primary" class="generate-name-btn">
-                                🎲 {{ t('generateName') }}
-                            </n-button>
-                        </div>
-                        <n-form-item-row v-if="canUseRandomSubdomain">
-                            <n-checkbox v-model:checked="enableRandomSubdomain">
-                                {{ t('enableRandomSubdomain') }}
-                            </n-checkbox>
-                            <p style="margin: 8px 0 0; opacity: 0.75;">
-                                {{ t('randomSubdomainTip') }}
-                            </p>
-                        </n-form-item-row>
-                        <Turnstile v-model:value="cfToken" />
-                        <n-button type="primary" block size="large" class="main-submit-btn" strong @click="newEmail" :loading="loading">
-                            <template #icon>
-                                <n-icon :component="NewLabelOutlined" />
-                            </template>
-                            {{ t('getNewEmail') }}
-                        </n-button>
-                    </n-form>
-                </n-spin>
-            </section>
-            <section v-else-if="tabValue === 'help'" id="login-panel-help" role="tabpanel" aria-labelledby="login-tab-help"
-                class="login-tab-panel">
-                <n-alert :show-icon="false" :bordered="false">
-                    <span>{{ showNewAddressTab ? t('pleaseGetNewEmail') : t('pleaseUseExistingCredential') }}</span>
-                </n-alert>
-                <AdminContact />
-            </section>
-        </div>
+            <button class="auth-submit-btn" type="submit" :disabled="loading">
+                {{ t('getNewEmail') }}
+            </button>
+        </form>
     </div>
 </template>
 
 <style scoped>
-.n-alert {
-    margin-top: 10px;
-    margin-bottom: 10px;
-    text-align: center;
-}
-
-.login-tab-list {
-    display: flex;
-    gap: 6px;
-    margin-bottom: 20px;
-    padding: 4px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid var(--ets-border);
-}
-
-.login-tab {
+.mailbox-login-container {
+    width: 100%;
     flex: 1;
-    min-height: 36px;
-    border: 0;
-    border-radius: 7px;
-    background: transparent;
-    color: var(--ets-text-muted);
-    font: inherit;
-    font-size: 13.5px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 140ms ease;
-}
-
-.login-tab:hover {
-    color: var(--ets-text);
-    background: rgba(255, 255, 255, 0.04);
-}
-
-.login-tab.active {
-    background: #3b82f6;
-    color: #ffffff;
-    font-weight: 600;
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.35);
-}
-
-.login-tab-panel {
-    text-align: left;
-}
-
-.switch-login-row {
-    display: flex;
-    justify-content: flex-end;
-    margin: 6px 0 12px;
-}
-
-.switch-method-link {
-    border: 0;
-    background: transparent;
-    color: var(--ets-text-muted);
-    font: inherit;
-    font-size: 12.5px;
-    cursor: pointer;
-    padding: 2px 6px;
-    border-radius: 4px;
-    transition: color 120ms ease;
-}
-
-.switch-method-link:hover {
-    color: var(--ets-brand, #3b82f6);
-}
-
-.register-form {
     display: flex;
     flex-direction: column;
-    gap: 8px;
 }
 
-.register-rule-alert {
-    margin-bottom: 6px;
-    font-size: 12.5px;
-}
-
-.register-address-input-wrap {
-    margin-bottom: 4px;
-}
-
-.register-generate-row {
+.register-input-group {
     display: flex;
-    justify-content: flex-end;
-    margin-bottom: 8px;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
 }
 
-.generate-name-btn {
-    font-size: 12.5px;
+.prefix-tag,
+.at-tag {
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--ets-text-muted);
 }
 
-.n-form {
-    text-align: left;
+.domain-select {
+    width: auto;
+    min-width: 130px;
+    cursor: pointer;
 }
 
-.main-submit-btn {
-    height: 42px;
-    font-size: 15px;
-    font-weight: 700;
-    border-radius: 8px;
-    margin-top: 10px;
-}
-
-.alt-action-btn {
-    height: 40px;
-    font-size: 14px;
-    border-radius: 8px;
-    margin-top: 10px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid var(--ets-border);
+.random-subdomain-row {
+    margin-top: 4px;
+    color: var(--ets-text-muted);
 }
 </style>

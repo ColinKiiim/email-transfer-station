@@ -27,33 +27,36 @@ const iconPaths = {
 <style scoped>
 .surface-links {
   display: inline-flex;
-  gap: 2px;
+  gap: 4px;
   align-items: center;
   min-width: 0;
-  border-radius: var(--ets-radius-md);
-  padding: 2px;
-  background: var(--ets-surface-alt);
-  box-shadow: var(--ets-shadow-hairline);
+  padding: 0;
 }
 
 .surface-link {
   display: inline-flex;
-  gap: 7px;
+  gap: 6px;
   align-items: center;
+  height: 32px;
   min-height: 32px;
-  border-radius: var(--ets-radius-sm);
-  padding: 0 9px;
+  border-radius: var(--ets-radius-sm, 6px);
+  padding: 0 10px;
   color: var(--ets-text-muted);
-  font: 650 12px/1 var(--ets-font-ui);
+  font: 550 13px/1 var(--ets-font-ui);
   text-decoration: none;
   white-space: nowrap;
+  transition: background-color var(--ets-motion-fast) ease, color var(--ets-motion-fast) ease;
 }
 
-.surface-link:hover,
+.surface-link:hover {
+  background: var(--ets-hover);
+  color: var(--ets-text-strong);
+}
+
 .surface-link.router-link-exact-active {
-  background: var(--ets-surface);
-  color: var(--ets-on-brand-soft);
-  box-shadow: var(--ets-shadow-hairline);
+  background: var(--ets-hover);
+  color: var(--ets-brand, #0f6cbd);
+  font-weight: 600;
 }
 
 .surface-link:focus-visible {

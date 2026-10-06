@@ -118,6 +118,10 @@ export const MESSAGE_REGISTRY = {
       "en": "Select All of This Page",
       "zh": "全选本页"
     },
+    "selectedCount": {
+      "en": "{count} selected",
+      "zh": "已选 {count} 项"
+    },
     "success": {
       "en": "Success",
       "zh": "成功"
@@ -266,6 +270,10 @@ export const MESSAGE_REGISTRY = {
       "en": "Select All of This Page",
       "zh": "全选本页"
     },
+    "selectedCount": {
+      "en": "{count} selected",
+      "zh": "已选 {count} 项"
+    },
     "showCode": {
       "en": "Change View Original Code",
       "zh": "切换查看元数据"
@@ -307,8 +315,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "地址凭证"
     },
     "addressCredentialLabel": {
-      "en": "Address JWT",
-      "zh": "Address JWT"
+      "en": "Address Access Token",
+      "zh": "地址访问凭证"
     },
     "addressPassword": {
       "en": "Address Password",
@@ -319,8 +327,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "AI Agent"
     },
     "agentAccessTip": {
-      "en": "Use this mailbox from an AI agent with the Address JWT and parsed-mail APIs.",
-      "zh": "AI Agent 可使用 Address JWT 和 parsed-mail API 读取这个邮箱"
+      "en": "Use this mailbox from an AI agent with the Address Access Token and parsed-mail APIs.",
+      "zh": "AI Agent 可使用地址访问凭据和 parsed-mail API 读取这个邮箱"
     },
     "agentConfig": {
       "en": "Agent config",
@@ -610,6 +618,10 @@ export const MESSAGE_REGISTRY = {
       "en": "Are you sure you want to logout?",
       "zh": "确定要退出登录吗？"
     },
+    "logoutDesc": {
+      "en": "Sign out of current user account",
+      "zh": "退出当前用户账号并清除登录态"
+    },
     "passkeyCreated": {
       "en": "Passkey created successfully",
       "zh": "Passkey 创建成功"
@@ -623,8 +635,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "Passkey 名称"
     },
     "passordTip": {
-      "en": "The server will only receive the hash value of the password, and will not receive the plaintext password, so it cannot view or retrieve your password. If the administrator enables email verification, you can reset the password in incognito mode",
-      "zh": "服务器只会接收到密码的哈希值，不会接收到明文密码，因此无法查看或者找回您的密码, 如果管理员启用了邮件验证您可以在无痕模式重置密码"
+      "en": "Your password is encrypted and never stored in plaintext. If the administrator enables email verification, you can reset the password in incognito mode.",
+      "zh": "系统采用端到端加密保护您的密码安全，全程不存储明文密码。若管理员已开启邮件验证，您可随时在隐私模式下重置密码。"
     },
     "renamePasskey": {
       "en": "Rename Passkey",
@@ -634,6 +646,14 @@ export const MESSAGE_REGISTRY = {
       "en": "Please enter the new passkey name",
       "zh": "请输入新的 Passkey 名称"
     },
+    "security": {
+      "en": "Account Security",
+      "zh": "账户安全"
+    },
+    "session": {
+      "en": "Session Management",
+      "zh": "会话管理"
+    },
     "showPasskeyList": {
       "en": "Show Passkey List",
       "zh": "查看 Passkey 列表"
@@ -641,6 +661,10 @@ export const MESSAGE_REGISTRY = {
     "updated_at": {
       "en": "Updated At",
       "zh": "更新时间"
+    },
+    "userAccount": {
+      "en": "User Account",
+      "zh": "用户账户"
     }
   },
   "views.Header": {
@@ -694,6 +718,14 @@ export const MESSAGE_REGISTRY = {
     }
   },
   "views.user.BindAddress": {
+    "description": {
+      "en": "Sign in with an existing address credential to bind it to your user account.",
+      "zh": "通过已有邮箱地址凭证登录并将其绑定至当前用户账户。"
+    },
+    "title": {
+      "en": "Bind Existing Address",
+      "zh": "绑定已有邮箱地址"
+    }
   },
   "views.User": {
     "authenticators": {
@@ -839,6 +871,14 @@ export const MESSAGE_REGISTRY = {
     "myInbox": {
       "en": "My inbox",
       "zh": "我的收件箱"
+    },
+    "cancel": {
+      "en": "Cancel",
+      "zh": "取消"
+    },
+    "logoutConfirm": {
+      "en": "Are you sure you want to sign out of the user workspace?",
+      "zh": "确定要退出用户工作台吗？"
     },
     "signOut": {
       "en": "Sign out",
@@ -1032,6 +1072,10 @@ export const MESSAGE_REGISTRY = {
       "en": "Are you sure to clear all emails in your inbox?",
       "zh": "确定要清空你收件箱中的所有邮件吗？"
     },
+    "clearInboxDesc": {
+      "en": "Permanently clear all emails in current inbox",
+      "zh": "彻底清空当前收件箱中的全部邮件"
+    },
     "clearSentItems": {
       "en": "Clear Sent Items",
       "zh": "清空发件箱"
@@ -1040,9 +1084,29 @@ export const MESSAGE_REGISTRY = {
       "en": "Are you sure to clear all emails in your sent items?",
       "zh": "确定要清空你发件箱中的所有邮件吗？"
     },
+    "clearSentItemsDesc": {
+      "en": "Permanently clear all sent items records",
+      "zh": "彻底清空已发送邮件记录"
+    },
     "confirmPassword": {
       "en": "Confirm Password",
       "zh": "确认密码"
+    },
+    "credentialDesc": {
+      "en": "Manage credentials or export mailbox access",
+      "zh": "查看邮箱凭证与外部客户端连接方式"
+    },
+    "currentAddress": {
+      "en": "Current Mailbox Address",
+      "zh": "当前邮箱地址"
+    },
+    "dangerZone": {
+      "en": "Danger Zone",
+      "zh": "危险区域"
+    },
+    "dataManagement": {
+      "en": "Mails & Session",
+      "zh": "邮件与会话"
     },
     "deleteAccount": {
       "en": "Delete Account",
@@ -1052,6 +1116,14 @@ export const MESSAGE_REGISTRY = {
       "en": "Are you sure to delete your account and all emails for this account?",
       "zh": "确定要删除你的账户和其中的所有邮件吗?"
     },
+    "deleteAccountDesc": {
+      "en": "Permanently destroy this mailbox address and all associated data. Irreversible!",
+      "zh": "永久销毁该邮箱地址及其所有接收、发送数据。此操作不可逆！"
+    },
+    "edit": {
+      "en": "Edit",
+      "zh": "修改"
+    },
     "logout": {
       "en": "Logout",
       "zh": "退出登录"
@@ -1059,6 +1131,10 @@ export const MESSAGE_REGISTRY = {
     "logoutConfirm": {
       "en": "Are you sure to logout?",
       "zh": "确定要退出登录吗？"
+    },
+    "logoutDesc": {
+      "en": "Clear local credentials for current temporary mailbox",
+      "zh": "清除当前临时邮箱的本地访问凭据并退出"
     },
     "newPassword": {
       "en": "New Password",
@@ -1068,9 +1144,17 @@ export const MESSAGE_REGISTRY = {
       "en": "Password changed successfully",
       "zh": "密码修改成功"
     },
+    "passwordDesc": {
+      "en": "Set or update standalone password for this mailbox",
+      "zh": "为当前邮箱设置或修改独立访问密码"
+    },
     "passwordMismatch": {
       "en": "Passwords do not match",
       "zh": "密码不匹配"
+    },
+    "security": {
+      "en": "Security & Credentials",
+      "zh": "安全与凭据"
     },
     "showAddressCredential": {
       "en": "Credentials & Connection Methods",
@@ -1079,6 +1163,10 @@ export const MESSAGE_REGISTRY = {
     "success": {
       "en": "Success",
       "zh": "成功"
+    },
+    "view": {
+      "en": "View",
+      "zh": "查看"
     }
   },
   "views.user.UserOauth2Callback": {
@@ -1124,9 +1212,21 @@ export const MESSAGE_REGISTRY = {
       "en": "Deleted successfully",
       "zh": "删除成功"
     },
+    "description": {
+      "en": "Manage and download attachments stored in S3 object storage.",
+      "zh": "查看与管理保存在 S3 对象存储中的邮件附件。"
+    },
     "download": {
       "en": "Download",
       "zh": "下载"
+    },
+    "refresh": {
+      "en": "Refresh",
+      "zh": "刷新"
+    },
+    "title": {
+      "en": "S3 Attachments",
+      "zh": "S3 附件存储"
     }
   },
   "views.index.AutoReply": {
@@ -1219,6 +1319,10 @@ export const MESSAGE_REGISTRY = {
     "send": {
       "en": "Send",
       "zh": "发送"
+    },
+    "sendmail": {
+      "en": "Send Mail",
+      "zh": "发送邮件"
     },
     "send_balance": {
       "en": "Send Mail Balance Left",
@@ -4538,6 +4642,28 @@ export const MESSAGE_REGISTRY = {
     "language": {
       "en": "Language",
       "zh": "语言"
+    }
+  },
+  "components.AppTopbar": {
+    "home": {
+      "en": "Home",
+      "zh": "主页"
+    },
+    "user": {
+      "en": "User",
+      "zh": "用户"
+    },
+    "admin": {
+      "en": "Admin",
+      "zh": "管理"
+    },
+    "share": {
+      "en": "Share",
+      "zh": "共享"
+    },
+    "surfaces": {
+      "en": "Product surfaces",
+      "zh": "产品导航"
     }
   }
 } as const

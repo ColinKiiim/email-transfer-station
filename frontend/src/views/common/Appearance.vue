@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { useScopedI18n } from '@/i18n/app'
 
 import { useIsMobile } from '../../utils/composables'
@@ -84,7 +84,7 @@ const { t } = useScopedI18n('views.common.Appearance')
     display: flex;
     flex-direction: column;
     gap: 16px;
-    max-width: min(100%, 1080px);
+    max-width: 680px;
     width: 100%;
 }
 
