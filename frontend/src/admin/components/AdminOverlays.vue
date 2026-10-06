@@ -495,9 +495,9 @@ onBeforeUnmount(() => {
             </div>
             <div class="modal-actions">
                 <template v-if="model.actionModal === 'one-time-result'">
+                    <button class="btn" type="button" @click="actions.closeActionModal">{{ t('savedSecurely') }}</button>
                     <button class="btn primary" type="button" :disabled="!model.oneTimeResult.value"
                         @click="actions.copyText(model.oneTimeResult.value)">{{ t('copyResult') }}</button>
-                    <button class="btn" type="button" @click="actions.closeActionModal">{{ t('savedSecurely') }}</button>
                 </template>
                 <template v-else-if="model.actionModal === 'user-addresses'">
                     <button class="btn primary" data-testid="user-addresses-close" type="button" @click="actions.closeActionModal">{{ t('close') }}</button>

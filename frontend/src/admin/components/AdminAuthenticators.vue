@@ -2,6 +2,7 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 import { adminApi } from '../admin-api'
+import AdminEmptyState from './AdminEmptyState.vue'
 
 const props = defineProps({
     requestConfirm: { type: Function, required: true },
@@ -42,7 +43,7 @@ onBeforeUnmount(() => window.clearInterval(timer))
         </form>
         <label class="expiry"><span>{{ t('shareExpiry') }}</span><input v-model="expiry" type="datetime-local" /></label>
         <p v-if="error" class="error" role="alert">{{ error }}</p>
-        <div v-if="!rows.length" class="empty">{{ t('empty') }}</div>
+        <AdminEmptyState v-if="!rows.length" :title="t('empty')" />
         <ul v-else class="items">
             <li v-for="row in rows" :key="row.id" class="item">
                 <div class="identity"><strong>{{ row.label }}</strong><span>{{ row.issuer || t('noIssuer') }}</span></div>
