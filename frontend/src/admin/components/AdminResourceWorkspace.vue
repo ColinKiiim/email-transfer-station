@@ -538,7 +538,7 @@ const scrollToChannels = (event) => {
                 <dl class="kv-grid">
                     <div class="kv-item">
                         <dt>{{ t('aiExtract') }}</dt>
-                        <dd><span class="badge badge-warn"><span class="badge-dot" />{{ t('aiExtractValue') }}</span></dd>
+                        <dd><span class="badge badge-neutral"><span class="badge-dot" />{{ t('aiExtractValue') }}</span></dd>
                     </div>
                     <div class="kv-item">
                         <dt>{{ t('htmlPreview') }}</dt>
@@ -546,11 +546,11 @@ const scrollToChannels = (event) => {
                     </div>
                     <div class="kv-item">
                         <dt>{{ t('attachmentTransfer') }}</dt>
-                        <dd><span class="badge badge-warn"><span class="badge-dot" />{{ t('attachmentTransferValue') }}</span></dd>
+                        <dd><span class="badge badge-neutral"><span class="badge-dot" />{{ t('attachmentTransferValue') }}</span></dd>
                     </div>
                     <div class="kv-item">
                         <dt>{{ t('autoReply') }}</dt>
-                        <dd><span class="badge badge-warn"><span class="badge-dot" />{{ t('autoReplyValue') }}</span></dd>
+                        <dd><span class="badge badge-neutral"><span class="badge-dot" />{{ t('autoReplyValue') }}</span></dd>
                     </div>
                 </dl>
             </div>

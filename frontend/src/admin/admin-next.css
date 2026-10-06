@@ -3537,33 +3537,33 @@ body:has(.admin-next) .n-message-container {
 }
 
 .admin-next-host .overview-card.card-flow {
-    background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9));
-    border-color: rgba(59, 130, 246, 0.3);
-    color: #f8fafc;
+    background: color-mix(in oklch, var(--accent-soft) 30%, var(--surface));
+    border-color: color-mix(in oklch, var(--accent) 30%, var(--border));
+    color: var(--fg);
 }
 
 .admin-next-host .overview-card.card-flow:hover {
-    border-color: rgba(59, 130, 246, 0.7);
-    box-shadow: 0 8px 24px rgba(37, 99, 235, 0.2), 0 0 0 1px rgba(59, 130, 246, 0.3);
+    border-color: var(--accent);
+    box-shadow: 0 8px 24px rgba(37, 99, 235, 0.16), 0 0 0 1px var(--accent);
 }
 
 .admin-next-host .overview-card.card-flow .card-kicker,
 .admin-next-host .overview-card.card-flow .card-unit,
 .admin-next-host .overview-card.card-flow .card-desc {
-    color: #94a3b8;
+    color: var(--muted);
 }
 
 .admin-next-host .overview-card.card-flow .card-badge:not(.is-unread) {
-    background: rgba(255, 255, 255, 0.08);
-    color: #94a3b8;
+    background: var(--surface-soft);
+    color: var(--muted);
 }
 
 .admin-next-host .overview-card.card-flow .card-value {
-    color: #f8fafc;
+    color: var(--fg);
 }
 
 .admin-next-host .overview-card.card-flow .card-action {
-    color: #38bdf8;
+    color: var(--accent);
 }
 
 .admin-next-host .card-top {
