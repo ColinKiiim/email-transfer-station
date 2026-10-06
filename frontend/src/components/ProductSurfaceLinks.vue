@@ -42,7 +42,7 @@ const iconPaths = {
   border-radius: var(--ets-radius-sm, 6px);
   padding: 0 10px;
   color: var(--ets-text-muted);
-  font: 550 13px/1 var(--ets-font-ui);
+  font: 500 13px/1 var(--ets-font-ui);
   text-decoration: none;
   white-space: nowrap;
   transition: background-color var(--ets-motion-fast) ease, color var(--ets-motion-fast) ease;

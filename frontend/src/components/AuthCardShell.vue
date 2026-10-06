@@ -145,7 +145,7 @@ defineProps({
 
 :deep(.auth-label) {
   font-size: 13px;
-  font-weight: 550;
+  font-weight: 500;
   color: var(--ets-text);
   line-height: 1.3;
 }

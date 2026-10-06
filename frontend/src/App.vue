@@ -135,7 +135,7 @@ onMounted(async () => {
 
 <style>
 :root {
-  --ets-ui-font: "Segoe UI Variable", "Segoe UI", "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", "Helvetica Neue", Arial, sans-serif;
+  --ets-ui-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "PingFang SC", system-ui, sans-serif;
 }
 
 html,
