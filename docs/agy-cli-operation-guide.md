@@ -99,7 +99,7 @@ git diff --stat
 git diff -- <allowlist>
 ~~~
 
-按风险在受影响的 `worker/` 或 `frontend/` 中运行 corepack pnpm run test、corepack pnpm run lint、corepack pnpm run typecheck 或相关构建；其他包按 `AGENTS.md` 的验证菜单执行。UI 任务可让 Agy 自己打开浏览器/MCP，并要求报告视口、截图、关键元素几何、溢出、交互结果和未验证项；无法进入目标状态就报告 BLOCKED，不要伪造 PASS。
+按风险只运行一个最小相关检查：优先受影响模块的单文件/单用例测试；没有行为变化时只做 `git diff --check`。不要默认运行全量 Vitest、全包 lint/typecheck/build 或重复检查。UI 任务可让 Agy 自己打开浏览器/MCP，并要求报告视口、截图、关键元素几何、溢出、交互结果和未验证项；无法进入目标状态就报告 BLOCKED，不要伪造 PASS。
 
 ## 异常
 
