@@ -179,7 +179,7 @@ Removed 22 redundant tests without archiving them: 14 frontend suites that
 duplicated AdminNext/admin-flow/session or browser coverage, 2 Worker suites
 duplicated by canonical admin route and session regressions, and 6 E2E suites
 duplicated by Worker/API or browser smoke coverage. The tracked frontend test
-surface is now 20 test files (from 34), Worker 24 (from 26), and E2E 25 (from
+surface is now 18 test files (from 34), Worker 24 (from 26), and E2E 25 (from
 31). Security, authentication, migration, quota, mail-ingress, protocol, and
 core mailbox smoke coverage remains. The standalone request-state test was
 removed because `frontend/src/api/__tests__/settings.test.js` already exercises
@@ -187,6 +187,9 @@ the same concurrent loading contract.
 
 The AgyCLI guide and UI checklist now require one smallest relevant check and
 explicitly skip full-suite/repeated checks for styling, documentation, and other
-low-risk changes. Existing user dirty work was not staged or modified. This
-cleanup itself was validated with static reference review and `git diff --check`;
-no full suite was run.
+low-risk changes. Existing user dirty work was not staged or modified. A final
+small reduction also removed the admin view-model and ordinary mail-detail UI
+tests because their behavior is exercised by the retained admin flow and
+browser smoke coverage. This cleanup itself was validated with static reference
+review and `git diff --check`; no full suite was run. Per the user's current
+instruction, the follow-up remains local-only and is not pushed or deployed.

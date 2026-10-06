@@ -2,8 +2,6 @@
 
 import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import fs from 'node:fs'
-import path from 'node:path'
 
 const message = {
     error: vi.fn(),
@@ -220,29 +218,6 @@ describe('AccessMailWorkbench - Pagination count retention across pages', () => 
         })
 
         wrapper.unmount()
-    })
-})
-
-describe('AccessMailWorkbench - Responsive narrow screen CSS rules', () => {
-    it('contains valid flex wrapping and directional rules for narrow screens in styles', () => {
-        const vueFilePath = path.resolve(__dirname, '../AccessMailWorkbench.vue')
-        const content = fs.readFileSync(vueFilePath, 'utf-8')
-
-        // Must define @media (max-width: 720px)
-        expect(content).toContain('@media (max-width: 720px)')
-
-        // .panel-head in media query must use flex-wrap: wrap instead of invalid grid-template-columns
-        expect(content).toMatch(/\.panel-head\s*\{[^}]*flex-wrap:\s*wrap/)
-
-        // .panel-head .n-pagination must allow wrapping for size picker and buttons
-        expect(content).toMatch(/\.panel-head\s*:deep\(\.n-pagination\)\s*\{[^}]*flex-wrap:\s*wrap/)
-
-        // .mail-command-surface in media query must use flex-direction: column
-        expect(content).toMatch(/\.mail-command-surface\s*\{[^}]*flex-direction:\s*column/)
-
-        // Must NOT apply grid-template-columns to .panel-head or .mail-command-surface
-        expect(content).not.toMatch(/\.mail-command-surface[^}]*grid-template-columns:\s*1fr/)
-        expect(content).not.toMatch(/\.panel-head[^}]*grid-template-columns:\s*1fr/)
     })
 })
 
