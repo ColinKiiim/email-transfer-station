@@ -21,7 +21,9 @@ export const buildAdminAddressRows = (rows = [], enableAddressPassword = false) 
         packages: row.active_share_token_count || 0,
         credentialVersion: Number(row.credential_version || 1),
         credential: row.credential_version ? `v${row.credential_version}` : t('credentialNormal'),
+        credentialTone: 'neutral',
         password: enableAddressPassword ? t('passwordEnabled') : t('passwordDisabled'),
+        passwordTone: enableAddressPassword ? 'ok' : 'neutral',
         note: row.owner_note || row.source_meta || t('defaultNote'),
         updated: row.updated_at || '-',
     }

@@ -421,15 +421,19 @@ const isPrimaryPanel = (panel) => (
             </div>
 
             <div class="table-wrap">
-                <table>
+                <table :class="['resource-table', `table-${panel.id}`]">
                     <caption class="sr-only">{{ t('tableCaption', { title: panel.title }) }}</caption>
                     <thead>
                         <tr>
                             <th v-for="column in panel.columns" :key="column.labelKey"
-                                :class="{
-                                    num: column.type === 'number',
-                                    'text-right': column.type === 'domainActions' || column.type === 'userActions' || column.type === 'addressActions' || column.type === 'shareActions'
-                                }">
+                                :class="[
+                                    `col-${column.key || column.main || column.type}`,
+                                    {
+                                        num: column.type === 'number',
+                                        'text-right': column.type === 'number' || column.type === 'domainActions' || column.type === 'userActions' || column.type === 'addressActions' || column.type === 'shareActions',
+                                        'text-center': column.type === 'status'
+                                    }
+                                ]">
                                 {{ tCol(column.labelKey) }}
                             </th>
                         </tr>
@@ -441,10 +445,14 @@ const isPrimaryPanel = (panel) => (
                             @click="actions.selectRow(panel.kind, row.id)"
                             @keydown="actions.handleRowKey($event, panel.kind, row)">
                             <td v-for="column in panel.columns" :key="column.labelKey"
-                                :class="{
-                                    num: column.type === 'number',
-                                    'text-right': column.type === 'domainActions' || column.type === 'userActions' || column.type === 'addressActions' || column.type === 'shareActions'
-                                }">
+                                :class="[
+                                    `col-${column.key || column.main || column.type}`,
+                                    {
+                                        num: column.type === 'number',
+                                        'text-right': column.type === 'number' || column.type === 'domainActions' || column.type === 'userActions' || column.type === 'addressActions' || column.type === 'shareActions',
+                                        'text-center': column.type === 'status'
+                                    }
+                                ]">
                                 <template v-if="column.type === 'entity'">
                                     <div class="cell-main">
                                         <strong>{{ cellText(row, column.main) }}</strong>
@@ -456,8 +464,11 @@ const isPrimaryPanel = (panel) => (
                                 </template>
 
                                 <span v-else-if="column.type === 'status'" class="badge"
-                                    :class="'badge-' + (statusClass(row[`${column.key}Tone`] || row[column.key]))">
-                                    <span class="badge-dot" aria-hidden="true" />
+                                    :class="[
+                                        'badge-' + (statusClass(row[`${column.key}Tone`] || row[column.key])),
+                                        { 'badge-dotless': column.key === 'credential' || (column.key === 'password' && (row[`${column.key}Tone`] === 'neutral' || !row[`${column.key}Tone`])) }
+                                    ]">
+                                    <span v-if="!(column.key === 'credential' || (column.key === 'password' && (row[`${column.key}Tone`] === 'neutral' || !row[`${column.key}Tone`])))" class="badge-dot" aria-hidden="true" />
                                     <span>{{ cellText(row, column.key) }}</span>
                                 </span>
 
