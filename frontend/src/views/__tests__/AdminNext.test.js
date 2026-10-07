@@ -492,4 +492,37 @@ describe('AdminNext behavior baseline', () => {
         expect(runtime.lastDomainDisable).toEqual({ config_version: 7, confirm: true })
         mounted.wrapper.unmount()
     })
-})
+
+    it('defers view transition until target data arrives and shows top loading indicator without flashing empty', async () => {
+        let resolveIdentity
+        const identityPromise = new Promise((resolve) => { resolveIdentity = resolve })
+        mocks.fetch.mockImplementation(async (path, options) => {
+            if (path.startsWith('/api/admin/address?')) {
+                await identityPromise
+                return { results: [{ id: 88, name: 'deferred@example.test' }] }
+            }
+            return fixtureResponse(path, options)
+        })
+
+        const { wrapper } = await mountAdmin({ path: '/admin?view=flow' })
+        expect(wrapper.text()).toContain('收件')
+        expect(wrapper.find('.mail-row').exists()).toBe(true)
+
+        const identityNavLink = wrapper.findAll('.nav-link').find((link) => link.text().includes('地址'))
+        expect(identityNavLink).toBeTruthy()
+        await identityNavLink.trigger('click')
+        await nextTick()
+
+        expect(wrapper.find('.gmail-loading-pill').exists()).toBe(true)
+        expect(wrapper.find('.gmail-loading-pill').text()).toBe('正在加载...')
+        expect(wrapper.find('.mail-row').exists()).toBe(true)
+        expect(wrapper.find('.sync-state.sr-only').exists()).toBe(true)
+
+        resolveIdentity()
+        await settle()
+
+        expect(wrapper.find('.gmail-loading-pill').exists()).toBe(false)
+        expect(wrapper.text()).toContain('deferred@example.test')
+        wrapper.unmount()
+    })
+});

@@ -8,7 +8,7 @@ import { api } from '../api'
 import { useGlobalState } from '../store'
 import { hashPassword } from '../utils'
 import { processItem } from '../utils/email-parser'
-import { adminApi, loadAdminViewSnapshot } from '../admin/admin-api'
+import { adminApi, loadAdminViewSnapshot, VIEW_SNAPSHOT_KEYS } from '../admin/admin-api'
 import { useAdminConsoleActions } from '../admin/admin-console-actions'
 import { useAdminFeedback } from '../admin/admin-feedback'
 import AdminConsoleShell from '../admin/components/AdminConsoleShell.vue'
@@ -250,9 +250,9 @@ const clearAdminSessionState = () => {
 }
 
 const {
+    applyView,
     persistView,
     replaceRouteQuery,
-    setView,
     syncMailQueryToRoute,
     syncSelectionFromRoute,
 } = useAdminRouteState({
@@ -262,6 +262,9 @@ const {
     detailOpen,
     storage: typeof localStorage === 'undefined' ? undefined : localStorage,
 })
+
+const pendingView = ref(null)
+const isNavigating = ref(false)
 
 const recordLoadError = (label, error) => {
     const text = `${label}: ${error?.message || error || 'error'}`
@@ -276,14 +279,66 @@ const adminNotificationSink = {
     info: () => {},
 }
 
-const fetchAdminData = async () => {
+const applyAdminSnapshot = (snapshot, view) => {
+    const keys = VIEW_SNAPSHOT_KEYS[view] || Object.keys(snapshot)
+    keys.forEach((key) => {
+        if (key in snapshot) {
+            live[key] = snapshot[key]
+        }
+    })
+    if (Array.isArray(snapshot.errors)) {
+        live.errors = snapshot.errors
+    }
+}
+
+const fetchAdminData = async (view = activeView.value) => {
     if (!showAdminPage.value) return
     const generation = ++adminLoadGeneration
-    const snapshot = await loadAdminViewSnapshot(adminApi, activeView.value)
+    const snapshot = await loadAdminViewSnapshot(adminApi, view)
     if (generation !== adminLoadGeneration) return
-    Object.assign(live, snapshot)
+    applyAdminSnapshot(snapshot, view)
     live.fetchedAdmin = true
     live.lastSynced = new Date().toLocaleTimeString('zh-CN', { hour12: false })
+}
+
+const setView = async (targetView) => {
+    if (!viewMeta[targetView]) return
+    if (targetView === activeView.value) {
+        if (live.fetchedAdmin && showAdminPage.value && !showAdminAuth.value) {
+            await refreshAll()
+        }
+        return
+    }
+
+    pendingView.value = targetView
+    isNavigating.value = true
+    const generation = ++adminLoadGeneration
+
+    try {
+        const snapshot = await loadAdminViewSnapshot(adminApi, targetView)
+        if (generation !== adminLoadGeneration) return
+
+        applyAdminSnapshot(snapshot, targetView)
+        live.fetchedAdmin = true
+        live.lastSynced = new Date().toLocaleTimeString('zh-CN', { hour12: false })
+
+        applyView(targetView)
+        persistView(targetView)
+        await replaceRouteQuery({
+            view: targetView,
+            status: ui.status === 'all' ? undefined : ui.status,
+        }, targetView === 'flow' ? [] : ['mailId', 'item', 'mode'])
+    } catch (error) {
+        if (generation === adminLoadGeneration) {
+            recordLoadError(targetView, error)
+            showToast?.({ message: error?.message || '加载失败', type: 'error' })
+        }
+    } finally {
+        if (generation === adminLoadGeneration) {
+            pendingView.value = null
+            isNavigating.value = false
+        }
+    }
 }
 
 /*
@@ -326,6 +381,7 @@ const refreshUsers = async () => {
 }
 
 watch(activeView, () => {
+    if (isNavigating.value) return
     if (live.fetchedAdmin && showAdminPage.value && !showAdminAuth.value) void refreshAll()
 })
 
@@ -871,6 +927,8 @@ const shellModel = computed(() => ({
     dbVersionLabel: dbVersionLabel.value,
     syncLabel: syncLabel.value,
     navBadges: navBadges.value,
+    pendingView: pendingView.value,
+    isNavigating: isNavigating.value,
 }))
 
 const workspaceModel = computed(() => ({

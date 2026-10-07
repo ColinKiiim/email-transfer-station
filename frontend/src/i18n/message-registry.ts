@@ -1831,6 +1831,10 @@ export const MESSAGE_REGISTRY = {
     "sync": {
       "en": "Sync",
       "zh": "同步"
+    },
+    "loading": {
+      "en": "Loading...",
+      "zh": "正在加载..."
     }
   },
   "admin.workspace": {

@@ -66,22 +66,29 @@ defineExpose({
                 <h1 class="sr-only">{{ tNav(model.activeView) }}</h1>
 
                 <div class="topbar-controls">
-                    <label class="searchbox">
-                        <svg viewBox="0 0 24 24">
-                            <component :is="shape.tag" v-for="(shape, index) in shapeList('search')" :key="index"
-                                v-bind="shape.attrs" />
-                        </svg>
-                        <input ref="searchInput" v-model="model.ui.query" class="field"
-                            :placeholder="t('searchPlaceholder')"
-                            @input="actions.updateSearch" />
-                        <span class="kbd">{{ searchShortcut }}</span>
-                    </label>
+                    <div class="topbar-search-wrap">
+                        <label class="searchbox">
+                            <svg viewBox="0 0 24 24">
+                                <component :is="shape.tag" v-for="(shape, index) in shapeList('search')" :key="index"
+                                    v-bind="shape.attrs" />
+                            </svg>
+                            <input ref="searchInput" v-model="model.ui.query" class="field"
+                                :placeholder="t('searchPlaceholder')"
+                                @input="actions.updateSearch" />
+                            <span class="kbd">{{ searchShortcut }}</span>
+                        </label>
+                        <transition name="loading-pill-fade">
+                            <div v-if="model.isNavigating || model.ui.syncing" class="gmail-loading-pill" role="status" aria-live="polite">
+                                {{ t('loading') }}
+                            </div>
+                        </transition>
+                    </div>
 
                     <div class="top-actions">
                         <ProductSurfaceLinks :items="surfaceItems" :aria-label="t('surfaceLinksLabel')" />
                         <AppUtilityMenu />
                         <div class="topbar-divider" role="separator"></div>
-                        <span class="sync-state" :class="{ 'is-loading': model.ui.syncing }" role="status" aria-live="polite">
+                        <span class="sync-state sr-only" :class="{ 'is-loading': model.ui.syncing }" role="status" aria-live="polite">
                             {{ model.syncLabel }}
                         </span>
                         <div class="topbar-action-group">
@@ -104,9 +111,9 @@ defineExpose({
                 <section v-for="group in navGroups" :key="group.label" class="nav-group">
                     <div class="nav-group-title">{{ tNav(group.labelKey) }}</div>
                     <button v-for="item in group.items" :key="item.id" class="nav-link"
-                        :class="{ 'is-active': model.activeView === item.id }" type="button"
+                        :class="{ 'is-active': (model.pendingView || model.activeView) === item.id }" type="button"
                         :title="model.sidebarCollapsed ? tNav(item.id) : ''"
-                        :aria-current="model.activeView === item.id ? 'page' : undefined"
+                        :aria-current="(model.pendingView || model.activeView) === item.id ? 'page' : undefined"
                         :aria-label="tNav(item.id)" @click="actions.setView(item.id)">
                         <svg viewBox="0 0 24 24" aria-hidden="true">
                             <component :is="shape.tag" v-for="(shape, index) in shapeList(item.icon)" :key="index"

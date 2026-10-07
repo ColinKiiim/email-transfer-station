@@ -231,6 +231,18 @@ export const loadAdminSnapshot = async (client = adminApi, seed = {}) => {
     return normalizeAdminSnapshot(Object.fromEntries(entries), errors)
 }
 
+export const VIEW_SNAPSHOT_KEYS = {
+    overview: ['overview', 'statistics', 'domains', 'domainAutomation', 'mailDomains', 'mails', 'mailTotalCount', 'mailUnreadCount', 'auditEvents', 'accessEvents', 'workerConfig', 'dbVersion'],
+    flow: ['domains', 'domainAutomation', 'mailDomains', 'mailAddresses', 'mails', 'mailTotalCount', 'mailUnreadCount'],
+    identity: ['domains', 'domainAutomation', 'addresses', 'users', 'userTotalCount'],
+    routing: ['overview', 'domains', 'domainAutomation', 'mailDomains', 'workerConfig'],
+    delivery: ['mailWebhook', 'globalWebhook', 'telegram', 'aiSettings', 'senderAccess', 'sendBox'],
+    users: ['users', 'userTotalCount', 'addresses'],
+    access: ['accessPackages', 'auditEvents', 'accessEvents'],
+    ops: ['workerConfig', 'dbVersion', 'mailWebhook', 'globalWebhook', 'telegram', 'aiSettings'],
+    authenticators: [],
+}
+
 const VIEW_READS = {
     overview: [
         ['overview', 'overview', 'getOverview'],

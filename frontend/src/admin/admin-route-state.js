@@ -125,6 +125,7 @@ export const useAdminRouteState = ({ route, router, ui, detailOpen, storage }) =
     }, { immediate: true })
 
     return {
+        applyView,
         persistView,
         replaceRouteQuery,
         setView,
