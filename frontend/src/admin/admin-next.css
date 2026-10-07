@@ -2563,12 +2563,71 @@ body:has(.admin-next) .n-message-container {
     background: var(--surface);
 }
 
-.admin-next-host .workspace-toolbar .toolbar-spacer {
-    flex: 1;
+.admin-next-host .workspace-toolbar .toolbar-left {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
 }
 
-.admin-next-host .workspace-toolbar .domain-filter-bar {
-    padding: 0;
+.admin-next-host .workspace-toolbar .filter-chips {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+}
+
+.admin-next-host .toolbar-counter {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    user-select: none;
+    white-space: nowrap;
+}
+
+.admin-next-host .toolbar-counter svg {
+    color: var(--muted);
+    opacity: 0.8;
+    flex-shrink: 0;
+}
+
+.admin-next-host .chip-count {
+    font-size: 11px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    padding: 1px 6px;
+    border-radius: 9999px;
+    background: color-mix(in oklch, var(--fg) 8%, transparent);
+    color: inherit;
+}
+
+.admin-next-host .filter-chip.is-active .chip-count {
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+.admin-next-host .chip-at {
+    color: var(--muted);
+    font-weight: 400;
+}
+
+.admin-next-host .panel-head-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 28px;
+    min-height: 28px;
+    padding: 0 10px;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: var(--radius-sm);
+    letter-spacing: -0.01em;
+}
+
+.admin-next-host .panel-head-actions .btn svg {
+    flex-shrink: 0;
 }
 
 .admin-next-host .panel-section-head {
@@ -4223,43 +4282,6 @@ body:has(.admin-next) .n-message-container {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-}
-
-.admin-next-host .domain-filter-bar {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 0 18px 12px;
-    flex-wrap: wrap;
-}
-
-.admin-next-host .domain-filter-pill {
-    display: inline-flex;
-    align-items: center;
-    min-height: 28px;
-    padding: 0 12px;
-    border-radius: 9999px;
-    border: 1px solid var(--border);
-    background: var(--surface-soft);
-    color: var(--muted);
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 120ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.admin-next-host .domain-filter-pill:hover {
-    background: var(--surface-hover);
-    color: var(--fg);
-    border-color: var(--border-hover);
-}
-
-.admin-next-host .domain-filter-pill.is-active {
-    background: var(--accent-subtle);
-    color: var(--accent);
-    border-color: var(--accent);
-    font-weight: 600;
-    box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {

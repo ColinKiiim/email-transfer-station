@@ -2978,6 +2978,26 @@ export const MESSAGE_REGISTRY = {
       "en": "All",
       "zh": "全部"
     },
+    "countDomains": {
+      "en": "{count} domains",
+      "zh": "共 {count} 个域名"
+    },
+    "countChannels": {
+      "en": "{count} channels",
+      "zh": "共 {count} 个通道"
+    },
+    "countUsers": {
+      "en": "{count} users",
+      "zh": "共 {count} 位用户"
+    },
+    "countShares": {
+      "en": "{count} access packages",
+      "zh": "共 {count} 个访问包"
+    },
+    "countComponents": {
+      "en": "{count} system components",
+      "zh": "{count} 项系统组件"
+    },
     "tableCaption": {
       "en": "{title} data table",
       "zh": "{title} 数据表"
@@ -3438,6 +3458,7 @@ export const MESSAGE_REGISTRY = {
     }
   },
   "admin.authenticators": {
+    "countAuthenticators": { "en": "{count} authenticators", "zh": "共 {count} 个验证器" },
     "title": { "en": "Authenticator distribution", "zh": "验证器分发" },
     "description": { "en": "Create TOTP entries here, then assign them to users or share a link.", "zh": "在这里创建 TOTP 条目，再分发给用户或生成分享链接。" },
     "label": { "en": "Label", "zh": "名称" },

@@ -278,52 +278,128 @@ const isPrimaryPanel = (panel) => (
             :class="[panel.layout, `panel-${panel.id}`]">
             <!-- Primary Panel Toolbar: Standard 48px height across all views -->
             <div v-if="isPrimaryPanel(panel)" class="workspace-toolbar">
-                <div class="domain-filter-bar">
-                    <!-- Address-specific domain filters -->
-                    <template v-if="panel.id === 'addresses'">
-                        <button type="button" class="domain-filter-pill"
+                <div class="toolbar-left">
+                    <!-- Address-specific domain filters using unified filter-chip -->
+                    <div v-if="panel.id === 'addresses'" class="filter-chips">
+                        <button type="button" class="filter-chip"
                             :class="{ 'is-active': !model.ui.domain || model.ui.domain === 'all' }"
+                            :aria-pressed="!model.ui.domain || model.ui.domain === 'all' ? 'true' : 'false'"
                             @click="actions.setFilterDomain('all')">
-                            {{ t('allFilter') }} ({{ model.addressRows.length }})
+                            <span>{{ t('allFilter') }}</span>
+                            <b class="chip-count">{{ model.addressRows.length }}</b>
                         </button>
                         <button v-for="domainOpt in addressDomainStats" :key="domainOpt.domain"
-                            type="button" class="domain-filter-pill"
+                            type="button" class="filter-chip"
                             :class="{ 'is-active': model.ui.domain === domainOpt.domain }"
+                            :aria-pressed="model.ui.domain === domainOpt.domain ? 'true' : 'false'"
                             @click="actions.setFilterDomain(domainOpt.domain)">
-                            @{{ domainOpt.domain }} ({{ domainOpt.count }})
+                            <span class="chip-at">@</span>
+                            <span>{{ domainOpt.domain }}</span>
+                            <b class="chip-count">{{ domainOpt.count }}</b>
                         </button>
-                    </template>
-                    <!-- Other primary panels show standard count pill -->
-                    <template v-else>
-                        <button type="button" class="domain-filter-pill is-active">
-                            {{ t('allFilter') }} ({{ panel.rows ? panel.rows.length : 0 }})
-                        </button>
-                    </template>
+                    </div>
+
+                    <!-- Domains summary counter -->
+                    <div v-else-if="panel.id === 'domains'" class="toolbar-counter">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="2" x2="22" y1="12" y2="12" />
+                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                        </svg>
+                        <span>{{ t('countDomains', { count: panel.rows ? panel.rows.length : 0 }) }}</span>
+                    </div>
+
+                    <!-- Channels summary counter -->
+                    <div v-else-if="panel.id === 'channels'" class="toolbar-counter">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="m22 2-7 20-4-9-9-4Z" />
+                            <path d="M22 2 11 13" />
+                        </svg>
+                        <span>{{ t('countChannels', { count: panel.rows ? panel.rows.length : 0 }) }}</span>
+                    </div>
+
+                    <!-- Users summary counter -->
+                    <div v-else-if="panel.id === 'users'" class="toolbar-counter">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                            <circle cx="9" cy="7" r="4" />
+                            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                        </svg>
+                        <span>{{ t('countUsers', { count: panel.rows ? panel.rows.length : 0 }) }}</span>
+                    </div>
+
+                    <!-- Shares summary counter -->
+                    <div v-else-if="panel.id === 'shares'" class="toolbar-counter">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <rect width="18" height="18" x="3" y="3" rx="2" />
+                            <path d="M7 7h.01" />
+                            <path d="M17 7h.01" />
+                            <path d="M7 17h.01" />
+                            <path d="M17 17h.01" />
+                        </svg>
+                        <span>{{ t('countShares', { count: panel.rows ? panel.rows.length : 0 }) }}</span>
+                    </div>
+
+                    <!-- Ops summary counter -->
+                    <div v-else-if="panel.id === 'ops'" class="toolbar-counter">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="3" />
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                        </svg>
+                        <span>{{ t('countComponents', { count: panel.rows ? panel.rows.length : 0 }) }}</span>
+                    </div>
                 </div>
+
                 <div class="panel-head-actions">
                     <button v-if="panel.id === 'addresses'" class="btn small primary" type="button"
                         :disabled="!!model.actionBusy" @click="actions.openActionModal('new-address')">
-                        + {{ t('newAddress') }}
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                        <span>{{ t('newAddress') }}</span>
                     </button>
                     <button v-else-if="panel.id === 'domains'" class="btn small primary" type="button"
                         :disabled="!!model.actionBusy" @click="actions.handleAction('new-domain')">
-                        + {{ t('newDomain') }}
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                        <span>{{ t('newDomain') }}</span>
                     </button>
                     <button v-else-if="panel.id === 'channels'" class="btn small" type="button"
                         :disabled="!!model.actionBusy" @click="actions.handleAction('refresh')">
-                        {{ t('refreshChannels') }}
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                            <path d="M3 3v5h5" />
+                            <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+                            <path d="M16 21h5v-5" />
+                        </svg>
+                        <span>{{ t('refreshChannels') }}</span>
                     </button>
                     <button v-else-if="panel.id === 'users'" class="btn small primary" type="button"
                         :disabled="!!model.actionBusy" @click="actions.openActionModal('new-user')">
-                        + {{ t('newUser') }}
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                        <span>{{ t('newUser') }}</span>
                     </button>
                     <button v-else-if="panel.id === 'shares'" class="btn small primary" type="button"
                         :disabled="!!model.actionBusy" @click="actions.openActionModal('share-package')">
-                        + {{ t('generateAccessPackage') }}
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                        <span>{{ t('generateAccessPackage') }}</span>
                     </button>
                     <button v-else-if="panel.id === 'ops'" class="btn small" type="button"
                         :disabled="!!model.actionBusy" @click="actions.handleAction('health-check')">
-                        {{ t('healthCheck') }}
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                        </svg>
+                        <span>{{ t('healthCheck') }}</span>
                     </button>
                 </div>
             </div>
