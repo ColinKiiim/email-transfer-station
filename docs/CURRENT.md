@@ -207,3 +207,18 @@ The remaining 18 frontend, 24 Worker, and 21 E2E test files are intentionally
 layered by boundary. This follows mature repository practice: focused unit/API
 projects are run independently, while browser and protocol checks remain separate
 smoke layers. File count alone is not the optimization target.
+
+## Admin Console UI modernization & Apple HIG split view — 2026-10-07
+
+Eliminated the artificial 24px void gap between the sidebar and the main workspace
+across all 9 admin views (`flow`, `addresses`, `domains`, `channels`, `users`,
+`shares`, `authenticators`, `ops`, and `overview`). Replaced floating isolated card
+panels with a seamless, edge-to-edge Apple HIG split-view architecture:
+- Workspace surface seamlessly attaches to the sidebar's hairline divider (`1px solid var(--border)`).
+- Topbar searchbox upgraded to a centered 44px pill (border-radius: 9999px) with
+  Apple HIG focus ring, responsive width up to 660px, luminous focus-within elevation,
+  and mono `⌘K` / `Ctrl+K` keycap badge.
+- Standardized workspace toolbar across views to 48px height with flush bottom border,
+  matching the mail flow header and aligning first/last table cells to the same 18px grid.
+- Maintained local-only discipline: verified with frontend unit tests and production build;
+  no push or deploy was executed.
