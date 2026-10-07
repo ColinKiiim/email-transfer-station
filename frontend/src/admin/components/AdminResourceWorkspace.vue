@@ -276,57 +276,63 @@ const isPrimaryPanel = (panel) => (
         <section v-for="panel in model.activePanels" :key="panel.id" class="panel"
             :id="model.activeView === 'delivery' && panel.id === 'channels' ? 'delivery-channels' : undefined"
             :class="[panel.layout, `panel-${panel.id}`]">
-            <!-- Primary Panel Toolbar: Address domain pills & new address action -->
-            <div v-if="panel.id === 'addresses'" class="workspace-toolbar">
+            <!-- Primary Panel Toolbar: Standard 48px height across all views -->
+            <div v-if="isPrimaryPanel(panel)" class="workspace-toolbar">
                 <div class="domain-filter-bar">
-                    <button type="button" class="domain-filter-pill"
-                        :class="{ 'is-active': !model.ui.domain || model.ui.domain === 'all' }"
-                        @click="actions.setFilterDomain('all')">
-                        {{ t('allFilter') }} ({{ model.addressRows.length }})
-                    </button>
-                    <button v-for="domainOpt in addressDomainStats" :key="domainOpt.domain"
-                        type="button" class="domain-filter-pill"
-                        :class="{ 'is-active': model.ui.domain === domainOpt.domain }"
-                        @click="actions.setFilterDomain(domainOpt.domain)">
-                        @{{ domainOpt.domain }} ({{ domainOpt.count }})
-                    </button>
+                    <!-- Address-specific domain filters -->
+                    <template v-if="panel.id === 'addresses'">
+                        <button type="button" class="domain-filter-pill"
+                            :class="{ 'is-active': !model.ui.domain || model.ui.domain === 'all' }"
+                            @click="actions.setFilterDomain('all')">
+                            {{ t('allFilter') }} ({{ model.addressRows.length }})
+                        </button>
+                        <button v-for="domainOpt in addressDomainStats" :key="domainOpt.domain"
+                            type="button" class="domain-filter-pill"
+                            :class="{ 'is-active': model.ui.domain === domainOpt.domain }"
+                            @click="actions.setFilterDomain(domainOpt.domain)">
+                            @{{ domainOpt.domain }} ({{ domainOpt.count }})
+                        </button>
+                    </template>
+                    <!-- Other primary panels show standard count pill -->
+                    <template v-else>
+                        <button type="button" class="domain-filter-pill is-active">
+                            {{ t('allFilter') }} ({{ panel.rows ? panel.rows.length : 0 }})
+                        </button>
+                    </template>
                 </div>
                 <div class="panel-head-actions">
-                    <button class="btn small primary" type="button"
+                    <button v-if="panel.id === 'addresses'" class="btn small primary" type="button"
                         :disabled="!!model.actionBusy" @click="actions.openActionModal('new-address')">
                         + {{ t('newAddress') }}
                     </button>
-                </div>
-            </div>
-
-            <!-- Primary Panel Toolbars with Action Buttons -->
-            <div v-else-if="panel.id === 'domains'" class="workspace-toolbar">
-                <div class="toolbar-spacer" />
-                <div class="panel-head-actions">
-                    <button class="btn small primary" type="button"
+                    <button v-else-if="panel.id === 'domains'" class="btn small primary" type="button"
                         :disabled="!!model.actionBusy" @click="actions.handleAction('new-domain')">
                         + {{ t('newDomain') }}
                     </button>
-                </div>
-            </div>
-
-            <div v-else-if="panel.id === 'users'" class="workspace-toolbar">
-                <div class="toolbar-spacer" />
-                <div class="panel-head-actions">
-                    <button class="btn small primary" type="button"
+                    <button v-else-if="panel.id === 'channels'" class="btn small" type="button"
+                        :disabled="!!model.actionBusy" @click="actions.handleAction('refresh')">
+                        {{ t('refreshChannels') }}
+                    </button>
+                    <button v-else-if="panel.id === 'users'" class="btn small primary" type="button"
                         :disabled="!!model.actionBusy" @click="actions.openActionModal('new-user')">
                         + {{ t('newUser') }}
                     </button>
-                </div>
-            </div>
-
-            <div v-else-if="panel.id === 'ops'" class="workspace-toolbar">
-                <div class="toolbar-spacer" />
-                <div class="panel-head-actions">
-                    <button class="btn small" type="button"
+                    <button v-else-if="panel.id === 'shares'" class="btn small primary" type="button"
+                        :disabled="!!model.actionBusy" @click="actions.openActionModal('share-package')">
+                        + {{ t('generateAccessPackage') }}
+                    </button>
+                    <button v-else-if="panel.id === 'ops'" class="btn small" type="button"
                         :disabled="!!model.actionBusy" @click="actions.handleAction('health-check')">
                         {{ t('healthCheck') }}
                     </button>
+                </div>
+            </div>
+
+            <!-- Ops Runtime Boundary Strip -->
+            <div v-if="panel.id === 'ops' && model.opsBoundaryItems?.length" class="ops-boundary-strip" :aria-label="t('systemHealth')">
+                <div v-for="item in model.opsBoundaryItems" :key="item.label" class="ops-boundary-item">
+                    <span>{{ item.label }}</span>
+                    <strong class="status" :class="statusClass(item.value)">{{ item.value }}</strong>
                 </div>
             </div>
 

@@ -3054,6 +3054,22 @@ export const MESSAGE_REGISTRY = {
       "en": "New domain",
       "zh": "新增域名"
     },
+    "refreshChannels": {
+      "en": "Refresh channels",
+      "zh": "刷新通道"
+    },
+    "actionRefreshChannels": {
+      "en": "Refresh channels",
+      "zh": "刷新通道"
+    },
+    "generateAccessPackage": {
+      "en": "Generate access package",
+      "zh": "生成访问包"
+    },
+    "modalGenerateAccessPackage": {
+      "en": "Generate access package",
+      "zh": "生成访问包"
+    },
     "healthCheck": {
       "en": "Health check",
       "zh": "健康检查"
@@ -3425,6 +3441,7 @@ export const MESSAGE_REGISTRY = {
     "secret": { "en": "Secret or otpauth URI", "zh": "密钥或 otpauth 链接" },
     "secretPlaceholder": { "en": "Paste the authenticator secret", "zh": "粘贴验证器密钥" },
     "create": { "en": "Create", "zh": "创建" },
+    "cancel": { "en": "Cancel", "zh": "取消" },
     "shareExpiry": { "en": "Link expiry", "zh": "链接有效期" },
     "empty": { "en": "No authenticators yet.", "zh": "还没有验证器。" },
     "noIssuer": { "en": "No issuer", "zh": "无发行方" },

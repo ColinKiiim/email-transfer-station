@@ -52,13 +52,6 @@ defineExpose({
         <AdminViewFeedback :syncing="model.ui.syncing" :errors="model.pageLoadErrors"
             :show-errors="model.showAdminPage" @retry="actions.handleAction('refresh')" />
 
-        <div v-if="model.activeView === 'ops'" class="ops-boundary-strip" :aria-label="t('runtimeBoundary')">
-            <div v-for="item in model.opsBoundaryItems" :key="item.label" class="ops-boundary-item">
-                <span>{{ item.label }}</span>
-                <strong class="status" :class="statusClass(item.value)">{{ item.value }}</strong>
-            </div>
-        </div>
-
         <AdminMailWorkspace v-if="model.activeView === 'flow'" ref="mailWorkspace"
             :model="model" :actions="actions" />
         <AdminAuthenticators v-else-if="model.activeView === 'authenticators'"
