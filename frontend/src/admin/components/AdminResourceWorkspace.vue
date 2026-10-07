@@ -100,6 +100,15 @@ const scrollToChannels = (event) => {
         el.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
 }
+
+const isPrimaryPanel = (panel) => (
+    panel.id === 'addresses' ||
+    panel.id === 'domains' ||
+    panel.id === 'channels' ||
+    panel.id === 'users' ||
+    panel.id === 'shares' ||
+    panel.id === 'ops'
+)
 </script>
 
 <template>
@@ -267,46 +276,66 @@ const scrollToChannels = (event) => {
         <section v-for="panel in model.activePanels" :key="panel.id" class="panel"
             :id="model.activeView === 'delivery' && panel.id === 'channels' ? 'delivery-channels' : undefined"
             :class="[panel.layout, `panel-${panel.id}`]">
-            <div class="panel-head">
-                <div class="panel-head-title">
-                    <h2>{{ panel.title }}</h2>
-                    <span v-if="panel.rows && panel.rows.length" class="panel-badge-count">{{ panel.rows.length }}</span>
-                    <p v-if="panel.note">{{ panel.note }}</p>
+            <!-- Primary Panel Toolbar: Address domain pills & new address action -->
+            <div v-if="panel.id === 'addresses'" class="workspace-toolbar">
+                <div class="domain-filter-bar">
+                    <button type="button" class="domain-filter-pill"
+                        :class="{ 'is-active': !model.ui.domain || model.ui.domain === 'all' }"
+                        @click="actions.setFilterDomain('all')">
+                        {{ t('allFilter') }} ({{ model.addressRows.length }})
+                    </button>
+                    <button v-for="domainOpt in addressDomainStats" :key="domainOpt.domain"
+                        type="button" class="domain-filter-pill"
+                        :class="{ 'is-active': model.ui.domain === domainOpt.domain }"
+                        @click="actions.setFilterDomain(domainOpt.domain)">
+                        @{{ domainOpt.domain }} ({{ domainOpt.count }})
+                    </button>
                 </div>
-
                 <div class="panel-head-actions">
-                    <button v-if="panel.kind === 'identity' && panel.id === 'addresses'" class="btn small primary" type="button"
+                    <button class="btn small primary" type="button"
                         :disabled="!!model.actionBusy" @click="actions.openActionModal('new-address')">
                         + {{ t('newAddress') }}
                     </button>
-                    <button v-if="panel.kind === 'users'" class="btn small primary" type="button"
-                        :disabled="!!model.actionBusy" @click="actions.openActionModal('new-user')">
-                        + {{ t('newUser') }}
-                    </button>
-                    <button v-if="panel.kind === 'routing' && panel.id === 'domains'" class="btn small primary" type="button"
+                </div>
+            </div>
+
+            <!-- Primary Panel Toolbars with Action Buttons -->
+            <div v-else-if="panel.id === 'domains'" class="workspace-toolbar">
+                <div class="toolbar-spacer" />
+                <div class="panel-head-actions">
+                    <button class="btn small primary" type="button"
                         :disabled="!!model.actionBusy" @click="actions.handleAction('new-domain')">
                         + {{ t('newDomain') }}
                     </button>
-                    <button v-if="panel.kind === 'ops'" class="btn small" type="button"
+                </div>
+            </div>
+
+            <div v-else-if="panel.id === 'users'" class="workspace-toolbar">
+                <div class="toolbar-spacer" />
+                <div class="panel-head-actions">
+                    <button class="btn small primary" type="button"
+                        :disabled="!!model.actionBusy" @click="actions.openActionModal('new-user')">
+                        + {{ t('newUser') }}
+                    </button>
+                </div>
+            </div>
+
+            <div v-else-if="panel.id === 'ops'" class="workspace-toolbar">
+                <div class="toolbar-spacer" />
+                <div class="panel-head-actions">
+                    <button class="btn small" type="button"
                         :disabled="!!model.actionBusy" @click="actions.handleAction('health-check')">
                         {{ t('healthCheck') }}
                     </button>
                 </div>
             </div>
 
-            <!-- Addresses View: Domain Filter Pills sub-toolbar -->
-            <div v-if="panel.id === 'addresses'" class="domain-filter-bar">
-                <button type="button" class="domain-filter-pill"
-                    :class="{ 'is-active': !model.ui.domain || model.ui.domain === 'all' }"
-                    @click="actions.setFilterDomain('all')">
-                    {{ t('allFilter') }} ({{ model.addressRows.length }})
-                </button>
-                <button v-for="domainOpt in addressDomainStats" :key="domainOpt.domain"
-                    type="button" class="domain-filter-pill"
-                    :class="{ 'is-active': model.ui.domain === domainOpt.domain }"
-                    @click="actions.setFilterDomain(domainOpt.domain)">
-                    @{{ domainOpt.domain }} ({{ domainOpt.count }})
-                </button>
+            <!-- Secondary section header for subordinate panels -->
+            <div v-else-if="!isPrimaryPanel(panel)" class="panel-section-head">
+                <div class="panel-head-title">
+                    <h3>{{ panel.title }}</h3>
+                    <span v-if="panel.rows && panel.rows.length" class="panel-badge-count">{{ panel.rows.length }}</span>
+                </div>
             </div>
 
             <div class="table-wrap">
@@ -553,9 +582,9 @@ const scrollToChannels = (event) => {
         </section>
 
         <section v-if="model.activeView === 'routing'" class="panel split panel-routing-check">
-            <div class="panel-head">
-                <div>
-                    <h2>{{ t('configCheck') }}</h2>
+            <div class="panel-section-head">
+                <div class="panel-head-title">
+                    <h3>{{ t('configCheck') }}</h3>
                 </div>
             </div>
             <div class="inner-pad timeline">
@@ -571,9 +600,9 @@ const scrollToChannels = (event) => {
         </section>
 
         <section v-if="model.activeView === 'delivery'" class="panel">
-            <div class="panel-head">
-                <div>
-                    <h2>{{ t('contentProcessing') }}</h2>
+            <div class="panel-section-head">
+                <div class="panel-head-title">
+                    <h3>{{ t('contentProcessing') }}</h3>
                 </div>
             </div>
             <div class="inner-pad">

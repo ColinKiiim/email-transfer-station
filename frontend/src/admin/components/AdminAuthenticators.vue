@@ -33,9 +33,6 @@ onBeforeUnmount(() => window.clearInterval(timer))
 
 <template>
     <section class="authenticator-admin panel">
-        <div class="panel-head">
-            <div class="panel-head-title"><h2>{{ t('title') }}</h2><p>{{ t('description') }}</p></div>
-        </div>
         <form class="create-grid" @submit.prevent="create">
             <label><span>{{ t('label') }}</span><input v-model="label" :placeholder="t('labelPlaceholder')" /></label>
             <label><span>{{ t('secret') }}</span><input v-model="input" :placeholder="t('secretPlaceholder')" autocomplete="off" required /></label>
@@ -62,9 +59,10 @@ onBeforeUnmount(() => window.clearInterval(timer))
 .authenticator-admin {
     display: grid;
     gap: 16px;
+    padding: 16px 18px;
+    box-sizing: border-box;
 }
 
-.panel-head-title p,
 .empty,
 .meta,
 .identity span {
