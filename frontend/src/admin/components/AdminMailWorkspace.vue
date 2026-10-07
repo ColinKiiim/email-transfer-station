@@ -25,12 +25,29 @@ const getSenderInitial = (sender) => {
     return first.toUpperCase() || '✉'
 }
 
-const selectedDomainLabel = computed(() => {
+const selectedDomainText = computed(() => {
     if (!props.model.ui.domain || props.model.ui.domain === 'all') {
-        return `🌐 ${t('allDomains') || '全部域名'}`
+        return t('allDomains') || '全部域名'
     }
-    return `🌐 ${props.model.ui.domain}`
+    return props.model.ui.domain
 })
+
+const selectedDomainLabel = computed(() => selectedDomainText.value)
+
+const hasActiveMailFilters = computed(() => {
+    return (props.model.ui.status && props.model.ui.status !== 'all') ||
+           (props.model.ui.domain && props.model.ui.domain !== 'all') ||
+           (props.model.ui.address && props.model.ui.address !== 'all')
+})
+
+const clearAllMailFilters = () => {
+    props.actions.setMailStatus?.('all')
+    props.actions.setMailDomain?.('all')
+    props.actions.setMailAddress?.('all')
+    if (props.actions.handleAction) {
+        props.actions.handleAction('reset-filters')
+    }
+}
 
 const selectDomain = (domain) => {
     props.actions.setMailDomain(domain)
@@ -193,7 +210,7 @@ defineExpose({
                             :aria-expanded="showSelectMenu"
                             @click.stop="showSelectMenu = !showSelectMenu">
                             <span class="dropdown-arrow" aria-hidden="true">
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                     <polyline points="6 9 12 15 18 9" />
                                 </svg>
                             </span>
@@ -214,26 +231,54 @@ defineExpose({
                         </div>
                     </div>
 
+                    <div class="mail-toolbar-divider" aria-hidden="true" />
+
+                    <button type="button" class="mail-toolbar-icon-btn"
+                        :disabled="!!model.actionBusy"
+                        :title="t('refresh') || '刷新'"
+                        :aria-label="t('refresh') || '刷新'"
+                        @click="actions.handleAction('refresh')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+                        </svg>
+                    </button>
+
                     <div v-if="model.selectedMailCount > 0" class="mail-batch-bar" role="toolbar" :aria-label="t('selectionOptions')">
                         <span class="batch-count">{{ t('selectedCount', { count: model.selectedMailCount }) }}</span>
                         <button type="button" class="btn compact-btn batch-action-btn"
                             :disabled="!!model.actionBusy"
                             @click="actions.batchMarkRead(model.selectedMailRows, true)">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <polyline points="20 6 9 17 4 12" />
+                            </svg>
                             {{ t('markAsRead') }}
                         </button>
                         <button type="button" class="btn compact-btn batch-action-btn"
                             :disabled="!!model.actionBusy"
                             @click="actions.batchMarkRead(model.selectedMailRows, false)">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <rect width="20" height="16" x="2" y="4" rx="2" />
+                                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                            </svg>
                             {{ t('markAsUnread') }}
                         </button>
                         <button type="button" class="btn compact-btn danger batch-action-btn"
                             :disabled="!!model.actionBusy"
                             @click="actions.batchDeleteMails(model.selectedMailRows)">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <polyline points="3 6 5 6 21 6" />
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                            </svg>
                             {{ t('deleteSelected') }}
                         </button>
                         <button type="button" class="btn compact-btn batch-action-btn"
                             :disabled="!!model.actionBusy"
                             @click="actions.batchExportMails(model.selectedMailRows)">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="7 10 12 15 17 10" />
+                                <line x1="12" y1="15" x2="12" y2="3" />
+                            </svg>
                             {{ t('exportSelected') }}
                         </button>
                     </div>
@@ -241,20 +286,35 @@ defineExpose({
                     <div v-else class="mail-filter-chips">
                         <button type="button" class="filter-chip"
                             :class="{ 'is-active': model.ui.status === 'unread' }"
+                            :aria-pressed="model.ui.status === 'unread' ? 'true' : 'false'"
                             @click="actions.setMailStatus(model.ui.status === 'unread' ? 'all' : 'unread')">
-                            ✉️ {{ t('unread') || '未读' }}
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <rect width="20" height="16" x="2" y="4" rx="2" />
+                                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                            </svg>
+                            <span>{{ t('unread') || '未读' }}</span>
                         </button>
                         <button type="button" class="filter-chip"
                             :class="{ 'is-active': model.ui.status === 'attachments' }"
+                            :aria-pressed="model.ui.status === 'attachments' ? 'true' : 'false'"
                             @click="actions.setMailStatus(model.ui.status === 'attachments' ? 'all' : 'attachments')">
-                            📎 {{ t('attachments') || '有附件' }}
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                            </svg>
+                            <span>{{ t('attachments') || '附件' }}</span>
                         </button>
                         <div v-if="model.mailHierarchy?.domains?.length" ref="domainDropdownRef" class="domain-filter-wrapper">
                             <button type="button" class="filter-chip domain-chip" :class="{ 'is-active': model.ui.domain !== 'all' }"
+                                :aria-expanded="showDomainMenu"
                                 @click.stop="showDomainMenu = !showDomainMenu">
-                                {{ selectedDomainLabel }}
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <line x1="2" x2="22" y1="12" y2="12" />
+                                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                                </svg>
+                                <span>{{ selectedDomainText }}</span>
                                 <span class="dropdown-arrow" aria-hidden="true">
-                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                         <polyline points="6 9 12 15 18 9" />
                                     </svg>
                                 </span>
@@ -262,17 +322,37 @@ defineExpose({
                             <div v-show="showDomainMenu" class="domain-dropdown-menu">
                                 <button type="button" class="domain-option" :class="{ 'is-selected': model.ui.domain === 'all' }"
                                     @click="selectDomain('all')">
-                                    <span>🌐 {{ t('allDomains') || '全部域名' }}</span>
-                                    <b>{{ formatNumber(model.mailHierarchy.queues[0]?.count ?? model.mailRows.length) }}</b>
+                                    <span class="domain-option-label">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="10" />
+                                            <line x1="2" x2="22" y1="12" y2="12" />
+                                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                                        </svg>
+                                        {{ t('allDomains') || '全部域名' }}
+                                    </span>
+                                    <b class="domain-count-badge">{{ formatNumber(model.mailHierarchy.queues[0]?.count ?? model.mailRows.length) }}</b>
                                 </button>
                                 <button v-for="d in model.mailHierarchy.domains" :key="d.domain" type="button"
                                     class="domain-option" :class="{ 'is-selected': model.ui.domain === d.domain }"
                                     @click="selectDomain(d.domain)">
-                                    <span>{{ d.domain }}</span>
-                                    <b>{{ formatNumber(d.mails || 0) }}</b>
+                                    <span class="domain-option-label">
+                                        <span class="domain-at">@</span>
+                                        {{ d.domain }}
+                                    </span>
+                                    <b class="domain-count-badge">{{ formatNumber(d.mails || 0) }}</b>
                                 </button>
                             </div>
                         </div>
+
+                        <button v-if="hasActiveMailFilters" type="button" class="filter-chip clear-chip"
+                            :title="t('clearFilters') || '清除筛选'"
+                            @click="clearAllMailFilters">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                            <span>{{ t('clearFilters') || '清除筛选' }}</span>
+                        </button>
                     </div>
                 </div>
                 <div class="panel-head-actions mail-head-actions">

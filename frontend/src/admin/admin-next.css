@@ -1178,16 +1178,17 @@ body:has(.admin-next) .n-message-container {
 
 .admin-next-host .domain-dropdown-menu {
     position: absolute;
-    top: calc(100% + 6px);
+    top: calc(100% + 4px);
     left: 0;
     z-index: 1000;
-    min-width: 240px;
+    min-width: 220px;
     max-height: 320px;
     overflow-y: auto;
     border-radius: var(--radius);
-    padding: 6px;
+    padding: 4px;
     background: var(--surface);
-    border: 1px solid var(--border);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border-strong);
     box-shadow: var(--shadow-pop);
     display: flex;
     flex-direction: column;
@@ -1199,7 +1200,7 @@ body:has(.admin-next) .n-message-container {
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    padding: 8px 12px;
+    padding: 6px 10px;
     border-radius: var(--radius-sm);
     border: 0;
     background: transparent;
@@ -1207,7 +1208,31 @@ body:has(.admin-next) .n-message-container {
     font-size: 13px;
     cursor: pointer;
     text-align: left;
-    transition: background 0.15s ease, color 0.15s ease;
+    transition: background 100ms ease, color 100ms ease;
+}
+
+.admin-next-host .domain-option-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.admin-next-host .domain-at {
+    color: var(--muted);
+    font-weight: 500;
+}
+
+.admin-next-host .domain-count-badge {
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+    font-weight: 500;
+    padding: 1px 6px;
+    border-radius: 9999px;
+    background: color-mix(in oklch, var(--fg) 6%, transparent);
 }
 
 .admin-next-host .domain-option:hover,
@@ -1222,10 +1247,9 @@ body:has(.admin-next) .n-message-container {
     font-weight: 600;
 }
 
-.admin-next-host .domain-option b {
-    font-size: 11px;
-    color: var(--muted);
-    font-weight: normal;
+.admin-next-host .domain-option.is-selected .domain-count-badge {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
 }
 
 .admin-next-host .detail-back-bar {
@@ -1628,11 +1652,18 @@ body:has(.admin-next) .n-message-container {
     cursor: not-allowed;
 }
 
+/* Modern Apple HIG / Gmail Filter Chips */
 .admin-next-host .mail-filter-chips {
     display: flex;
     align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
+    gap: 6px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.admin-next-host .mail-filter-chips::-webkit-scrollbar {
+    display: none;
 }
 
 .admin-next-host .filter-chip {
@@ -1640,55 +1671,82 @@ body:has(.admin-next) .n-message-container {
     align-items: center;
     gap: 6px;
     height: 28px;
-    padding: 0 12px;
+    padding: 0 10px;
     border: 1px solid var(--border);
-    border-radius: 9999px;
+    border-radius: var(--radius-sm);
     background: var(--surface-soft);
     color: var(--muted);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 500;
+    letter-spacing: -0.01em;
     cursor: pointer;
-    transition: all 120ms ease;
+    white-space: nowrap;
+    user-select: none;
+    transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+    flex-shrink: 0;
+}
+
+.admin-next-host .filter-chip svg {
+    flex-shrink: 0;
 }
 
 .admin-next-host .filter-chip:hover {
-    background: color-mix(in oklch, var(--accent-soft) 30%, var(--surface-soft));
+    background: var(--surface-hover);
     color: var(--fg);
-    border-color: color-mix(in oklch, var(--accent) 40%, var(--border));
+    border-color: var(--border-strong);
 }
 
 .admin-next-host .filter-chip.is-active {
     background: var(--accent-subtle);
     color: var(--accent);
-    border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+    border-color: color-mix(in srgb, var(--accent) 35%, transparent);
     font-weight: 600;
+}
+
+.admin-next-host .filter-chip.clear-chip {
+    color: var(--muted);
+    border-style: dashed;
+}
+
+.admin-next-host .filter-chip.clear-chip:hover {
+    color: var(--danger, #ff453a);
+    border-color: color-mix(in srgb, var(--danger, #ff453a) 40%, transparent);
+    background: color-mix(in srgb, var(--danger, #ff453a) 10%, transparent);
 }
 
 .admin-next-host .mail-header-controls {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     min-width: 0;
     flex: 1;
 }
 
+/* Unified Selection Button Group */
 .admin-next-host .mail-select-all-wrapper {
     position: relative;
     display: inline-flex;
     align-items: center;
-    height: 32px;
-    border-radius: 8px;
-    background: var(--surface-sunken);
+    height: 28px;
+    border-radius: var(--radius-sm);
+    background: var(--surface-soft);
     border: 1px solid var(--border);
-    padding: 0 4px;
+    padding: 0 2px 0 6px;
     gap: 2px;
+    transition: background 120ms ease, border-color 120ms ease;
+    flex-shrink: 0;
+}
+
+.admin-next-host .mail-select-all-wrapper:hover {
+    background: var(--surface-hover);
+    border-color: var(--border-strong);
 }
 
 .admin-next-host .mail-select-all-trigger {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
+    width: 18px;
     height: 24px;
     background: transparent;
     border: none;
@@ -1701,29 +1759,32 @@ body:has(.admin-next) .n-message-container {
     align-items: center;
     justify-content: center;
     width: 16px;
-    height: 24px;
+    height: 22px;
     background: transparent;
     border: none;
+    border-radius: 4px;
     cursor: pointer;
     padding: 0;
     color: var(--muted);
-    font-size: 11px;
+    transition: color 120ms ease, background 120ms ease;
 }
 
 .admin-next-host .mail-select-all-arrow:hover {
     color: var(--fg);
+    background: color-mix(in oklch, var(--fg) 8%, transparent);
 }
 
 .admin-next-host .mail-select-menu {
     position: absolute;
     top: calc(100% + 4px);
     left: 0;
-    z-index: 40;
-    min-width: 110px;
+    z-index: 1000;
+    min-width: 120px;
     background: var(--surface);
+    backdrop-filter: blur(20px);
     border: 1px solid var(--border-strong);
-    border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-pop);
     padding: 4px;
     display: flex;
     flex-direction: column;
@@ -1734,10 +1795,10 @@ body:has(.admin-next) .n-message-container {
     display: flex;
     align-items: center;
     width: 100%;
-    height: 30px;
-    padding: 0 10px;
+    height: 28px;
+    padding: 0 8px;
     border: none;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     background: transparent;
     color: var(--fg);
     font-size: 13px;
@@ -1747,30 +1808,91 @@ body:has(.admin-next) .n-message-container {
 }
 
 .admin-next-host .select-option:hover {
-    background: color-mix(in oklch, var(--accent-soft) 40%, var(--mix-bg));
+    background: var(--surface-hover);
 }
 
+/* Hairline Toolbar Divider (like Gmail) */
+.admin-next-host .mail-toolbar-divider {
+    width: 1px;
+    height: 16px;
+    background: var(--border);
+    opacity: 0.8;
+    margin: 0 2px;
+    flex-shrink: 0;
+}
+
+/* Toolbar Icon Button (Refresh) */
+.admin-next-host .mail-toolbar-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-soft);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 120ms ease;
+    flex-shrink: 0;
+}
+
+.admin-next-host .mail-toolbar-icon-btn:hover:not(:disabled) {
+    background: var(--surface-hover);
+    border-color: var(--border-strong);
+    color: var(--fg);
+}
+
+.admin-next-host .mail-toolbar-icon-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* Batch Action Bar */
 .admin-next-host .mail-batch-bar {
     display: flex;
     align-items: center;
     gap: 6px;
     min-width: 0;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.admin-next-host .mail-batch-bar::-webkit-scrollbar {
+    display: none;
 }
 
 .admin-next-host .batch-count {
+    display: inline-flex;
+    align-items: center;
+    height: 24px;
+    padding: 0 8px;
+    border-radius: var(--radius-sm);
+    background: var(--accent-subtle);
+    color: var(--accent);
     font-size: 12px;
     font-weight: 600;
-    color: var(--fg);
-    padding: 0 4px;
+    font-variant-numeric: tabular-nums;
     white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .admin-next-host .batch-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     height: 28px;
-    padding: 0 8px;
+    padding: 0 10px;
     font-size: 12px;
-    border-radius: 6px;
+    font-weight: 500;
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+}
+
+.admin-next-host .batch-action-btn svg {
+    flex-shrink: 0;
 }
 
 .admin-next-host .mail-select-cell {

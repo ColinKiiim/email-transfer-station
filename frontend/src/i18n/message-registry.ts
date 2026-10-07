@@ -3288,6 +3288,10 @@ export const MESSAGE_REGISTRY = {
       "en": "Clear filters",
       "zh": "清除筛选"
     },
+    "refresh": {
+      "en": "Refresh",
+      "zh": "刷新"
+    },
     "resizeDetailColumn": {
       "en": "Resize list and detail columns",
       "zh": "调整列表和详情列宽"
