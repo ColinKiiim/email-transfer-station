@@ -11,6 +11,8 @@ public maintenance records that apply to the single product repository.
   [`plans/PLAN_2026-10-05_maintainability-refactor.md`](plans/PLAN_2026-10-05_maintainability-refactor.md)
 - UI specification: [`UI_SPECIFICATION.md`](UI_SPECIFICATION.md)
 - UI audit record: [`UI_AUDIT_REPORT.md`](UI_AUDIT_REPORT.md)
+- Shared admin toolbar controls:
+  [`plans/PLAN_2026-10-12_admin-toolbar-controls.md`](plans/PLAN_2026-10-12_admin-toolbar-controls.md)
 
 Operational output, browser state, release receipts, private credentials,
 governance history, and reference repositories are excluded from the product

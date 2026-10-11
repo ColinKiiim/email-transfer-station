@@ -5,6 +5,8 @@ import { useScopedI18n } from '@/i18n/app'
 import MailContentRenderer from '../../components/MailContentRenderer.vue'
 import { formatNumber, statusClass } from '../admin-formatters'
 import AdminEmptyState from './AdminEmptyState.vue'
+import AdminDomainDropdown from './AdminDomainDropdown.vue'
+import AdminRefreshButton from './AdminRefreshButton.vue'
 
 const props = defineProps({
     model: { type: Object, required: true },
@@ -13,8 +15,6 @@ const props = defineProps({
 
 const { t } = useScopedI18n('admin.mailView')
 const mailList = ref(null)
-const showDomainMenu = ref(false)
-const domainDropdownRef = ref(null)
 const showSelectMenu = ref(false)
 const selectDropdownRef = ref(null)
 
@@ -24,15 +24,6 @@ const getSenderInitial = (sender) => {
     const first = clean.charAt(0)
     return first.toUpperCase() || '✉'
 }
-
-const selectedDomainText = computed(() => {
-    if (!props.model.ui.domain || props.model.ui.domain === 'all') {
-        return t('allDomains') || '全部域名'
-    }
-    return props.model.ui.domain
-})
-
-const selectedDomainLabel = computed(() => selectedDomainText.value)
 
 const hasActiveMailFilters = computed(() => {
     return (props.model.ui.status && props.model.ui.status !== 'all') ||
@@ -49,15 +40,7 @@ const clearAllMailFilters = () => {
     }
 }
 
-const selectDomain = (domain) => {
-    props.actions.setMailDomain(domain)
-    showDomainMenu.value = false
-}
-
 const handleClickOutside = (e) => {
-    if (domainDropdownRef.value && !domainDropdownRef.value.contains(e.target)) {
-        showDomainMenu.value = false
-    }
     if (selectDropdownRef.value && !selectDropdownRef.value.contains(e.target)) {
         showSelectMenu.value = false
     }
@@ -233,15 +216,10 @@ defineExpose({
 
                     <div class="mail-toolbar-divider" aria-hidden="true" />
 
-                    <button type="button" class="mail-toolbar-icon-btn"
+                    <AdminRefreshButton
                         :disabled="!!model.actionBusy"
-                        :title="t('refresh') || '刷新'"
-                        :aria-label="t('refresh') || '刷新'"
-                        @click="actions.handleAction('refresh')">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
-                        </svg>
-                    </button>
+                        :label="t('refresh') || '刷新'"
+                        @click="actions.handleAction('refresh')" />
 
                     <div v-if="model.selectedMailCount > 0" class="mail-batch-bar" role="toolbar" :aria-label="t('selectionOptions')">
                         <span class="batch-count">{{ t('selectedCount', { count: model.selectedMailCount }) }}</span>
@@ -303,46 +281,13 @@ defineExpose({
                             </svg>
                             <span>{{ t('attachments') || '附件' }}</span>
                         </button>
-                        <div v-if="model.mailHierarchy?.domains?.length" ref="domainDropdownRef" class="domain-filter-wrapper">
-                            <button type="button" class="filter-chip domain-chip" :class="{ 'is-active': model.ui.domain !== 'all' }"
-                                :aria-expanded="showDomainMenu"
-                                @click.stop="showDomainMenu = !showDomainMenu">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                    <circle cx="12" cy="12" r="10" />
-                                    <line x1="2" x2="22" y1="12" y2="12" />
-                                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                                </svg>
-                                <span>{{ selectedDomainText }}</span>
-                                <span class="dropdown-arrow" aria-hidden="true">
-                                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                        <polyline points="6 9 12 15 18 9" />
-                                    </svg>
-                                </span>
-                            </button>
-                            <div v-show="showDomainMenu" class="domain-dropdown-menu">
-                                <button type="button" class="domain-option" :class="{ 'is-selected': model.ui.domain === 'all' }"
-                                    @click="selectDomain('all')">
-                                    <span class="domain-option-label">
-                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                            <circle cx="12" cy="12" r="10" />
-                                            <line x1="2" x2="22" y1="12" y2="12" />
-                                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                                        </svg>
-                                        {{ t('allDomains') || '全部域名' }}
-                                    </span>
-                                    <b class="domain-count-badge">{{ formatNumber(model.mailHierarchy.queues[0]?.count ?? model.mailRows.length) }}</b>
-                                </button>
-                                <button v-for="d in model.mailHierarchy.domains" :key="d.domain" type="button"
-                                    class="domain-option" :class="{ 'is-selected': model.ui.domain === d.domain }"
-                                    @click="selectDomain(d.domain)">
-                                    <span class="domain-option-label">
-                                        <span class="domain-at">@</span>
-                                        {{ d.domain }}
-                                    </span>
-                                    <b class="domain-count-badge">{{ formatNumber(d.mails || 0) }}</b>
-                                </button>
-                            </div>
-                        </div>
+                        <AdminDomainDropdown
+                            v-if="model.mailHierarchy?.domains?.length"
+                            :selected-domain="model.ui.domain"
+                            :all-label="t('allDomains') || '全部域名'"
+                            :all-count="formatNumber(model.mailHierarchy.queues[0]?.count ?? model.mailRows.length)"
+                            :domains="model.mailHierarchy.domains.map((domain) => ({ domain: domain.domain, count: formatNumber(domain.mails || 0) }))"
+                            @select="actions.setMailDomain" />
 
                         <button v-if="hasActiveMailFilters" type="button" class="filter-chip clear-chip"
                             :title="t('clearFilters') || '清除筛选'"

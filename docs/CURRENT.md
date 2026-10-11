@@ -1,6 +1,6 @@
 # Current project state
 
-Updated: 2026-10-05 (Asia/Singapore)
+Updated: 2026-10-12 (Asia/Singapore)
 
 ## Maintainability refactor — WP1–WP7 complete
 
@@ -222,3 +222,20 @@ panels with a seamless, edge-to-edge Apple HIG split-view architecture:
   matching the mail flow header and aligning first/last table cells to the same 18px grid.
 - Maintained local-only discipline: verified with frontend unit tests and production build;
   no push or deploy was executed.
+
+## Shared admin toolbar controls — 2026-10-12
+
+Extracted `AdminRefreshButton.vue` for the mail, resource, and authenticator
+workspaces and `AdminDomainDropdown.vue` for the mail and address domain filters.
+Refresh controls share the mail toolbar's transparent 28px Ghost style; the
+duplicate refresh markup and CSS selectors are removed. Parents retain their
+existing translations, count formatting, refresh handlers, and domain actions.
+The dropdown owns its open state, outside-click/Escape handling, and listener
+cleanup. No new dependency, API, credential, or database change is involved.
+
+Validation: the focused toolbar component test file passed all 3 tests; all five
+component sources in the commit passed Vue script/template compilation, and
+repository whitespace checks passed. Delivery is a local commit only, as
+explicitly requested; no push, release, deployment, or browser acceptance run.
+Unrelated inherited changes remain in the working tree. Scope and exclusions
+are recorded in [`plans/PLAN_2026-10-12_admin-toolbar-controls.md`](plans/PLAN_2026-10-12_admin-toolbar-controls.md).

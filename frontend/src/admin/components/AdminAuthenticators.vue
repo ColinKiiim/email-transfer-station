@@ -3,6 +3,7 @@ import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 import { adminApi } from '../admin-api'
 import AdminEmptyState from './AdminEmptyState.vue'
+import AdminRefreshButton from './AdminRefreshButton.vue'
 
 const props = defineProps({
     requestConfirm: { type: Function, required: true },
@@ -155,15 +156,15 @@ onBeforeUnmount(() => {
         <!-- Standard 48px Workspace Toolbar -->
         <div class="workspace-toolbar">
             <div class="toolbar-left">
-                <div class="toolbar-counter">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                    </svg>
-                    <span>{{ t('countAuthenticators', { count: rows.length }) }}</span>
-                </div>
+                <AdminRefreshButton
+                    :disabled="!!busy"
+                    :label="tRes('refresh') || '刷新'"
+                    @click="load" />
             </div>
             <div class="panel-head-actions">
+                <span class="toolbar-range-indicator">
+                    {{ t('countAuthenticators', { count: rows.length }) }}
+                </span>
                 <button class="btn small primary" type="button" :disabled="!!busy"
                     @click="isCreating = !isCreating">
                     <svg v-if="!isCreating" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

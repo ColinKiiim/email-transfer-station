@@ -2982,6 +2982,18 @@ export const MESSAGE_REGISTRY = {
       "en": "All",
       "zh": "全部"
     },
+    "allDomains": {
+      "en": "All domains",
+      "zh": "全部域名"
+    },
+    "refresh": {
+      "en": "Refresh",
+      "zh": "刷新"
+    },
+    "countAddresses": {
+      "en": "{count} addresses",
+      "zh": "共 {count} 个地址"
+    },
     "countDomains": {
       "en": "{count} domains",
       "zh": "共 {count} 个域名"

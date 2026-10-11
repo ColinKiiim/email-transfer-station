@@ -1874,31 +1874,48 @@ html.dark .admin-next-host .gmail-loading-pill,
     flex-shrink: 0;
 }
 
-/* Toolbar Icon Button (Refresh) */
-.admin-next-host .mail-toolbar-icon-btn {
+/* Toolbar Icon Button (Refresh) - Flat Ghost Control */
+.admin-next-host .admin-refresh-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     width: 28px;
     height: 28px;
+    min-height: 28px;
+    max-height: 28px;
+    min-width: 28px;
+    max-width: 28px;
     padding: 0;
-    border: 1px solid var(--border);
+    margin: 0;
+    border: 1px solid transparent;
     border-radius: var(--radius-sm);
-    background: var(--surface-soft);
+    background: transparent;
     color: var(--muted);
     cursor: pointer;
-    transition: all 120ms ease;
+    transition: background-color 120ms ease, color 120ms ease;
     flex-shrink: 0;
+    box-sizing: border-box;
 }
 
-.admin-next-host .mail-toolbar-icon-btn:hover:not(:disabled) {
+.admin-next-host .admin-refresh-btn svg {
+    width: 14px;
+    height: 14px;
+    display: block;
+    stroke: currentColor;
+    stroke-width: 1.8;
+}
+
+.admin-next-host .admin-refresh-btn:hover:not(:disabled) {
     background: var(--surface-hover);
-    border-color: var(--border-strong);
     color: var(--fg);
 }
 
-.admin-next-host .mail-toolbar-icon-btn:disabled {
-    opacity: 0.4;
+.admin-next-host .admin-refresh-btn:active:not(:disabled) {
+    background: color-mix(in oklch, var(--fg) 10%, transparent);
+}
+
+.admin-next-host .admin-refresh-btn:disabled {
+    opacity: 0.35;
     cursor: not-allowed;
 }
 
@@ -2654,6 +2671,16 @@ html.dark .admin-next-host .gmail-loading-pill,
     color: var(--muted);
     user-select: none;
     white-space: nowrap;
+}
+
+.admin-next-host .toolbar-range-indicator {
+    display: inline-flex;
+    align-items: center;
+    color: var(--muted);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    user-select: none;
 }
 
 .admin-next-host .toolbar-counter svg {
