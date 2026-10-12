@@ -1,5 +1,5 @@
 <script setup>
-import { Transition, computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { Transition, computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 
 import MailContentRenderer from '../../components/MailContentRenderer.vue'
@@ -17,6 +17,22 @@ const { t } = useScopedI18n('admin.mailView')
 const mailList = ref(null)
 const showSelectMenu = ref(false)
 const selectDropdownRef = ref(null)
+const headerCheckboxRef = ref(null)
+
+const syncHeaderCheckbox = () => {
+    if (headerCheckboxRef.value) {
+        headerCheckboxRef.value.checked = Boolean(props.model.isAllVisibleSelected)
+        headerCheckboxRef.value.indeterminate = Boolean(props.model.isSomeVisibleSelected)
+    }
+}
+
+watch(
+    [() => props.model.isAllVisibleSelected, () => props.model.isSomeVisibleSelected],
+    () => {
+        syncHeaderCheckbox()
+    },
+    { flush: 'post' }
+)
 
 const getSenderInitial = (sender) => {
     if (!sender) return '✉'
@@ -47,16 +63,22 @@ const handleClickOutside = (e) => {
 }
 
 const handleSelectAllToggle = () => {
-    if (props.model.isAllVisibleSelected || props.model.isSomeVisibleSelected) {
-        props.actions.selectAllVisibleMails('none')
+    if (props.model.isAllVisibleSelected || props.model.isSomeVisibleSelected || props.model.selectedMailCount > 0) {
+        if (props.actions.clearMailSelection) {
+            props.actions.clearMailSelection()
+        } else {
+            props.actions.selectAllVisibleMails('none')
+        }
     } else {
         props.actions.selectAllVisibleMails('all')
     }
+    nextTick(syncHeaderCheckbox)
 }
 
 const handleSelectOption = (mode) => {
     props.actions.selectAllVisibleMails(mode)
     showSelectMenu.value = false
+    nextTick(syncHeaderCheckbox)
 }
 
 const rangeLabel = computed(() => {
@@ -104,6 +126,7 @@ const handleRowFocusOut = (event, row) => {
 
 onMounted(() => {
     window.addEventListener('click', handleClickOutside)
+    syncHeaderCheckbox()
 })
 onBeforeUnmount(() => {
     window.removeEventListener('click', handleClickOutside)
@@ -177,15 +200,13 @@ defineExpose({
                 <div class="mail-header-controls">
                     <div ref="selectDropdownRef" class="mail-select-all-wrapper">
                         <label class="mail-select-all-trigger"
-                            :class="{ 'is-active': model.selectedMailCount > 0 }"
-                            @click.stop.prevent="handleSelectAllToggle">
-                            <input type="checkbox" class="mail-checkbox header-checkbox"
-                                :checked="model.isAllVisibleSelected"
-                                :indeterminate.prop="model.isSomeVisibleSelected"
+                            :class="{ 'is-active': model.selectedMailCount > 0 }">
+                            <input ref="headerCheckboxRef" type="checkbox" class="mail-checkbox header-checkbox"
+                                :checked.prop="Boolean(model.isAllVisibleSelected)"
+                                :indeterminate.prop="Boolean(model.isSomeVisibleSelected)"
                                 :aria-checked="model.isAllVisibleSelected ? 'true' : (model.isSomeVisibleSelected ? 'mixed' : 'false')"
                                 :aria-label="t('selectAll')"
-                                tabindex="0"
-                                @keydown.space.stop.prevent="handleSelectAllToggle"
+                                @change.stop="handleSelectAllToggle"
                                 @keydown.enter.stop.prevent="handleSelectAllToggle" />
                         </label>
                         <button type="button" class="mail-select-all-arrow"
@@ -214,13 +235,14 @@ defineExpose({
                         </div>
                     </div>
 
-                    <div class="mail-toolbar-divider" aria-hidden="true" />
-
                     <AdminRefreshButton
                         :disabled="!!model.actionBusy"
                         :label="t('refresh') || '刷新'"
                         @click="actions.handleAction('refresh')" />
 
+                    <div class="mail-toolbar-divider" aria-hidden="true" />
+
+                    <!-- When selected > 0: Batch Action Toolbar in same row -->
                     <div v-if="model.selectedMailCount > 0" class="mail-batch-bar" role="toolbar" :aria-label="t('selectionOptions')">
                         <span class="batch-count">{{ t('selectedCount', { count: model.selectedMailCount }) }}</span>
                         <button type="button" class="btn compact-btn batch-action-btn"
@@ -261,7 +283,16 @@ defineExpose({
                         </button>
                     </div>
 
-                    <div v-else class="mail-filter-chips">
+                    <!-- When selected == 0: Inline Filter Chips -->
+                    <div v-else class="mail-filter-chips" role="toolbar" :aria-label="t('filters') || '筛选'">
+                        <AdminDomainDropdown
+                            v-if="model.mailHierarchy?.domains?.length"
+                            :selected-domain="model.ui.domain"
+                            :all-label="t('allDomains') || '全部域名'"
+                            :all-count="formatNumber(model.mailHierarchy.queues[0]?.count ?? model.mailRows.length)"
+                            :domains="model.mailHierarchy.domains.map((domain) => ({ domain: domain.domain, count: formatNumber(domain.mails || 0) }))"
+                            @select="actions.setMailDomain" />
+
                         <button type="button" class="filter-chip"
                             :class="{ 'is-active': model.ui.status === 'unread' }"
                             :aria-pressed="model.ui.status === 'unread' ? 'true' : 'false'"
@@ -272,6 +303,7 @@ defineExpose({
                             </svg>
                             <span>{{ t('unread') || '未读' }}</span>
                         </button>
+
                         <button type="button" class="filter-chip"
                             :class="{ 'is-active': model.ui.status === 'attachments' }"
                             :aria-pressed="model.ui.status === 'attachments' ? 'true' : 'false'"
@@ -281,13 +313,6 @@ defineExpose({
                             </svg>
                             <span>{{ t('attachments') || '附件' }}</span>
                         </button>
-                        <AdminDomainDropdown
-                            v-if="model.mailHierarchy?.domains?.length"
-                            :selected-domain="model.ui.domain"
-                            :all-label="t('allDomains') || '全部域名'"
-                            :all-count="formatNumber(model.mailHierarchy.queues[0]?.count ?? model.mailRows.length)"
-                            :domains="model.mailHierarchy.domains.map((domain) => ({ domain: domain.domain, count: formatNumber(domain.mails || 0) }))"
-                            @select="actions.setMailDomain" />
 
                         <button v-if="hasActiveMailFilters" type="button" class="filter-chip clear-chip"
                             :title="t('clearFilters') || '清除筛选'"
@@ -300,6 +325,7 @@ defineExpose({
                         </button>
                     </div>
                 </div>
+
                 <div class="panel-head-actions mail-head-actions">
                     <span class="mail-range-indicator">{{ rangeLabel }}</span>
                     <div class="mail-pagination-controls" role="group" :aria-label="t('mailListLabel')">

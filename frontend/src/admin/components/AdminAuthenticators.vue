@@ -25,8 +25,10 @@ const error = ref('')
 const isCreating = ref(false)
 const activeMenuId = ref(null)
 
-let timer
-let refreshing = false
+let timer = null
+let refreshRequest = null
+let retryCount = 0
+let disposed = false
 const shares = ref({})
 
 const toggleMenu = (rowId) => {
@@ -50,9 +52,74 @@ const handleDocumentKeydown = (event) => {
 }
 
 const load = async () => {
-    const [items, userResult] = await Promise.all([adminApi.listAuthenticators(), adminApi.listUsers({ limit: 100 })])
-    rows.value = items.results || []
-    users.value = userResult.results || []
+    const [, userResult] = await Promise.all([refreshCodes(), adminApi.listUsers({ limit: 100 })])
+    if (!disposed) users.value = userResult.results || []
+}
+
+const clearScheduledTimer = () => {
+    if (timer) {
+        window.clearTimeout(timer)
+        timer = null
+    }
+}
+
+const scheduleNextRefresh = () => {
+    clearScheduledTimer()
+    if (disposed || document.hidden) return
+
+    const now = Date.now()
+    const validRows = rows.value.filter((r) => Number.isFinite(r.valid_until))
+    if (!validRows.length && !retryCount) return
+
+    const nextExpiry = Math.min(...validRows.map((r) => r.valid_until))
+    const delay = retryCount
+        ? Math.min(30000, 5000 * Math.pow(1.5, retryCount - 1))
+        : Math.max(1000, (nextExpiry - now) + 500)
+
+    timer = window.setTimeout(() => {
+        if (busy.value) {
+            scheduleNextRefresh()
+            return
+        }
+        refreshCodes().catch(() => {})
+    }, delay)
+}
+
+const refreshCodes = () => {
+    if (disposed) return Promise.resolve()
+    if (refreshRequest) return refreshRequest
+    clearScheduledTimer()
+    refreshRequest = adminApi.listAuthenticators()
+        .then((result) => {
+            if (disposed) return
+            rows.value = result.results || []
+            retryCount = 0
+            error.value = ''
+        })
+        .catch((reason) => {
+            if (disposed) return
+            error.value = reason?.message || t('failed')
+            retryCount += 1
+            throw reason
+        })
+        .finally(() => {
+            refreshRequest = null
+            scheduleNextRefresh()
+        })
+    return refreshRequest
+}
+
+const handleVisibilityChange = () => {
+    if (!document.hidden) {
+        const hasExpired = rows.value.some((r) => r.valid_until && r.valid_until <= Date.now())
+        if ((hasExpired || retryCount) && !busy.value) {
+            refreshCodes().catch(() => {})
+        } else {
+            scheduleNextRefresh()
+        }
+    } else {
+        clearScheduledTimer()
+    }
 }
 
 const run = async (key, task) => {
@@ -125,29 +192,20 @@ const share = (row) => run(`share-${row.id}`, async () => {
 const labelForUser = (user) => user.display_name || user.username || user.user_email
 
 onMounted(() => {
-    load().catch((reason) => { error.value = reason?.message || t('failed') })
+    load().catch((reason) => {
+        if (!disposed) error.value = reason?.message || t('failed')
+    })
     window.addEventListener('click', handleDocumentClick)
     window.addEventListener('keydown', handleDocumentKeydown)
-    timer = window.setInterval(async () => {
-        if (!busy.value && !refreshing && rows.value.some((row) => row.valid_until <= Date.now())) {
-            refreshing = true
-            try {
-                const result = await adminApi.listAuthenticators()
-                rows.value = result.results || []
-            } catch (reason) {
-                rows.value = []
-                error.value = reason?.message || t('failed')
-            } finally {
-                refreshing = false
-            }
-        }
-    }, 1000)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
 })
 
 onBeforeUnmount(() => {
+    disposed = true
     window.removeEventListener('click', handleDocumentClick)
     window.removeEventListener('keydown', handleDocumentKeydown)
-    window.clearInterval(timer)
+    document.removeEventListener('visibilitychange', handleVisibilityChange)
+    clearScheduledTimer()
 })
 </script>
 

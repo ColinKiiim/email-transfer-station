@@ -237,7 +237,7 @@ const iconFor = (item) => iconPaths[item.icon] || iconPaths.mailbox
 }
 
 .rail-item:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--ets-hover);
   color: var(--access-text);
 }
 

@@ -209,6 +209,25 @@ const backFirstPageAndRefresh = async () => {
   await refresh();
 }
 
+const isRowSelected = (row) => Boolean(curMail.value && curMail.value.id == row.id);
+
+const handleRowKey = (event, row) => {
+  if (event.target !== event.currentTarget) return;
+
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    clickRow(row);
+  } else if (event.key === 'ArrowDown') {
+    event.preventDefault();
+    const next = event.currentTarget.nextElementSibling;
+    if (next && typeof next.focus === 'function') next.focus();
+  } else if (event.key === 'ArrowUp') {
+    event.preventDefault();
+    const prev = event.currentTarget.previousElementSibling;
+    if (prev && typeof prev.focus === 'function') prev.focus();
+  }
+};
+
 const clickRow = async (row) => {
   if (multiActionMode.value) {
     row.checked = !row.checked;
@@ -474,8 +493,17 @@ onBeforeUnmount(() => {
       </div>
       <div v-if="!curMail" class="desktop-fullwidth-stream">
         <n-list hoverable clickable>
-          <n-list-item v-for="row in data" v-bind:key="row.id" @click="() => clickRow(row)"
-            :class="mailItemClass(row)">
+          <n-list-item
+            v-for="row in data"
+            :key="row.id"
+            role="button"
+            :tabindex="0"
+            :aria-pressed="isRowSelected(row)"
+            :aria-label="`${row.unread ? t('unread') + ' ' : ''}${row.subject || '(无主题)'}`"
+            :class="mailItemClass(row)"
+            @click="() => clickRow(row)"
+            @keydown="handleRowKey($event, row)"
+          >
             <template #prefix v-if="multiActionMode">
               <n-checkbox v-model:checked="row.checked" class="mail-select-checkbox" @click.stop />
             </template>
@@ -517,8 +545,17 @@ onBeforeUnmount(() => {
         <template #1>
           <div class="desktop-mail-list-pane">
             <n-list hoverable clickable>
-              <n-list-item v-for="row in data" v-bind:key="row.id" @click="() => clickRow(row)"
-                :class="mailItemClass(row)">
+              <n-list-item
+                v-for="row in data"
+                :key="row.id"
+                role="button"
+                :tabindex="0"
+                :aria-pressed="isRowSelected(row)"
+                :aria-label="`${row.unread ? t('unread') + ' ' : ''}${row.subject || '(无主题)'}`"
+                :class="mailItemClass(row)"
+                @click="() => clickRow(row)"
+                @keydown="handleRowKey($event, row)"
+              >
                 <template #prefix v-if="multiActionMode">
                   <n-checkbox v-model:checked="row.checked" class="mail-select-checkbox" @click.stop />
                 </template>
@@ -605,8 +642,17 @@ onBeforeUnmount(() => {
       </div>
       <div class="mobile-mail-list">
         <n-list hoverable clickable>
-          <n-list-item v-for="row in data" v-bind:key="row.id" @click="() => clickRow(row)"
-            :class="mailItemClass(row)">
+          <n-list-item
+            v-for="row in data"
+            :key="row.id"
+            role="button"
+            :tabindex="0"
+            :aria-pressed="isRowSelected(row)"
+            :aria-label="`${row.unread ? t('unread') + ' ' : ''}${row.subject || '(无主题)'}`"
+            :class="mailItemClass(row)"
+            @click="() => clickRow(row)"
+            @keydown="handleRowKey($event, row)"
+          >
             <div class="mail-list-row">
               <div class="mail-row-header">
                 <div class="mail-row-sender-wrap">
@@ -743,7 +789,16 @@ onBeforeUnmount(() => {
 
 :deep(.n-list .n-list-item) {
   padding: 0;
-  transition: background-color 0.15s ease;
+  outline: none;
+  position: relative;
+  transition: background-color var(--ets-motion-fast, 150ms) ease,
+              box-shadow var(--ets-motion-fast, 150ms) ease;
+}
+
+:deep(.n-list .n-list-item:focus-visible) {
+  outline: 2px solid var(--ets-brand, #2563eb);
+  outline-offset: -2px;
+  z-index: 2;
 }
 
 :deep(.mail-select-checkbox) {
@@ -763,8 +818,7 @@ onBeforeUnmount(() => {
 }
 
 .mail-row-active {
-  background-color: var(--ets-brand-soft, rgba(37, 99, 235, 0.08)) !important;
-  border-left: 3px solid var(--ets-brand, #2563eb) !important;
+  background-color: var(--ets-selected, rgba(37, 99, 235, 0.08)) !important;
 }
 
 .mail-row-header {

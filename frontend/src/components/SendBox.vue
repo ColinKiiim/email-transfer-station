@@ -95,6 +95,24 @@ const refresh = async () => {
   }
 };
 
+const isRowSelected = (row) => Boolean(curMail.value && curMail.value.id == row.id);
+
+const handleRowKey = (event, row) => {
+  if (event.target !== event.currentTarget) return;
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    clickRow(row);
+  } else if (event.key === 'ArrowDown') {
+    event.preventDefault();
+    const next = event.currentTarget.nextElementSibling;
+    if (next && typeof next.focus === 'function') next.focus();
+  } else if (event.key === 'ArrowUp') {
+    event.preventDefault();
+    const prev = event.currentTarget.previousElementSibling;
+    if (prev && typeof prev.focus === 'function') prev.focus();
+  }
+};
+
 const clickRow = async (row) => {
   if (multiActionMode.value) {
     row.checked = !row.checked;
@@ -229,8 +247,18 @@ onMounted(async () => {
           <div class="sendbox-list-scroll">
             <n-empty v-if="data.length === 0" class="empty-list" :description="t('emptySent')" />
             <n-list v-else hoverable clickable class="sendbox-list">
-              <n-list-item v-for="row in data" :key="row.id" @click="() => clickRow(row)"
-                class="sendbox-mail-row" :class="mailItemClass(row)">
+              <n-list-item
+                v-for="row in data"
+                :key="row.id"
+                role="button"
+                :tabindex="0"
+                :aria-pressed="isRowSelected(row)"
+                :aria-label="`TO: ${row.to_mail}, ${row.subject || '(无主题)'}`"
+                class="sendbox-mail-row"
+                :class="mailItemClass(row)"
+                @click="() => clickRow(row)"
+                @keydown="handleRowKey($event, row)"
+              >
                 <div class="mail-row-content">
                   <div v-if="multiActionMode" class="row-checkbox">
                     <n-checkbox v-model:checked="row.checked" @click.stop />
@@ -312,7 +340,18 @@ onMounted(async () => {
       <div class="sendbox-list-scroll">
         <n-empty v-if="data.length === 0" class="empty-list" :description="t('emptySent')" />
         <n-list v-else hoverable clickable class="sendbox-list">
-          <n-list-item v-for="row in data" :key="row.id" @click="() => clickRow(row)" class="sendbox-mail-row">
+          <n-list-item
+            v-for="row in data"
+            :key="row.id"
+            role="button"
+            :tabindex="0"
+            :aria-pressed="isRowSelected(row)"
+            :aria-label="`TO: ${row.to_mail}, ${row.subject || '(无主题)'}`"
+            class="sendbox-mail-row"
+            :class="mailItemClass(row)"
+            @click="() => clickRow(row)"
+            @keydown="handleRowKey($event, row)"
+          >
             <div class="row-main">
               <div class="row-head">
                 <span class="row-recipient"><strong>TO:</strong> {{ row.to_mail }}</span>
@@ -415,10 +454,17 @@ onMounted(async () => {
 }
 
 .sendbox-mail-row {
-  border-left: 3px solid transparent;
+  outline: none;
+  position: relative;
   padding: 10px 14px;
   cursor: pointer;
-  transition: background-color var(--ets-motion-fast), border-left-color var(--ets-motion-fast);
+  transition: background-color var(--ets-motion-fast);
+}
+
+.sendbox-mail-row:focus-visible {
+  outline: 2px solid var(--ets-brand, #2563eb);
+  outline-offset: -2px;
+  z-index: 2;
 }
 
 .sendbox-mail-row:hover {
@@ -426,7 +472,6 @@ onMounted(async () => {
 }
 
 .mail-row-active {
-  border-left: 3px solid var(--ets-brand) !important;
   background-color: var(--ets-selected, #e8f0fe) !important;
 }
 

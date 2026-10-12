@@ -294,8 +294,9 @@ body:has(.admin-next) .n-message-container {
     transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
 }
 
-.admin-next-host button:active:not(:disabled) {
-    scale: 0.96;
+.admin-next-host .btn.primary:active:not(:disabled),
+.admin-next-host .btn.confirm-primary:active:not(:disabled) {
+    scale: 0.98;
 }
 
 .admin-next-host button:disabled {
@@ -694,22 +695,11 @@ body:has(.admin-next) .n-message-container {
     transition: opacity 160ms cubic-bezier(0.2, 0, 0, 1), transform 160ms cubic-bezier(0.2, 0, 0, 1);
 }
 
-html.dark .admin-next-host .gmail-loading-pill,
-.admin-next-host[data-theme="dark"] .gmail-loading-pill,
-:root[data-theme="dark"] .admin-next-host .gmail-loading-pill {
-    background: rgba(251, 191, 36, 0.16);
+html.dark .admin-next-host .gmail-loading-pill {
+    background: #3c351f;
     color: #fde68a;
-    border: 1px solid rgba(251, 191, 36, 0.32);
+    border: 1px solid rgba(251, 191, 36, 0.35);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
-}
-
-@media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) .admin-next-host .gmail-loading-pill {
-        background: rgba(251, 191, 36, 0.16);
-        color: #fde68a;
-        border: 1px solid rgba(251, 191, 36, 0.32);
-        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
-    }
 }
 
 .loading-pill-fade-enter-active,
@@ -1621,14 +1611,22 @@ html.dark .admin-next-host .gmail-loading-pill,
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    min-height: 44px;
-    height: 44px;
-    padding: 0 16px;
+    gap: 10px;
+    min-height: 42px;
+    height: 42px;
+    padding: 0 18px;
     box-sizing: border-box;
     border-bottom: 1px solid var(--border);
     background: var(--surface);
     border-radius: 12px 12px 0 0;
+    position: relative;
+    z-index: 10;
+    overflow: visible;
+}
+
+.admin-next-host .mail-panel-head button {
+    min-height: 0;
+    scale: none;
 }
 
 .admin-next-host .mail-head-actions {
@@ -1646,12 +1644,13 @@ html.dark .admin-next-host .gmail-loading-pill,
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
     user-select: none;
+    margin-right: 2px;
 }
 
 .admin-next-host .mail-pagination-controls {
     display: inline-flex;
     align-items: center;
-    gap: 2px;
+    gap: 3px;
 }
 
 .admin-next-host .mail-page-btn,
@@ -1662,26 +1661,31 @@ html.dark .admin-next-host .gmail-loading-pill,
     width: 28px;
     height: 28px;
     min-height: 28px;
+    max-height: 28px;
+    min-width: 28px;
+    max-width: 28px;
     padding: 0;
+    margin: 0;
     border: 1px solid transparent;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     background: transparent;
     color: var(--muted);
     cursor: pointer;
+    box-sizing: border-box;
     transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
 }
 
 .admin-next-host .mail-page-btn svg,
 .admin-next-host .mail-view-toggle-btn svg {
-    width: 15px;
-    height: 15px;
+    width: 14px;
+    height: 14px;
     stroke: currentColor;
     stroke-width: 1.8;
 }
 
 .admin-next-host .mail-page-btn:hover:not(:disabled),
 .admin-next-host .mail-view-toggle-btn:hover:not(:disabled) {
-    background: color-mix(in oklch, var(--fg) 10%, transparent);
+    background: var(--surface-hover);
     color: var(--fg);
     border-color: var(--border);
 }
@@ -1707,16 +1711,11 @@ html.dark .admin-next-host .gmail-loading-pill,
 
 /* Modern Apple HIG / Gmail Filter Chips */
 .admin-next-host .mail-filter-chips {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 6px;
     flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-}
-
-.admin-next-host .mail-filter-chips::-webkit-scrollbar {
-    display: none;
+    overflow: visible;
 }
 
 .admin-next-host .filter-chip {
@@ -1724,29 +1723,42 @@ html.dark .admin-next-host .gmail-loading-pill,
     align-items: center;
     gap: 6px;
     height: 28px;
+    min-height: 28px;
+    max-height: 28px;
     padding: 0 10px;
+    margin: 0;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     background: var(--surface-soft);
     color: var(--muted);
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
+    line-height: 1;
     letter-spacing: -0.01em;
     cursor: pointer;
     white-space: nowrap;
     user-select: none;
-    transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
     flex-shrink: 0;
+    box-sizing: border-box;
 }
 
 .admin-next-host .filter-chip svg {
+    width: 13px;
+    height: 13px;
     flex-shrink: 0;
+    display: block;
+    stroke: currentColor;
 }
 
 .admin-next-host .filter-chip:hover {
     background: var(--surface-hover);
     color: var(--fg);
     border-color: var(--border-strong);
+}
+
+.admin-next-host .filter-chip:active {
+    background: color-mix(in oklch, var(--fg) 8%, transparent);
 }
 
 .admin-next-host .filter-chip.is-active {
@@ -1758,7 +1770,10 @@ html.dark .admin-next-host .gmail-loading-pill,
 
 .admin-next-host .filter-chip.clear-chip {
     color: var(--muted);
-    border-style: dashed;
+    border-color: color-mix(in srgb, var(--border) 70%, transparent);
+    background: transparent;
+    font-size: 12px;
+    padding: 0 8px;
 }
 
 .admin-next-host .filter-chip.clear-chip:hover {
@@ -1773,58 +1788,90 @@ html.dark .admin-next-host .gmail-loading-pill,
     gap: 6px;
     min-width: 0;
     flex: 1;
+    overflow: visible;
 }
 
-/* Unified Selection Button Group */
+/* Unified Selection Split Button - Flat Ghost Control */
 .admin-next-host .mail-select-all-wrapper {
     position: relative;
     display: inline-flex;
     align-items: center;
     height: 28px;
+    min-height: 28px;
+    max-height: 28px;
     border-radius: var(--radius-sm);
-    background: var(--surface-soft);
-    border: 1px solid var(--border);
-    padding: 0 2px 0 6px;
-    gap: 2px;
-    transition: background 120ms ease, border-color 120ms ease;
+    background: transparent;
+    border: 1px solid transparent;
+    padding: 0;
+    gap: 0;
+    transition: background-color 120ms ease;
     flex-shrink: 0;
+    box-sizing: border-box;
+    overflow: visible;
 }
 
 .admin-next-host .mail-select-all-wrapper:hover {
     background: var(--surface-hover);
-    border-color: var(--border-strong);
 }
 
 .admin-next-host .mail-select-all-trigger {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 18px;
-    height: 24px;
+    width: 22px;
+    height: 28px;
+    min-height: 28px;
+    max-height: 28px;
     background: transparent;
     border: none;
+    border-radius: var(--radius-sm) 0 0 var(--radius-sm);
     cursor: pointer;
     padding: 0;
+    margin: 0;
+    transition: background-color 120ms ease;
+    box-sizing: border-box;
+}
+
+.admin-next-host .mail-select-all-trigger:hover {
+    background: color-mix(in oklch, var(--fg) 6%, transparent);
+}
+
+.admin-next-host .header-checkbox {
+    width: 15px;
+    height: 15px;
+    min-height: 0;
+    margin: 0;
+    cursor: pointer;
+    accent-color: var(--accent);
+    pointer-events: none;
 }
 
 .admin-next-host .mail-select-all-arrow {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 16px;
-    height: 22px;
+    width: 14px;
+    height: 28px;
+    min-height: 28px;
+    max-height: 28px;
     background: transparent;
     border: none;
-    border-radius: 4px;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
     cursor: pointer;
     padding: 0;
+    margin: 0;
     color: var(--muted);
-    transition: color 120ms ease, background 120ms ease;
+    transition: color 120ms ease, background-color 120ms ease;
+    box-sizing: border-box;
 }
 
 .admin-next-host .mail-select-all-arrow:hover {
     color: var(--fg);
     background: color-mix(in oklch, var(--fg) 8%, transparent);
+}
+
+.admin-next-host .mail-select-all-arrow:active {
+    background: color-mix(in oklch, var(--fg) 12%, transparent);
 }
 
 .admin-next-host .mail-select-menu {
@@ -1869,8 +1916,8 @@ html.dark .admin-next-host .gmail-loading-pill,
     width: 1px;
     height: 16px;
     background: var(--border);
-    opacity: 0.8;
-    margin: 0 2px;
+    opacity: 0.6;
+    margin: 0 4px;
     flex-shrink: 0;
 }
 
@@ -1954,11 +2001,14 @@ html.dark .admin-next-host .gmail-loading-pill,
     align-items: center;
     gap: 5px;
     height: 28px;
+    min-height: 28px;
+    max-height: 28px;
     padding: 0 10px;
     font-size: 12px;
     font-weight: 500;
     border-radius: var(--radius-sm);
     flex-shrink: 0;
+    box-sizing: border-box;
 }
 
 .admin-next-host .batch-action-btn svg {
@@ -2017,7 +2067,6 @@ html.dark .admin-next-host .gmail-loading-pill,
 
 .admin-next-host .mail-row.is-unread {
     background: color-mix(in srgb, var(--accent) 3%, var(--surface));
-    box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .admin-next-host .mail-row:hover {
@@ -2030,10 +2079,6 @@ html.dark .admin-next-host .gmail-loading-pill,
 
 .admin-next-host .mail-row.is-checked {
     background: color-mix(in oklch, var(--accent-soft) 30%, var(--mix-bg));
-}
-
-.admin-next-host .mail-row.is-unread.is-selected {
-    box-shadow: inset 3.5px 0 0 var(--accent);
 }
 
 .admin-next-host .mail-row.exception {
@@ -2094,12 +2139,11 @@ html.dark .admin-next-host .gmail-loading-pill,
 
 .admin-next-host .mail-body-preview {
     overflow: hidden;
-    color: var(--subtle);
+    color: var(--muted);
     font-size: 13px;
     font-weight: 400;
     text-overflow: ellipsis;
     white-space: nowrap;
-    opacity: 0.75;
 }
 
 .admin-next-host .mail-time {
@@ -2816,14 +2860,16 @@ html.dark .admin-next-host .gmail-loading-pill,
 
 .admin-next-host th {
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 500;
-    background: var(--surface-soft);
+    letter-spacing: 0.02em;
+    background: var(--surface);
     border-top: none;
     border-bottom: 1px solid var(--border);
     position: sticky;
     top: 0;
     z-index: 2;
+    user-select: none;
 }
 
 .admin-next-host th:first-child,
@@ -3842,14 +3888,14 @@ html.dark .admin-next-host .gmail-loading-pill,
 
     .admin-next-host .mail-panel-head {
         flex-wrap: wrap;
-        gap: 8px 10px;
         padding: 8px 10px;
+        min-height: auto;
+        height: auto;
+        gap: 8px;
     }
 
     .admin-next-host .mail-header-controls {
         flex: 1 1 100%;
-        width: 100%;
-        min-width: 0;
         flex-wrap: wrap;
         gap: 6px;
     }
@@ -4364,20 +4410,30 @@ html.dark .admin-next-host .gmail-loading-pill,
 
 .admin-next-host .resource-table th,
 .admin-next-host .resource-table td {
-    padding: 9px 12px;
+    padding: 8px 12px;
     border-bottom: 1px solid var(--border);
     vertical-align: middle;
 }
 
 .admin-next-host .resource-table th {
-    background: var(--surface-soft);
+    background: var(--surface);
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 500;
+    letter-spacing: 0.02em;
     white-space: nowrap;
     position: sticky;
     top: 0;
     z-index: 2;
+    user-select: none;
+}
+
+.admin-next-host .resource-table th.col-actions,
+.admin-next-host .resource-table th.col-domainActions,
+.admin-next-host .resource-table th.col-userActions,
+.admin-next-host .resource-table th.col-addressActions,
+.admin-next-host .resource-table th.col-shareActions {
+    font-size: 0;
 }
 
 .admin-next-host .resource-table .cell-main strong {

@@ -62,7 +62,7 @@ const handleDocumentClick = (event) => {
 }
 
 const handleDocumentKeydown = (event) => {
-    if (event.key === 'Escape' && (activeMenuAddressId.value !== null || activeMenuDomainId.value !== null || activeMenuUserId.value !== null)) {
+    if (event.key === 'Escape') {
         closeAllMenus()
     }
 }
@@ -397,7 +397,12 @@ const isPrimaryPanel = (panel) => (
                                         'text-center': column.type === 'status'
                                     }
                                 ]">
-                                {{ tCol(column.labelKey) }}
+                                <template v-if="column.key === 'actions' || column.type?.endsWith?.('Actions')">
+                                    <span class="sr-only">{{ tCol(column.labelKey) }}</span>
+                                </template>
+                                <template v-else>
+                                    {{ tCol(column.labelKey) }}
+                                </template>
                             </th>
                         </tr>
                     </thead>

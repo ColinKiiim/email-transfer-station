@@ -14,6 +14,9 @@ public maintenance records that apply to the single product repository.
 - Shared admin toolbar controls:
   [`plans/PLAN_2026-10-12_admin-toolbar-controls.md`](plans/PLAN_2026-10-12_admin-toolbar-controls.md)
 
+- Frontend polish review and local delivery:
+  [`plans/PLAN_2026-10-09_impeccable-frontend-polish.md`](plans/PLAN_2026-10-09_impeccable-frontend-polish.md)
+
 Operational output, browser state, release receipts, private credentials,
 governance history, and reference repositories are excluded from the product
 source. Release and UI-review Skills live under `skills/`; QA tooling lives under

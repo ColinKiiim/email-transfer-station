@@ -1,6 +1,6 @@
 # Current project state
 
-Updated: 2026-10-12 (Asia/Singapore)
+Updated: 2026-10-13 (Asia/Singapore)
 
 ## Maintainability refactor — WP1–WP7 complete
 
@@ -239,3 +239,23 @@ repository whitespace checks passed. Delivery is a local commit only, as
 explicitly requested; no push, release, deployment, or browser acceptance run.
 Unrelated inherited changes remain in the working tree. Scope and exclusions
 are recorded in [`plans/PLAN_2026-10-12_admin-toolbar-controls.md`](plans/PLAN_2026-10-12_admin-toolbar-controls.md).
+
+## Inherited frontend polish review — 2026-10-13
+
+The user authorized reviewing and committing all remaining appropriate local
+changes after the shared toolbar refactor. Accepted changes finish expiry-based
+admin code refresh with backoff and request coalescing, share-page visibility
+and lifecycle handling, mailbox keyboard access, native selection state, mail
+preview fallbacks, and the pending toolbar/table styling. Existing translations,
+range semantics, unread filtering, and authored mail HTML rendering are retained.
+Redundant health caching/reads and unsafe dark mail backgrounds were withdrawn.
+
+Validation: all 8 focused pending-frontend regression tests passed, the production
+frontend build succeeded, and Git whitespace checks passed. No full suite or
+browser acceptance was run. The final local commit records these changes and
+their regression tests.
+The old draft and critique reports remain in ignored local UI-audit output,
+while the reviewed scope is tracked in
+[`plans/PLAN_2026-10-09_impeccable-frontend-polish.md`](plans/PLAN_2026-10-09_impeccable-frontend-polish.md).
+This closes the inherited pending work noted on 2026-10-12. No push, release,
+deployment, API change, database change, or secret change was performed.

@@ -118,13 +118,24 @@ export const compactRaw = (raw) => {
     return text ? text.slice(0, 240) : t('bodyRenderNotice')
 }
 
+const sanitizePreviewEntities = (str) => {
+    if (!str) return ''
+    return String(str)
+        .replace(/&(?:zwnj|zwj)(?:;|(?![a-z0-9]))/gi, '')
+        .replace(/&nbsp(?:;|(?![a-z0-9]))/gi, ' ')
+        .replace(/&#820[45](?:;|(?!\d))/g, '')
+        .replace(/[\u200B-\u200F\u202A-\u202E\uFEFF]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+}
+
 export const cleanMailPreview = (text, html, rawFallback = '', maxLength = 180) => {
-    const fromText = text ? stripHtmlForPreview(text, maxLength) : ''
+    const fromText = text ? sanitizePreviewEntities(stripHtmlForPreview(text, maxLength)) : ''
     if (fromText) return fromText
-    const fromHtml = html ? stripHtmlForPreview(html, maxLength) : ''
+    const fromHtml = html ? sanitizePreviewEntities(stripHtmlForPreview(html, maxLength)) : ''
     if (fromHtml) return fromHtml
     const fallback = typeof rawFallback === 'string' && rawFallback.trim() ? stripHtmlForPreview(rawFallback, maxLength) : ''
-    return fallback || ''
+    return sanitizePreviewEntities(fallback) || ''
 }
 
 export { formatSenderDisplay }

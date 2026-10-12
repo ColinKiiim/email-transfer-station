@@ -12,18 +12,38 @@ const item = ref(null)
 const expiresAt = ref('')
 const now = ref(Date.now())
 let timer = null
+let refreshRequest = null
+let disposed = false
 
 const token = computed(() => Array.isArray(route.params.token) ? route.params.token[0] : route.params.token)
 const remaining = computed(() => item.value ? Math.max(0, Math.ceil(((item.value.valid_until || now.value) - now.value) / 1000)) : 0)
 
-const load = async () => {
-    const data = await api.fetch('/open_api/authenticator_share', {
+const handleVisibilityChange = () => {
+    if (document.hidden) return
+    now.value = Date.now()
+    if (item.value && remaining.value <= 0 && !refreshRequest) {
+        refresh()
+    }
+}
+
+const load = () => {
+    if (refreshRequest) return refreshRequest
+    refreshRequest = api.fetch('/open_api/authenticator_share', {
         method: 'POST',
         body: JSON.stringify({ token: token.value })
-    })
-    item.value = data.item
-    expiresAt.value = data.expires_at || ''
+    }).then((data) => {
+        if (disposed) return
+        item.value = data.item
+        expiresAt.value = data.expires_at || ''
+    }).finally(() => { refreshRequest = null })
+    return refreshRequest
 }
+
+const refresh = () => load().catch((error) => {
+    if (disposed) return
+    item.value = null
+    message.error(error.message || t('invalid'))
+})
 
 const copy = async () => {
     if (!item.value?.code) return
@@ -43,27 +63,16 @@ const save = async () => {
     }
 }
 
-onMounted(async () => {
-    try {
-        await load()
-    } catch (error) {
-        message.error(error.message || t('invalid'))
-    }
-    timer = window.setInterval(async () => {
-        now.value = Date.now()
-        if (item.value && remaining.value <= 0) {
-            try {
-                await load()
-            } catch (error) {
-                item.value = null
-                message.error(error.message || t('invalid'))
-            }
-        }
-    }, 1000)
+onMounted(() => {
+    timer = window.setInterval(handleVisibilityChange, 1000)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    refresh()
 })
 
 onBeforeUnmount(() => {
+    disposed = true
     if (timer) window.clearInterval(timer)
+    document.removeEventListener('visibilitychange', handleVisibilityChange)
 })
 </script>
 
