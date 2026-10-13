@@ -259,3 +259,30 @@ while the reviewed scope is tracked in
 [`plans/PLAN_2026-10-09_impeccable-frontend-polish.md`](plans/PLAN_2026-10-09_impeccable-frontend-polish.md).
 This closes the inherited pending work noted on 2026-10-12. No push, release,
 deployment, API change, database change, or secret change was performed.
+
+## Authorized production delivery and incident handoff — 2026-10-13
+
+The user subsequently authorized committing all appropriate pending work,
+pushing main and deploying production, overriding the earlier local-only
+delivery notes above. The local main backlog (18 commits at push time) was
+pushed through `3a557f7`; this includes `a274ddf` shared admin controls and
+`3a557f7` reviewed pending frontend reliability/keyboard work.
+
+Canonical Immediate Pages release was run once for source
+`3a557f7110afc55771c6f1beaaf687e60a1cd889`. The saved receipt status is ACCEPTED
+and acceptance.passed is true. Deployment URL:
+https://d96bef4c.email-transfer-station.pages.dev . Root/admin/settings/auth
+acceptance and asset checks passed for all configured targets. CI run
+38294511456 completed successfully for the same source. No remote database
+migration, DNS change, secret rotation or second Pages deployment was performed.
+
+The subsequent account Durable Objects quota alert was attributed by Cloudflare
+namespace inventory/GraphQL to WANdrop PairRoom, not this product (which has no
+DO namespace). Emergency product changes were made in D:/Develop/WANdrop and
+released through 0.0.78. Their full ledger, latest still-high write counters and
+explicit user pause are recorded in that workspace's
+docs/evidence/2026-10-13-do-idle-write-incident.md and docs/CURRENT.md.
+
+This final documentation correction records the already-completed release;
+it does not trigger a new product release. The user requested pausing after
+checks/recording and will arrange continuation in the WANdrop workspace.
