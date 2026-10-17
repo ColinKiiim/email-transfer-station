@@ -3627,12 +3627,6 @@ html.dark .admin-next-host .gmail-loading-pill {
     }
 
     .admin-next-host .mail-workbench {
-        grid-template-columns:
-            minmax(180px, var(--mail-facets-width, 200px))
-            4px
-            minmax(340px, var(--mail-list-width, 500px))
-            4px
-            minmax(360px, 1fr);
         height: 100%;
         min-height: 0;
         max-width: 100%;
@@ -3647,14 +3641,22 @@ html.dark .admin-next-host .gmail-loading-pill {
     }
 }
 
+/* Gmail: without room for list and reader side by side, an open mail takes
+   the whole page and Back returns to the list. */
+@media (max-width: 1100px) {
+    .admin-next-host .mail-workbench.flow-mode-detail {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .admin-next-host .mail-workbench.flow-mode-detail .mail-list-panel,
+    .admin-next-host .mail-workbench.flow-mode-detail .detail-resizer,
+    .admin-next-host .mail-view-toggle-btn {
+        display: none !important;
+    }
+}
+
 @media (max-width: 1120px) {
     .admin-next-host .mail-workbench {
-        grid-template-columns:
-            minmax(170px, var(--mail-facets-width, 190px))
-            4px
-            minmax(320px, var(--mail-list-width, 460px))
-            4px
-            minmax(320px, 1fr);
         height: 100%;
         min-height: 0;
     }

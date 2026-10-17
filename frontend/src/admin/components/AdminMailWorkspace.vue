@@ -129,11 +129,20 @@ const setRenderMode = (mode) => {
     showReaderMenu.value = false
 }
 
+// Back keeps the reader's mail in view; a full-page reader hides the list,
+// which drops its scroll position.
+const returnToList = async () => {
+    const id = props.model.currentMail?.id
+    props.actions.backToMailList()
+    await nextTick()
+    if (id) mailList.value?.querySelector(`[data-mail-id="${CSS.escape(id)}"]`)?.scrollIntoView({ block: 'nearest' })
+}
+
 const markCurrentUnread = async () => {
     const row = props.model.currentMail
     if (!row) return
     await props.actions.setRowReadState(row, false)
-    props.actions.backToMailList()
+    await returnToList()
 }
 
 const handleRowMouseEnter = (row) => {
@@ -396,7 +405,7 @@ defineExpose({
                 </div>
             </div>
             <div ref="mailList" class="mail-list" role="list" :aria-label="t('mailRecordsLabel')">
-                <div v-for="row in (model.visibleMailRows || model.filteredMailRows)" :key="row.id" class="mail-row"
+                <div v-for="row in (model.visibleMailRows || model.filteredMailRows)" :key="row.id" :data-mail-id="row.id" class="mail-row"
                     role="listitem" :aria-current="actions.isSelected('flow', row) ? 'true' : undefined" tabindex="0"
                     :class="{ 'is-selected': actions.isSelected('flow', row), 'is-unread': row.unread, 'is-checked': actions.isMailSelected(row.id) }"
                     @click="actions.selectRow('flow', row.id)"
@@ -481,7 +490,7 @@ defineExpose({
                 <div class="reader-toolbar-group">
                     <button type="button" class="reader-icon-btn detail-back-btn"
                         :aria-label="t('backToInbox')" :title="t('backToInbox')"
-                        @click="actions.backToMailList()">
+                        @click="returnToList">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5" /><path d="m12 19-7-7 7-7" /></svg>
                     </button>
                     <template v-if="model.currentMail">
