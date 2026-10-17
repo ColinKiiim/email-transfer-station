@@ -86,8 +86,8 @@ export const listRawMailsWithReadState = async (
     const resolvedResults = await resolveRawEmailList(results);
     const count = pagination.offset === 0
         ? await c.env.DB.prepare(
-            `SELECT count(*) AS count FROM raw_mails r ${whereSql}`
-        ).bind(...params).first<number>("count")
+            `SELECT count(*) AS count FROM raw_mails r ${readJoin} ${whereSql}`
+        ).bind(...actorParams, ...params).first<number>("count")
         : 0;
     const unreadCount = pagination.offset === 0
         ? await c.env.DB.prepare(

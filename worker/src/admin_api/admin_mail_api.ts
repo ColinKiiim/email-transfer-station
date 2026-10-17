@@ -175,14 +175,15 @@ const withAdminParsedMailRows = async (
 
 export default {
     getMails: async (c: Context<HonoCustomType>) => {
-        const { address, domain, address_prefix, include_raw, limit, offset } = c.req.query();
+        const { address, domain, address_prefix, unread, include_raw, limit, offset } = c.req.query();
         const addressQuery = address ? `r.address = ?` : "";
         const addressParams = address ? [address] : [];
         const domainQuery = domain ? `lower(substr(r.address, instr(r.address, '@') + 1)) = lower(?)` : "";
         const domainParams = domain ? [domain] : [];
         const prefixQuery = address_prefix ? `instr(lower(r.address), lower(?)) > 0` : "";
         const prefixParams = address_prefix ? [address_prefix] : [];
-        const filterQuerys = [addressQuery, domainQuery, prefixQuery].filter((item) => item).join(" and ");
+        const unreadQuery = unread === "true" ? "mrs.read_at IS NULL" : "";
+        const filterQuerys = [addressQuery, domainQuery, prefixQuery, unreadQuery].filter((item) => item).join(" and ");
         const finalQuery = filterQuerys.length > 0 ? `WHERE ${filterQuerys}` : "";
         const filterParams = [...addressParams, ...domainParams, ...prefixParams]
         return await withAdminParsedMailRows(

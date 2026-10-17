@@ -29,7 +29,13 @@ export const createAdminApi = (fetcher, { requestIdFactory = createAdminRequestI
     listDomains: () => fetcher('/api/admin/domains'),
     listMailDomains: () => fetcher('/api/admin/mail_domains'),
     listMailAddresses: () => fetcher('/api/admin/mail_addresses'),
-    listMails: ({ limit = ADMIN_MAIL_PAGE_LIMIT, offset = 0 } = {}) => fetcher(`/api/admin/mails?limit=${limit}&offset=${offset}&include_raw=false`),
+    listMails: ({ limit = ADMIN_MAIL_PAGE_LIMIT, offset = 0, domain, address, unread } = {}) => {
+        const params = new URLSearchParams({ limit: String(limit), offset: String(offset), include_raw: 'false' })
+        if (address) params.set('address', address)
+        else if (domain) params.set('domain', domain)
+        if (unread) params.set('unread', 'true')
+        return fetcher(`/api/admin/mails?${params}`)
+    },
     getMail: (id) => fetcher(`/api/admin/mails/${pathId(id)}`),
     listUnknownMails: () => fetcher('/api/admin/mails_unknow?limit=100&offset=0&include_raw=false'),
     listAddresses: () => fetcher('/api/admin/address?limit=50&offset=0'),
@@ -300,12 +306,12 @@ const VIEW_READS = {
     authenticators: [],
 }
 
-export const loadAdminViewSnapshot = async (client = adminApi, view = 'overview') => {
+export const loadAdminViewSnapshot = async (client = adminApi, view = 'overview', args = {}) => {
     const errors = []
     const reads = VIEW_READS[view] || VIEW_READS.overview
     const safeRead = async ([key, label, method, shouldRecord = true]) => {
         try {
-            return [key, await client[method]()]
+            return [key, await client[method](args[method])]
         } catch (error) {
             if (shouldRecord) errors.push(`${label}: ${error?.message || error || 'error'}`)
             return [key, null]

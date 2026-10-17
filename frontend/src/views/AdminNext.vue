@@ -291,10 +291,26 @@ const applyAdminSnapshot = (snapshot, view) => {
     }
 }
 
+// Mail filters run on the server so a filter matches every stored mail, not
+// only the page already loaded.
+const mailListQuery = () => ({
+    domain: ui.domain !== 'all' ? ui.domain : undefined,
+    address: ui.address !== 'all' ? ui.address : undefined,
+    unread: ui.status === 'unread' || undefined,
+})
+const isMailListFiltered = () => Object.values(mailListQuery()).some(Boolean)
+const viewSnapshotArgs = (view) => (view === 'flow' ? { listMails: mailListQuery() } : {})
+// A filtered list's unread count is scoped to the filter; keep the inbox-wide
+// badge from the last unfiltered read.
+const keepInboxUnreadCount = (snapshot, view) => {
+    if (view === 'flow' && isMailListFiltered()) snapshot.mailUnreadCount = live.mailUnreadCount
+    return snapshot
+}
+
 const fetchAdminData = async (view = activeView.value) => {
     if (!showAdminPage.value) return
     const generation = ++adminLoadGeneration
-    const snapshot = await loadAdminViewSnapshot(adminApi, view)
+    const snapshot = keepInboxUnreadCount(await loadAdminViewSnapshot(adminApi, view, viewSnapshotArgs(view)), view)
     if (generation !== adminLoadGeneration) return
     applyAdminSnapshot(snapshot, view)
     live.fetchedAdmin = true
@@ -315,7 +331,10 @@ const setView = async (targetView) => {
     const generation = ++adminLoadGeneration
 
     try {
-        const snapshot = await loadAdminViewSnapshot(adminApi, targetView)
+        const snapshot = keepInboxUnreadCount(
+            await loadAdminViewSnapshot(adminApi, targetView, viewSnapshotArgs(targetView)),
+            targetView,
+        )
         if (generation !== adminLoadGeneration) return
 
         applyAdminSnapshot(snapshot, targetView)
@@ -383,6 +402,26 @@ const refreshUsers = async () => {
 watch(activeView, () => {
     if (isNavigating.value) return
     if (live.fetchedAdmin && showAdminPage.value && !showAdminAuth.value) void refreshAll()
+})
+
+const reloadMailList = async () => {
+    const generation = ++adminLoadGeneration
+    try {
+        const response = await adminApi.listMails(mailListQuery())
+        if (generation !== adminLoadGeneration) return
+        live.mails = Array.isArray(response?.results) ? response.results : []
+        live.mailTotalCount = Number.isFinite(Number(response?.count)) ? Number(response.count) : null
+        if (!isMailListFiltered() && Number.isFinite(Number(response?.unread_count))) {
+            live.mailUnreadCount = Number(response.unread_count)
+        }
+    } catch (error) {
+        if (generation === adminLoadGeneration) recordLoadError('mails', error)
+    }
+}
+
+watch(() => [ui.domain, ui.address, ui.status === 'unread'].join('\n'), () => {
+    if (isNavigating.value || activeView.value !== 'flow') return
+    if (live.fetchedAdmin && showAdminPage.value && !showAdminAuth.value) void reloadMailList()
 })
 
 const {
@@ -479,7 +518,9 @@ const {
     onParseError: (error) => console.error(error),
     getMailTotalCount: () => live.mailTotalCount,
     loadMailPage: async (page) => {
-        const response = await adminApi.listMails({ limit: 25, offset: (page - 1) * 25 })
+        const generation = adminLoadGeneration
+        const response = await adminApi.listMails({ ...mailListQuery(), limit: 25, offset: (page - 1) * 25 })
+        if (generation !== adminLoadGeneration) return
         const rows = Array.isArray(response?.results) ? response.results : []
         const loaded = new Set(live.mails.map((row) => row.id))
         live.mails.push(...rows.filter((row) => !loaded.has(row.id)))

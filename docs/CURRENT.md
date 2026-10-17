@@ -286,3 +286,19 @@ docs/evidence/2026-10-13-do-idle-write-incident.md and docs/CURRENT.md.
 This final documentation correction records the already-completed release;
 it does not trigger a new product release. The user requested pausing after
 checks/recording and will arrange continuation in the WANdrop workspace.
+
+## Server-side admin mail filters — 2026-10-18
+
+The admin inbox domain, address, and unread filters only matched the 25 mails
+already loaded (e.g. a domain filter showed 16 of 485 stored mails). The flow
+view now sends `domain`/`address`/`unread` to `/api/admin/mails` on load, on
+filter change, and for later pages, so counts and pages reflect the whole
+store. The Worker accepts `unread=true`; the count query now uses the same
+read-state join. The inbox unread badge keeps the last unfiltered count.
+Free-text search and the attachment queue remain client-side over loaded rows
+(list rows carry no attachment count).
+
+Validation: frontend `admin-api` and `AdminNext` tests (17), Worker
+`admin_api_routes` and `mail_read_state` tests (13), Worker typecheck, and
+`git diff --check` passed. The domain/address filters work with the deployed
+Worker; `unread=true` needs the Worker change to be deployed.
