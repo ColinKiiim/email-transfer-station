@@ -288,7 +288,7 @@ describe('AdminNext behavior baseline', () => {
     it('cancels a destructive mail write before the API call', async () => {
         const { wrapper } = await mountAdmin({ path: '/admin?view=flow&mailId=mail-7&mode=detail' })
 
-        await wrapper.get('.mail-detail-panel .panel-head .danger').trigger('click')
+        await wrapper.get('.mail-detail-panel .panel-head .detail-delete-btn').trigger('click')
         await settle()
 
         expect(wrapper.find('[data-testid="confirm-dialog-backdrop"]').exists()).toBe(true)
@@ -305,7 +305,7 @@ describe('AdminNext behavior baseline', () => {
         runtime.deleteError = new Error('删除接口失败')
         const { wrapper } = await mountAdmin({ path: '/admin?view=flow&mailId=mail-7&mode=detail' })
 
-        await wrapper.get('.mail-detail-panel .panel-head .danger').trigger('click')
+        await wrapper.get('.mail-detail-panel .panel-head .detail-delete-btn').trigger('click')
         await settle()
 
         expect(wrapper.find('[data-testid="confirm-dialog-backdrop"]').exists()).toBe(true)

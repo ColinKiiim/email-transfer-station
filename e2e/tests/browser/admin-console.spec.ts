@@ -69,7 +69,7 @@ test.describe('Admin console', () => {
       await expect(page).toHaveURL(/view=flow/);
       await expect(page.locator('.mail-row[aria-current="true"]', { hasText: subject })).toBeVisible();
 
-      await page.locator('.mail-detail-panel .panel-head .danger').click();
+      await page.locator('.mail-detail-panel .panel-head .detail-delete-btn').click();
       await expect(page.getByTestId('confirm-dialog-backdrop')).toBeVisible();
       await page.getByTestId('confirm-submit').click();
       await expect(page.locator('.toast')).toContainText('已删除 1 封邮件');
