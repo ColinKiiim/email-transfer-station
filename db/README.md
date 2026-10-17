@@ -5,7 +5,7 @@ unchanged. `worker/src/database.ts` imports their SQL as text and orders support
 upgrades from `v0.0.2` onward. Admin routes retain authorization, confirmation,
 audit, and response handling; they contain no table definitions.
 
-The current local code expects `v0.0.19`. The v0.0.17 corrective step described in
+The current local code expects `v0.0.20`. The v0.0.17 corrective step described in
 `2026-10-05-schema-consistency.sql` rebuilds the three authenticator tables in one
 D1 batch using the definitions from `schema.sql`, then restores canonical indexes.
 Both published `v0.0.16` shapes are supported. Resource IDs, ciphertext, nonces,
@@ -19,6 +19,13 @@ The v0.0.19 upgrade adds `admin_browser_sessions` and its expiry index directly
 from `schema.sql`. From v0.0.18 this is an additive, retryable upgrade; existing
 resources and relationship shapes are unchanged. The new Worker requires the
 table for persistent administrator login. See [administrator sessions](../docs/admin-sessions.md).
+
+The v0.0.20 upgrade adds `raw_mails.subject` and `raw_mails.attachment_count`
+(`2026-10-18-mail-summary.sql`) so admin search and the attachment filter run in
+SQL. New mail fills both at ingest. `POST /api/admin/db_migration` then
+backfills rows whose `attachment_count` is NULL, at most 500 per call, and
+returns `mail_summary.remaining`; repeat the call until it is 0. The previous
+Worker ignores the new columns.
 
 Each historical ALTER checks whether its column already exists. Historical
 version writes are ignored; the executor writes the current version only after

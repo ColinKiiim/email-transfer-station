@@ -11,6 +11,7 @@ import { remove_attachment_if_need } from "./check_attachment";
 import { extractEmailInfo } from "./ai_extract";
 import { forwardEmail } from "./forward";
 import { compressText } from "../gzip";
+import { mailSummary } from "../admin_api/admin_mail_api";
 import { resolveInboundRecipient } from "./recipient";
 import {
     getCollectorAddresses,
@@ -165,6 +166,15 @@ async function email(message: ForwardableEmailMessage, env: Bindings, ctx: Execu
         message.setReject(`Failed save message to ${inboundRecipient.address}`);
         console.error(`Failed save message from ${message.from} to ${inboundRecipient.address}`);
         return;
+    }
+
+    // A missed summary is filled by the next migration backfill.
+    try {
+        const summary = mailSummary(parsedEmailContext.rawEmail);
+        await env.DB.prepare(`UPDATE raw_mails SET subject = ?, attachment_count = ? WHERE id = ?`)
+            .bind(summary.subject, summary.attachment_count, rawMailId).run();
+    } catch (error) {
+        console.error("save mail summary error", error);
     }
 
     // ponytail: the receipt makes external effects at-most-once; use an outbox

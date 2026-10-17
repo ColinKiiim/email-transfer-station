@@ -14,12 +14,13 @@ import readStates from '../../db/2026-07-27-mail-read-states.sql';
 import delivery from '../../db/2026-08-13-delivery-authority.sql';
 import consistency from '../../db/2026-10-05-schema-consistency.sql';
 import authenticatorSources from '../../db/2026-10-05-authenticator-access-sources.sql';
+import mailSummary from '../../db/2026-10-18-mail-summary.sql';
 import { CONSTANTS } from './constants';
 
 const migrations = [
     [3, password], [4, metadata], [5, sourceMeta], [6, messageId], [7, rawBlob],
     [8, ingress], [9, credentials], [10, identities], [11, audit], [12, domains],
-    [13, hardening], [14, readStates], [15, delivery], [18, authenticatorSources],
+    [13, hardening], [14, readStates], [15, delivery], [18, authenticatorSources], [20, mailSummary],
 ] as const;
 
 // SQL files here contain no triggers or semicolons inside string literals.

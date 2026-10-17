@@ -11,6 +11,8 @@ CREATE TABLE IF NOT EXISTS raw_mails (
     raw TEXT,
     raw_blob BLOB,
     metadata TEXT,
+    subject TEXT,
+    attachment_count INTEGER,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -18,6 +18,7 @@ import { adminT } from './admin-i18n'
 import { statusOptionsForView } from './admin-route-state'
 
 const t = adminT('admin.mail')
+const SERVER_MAIL_STATUSES = new Set(['unread', 'read', 'attachment'])
 
 export const normalizeAdminMailRows = (rows = []) => (Array.isArray(rows) ? rows : []).map((row) => {
     const rawSubject = extractHeader(row.raw, 'Subject')
@@ -301,7 +302,15 @@ export const useAdminMailFlow = ({
     const mailRows = computed(() => normalizeAdminMailRows(getMails()))
     const unknownRows = computed(() => normalizeUnknownMailRows(getUnknownMails()))
     const filterRows = (rows) => filterAdminRows(rows, ui, activeView.value)
-    const filteredMailRows = computed(() => filterRows(mailRows.value))
+    // The server already applied search, domain, address and read/attachment
+    // filters; only local-only statuses are filtered here.
+    const filteredMailRows = computed(() => filterAdminRows(mailRows.value, {
+        ...ui,
+        query: '',
+        domain: 'all',
+        address: 'all',
+        status: SERVER_MAIL_STATUSES.has(ui.status) ? 'all' : ui.status,
+    }, activeView.value))
     const filteredUnknownRows = computed(() => filterRows(unknownRows.value))
     const currentMail = computed(() => mailRows.value.find((row) => row.id === ui.selected.flow) || null)
     const parsedMailCache = reactive({})

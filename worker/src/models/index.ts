@@ -206,5 +206,7 @@ export type RawMailRow = {
     raw?: string;
     raw_blob?: ArrayBuffer | ArrayLike<number>;
     metadata?: string;
+    subject?: string | null;
+    attachment_count?: number | null;
     created_at?: string;
 }

@@ -2,6 +2,7 @@ import { Context } from "hono";
 import { CONSTANTS } from "../constants";
 import { recordAuditEvent } from "../audit";
 import { getDatabaseVersion, initializeDatabase, migrateDatabase } from "../database";
+import { backfillMailSummaries } from "./admin_mail_api";
 
 async function changeDatabase(c: Context<HonoCustomType>, action: 'initialize' | 'migrate') {
     let result;
@@ -18,7 +19,13 @@ async function changeDatabase(c: Context<HonoCustomType>, action: 'initialize' |
         metadata: { from_version: result.from, to_version: CONSTANTS.DB_VERSION },
     });
     if (action === 'initialize') return c.json({ message: result.changed ? "Database initialized" : "Database already initialized" });
-    return c.json({ success: true, message: result.changed ? "Database migrated" : "Database does not need migration" });
+    // Retrying the migration also continues an unfinished mail summary backfill.
+    const mailSummary = await backfillMailSummaries(c.env.DB);
+    return c.json({
+        success: true,
+        message: result.changed ? "Database migrated" : "Database does not need migration",
+        mail_summary: mailSummary,
+    });
 }
 
 export default {

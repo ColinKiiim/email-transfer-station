@@ -296,9 +296,11 @@ const applyAdminSnapshot = (snapshot, view) => {
 const mailListQuery = () => ({
     domain: ui.domain !== 'all' ? ui.domain : undefined,
     address: ui.address !== 'all' ? ui.address : undefined,
-    unread: ui.status === 'unread' || undefined,
+    unread: ui.status === 'unread' ? true : ui.status === 'read' ? false : undefined,
+    hasAttachment: ui.status === 'attachment' || undefined,
+    q: String(ui.query || '').trim() || undefined,
 })
-const isMailListFiltered = () => Object.values(mailListQuery()).some(Boolean)
+const isMailListFiltered = () => Object.values(mailListQuery()).some((value) => value !== undefined)
 const viewSnapshotArgs = (view) => (view === 'flow' ? { listMails: mailListQuery() } : {})
 // A filtered list's unread count is scoped to the filter; keep the inbox-wide
 // badge from the last unfiltered read.
@@ -419,9 +421,14 @@ const reloadMailList = async () => {
     }
 }
 
-watch(() => [ui.domain, ui.address, ui.status === 'unread'].join('\n'), () => {
+let mailSearchTimer = null
+watch(() => JSON.stringify(mailListQuery()), (next, previous) => {
+    clearTimeout(mailSearchTimer)
     if (isNavigating.value || activeView.value !== 'flow') return
-    if (live.fetchedAdmin && showAdminPage.value && !showAdminAuth.value) void reloadMailList()
+    if (!live.fetchedAdmin || !showAdminPage.value || showAdminAuth.value) return
+    // Typing waits for a pause; filter clicks reload at once.
+    const typing = JSON.parse(next).q !== JSON.parse(previous).q
+    mailSearchTimer = setTimeout(() => void reloadMailList(), typing ? 300 : 0)
 })
 
 const {
@@ -1164,6 +1171,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
     window.removeEventListener('keydown', handleGlobalKeydown)
+    clearTimeout(mailSearchTimer)
     disposeFeedback()
 })
 </script>

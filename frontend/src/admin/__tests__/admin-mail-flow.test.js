@@ -354,8 +354,10 @@ describe('admin mail-flow model', () => {
         expect(flow.isMailSelected('mail-1')).toBe(true)
         expect(flow.isMailSelected('mail-3')).toBe(true)
 
-        // 8. Stale selection pruning on filter change
+        // 8. Stale selection pruning when the server returns a filtered list
+        const allRows = source.value
         ui.status = 'unread'
+        source.value = [allRows[0], allRows[2]]
         await nextTick()
         // Visible rows are mail-1 and mail-3
         expect(flow.filteredMailRows.value.map((r) => r.id)).toEqual(['mail-1', 'mail-3'])
@@ -367,6 +369,7 @@ describe('admin mail-flow model', () => {
         expect(flow.isMailSelected('mail-1')).toBe(true)
 
         ui.status = 'read'
+        source.value = [allRows[1], allRows[3]]
         await nextTick()
         // Visible rows are mail-2 and mail-4; mail-1 is pruned!
         expect(flow.isMailSelected('mail-1')).toBe(false)
@@ -374,6 +377,7 @@ describe('admin mail-flow model', () => {
 
         // 9. Stale selection pruning on source update
         ui.status = 'all'
+        source.value = allRows
         await nextTick()
         flow.toggleMailSelection(flow.filteredMailRows.value[0]) // mail-1
         expect(flow.isMailSelected('mail-1')).toBe(true)
@@ -459,8 +463,9 @@ describe('admin mail-flow model', () => {
         flow.prevMailPage()
         expect(flow.mailPage.value).toBe(2)
 
-        // Filter change (status) resets page to 1
+        // Filter change (status) resets page to 1; the server returns the matches
         ui.status = 'unread'
+        source.value = generateMails(60).filter((row) => row.unread)
         await nextTick()
         expect(flow.mailPage.value).toBe(1)
         // 30 unread mails -> 2 pages of 25 (25, 5)
@@ -479,6 +484,7 @@ describe('admin mail-flow model', () => {
         // Reset query and status
         ui.query = ''
         ui.status = 'all'
+        source.value = generateMails(60)
         await nextTick()
         expect(flow.mailPage.value).toBe(1)
 

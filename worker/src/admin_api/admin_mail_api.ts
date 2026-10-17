@@ -5,7 +5,7 @@ import {
     readStateFromRequest,
     updateRawMailReadState,
 } from "../mail_read_state";
-import { resolveRawEmailRow } from "../gzip";
+import { resolveRawEmail, resolveRawEmailRow } from "../gzip";
 import { RawMailRow } from "../models";
 
 const ADMIN_MAIL_PREVIEW_RAW_LIMIT = 64 * 1024;
@@ -127,6 +127,73 @@ export const fallbackBodyPreview = (raw: string): string => {
     return normalizeMailText(stripHtml(body).slice(0, 4000)).slice(0, 1000);
 };
 
+const ATTACHMENT_PART = /^content-disposition:[ \t]*attachment\b/gim;
+
+// Stored with each mail so search and the attachment filter run in SQL.
+export const mailSummary = (raw: string): { subject: string | null, attachment_count: number } => ({
+    subject: normalizeMailText(fallbackHeader(unfoldHeaders(splitHeadersAndBody(raw.slice(0, ADMIN_MAIL_PREVIEW_RAW_LIMIT)).headers), "Subject")) || null,
+    attachment_count: raw.match(ATTACHMENT_PART)?.length || 0,
+});
+
+const MAIL_SUMMARY_BATCH = 50;
+
+// ponytail: one call summarizes at most maxRows; repeat the migration call until remaining is 0.
+export const backfillMailSummaries = async (db: D1Database, maxRows = 500) => {
+    let summarized = 0;
+    while (summarized < maxRows) {
+        const { results } = await db.prepare(
+            `SELECT id, raw, raw_blob FROM raw_mails WHERE attachment_count IS NULL ORDER BY id DESC LIMIT ?`
+        ).bind(MAIL_SUMMARY_BATCH).all<RawMailRow>();
+        if (!results.length) break;
+        const statements = await Promise.all(results.map(async (row) => {
+            const summary = mailSummary(await resolveRawEmail(row));
+            return db.prepare(`UPDATE raw_mails SET subject = ?, attachment_count = ? WHERE id = ?`)
+                .bind(summary.subject, summary.attachment_count, row.id);
+        }));
+        await db.batch(statements);
+        summarized += results.length;
+    }
+    const remaining = await db.prepare(
+        `SELECT count(*) AS count FROM raw_mails WHERE attachment_count IS NULL`
+    ).first<number>("count");
+    return { summarized, remaining: remaining || 0 };
+};
+
+const SEARCH_COLUMNS: Record<string, string> = {
+    from: "r.source",
+    to: "r.address",
+    subject: "r.subject",
+};
+
+// Gmail-style query: plain words match subject, sender or recipient; from:, to:,
+// subject:, has:attachment, is:unread, is:read, after: and before: narrow it.
+const mailSearchFilter = (query: string): { sql: string[], params: string[] } => {
+    const sql: string[] = [];
+    const params: string[] = [];
+    const contains = (column: string) => `instr(lower(coalesce(${column}, '')), ?) > 0`;
+    const tokens = query.match(/(?:[^\s"]+|"[^"]*")+/g) || [];
+    for (const token of tokens.map((item) => item.replace(/"/g, "").toLowerCase()).filter(Boolean)) {
+        const separator = token.indexOf(":");
+        const key = separator > 0 ? token.slice(0, separator) : "";
+        const value = separator > 0 ? token.slice(separator + 1) : "";
+        if (value && SEARCH_COLUMNS[key]) {
+            sql.push(contains(SEARCH_COLUMNS[key]));
+            params.push(value);
+        } else if (key === "has" && value === "attachment") {
+            sql.push("r.attachment_count > 0");
+        } else if (key === "is" && (value === "unread" || value === "read")) {
+            sql.push(value === "unread" ? "mrs.read_at IS NULL" : "mrs.read_at IS NOT NULL");
+        } else if (value && (key === "after" || key === "before")) {
+            sql.push(`date(r.created_at) ${key === "after" ? ">=" : "<="} ?`);
+            params.push(value);
+        } else {
+            sql.push(`(${Object.values(SEARCH_COLUMNS).map(contains).join(" OR ")})`);
+            params.push(token, token, token);
+        }
+    }
+    return { sql, params };
+};
+
 export const toAdminParsedMailRow = async (
     row: Record<string, unknown>,
     includeRaw = true,
@@ -148,7 +215,7 @@ export const toAdminParsedMailRow = async (
         html: "",
         message: text,
         attachments: [],
-        attachment_count: 0,
+        attachment_count: Number(row.attachment_count) || 0,
         parse_status: raw ? "lightweight" : "empty",
     };
 };
@@ -175,17 +242,19 @@ const withAdminParsedMailRows = async (
 
 export default {
     getMails: async (c: Context<HonoCustomType>) => {
-        const { address, domain, address_prefix, unread, include_raw, limit, offset } = c.req.query();
+        const { address, domain, address_prefix, unread, has_attachment, q, include_raw, limit, offset } = c.req.query();
         const addressQuery = address ? `r.address = ?` : "";
         const addressParams = address ? [address] : [];
         const domainQuery = domain ? `lower(substr(r.address, instr(r.address, '@') + 1)) = lower(?)` : "";
         const domainParams = domain ? [domain] : [];
         const prefixQuery = address_prefix ? `instr(lower(r.address), lower(?)) > 0` : "";
         const prefixParams = address_prefix ? [address_prefix] : [];
-        const unreadQuery = unread === "true" ? "mrs.read_at IS NULL" : "";
-        const filterQuerys = [addressQuery, domainQuery, prefixQuery, unreadQuery].filter((item) => item).join(" and ");
+        const unreadQuery = unread === "true" ? "mrs.read_at IS NULL" : unread === "false" ? "mrs.read_at IS NOT NULL" : "";
+        const attachmentQuery = has_attachment === "true" ? "r.attachment_count > 0" : "";
+        const search = mailSearchFilter(q || "");
+        const filterQuerys = [addressQuery, domainQuery, prefixQuery, unreadQuery, attachmentQuery, ...search.sql].filter((item) => item).join(" and ");
         const finalQuery = filterQuerys.length > 0 ? `WHERE ${filterQuerys}` : "";
-        const filterParams = [...addressParams, ...domainParams, ...prefixParams]
+        const filterParams = [...addressParams, ...domainParams, ...prefixParams, ...search.params]
         return await withAdminParsedMailRows(
             c,
             await listRawMailsWithReadState(c, ADMIN_MAIL_READ_ACTOR, finalQuery, filterParams, limit, offset),

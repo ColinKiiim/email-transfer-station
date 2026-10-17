@@ -29,11 +29,13 @@ export const createAdminApi = (fetcher, { requestIdFactory = createAdminRequestI
     listDomains: () => fetcher('/api/admin/domains'),
     listMailDomains: () => fetcher('/api/admin/mail_domains'),
     listMailAddresses: () => fetcher('/api/admin/mail_addresses'),
-    listMails: ({ limit = ADMIN_MAIL_PAGE_LIMIT, offset = 0, domain, address, unread } = {}) => {
+    listMails: ({ limit = ADMIN_MAIL_PAGE_LIMIT, offset = 0, domain, address, unread, hasAttachment, q } = {}) => {
         const params = new URLSearchParams({ limit: String(limit), offset: String(offset), include_raw: 'false' })
         if (address) params.set('address', address)
         else if (domain) params.set('domain', domain)
-        if (unread) params.set('unread', 'true')
+        if (typeof unread === 'boolean') params.set('unread', String(unread))
+        if (hasAttachment) params.set('has_attachment', 'true')
+        if (q) params.set('q', q)
         return fetcher(`/api/admin/mails?${params}`)
     },
     getMail: (id) => fetcher(`/api/admin/mails/${pathId(id)}`),
