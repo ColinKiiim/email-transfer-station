@@ -477,7 +477,8 @@ export const MESSAGE_REGISTRY = {
     "mailbox": {
       "en": "Shared Inbox",
       "zh": "共享收件箱"
-    },
+    }
+,
     "verifying": {
       "en": "Verifying",
       "zh": "验证中"
@@ -1355,7 +1356,8 @@ export const MESSAGE_REGISTRY = {
     "tooLarge": {
       "en": "Too large file, please upload file less than 1MB.",
       "zh": "文件过大, 请上传小于1MB的文件"
-    },
+    }
+,
     "success": {
       "en": "Success",
       "zh": "成功"
@@ -1417,7 +1419,8 @@ export const MESSAGE_REGISTRY = {
     "refreshSuccess": {
       "en": "Mails refreshed successfully",
       "zh": "邮件刷新成功"
-    },
+    }
+,
     "copyFailed": {
       "en": "Copy failed",
       "zh": "复制失败"
@@ -1732,7 +1735,8 @@ export const MESSAGE_REGISTRY = {
       "en": "Signing in",
       "zh": "登录中"
     }
-  },
+  }
+,
   "admin.nav": {
     "overview": {
       "en": "Overview",
@@ -3448,17 +3452,45 @@ export const MESSAGE_REGISTRY = {
       "en": "{start}-{end} of {total}",
       "zh": "第 {start}-{end} 封，共 {total} 封"
     },
-    "rangeLabelLoaded": {
-      "en": "{start}-{end} of {loaded} (loaded) / {total} total",
-      "zh": "第 {start}-{end} 封 (已载 {loaded})，共 {total} 封"
-    },
-    "rangeLabelFilteredLoaded": {
-      "en": "{start}-{end} of {loadedMatches} loaded matches / {total} total",
-      "zh": "第 {start}-{end} 封（当前已载匹配 {loadedMatches} 封），数据库总数 {total} 封"
-    },
     "rangeEmpty": {
-      "en": "0 of 0",
-      "zh": "第 0 封，共 0 封"
+      "en": "No mail",
+      "zh": "没有邮件"
+    },
+    "readerPosition": {
+      "en": "{index} of {total}",
+      "zh": "第 {index} 封，共 {total} 封"
+    },
+    "newerMail": {
+      "en": "Newer",
+      "zh": "较新"
+    },
+    "olderMail": {
+      "en": "Older",
+      "zh": "较旧"
+    },
+    "backToInbox": {
+      "en": "Back to Inbox",
+      "zh": "返回收件箱"
+    },
+    "moreActions": {
+      "en": "More",
+      "zh": "更多"
+    },
+    "showHtml": {
+      "en": "Show formatted message",
+      "zh": "显示格式化邮件"
+    },
+    "showText": {
+      "en": "Show plain text",
+      "zh": "显示纯文本"
+    },
+    "showOriginal": {
+      "en": "Show original",
+      "zh": "显示原始邮件"
+    },
+    "toMe": {
+      "en": "to {address}",
+      "zh": "发送至 {address}"
     },
     "prevPage": {
       "en": "Previous page",

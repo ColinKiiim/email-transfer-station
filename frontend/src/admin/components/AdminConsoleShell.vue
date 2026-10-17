@@ -7,7 +7,7 @@ import ProductBrand from '../../components/ProductBrand.vue'
 import ProductSurfaceLinks from '../../components/ProductSurfaceLinks.vue'
 import { getRouterPathWithLang } from '../../utils'
 
-import { formatBadgeCount } from '../admin-formatters'
+import { formatBadgeCount, formatNumber } from '../admin-formatters'
 import {
     ICON_SHAPES as iconShapes,
     NAV_GROUPS as navGroups,
@@ -122,7 +122,7 @@ defineExpose({
                         <span class="nav-text">{{ tNav(item.id) }}</span>
                         <span v-if="model.navBadges[item.badgeKey]?.value" class="nav-badge"
                             :aria-label="model.navBadges[item.badgeKey].label">
-                            {{ formatBadgeCount(model.navBadges[item.badgeKey].value) }}
+                            {{ model.sidebarCollapsed ? formatBadgeCount(model.navBadges[item.badgeKey].value) : formatNumber(model.navBadges[item.badgeKey].value) }}
                         </span>
                         <span v-else-if="model.navBadges[item.badgeKey]?.dot" class="nav-dot"
                             :aria-label="model.navBadges[item.badgeKey].label"></span>

@@ -60,6 +60,9 @@ const handleClickOutside = (e) => {
     if (selectDropdownRef.value && !selectDropdownRef.value.contains(e.target)) {
         showSelectMenu.value = false
     }
+    if (readerMenuRef.value && !readerMenuRef.value.contains(e.target)) {
+        showReaderMenu.value = false
+    }
 }
 
 const handleSelectAllToggle = () => {
@@ -81,26 +84,57 @@ const handleSelectOption = (mode) => {
     nextTick(syncHeaderCheckbox)
 }
 
+// The server filters the list, so its count is the total for the current view.
+const mailListTotal = computed(() => {
+    const loaded = props.model.filteredMailRows?.length || 0
+    const total = Number(props.model.mailTotalCount)
+    return Number.isFinite(total) ? Math.max(total, loaded) : loaded
+})
+
 const rangeLabel = computed(() => {
-    const filteredCount = props.model.filteredMailRows?.length || 0
-    if (!filteredCount) {
-        return t('rangeEmpty') || '0 / 0'
-    }
+    const total = mailListTotal.value
+    if (!total) return t('rangeEmpty')
     const page = props.model.mailPage || 1
     const pageSize = props.model.mailPageSize || 25
     const start = (page - 1) * pageSize + 1
-    const end = Math.min(page * pageSize, filteredCount)
-    const loadedCount = props.model.mailRowCount ?? props.model.mailRows?.length ?? filteredCount
-    const totalCount = props.model.mailTotalCount
-
-    if (totalCount != null && totalCount > loadedCount) {
-        if (props.model.hasActiveFilters) {
-            return t('rangeLabelFilteredLoaded', { start, end, loadedMatches: filteredCount, total: totalCount })
-        }
-        return t('rangeLabelLoaded', { start, end, loaded: loadedCount, total: totalCount })
-    }
-    return t('rangeLabel', { start, end, total: filteredCount })
+    const end = Math.min(page * pageSize, total)
+    return t('rangeLabel', { start: formatNumber(start), end: formatNumber(end), total: formatNumber(total) })
 })
+
+const currentMailIndex = computed(() => (
+    (props.model.filteredMailRows || []).findIndex((row) => row.id === props.model.currentMail?.id)
+))
+
+const readerPositionLabel = computed(() => (
+    currentMailIndex.value < 0
+        ? ''
+        : t('readerPosition', { index: formatNumber(currentMailIndex.value + 1), total: formatNumber(mailListTotal.value) })
+))
+
+// Gmail's newer/older arrows walk the filtered list and keep its page in step.
+const openAdjacentMail = async (step) => {
+    const targetIndex = currentMailIndex.value + step
+    if (currentMailIndex.value < 0 || targetIndex < 0 || targetIndex >= mailListTotal.value) return
+    const targetPage = Math.floor(targetIndex / (props.model.mailPageSize || 25)) + 1
+    if (targetPage !== props.model.mailPage) await props.actions.setMailPage(targetPage)
+    const target = props.model.filteredMailRows?.[targetIndex]
+    if (target) props.actions.selectRow('flow', target.id)
+}
+
+const showReaderMenu = ref(false)
+const readerMenuRef = ref(null)
+
+const setRenderMode = (mode) => {
+    props.model.ui.mailRenderMode = mode
+    showReaderMenu.value = false
+}
+
+const markCurrentUnread = async () => {
+    const row = props.model.currentMail
+    if (!row) return
+    await props.actions.setRowReadState(row, false)
+    props.actions.backToMailList()
+}
 
 const handleRowMouseEnter = (row) => {
     props.actions.schedulePrefetchMail?.(row)
@@ -305,9 +339,9 @@ defineExpose({
                         </button>
 
                         <button type="button" class="filter-chip"
-                            :class="{ 'is-active': model.ui.status === 'attachments' }"
-                            :aria-pressed="model.ui.status === 'attachments' ? 'true' : 'false'"
-                            @click="actions.setMailStatus(model.ui.status === 'attachments' ? 'all' : 'attachments')">
+                            :class="{ 'is-active': model.ui.status === 'attachment' }"
+                            :aria-pressed="model.ui.status === 'attachment' ? 'true' : 'false'"
+                            @click="actions.setMailStatus(model.ui.status === 'attachment' ? 'all' : 'attachment')">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                 <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
                             </svg>
@@ -386,8 +420,12 @@ defineExpose({
                         <small v-if="row.body" class="mail-body-preview">{{ row.body }}</small>
                     </span>
                     <span class="mail-meta">
-                        <span v-if="row.attachmentCount > 0" class="attachment-indicator" :title="t('attachments') || '附件'">📎</span>
-                        <span class="mail-time">{{ row.time }}</span>
+                        <span v-if="row.attachmentCount > 0" class="attachment-indicator" :title="t('attachments')">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                            </svg>
+                        </span>
+                        <time class="mail-time" :datetime="row.created_at" :title="row.readerTime">{{ row.listTime || row.time }}</time>
                         <span class="mail-row-actions" role="toolbar" :aria-label="t('rowActions') || '快捷操作'">
                             <button v-if="row.unread" type="button" class="mail-row-action-btn"
                                 :title="t('markAsRead')"
@@ -439,42 +477,88 @@ defineExpose({
             @pointerdown="actions.startMailColumnResize('list-detail', $event)"></button>
 
         <aside class="mail-detail-panel panel" :aria-label="t('mailDetailLabel')">
-            <div class="panel-head">
-                <div class="mail-detail-head-content">
-                    <div class="detail-back-bar">
-                        <button type="button" class="btn compact-btn detail-back-btn"
-                            @click="actions.backToMailList ? actions.backToMailList() : (model.ui.flowMode = 'list', model.ui.selected.flow = '', model.ui.detailKind = '', actions.syncMailQueryToRoute({ mailId: undefined, mode: undefined }))">
-                            ← {{ t('backToList') || '返回列表' }}
+            <div class="panel-head reader-toolbar" role="toolbar" :aria-label="t('mailDetailLabel')">
+                <div class="reader-toolbar-group">
+                    <button type="button" class="reader-icon-btn detail-back-btn"
+                        :aria-label="t('backToInbox')" :title="t('backToInbox')"
+                        @click="actions.backToMailList()">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5" /><path d="m12 19-7-7 7-7" /></svg>
+                    </button>
+                    <template v-if="model.currentMail">
+                        <button type="button" class="reader-icon-btn detail-delete-btn"
+                            :aria-label="t('delete')" :title="t('delete')"
+                            :disabled="!!model.actionBusy" @click="actions.deleteCurrentMail">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M3 6h18" />
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                                <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                            </svg>
                         </button>
-                    </div>
-                    <h2>{{ model.currentMail?.subject || model.currentRail.title }}</h2>
-                    <p v-if="model.currentRail.subtitle && !model.currentMail">{{ model.currentRail.subtitle }}</p>
+                        <button type="button" class="reader-icon-btn"
+                            :aria-label="t('markAsUnread')" :title="t('markAsUnread')"
+                            :disabled="!!model.actionBusy" @click="markCurrentUnread">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg>
+                        </button>
+                        <div ref="readerMenuRef" class="reader-menu-wrapper">
+                            <button type="button" class="reader-icon-btn"
+                                :aria-label="t('moreActions')" :title="t('moreActions')"
+                                :aria-expanded="showReaderMenu" aria-haspopup="menu"
+                                @click.stop="showReaderMenu = !showReaderMenu">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="12" cy="19" r="1" /></svg>
+                            </button>
+                            <div v-show="showReaderMenu" class="mail-select-menu reader-menu" role="menu">
+                                <button type="button" class="select-option" role="menuitemradio"
+                                    :aria-checked="model.ui.mailRenderMode === 'html'"
+                                    :disabled="Boolean(model.isDetailParsing || !model.currentRail.mail?.html)"
+                                    @click="setRenderMode('html')">{{ t('showHtml') }}</button>
+                                <button type="button" class="select-option" role="menuitemradio"
+                                    :aria-checked="model.ui.mailRenderMode === 'text'"
+                                    :disabled="Boolean(model.isDetailParsing || !model.currentRail.mail?.text)"
+                                    @click="setRenderMode('text')">{{ t('showText') }}</button>
+                                <button type="button" class="select-option" role="menuitemradio"
+                                    :aria-checked="model.ui.mailRenderMode === 'raw'"
+                                    :disabled="Boolean(model.isDetailParsing || !model.currentRail.mail?.raw)"
+                                    @click="setRenderMode('raw')">{{ t('showOriginal') }}</button>
+                            </div>
+                        </div>
+                    </template>
                 </div>
-                <button v-if="model.currentMail" type="button" class="btn compact-btn detail-delete-btn"
-                    :disabled="!!model.actionBusy" @click="actions.deleteCurrentMail">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M3 6h18" />
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-                        <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                    </svg>
-                    {{ t('delete') }}
-                </button>
+                <div v-if="model.currentMail && readerPositionLabel" class="reader-toolbar-group reader-pager">
+                    <span class="mail-range-indicator">{{ readerPositionLabel }}</span>
+                    <button type="button" class="mail-page-btn"
+                        :aria-label="t('newerMail')" :title="t('newerMail')"
+                        :disabled="currentMailIndex <= 0 || !!model.actionBusy"
+                        @click="openAdjacentMail(-1)">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
+                    </button>
+                    <button type="button" class="mail-page-btn"
+                        :aria-label="t('olderMail')" :title="t('olderMail')"
+                        :disabled="currentMailIndex + 1 >= mailListTotal || !!model.actionBusy"
+                        @click="openAdjacentMail(1)">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6" /></svg>
+                    </button>
+                </div>
             </div>
             <div class="inner-pad detail-pane-body" :class="{ 'is-reader-empty': model.currentRail.empty }">
                 <AdminEmptyState v-if="model.currentRail.empty" class="reader-empty"
                     :title="model.currentRail.title" :description="model.currentRail.subtitle" />
                 <template v-else>
+                    <h2 class="reader-subject">{{ model.currentMail?.subject || model.currentRail.title }}</h2>
                     <div v-if="model.currentMail" class="gmail-sender-card">
                         <div class="sender-avatar">
                             {{ getSenderInitial(model.currentMail.sender) }}
                         </div>
                         <div class="sender-body">
                             <div class="sender-row">
-                                <strong class="sender-name">{{ model.currentMail.sender }}</strong>
-                                <span class="sender-time">{{ model.currentMail.fullTime || model.currentMail.time }}</span>
+                                <span class="sender-identity">
+                                    <strong class="sender-name">{{ model.currentMail.senderDisplay || model.currentMail.sender }}</strong>
+                                    <span v-if="model.currentMail.senderDisplay && model.currentMail.senderDisplay !== model.currentMail.sender"
+                                        class="sender-address">{{ model.currentMail.sender }}</span>
+                                </span>
+                                <time class="sender-time" :datetime="model.currentMail.created_at">{{ model.currentMail.readerTime || model.currentMail.fullTime }}</time>
                             </div>
                             <div class="recipient-summary">
-                                <span class="recipient-text">{{ t('recipient') }}: {{ model.currentMail.to }}</span>
+                                <span class="recipient-text">{{ t('toMe', { address: model.currentMail.to }) }}</span>
                                 <button type="button" class="icon-btn mail-copy-button"
                                     :aria-label="t('copyRecipient')" :title="t('copyRecipient')"
                                     @click="actions.copyText(model.currentMail.to)">
@@ -511,24 +595,7 @@ defineExpose({
                             <dd>{{ model.currentMail.fullTime || model.currentMail.time }}</dd>
                         </div>
                     </dl>
-                    <div v-if="model.currentRail.tags?.length" class="tag-row rail-tags">
-                        <span v-for="tag in model.currentRail.tags" :key="tag" class="tag">{{ tag }}</span>
-                    </div>
-                    <section class="body-section">
-                        <div class="body-section-head">
-                            <strong>{{ t('body') }}</strong>
-                            <div class="render-toggle" role="group" :aria-label="t('renderModeLabel')">
-                                <button type="button" :class="{ 'is-active': model.ui.mailRenderMode === 'html' }"
-                                    :disabled="Boolean(model.isDetailParsing || !model.currentRail.mail?.html)"
-                                    @click="model.ui.mailRenderMode = 'html'">HTML</button>
-                                <button type="button" :class="{ 'is-active': model.ui.mailRenderMode === 'text' }"
-                                    :disabled="Boolean(model.isDetailParsing || !model.currentRail.mail?.text)"
-                                    @click="model.ui.mailRenderMode = 'text'">{{ t('textMode') }}</button>
-                                <button type="button" :class="{ 'is-active': model.ui.mailRenderMode === 'raw' }"
-                                    :disabled="Boolean(model.isDetailParsing || !model.currentRail.mail?.raw)"
-                                    @click="model.ui.mailRenderMode = 'raw'">{{ t('rawMode') }}</button>
-                            </div>
-                        </div>
+                    <section class="body-section" :aria-label="t('body')">
                         <div class="mail-body-stage" :aria-busy="model.isDetailParsing ? 'true' : 'false'">
                             <Transition name="mail-body-fade" mode="out-in">
                                 <div v-if="model.isDetailParsing" key="skeleton"

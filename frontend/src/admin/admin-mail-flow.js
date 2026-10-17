@@ -8,13 +8,15 @@ import {
     extractHeader,
     formatAttachmentCount,
     formatDate,
+    formatMailListTime,
+    formatMailReaderTime,
     formatSenderDisplay,
     formatShortDate,
     getDomain,
     mailRenderLabel,
     normalizedAttachments,
 } from './admin-formatters'
-import { adminT } from './admin-i18n'
+import { adminLocale, adminT } from './admin-i18n'
 import { statusOptionsForView } from './admin-route-state'
 
 const t = adminT('admin.mail')
@@ -55,6 +57,8 @@ export const normalizeAdminMailRows = (rows = []) => (Array.isArray(rows) ? rows
         unread,
         time: formatShortDate(row.created_at),
         fullTime: formatDate(row.created_at),
+        listTime: formatMailListTime(row.created_at, adminLocale()),
+        readerTime: formatMailReaderTime(row.created_at, adminLocale()),
         created_at: row.created_at,
         sender,
         senderDisplay,

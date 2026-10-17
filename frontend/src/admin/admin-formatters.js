@@ -81,6 +81,41 @@ export const formatShortDate = (value) => {
     return full
 }
 
+// D1 CURRENT_TIMESTAMP values are UTC without a zone marker.
+const parseStoredTime = (value) => {
+    if (!value) return null
+    const text = String(value).trim().replace(' ', 'T')
+    const date = new Date(/(?:Z|[+-]\d{2}:?\d{2})$/i.test(text) ? text : `${text}Z`)
+    return Number.isNaN(date.getTime()) ? null : date
+}
+
+// Gmail list dates: time today, month and day this year, full date before.
+export const formatMailListTime = (value, locale, now = new Date()) => {
+    const date = parseStoredTime(value)
+    if (!date) return formatShortDate(value)
+    if (date.toDateString() === now.toDateString()) {
+        return new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', hour12: false }).format(date)
+    }
+    if (date.getFullYear() === now.getFullYear()) {
+        return new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(date)
+    }
+    return new Intl.DateTimeFormat(locale, { year: 'numeric', month: '2-digit', day: '2-digit' }).format(date)
+}
+
+const RELATIVE_UNITS = [['day', 86400], ['hour', 3600], ['minute', 60]]
+
+// Gmail reader dates: full local time plus a relative hint within 30 days.
+export const formatMailReaderTime = (value, locale, now = new Date()) => {
+    const date = parseStoredTime(value)
+    if (!date) return formatDate(value)
+    const full = new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short', hour12: false }).format(date)
+    const seconds = Math.round((now.getTime() - date.getTime()) / 1000)
+    if (seconds < 0 || seconds > 30 * 86400) return full
+    const [unit, size] = RELATIVE_UNITS.find(([, unitSize]) => seconds >= unitSize) || ['minute', 60]
+    const relative = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(-Math.floor(seconds / size), unit)
+    return `${full} (${relative})`
+}
+
 export const extractHeader = (raw, name) => {
     if (!raw) return ''
     const match = String(raw).match(new RegExp(`^${name}:\\s*(.+)$`, 'im'))
