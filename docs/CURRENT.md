@@ -390,5 +390,12 @@ Delivery: `aab8fc8` released ACCEPTED at
 https://69f85640.email-transfer-station.pages.dev after a fresh `pages` build.
 Live at 1600 px: list counter and dates, reader toolbar, newer navigation
 (8 → 7 of 485), and mark unread (returns to the list, badge 296 → 297) checked.
-Validation: frontend lint and admin tests (78), `pages` build. At an 800 px
-viewport the split view still overflows to the right (pre-existing layout).
+Validation: frontend lint and admin tests (78), `pages` build.
+
+Follow-up `d9077df`: below 1100 px an open mail takes the whole page (the split
+needed 844 px and overflowed), the split toggle is hidden, and Back scrolls the
+list to the mail just read. The 1360/1120 px five-track grids, which never
+applied, were removed. Released ACCEPTED at
+https://9c75dd4f.email-transfer-station.pages.dev ; live at 800 px and 1000 px
+the reader fills the page with no horizontal overflow and Back restores the
+list with the row in view; 1400 px keeps the split view.
