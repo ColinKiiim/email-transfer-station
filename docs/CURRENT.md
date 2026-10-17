@@ -347,3 +347,28 @@ whose Worker was already deployed). One Immediate Pages release for source
 passed on all configured targets, deployment
 https://4aebc8f1.email-transfer-station.pages.dev . No Worker deployment, D1
 migration, DNS or secret change was part of this frontend release.
+
+## Server-side admin search and attachment filter (D1 v0.0.20) — 2026-10-18
+
+User-authorized D1 migration. `raw_mails` gains `subject` and
+`attachment_count` (`db/2026-10-18-mail-summary.sql`), filled at ingest and
+backfilled by `POST /api/admin/db_migration` (500 rows per call, repeat until
+`mail_summary.remaining` is 0). `/api/admin/mails` accepts a Gmail-style `q`
+(plain words match subject, envelope sender, or recipient; `from:`, `to:`,
+`subject:`, `has:attachment`, `is:unread|read`, `after:`, `before:`),
+`has_attachment=true`, and `unread=false`. The inbox sends search (debounced
+300 ms) and read/attachment status to the server and no longer re-filters the
+loaded page. `from:` matches the envelope sender, not the From display name;
+body text is not searchable.
+
+Delivery: production D1 exported first to the private archive
+`D:/Develop/Email-Transfer-Station-archives/20261018-d1-before-v0.0.20/`
+(33 MB, 485 mails). Worker `55d42c0d-a405-4f83-9deb-6b180aa79727` deployed, then
+the migration ran through the admin API: v0.0.20, 485 summarized, 0 remaining,
+3 mails with attachments. Pages `a5dcff7` released ACCEPTED at
+https://bb588271.email-transfer-station.pages.dev after a fresh `pages` build
+(the Immediate release uploads the existing `frontend/dist`; an earlier upload
+of the stale bundle, a7a5d2b5, was superseded). Live: attachment filter 3,
+`from:openai subject:登录` 2, typed `netcraft` 3 with one request.
+Validation: Worker database/admin/ingest/read-state tests (30), frontend admin
+tests (78), Worker typecheck and lint, frontend lint, `git diff --check`.
