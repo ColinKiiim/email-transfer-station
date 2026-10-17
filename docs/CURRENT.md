@@ -372,3 +372,23 @@ of the stale bundle, a7a5d2b5, was superseded). Live: attachment filter 3,
 `from:openai subject:登录` 2, typed `netcraft` 3 with one request.
 Validation: Worker database/admin/ingest/read-state tests (30), frontend admin
 tests (78), Worker typecheck and lint, frontend lint, `git diff --check`.
+
+## Gmail-style inbox list and reader — 2026-10-18
+
+Using the user's Gmail as the reference (layout only), the inbox counter now
+reads "第 1-25 封，共 485 封" for the server-filtered view; the "已载 / 数据库总数"
+wording is gone. List dates follow Gmail (time today, month-day this year,
+full date before) in local time; stored UTC `created_at` values were previously
+shown unconverted. The reader has an icon toolbar (back, delete, mark unread,
+More with formatted/plain/original views), "第 N 封，共 M 封" with newer/older
+arrows that keep the list page in step, a subject heading, a flat sender row
+with address and relative time, and no status tags or "正文" heading. The
+attachment chip set an unknown `attachments` status and did nothing; it now
+uses `attachment`. The expanded sidebar shows the full unread count.
+
+Delivery: `aab8fc8` released ACCEPTED at
+https://69f85640.email-transfer-station.pages.dev after a fresh `pages` build.
+Live at 1600 px: list counter and dates, reader toolbar, newer navigation
+(8 → 7 of 485), and mark unread (returns to the list, badge 296 → 297) checked.
+Validation: frontend lint and admin tests (78), `pages` build. At an 800 px
+viewport the split view still overflows to the right (pre-existing layout).
