@@ -259,7 +259,7 @@ describe('AdminNext behavior baseline', () => {
         const pending = await mountAdmin({ path: '/admin?view=flow', waitForData: false })
         await nextTick()
         expect(pending.wrapper.get('.sync-state').text()).toBe('同步中')
-        expect(pending.wrapper.text()).toContain('后台数据同步中')
+        expect(pending.wrapper.text()).toContain('正在同步')
         resolveOverview({ totals: {}, domains: [] })
         await settle()
         expect(pending.wrapper.text()).toContain('没有匹配结果')
@@ -271,7 +271,7 @@ describe('AdminNext behavior baseline', () => {
         runtime.failPath = (path) => path.startsWith('/api/admin/mails?')
         runtime.failMessage = '邮件接口不可用'
         const failed = await mountAdmin({ path: '/admin?view=flow' })
-        expect(failed.wrapper.text()).toContain('后台数据加载失败')
+        expect(failed.wrapper.text()).toContain('加载失败')
         expect(failed.wrapper.text()).toContain('邮件接口不可用')
         expect(failed.wrapper.get('.sync-state').text()).toBe('同步部分失败')
         expect(failed.wrapper.get('.sync-state').text()).not.toContain('已同步')

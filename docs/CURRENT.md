@@ -1,6 +1,6 @@
 # Current project state
 
-Updated: 2026-10-13 (Asia/Singapore)
+Updated: 2026-10-18 (Asia/Singapore)
 
 ## Maintainability refactor — WP1–WP7 complete
 
@@ -302,3 +302,33 @@ Validation: frontend `admin-api` and `AdminNext` tests (17), Worker
 `admin_api_routes` and `mail_read_state` tests (13), Worker typecheck, and
 `git diff --check` passed. The domain/address filters work with the deployed
 Worker; `unread=true` needs the Worker change to be deployed.
+
+## Admin HIG / Material review — 2026-10-18
+
+Reviewed all nine admin views on the live console at desktop, 1024 px and
+375 px, dark and light, against Apple HIG, Material 3 and WCAG AA. The per-page
+issue list, basis, changes and open items are in
+[`plans/PLAN_2026-10-18_admin-hig-review.md`](plans/PLAN_2026-10-18_admin-hig-review.md).
+
+Changed (UI only; no API, data flow, permission or mail-filter code):
+
+- the mail detail `删除` is a plain trash button that turns red on hover;
+  checkbox and copy buttons get larger hit areas without visual change;
+- `color-mix(in oklch)` → `in srgb` removes a pink cast on light-theme rows;
+- 12 px minimum for sidebar group titles, table headers and row actions;
+  group titles now meet 4.5:1;
+- touch screens get 44 px targets; at ≤900 px the nav is one scrolling row,
+  search spans the width, mail rows use two lines and the resource toolbar no
+  longer clips its primary button;
+- domain and access-package column widths fixed; dates and addresses stay on
+  one line; empty channel tables no longer scroll sideways;
+- the duplicate channel refresh button is removed; the authenticator empty
+  state has an icon, description and create action;
+- 62 admin strings rewritten to drop backend terms (`生产`, `raw_mails`,
+  `Worker / D1`, `DB_VERSION`), dev-log tone and a false "shown once" claim;
+  five test expectations follow the new copy.
+
+Validation: Pages production build and `git diff --check` passed; CSS effects
+were measured on the live page with the stylesheet injected locally in the
+browser, and the edited sources render the local admin login. Unit tests were
+not run, per the task brief. Local commit only; no push or deployment.

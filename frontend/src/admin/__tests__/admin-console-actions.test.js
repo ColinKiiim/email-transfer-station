@@ -139,7 +139,7 @@ describe('admin console action controller', () => {
         await harness.actions.createAddressIdentity()
 
         expect(apiMocks.createAddress).not.toHaveBeenCalled()
-        expect(harness.showToast).toHaveBeenCalledWith('请先登录管理员会话后再执行新增地址', 'warning')
+        expect(harness.showToast).toHaveBeenCalledWith('请先登录管理员账号再新增地址', 'warning')
     })
 
     it('creates an address through the canonical adapter and exposes credentials once', async () => {
@@ -573,7 +573,7 @@ describe('admin console action controller', () => {
 
             expect(apiMocks.deleteMail).toHaveBeenCalledWith(1)
             expect(apiMocks.deleteMail).toHaveBeenCalledWith(2)
-            expect(harness.showToast).toHaveBeenCalledWith('已删除 2 封生产邮件', 'success')
+            expect(harness.showToast).toHaveBeenCalledWith('已删除 2 封邮件', 'success')
         })
 
         it('deletes current address after confirmation and aborts on cancel', async () => {

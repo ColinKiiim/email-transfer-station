@@ -1701,8 +1701,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "管理控制台"
     },
     "description": {
-      "en": "Use your administrator credentials to manage this station.",
-      "zh": "使用管理员凭据管理当前邮件站。"
+      "en": "Sign in to manage this mail station.",
+      "zh": "登录以管理此邮件站。"
     },
     "surfaceLinksLabel": {
       "en": "Product areas",
@@ -1788,6 +1788,14 @@ export const MESSAGE_REGISTRY = {
       "en": "Admin console",
       "zh": "管理控制台"
     },
+    "serviceStatus": {
+      "en": "Service {status}",
+      "zh": "服务{status}"
+    },
+    "versionLabel": {
+      "en": "Version {version}",
+      "zh": "版本 {version}"
+    },
     "surfaceLinksLabel": {
       "en": "Product areas",
       "zh": "产品区域"
@@ -1851,16 +1859,16 @@ export const MESSAGE_REGISTRY = {
       "zh": "清除筛选"
     },
     "syncing": {
-      "en": "Loading console data",
-      "zh": "后台数据同步中"
+      "en": "Syncing",
+      "zh": "正在同步"
     },
     "synced": {
-      "en": "Console data loaded",
-      "zh": "后台数据同步完成"
+      "en": "Synced",
+      "zh": "已同步"
     },
     "loadFailed": {
-      "en": "Failed to load console data",
-      "zh": "后台数据加载失败"
+      "en": "Failed to load",
+      "zh": "加载失败"
     },
     "retrying": {
       "en": "Retrying",
@@ -2157,8 +2165,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "需复核"
     },
     "bodyRenderNotice": {
-      "en": "The message body is shown on the detail page through the safe rendering policy.",
-      "zh": "邮件正文会在详情页通过安全渲染策略呈现。"
+      "en": "Open the message to read its body.",
+      "zh": "打开邮件查看正文。"
     },
     "attachmentCount": {
       "en": "{count} attachments",
@@ -2627,8 +2635,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "KV / 附件索引"
     },
     "opsKvDetail": {
-      "en": "Attachments, webhook configuration and runtime cache need recovery actions exposed on the detail page",
-      "zh": "附件、Webhook 配置、运行缓存需要在详情页暴露恢复动作"
+      "en": "Attachments, webhook settings and runtime cache",
+      "zh": "附件、Webhook 配置与运行缓存"
     },
     "opsKvAction": {
       "en": "View namespace",
@@ -2639,8 +2647,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "阻止与限流"
     },
     "opsBlocklistDetail": {
-      "en": "IP blocklist, address creation permission and send permission are consolidated in the policy center",
-      "zh": "IP 黑名单、地址创建权限、发送权限合并到策略中心"
+      "en": "IP blocklist, address creation and sending permissions",
+      "zh": "IP 黑名单、地址创建与发送权限"
     },
     "opsBlocklistAction": {
       "en": "Open policies",
@@ -2733,8 +2741,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "需更新"
     },
     "webhookNext": {
-      "en": "Shows configuration state only until the save-success gate is wired up",
-      "zh": "保存成功门禁未接入前仅显示配置状态"
+      "en": "Shows configuration status only",
+      "zh": "仅显示配置状态"
     },
     "activationCloudflareAuto": {
       "en": "Cloudflare auto setup",
@@ -2827,8 +2835,8 @@ export const MESSAGE_REGISTRY = {
   },
   "admin.resource": {
     "overviewAria": {
-      "en": "Operations overview entries",
-      "zh": "运行总控入口"
+      "en": "Overview",
+      "zh": "总览"
     },
     "flowKicker": {
       "en": "Mail workspace",
@@ -2839,8 +2847,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "{count} 未读"
     },
     "flowDesc": {
-      "en": "{count} recent messages. Open the inbox to review bodies, attachments, and render status.",
-      "zh": "{count} 封最近邮件，进入收件箱查看正文、附件和渲染状态。"
+      "en": "{count} recent messages",
+      "zh": "最近 {count} 封邮件"
     },
     "routingKicker": {
       "en": "Entry points & routing",
@@ -2851,8 +2859,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "{count} 个域名"
     },
     "routingDesc": {
-      "en": "Review collectors, receive modes, verification status, and domain ownership.",
-      "zh": "检查 collector、接收方式、验证状态和域名归属。"
+      "en": "Receive modes, verification and ownership",
+      "zh": "接收方式、验证状态与归属"
     },
     "identityKicker": {
       "en": "Address identity",
@@ -2863,8 +2871,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "{count} 个地址"
     },
     "identityDesc": {
-      "en": "Manage addresses, labels, credentials, share packages, and account ownership.",
-      "zh": "管理地址、标签、凭证、分享包和账号归属。"
+      "en": "Addresses, credentials, access packages and owners",
+      "zh": "地址、凭证、访问包与归属用户"
     },
     "opsKicker": {
       "en": "Operations",
@@ -2875,8 +2883,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "需复核"
     },
     "opsDesc": {
-      "en": "Review Worker, D1, KV, DB version, and admin API status.",
-      "zh": "查看 Worker、D1、KV、DB 版本和后台接口状态。"
+      "en": "Service status and database version",
+      "zh": "服务状态与数据库版本"
     },
     "mailUnit": {
       "en": "messages",
@@ -2891,8 +2899,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "个地址"
     },
     "dbVersionUnit": {
-      "en": "DB Version",
-      "zh": "DB 版本"
+      "en": "Database version",
+      "zh": "数据库版本"
     },
     "manageDomains": {
       "en": "Manage domain routing",
@@ -2907,12 +2915,12 @@ export const MESSAGE_REGISTRY = {
       "zh": "查看运行维护"
     },
     "recentActivityDesc": {
-      "en": "Real-time inbound mail and delivery records",
-      "zh": "实时入站邮件与投递流水记录"
+      "en": "Latest received mail",
+      "zh": "最近收到的邮件"
     },
     "systemHealthDesc": {
-      "en": "Cloudflare Workers, D1 & edge runtime specs",
-      "zh": "Cloudflare Workers, D1 & 边缘配置"
+      "en": "Service, database and domain summary",
+      "zh": "服务、数据库与域名概况"
     },
     "tableTime": {
       "en": "Time",
@@ -2943,12 +2951,12 @@ export const MESSAGE_REGISTRY = {
       "zh": "已接收"
     },
     "workerStatus": {
-      "en": "Worker Status",
-      "zh": "Worker 状态"
+      "en": "Service status",
+      "zh": "服务状态"
     },
     "d1Database": {
-      "en": "D1 Database",
-      "zh": "D1 数据库"
+      "en": "Database",
+      "zh": "数据库"
     },
     "totalDomains": {
       "en": "Total Domains",
@@ -3059,12 +3067,12 @@ export const MESSAGE_REGISTRY = {
       "zh": "停用"
     },
     "emptySenderDesc": {
-      "en": "No address-level sending permissions configured. Check outbound channels above.",
-      "zh": "暂无地址级发送记录，可通过发信通道配置出站权限"
+      "en": "No address-level sending permissions",
+      "zh": "暂无地址级发送权限"
     },
     "emptySendboxDesc": {
-      "en": "No outbound messages in the sendbox yet. Sent mail will be recorded here.",
-      "zh": "暂无外发邮件记录，通过发信通道发送的邮件将显示在此处"
+      "en": "No sent mail yet",
+      "zh": "暂无发出的邮件"
     },
     "configureChannelsLink": {
       "en": "Configure outbound channels",
@@ -3151,36 +3159,36 @@ export const MESSAGE_REGISTRY = {
       "zh": "删除地址"
     },
     "recentActivity": {
-      "en": "Recent Activity Stream",
-      "zh": "最近处理与审计流水"
+      "en": "Recent mail",
+      "zh": "最近邮件"
     },
     "systemHealth": {
-      "en": "Runtime Health & System Specs",
-      "zh": "运行环境与系统规格"
+      "en": "System status",
+      "zh": "运行状态"
     },
     "openFlow": {
-      "en": "Open Inbox",
-      "zh": "前往收件工作区"
+      "en": "Open inbox",
+      "zh": "打开收件箱"
     },
     "noRecentLogs": {
-      "en": "No recent events logged",
-      "zh": "暂无最近处理日志"
+      "en": "No recent mail",
+      "zh": "暂无最近邮件"
     },
     "currentPolicy": {
       "en": "Current policy",
       "zh": "当前策略"
     },
     "currentPolicyValue": {
-      "en": "credential_version check",
-      "zh": "credential_version 校验"
+      "en": "Checked against the credential version",
+      "zh": "按凭证版本校验"
     },
     "displayMode": {
       "en": "Display",
       "zh": "显示方式"
     },
     "displayModeValue": {
-      "en": "Shown once after administrator confirmation",
-      "zh": "管理员确认后展示一次"
+      "en": "Shown after administrator confirmation",
+      "zh": "管理员确认后显示"
     },
     "leakHandling": {
       "en": "Leak response",
@@ -3195,8 +3203,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "审计"
     },
     "auditValue": {
-      "en": "show / rotate / revoke are all recorded as events",
-      "zh": "show / rotate / revoke 均写入事件"
+      "en": "Views, rotations and revocations are logged",
+      "zh": "查看、轮换、撤销均有记录"
     },
     "configCheck": {
       "en": "Configuration checks",
@@ -3235,8 +3243,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "自动回复"
     },
     "autoReplyValue": {
-      "en": "No production writes yet",
-      "zh": "暂未执行生产写入"
+      "en": "Not enabled",
+      "zh": "未启用"
     }
   },
   "admin.mailView": {
@@ -3245,8 +3253,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "未读"
     },
     "workbenchLabel": {
-      "en": "Mail flow workbench",
-      "zh": "收件流工作台"
+      "en": "Inbox",
+      "zh": "收件箱"
     },
     "facetsLabel": {
       "en": "Mail flow filters",
@@ -3257,8 +3265,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "队列"
     },
     "queueTip": {
-      "en": "Normal mail, unknown recipients, and render risks all share one intake pipeline.",
-      "zh": "常规邮件、未知收件人和渲染风险归在同一条收件链路里。"
+      "en": "Regular mail and unknown-recipient mail are handled here.",
+      "zh": "常规邮件和未知收件人邮件都在这里处理。"
     },
     "helpTip": {
       "en": "Help",
@@ -3373,8 +3381,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "原始"
     },
     "emptyBody": {
-      "en": "This record has no body to display.",
-      "zh": "当前记录没有可展示正文。"
+      "en": "This message has no body.",
+      "zh": "这封邮件没有正文。"
     },
     "loadingBody": {
       "en": "Loading email body...",
@@ -3476,7 +3484,7 @@ export const MESSAGE_REGISTRY = {
   "admin.authenticators": {
     "countAuthenticators": { "en": "{count} authenticators", "zh": "共 {count} 个验证器" },
     "title": { "en": "Authenticator distribution", "zh": "验证器分发" },
-    "description": { "en": "Create TOTP entries here, then assign them to users or share a link.", "zh": "在这里创建 TOTP 条目，再分发给用户或生成分享链接。" },
+    "description": { "en": "Create a TOTP entry, then assign it to users or share a link.", "zh": "创建 TOTP 条目后，可分发给用户或生成分享链接。" },
     "label": { "en": "Label", "zh": "名称" },
     "labelPlaceholder": { "en": "Example account", "zh": "例如：测试账号" },
     "secret": { "en": "Secret or otpauth URI", "zh": "密钥或 otpauth 链接" },
@@ -3484,7 +3492,7 @@ export const MESSAGE_REGISTRY = {
     "create": { "en": "Create", "zh": "创建" },
     "cancel": { "en": "Cancel", "zh": "取消" },
     "shareExpiry": { "en": "Link expiry", "zh": "链接有效期" },
-    "empty": { "en": "No authenticators yet.", "zh": "还没有验证器。" },
+    "empty": { "en": "No authenticators yet", "zh": "还没有验证器" },
     "noIssuer": { "en": "No issuer", "zh": "无发行方" },
     "copyCode": { "en": "Copy current code", "zh": "复制当前验证码" },
     "assigned": { "en": "Assigned: {count}", "zh": "已分发：{count}" },
@@ -3682,8 +3690,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "健康检查"
     },
     "modalNewAddressIdentity": {
-      "en": "New address identity",
-      "zh": "新增地址身份"
+      "en": "New address",
+      "zh": "新增地址"
     },
     "modalNewUser": {
       "en": "New user",
@@ -3734,8 +3742,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "详情"
     },
     "railEmptySubtitle": {
-      "en": "Select any row on the left to see its details",
-      "zh": "选择左侧任意一行查看详情"
+      "en": "Select a row to see its details",
+      "zh": "选择一行查看详情"
     }
   },
   "admin.overlay": {
@@ -3748,8 +3756,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "确认"
     },
     "detailDrawerLabel": {
-      "en": "Context detail drawer",
-      "zh": "上下文详情抽屉"
+      "en": "Details",
+      "zh": "详情"
     },
     "closeDetail": {
       "en": "Close details",
@@ -3852,8 +3860,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "生产地址"
     },
     "productionAddressNote": {
-      "en": "Address credential can be viewed and reused anytime from the list.",
-      "zh": "创建成功后，登录凭证可在列表中随时查看与复用。"
+      "en": "You can view the credential from the list at any time.",
+      "zh": "创建后可随时在列表中查看登录凭证。"
     },
     "addressName": {
       "en": "Address name",
@@ -3880,8 +3888,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "只读访问"
     },
     "readOnlyAccessNote": {
-      "en": "The access link is shown only once; whoever holds it can read this address's mail.",
-      "zh": "访问链接只显示一次，持有者可查看该地址的邮件。"
+      "en": "Anyone with the link can read this address's mail.",
+      "zh": "持有链接的人可查看此地址的邮件。"
     },
     "address": {
       "en": "Address",
@@ -3904,8 +3912,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "新增用户"
     },
     "modalNewUserNote": {
-      "en": "Add a new user account with email and password.",
-      "zh": "通过邮箱和密码添加新用户账号。"
+      "en": "Create a user with an email and password.",
+      "zh": "用邮箱和密码创建用户。"
     },
     "modalResetPassword": {
       "en": "Reset password",
@@ -3920,16 +3928,16 @@ export const MESSAGE_REGISTRY = {
       "zh": "变更用户角色"
     },
     "modalEditRoleNote": {
-      "en": "Assign a configured role or clear the role for this user.",
-      "zh": "为该用户分配配置的角色或清除角色。"
+      "en": "Choose a role, or clear it.",
+      "zh": "选择角色，或清除角色。"
     },
     "modalUserAddresses": {
       "en": "User bound addresses",
       "zh": "用户绑定地址"
     },
     "modalUserAddressesNote": {
-      "en": "Manage email addresses bound to this user account.",
-      "zh": "管理绑定至该用户账号的邮箱地址。"
+      "en": "Manage the addresses this user can access.",
+      "zh": "管理该用户可访问的地址。"
     },
     "modalSubmitUser": {
       "en": "Create user",
@@ -4088,24 +4096,24 @@ export const MESSAGE_REGISTRY = {
       "zh": "当前筛选结果"
     },
     "signInBeforeDelete": {
-      "en": "Sign in to an administrator session before running production deletes",
-      "zh": "请先登录管理员会话后再执行生产删除"
+      "en": "Sign in as an administrator first",
+      "zh": "请先登录管理员账号"
     },
     "noProductionMailsToDelete": {
-      "en": "No production mail available to delete",
-      "zh": "没有可删除的生产邮件"
+      "en": "No mail to delete",
+      "zh": "没有可删除的邮件"
     },
     "confirmDeleteMails": {
-      "en": "Delete {count} {scope} from the production inbox? This removes raw_mails and the matching read state, and cannot be undone from the console.",
-      "zh": "确认从生产收件箱删除 {count} 封{scope}？此操作会删除 raw_mails 和对应已读状态，无法在后台撤销。"
+      "en": "Delete {count} {scope}? This can't be undone.",
+      "zh": "删除 {count} 封{scope}？删除后无法恢复。"
     },
     "deleteMailFailed": {
       "en": "Delete failed: {label}",
       "zh": "删除失败：{label}"
     },
     "deletedMails": {
-      "en": "Deleted {count} production messages",
-      "zh": "已删除 {count} 封生产邮件"
+      "en": "Deleted {count} messages",
+      "zh": "已删除 {count} 封邮件"
     },
     "markedMailsRead": {
       "en": "Marked {count} message(s) as read",
@@ -4144,12 +4152,12 @@ export const MESSAGE_REGISTRY = {
       "zh": "请先选择一封邮件"
     },
     "signInBeforeAction": {
-      "en": "Sign in to an administrator session before running {action}",
-      "zh": "请先登录管理员会话后再执行{action}"
+      "en": "Sign in as an administrator to run {action}",
+      "zh": "请先登录管理员账号再{action}"
     },
     "busy": {
-      "en": "A production action is already running",
-      "zh": "已有生产操作执行中"
+      "en": "Another action is in progress",
+      "zh": "有操作正在进行，请稍候"
     },
     "actionFailed": {
       "en": "{action} failed",
@@ -4176,8 +4184,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "地址已创建，凭证长期有效，可随时在列表中查看与复用。"
     },
     "addressCreatedNoCredential": {
-      "en": "The address was created, but the API returned no credential.",
-      "zh": "地址已创建，但接口未返回凭证。"
+      "en": "The address was created, but no credential was returned.",
+      "zh": "地址已创建，但未返回凭证。"
     },
     "addressCreated": {
       "en": "Address created",
@@ -4188,8 +4196,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "新增地址失败"
     },
     "selectProductionAddressFirst": {
-      "en": "Select a production address first",
-      "zh": "请先选择一个生产地址"
+      "en": "Select an address first",
+      "zh": "请先选择一个地址"
     },
     "labelCreateSharePackage": {
       "en": "create access package",
@@ -4208,8 +4216,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "访问链接已生成；持有者可只读查看该地址。"
     },
     "sharePackageCreatedNoToken": {
-      "en": "The access package was created, but the API returned no token.",
-      "zh": "访问包已创建，但接口未返回 token。"
+      "en": "The access package was created, but no link was returned.",
+      "zh": "访问包已创建，但未返回访问链接。"
     },
     "sharePackageCreated": {
       "en": "Access package created",
@@ -4220,8 +4228,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "创建访问包失败"
     },
     "addressNotProductionDelete": {
-      "en": "The current address is not a production address and cannot be deleted",
-      "zh": "当前地址不是生产地址，无法删除"
+      "en": "This address isn't managed here, so it can't be deleted",
+      "zh": "此地址不由本站管理，无法删除"
     },
     "labelDeleteAddress": {
       "en": "delete address",
@@ -4260,8 +4268,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "已停用 {domain}"
     },
     "addressNotProductionShowCredential": {
-      "en": "The current address is not a production address, so its credential cannot be shown",
-      "zh": "当前地址不是生产地址，无法显示凭证"
+      "en": "This address isn't managed here, so its credential can't be shown",
+      "zh": "此地址不由本站管理，无法查看凭证"
     },
     "labelShowCredential": {
       "en": "show address credential",
@@ -4280,8 +4288,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "当前凭证长期有效；如需作废可在列表中进行凭证轮换。"
     },
     "addressNotProductionRotate": {
-      "en": "The current address is not a production address, so its credential cannot be rotated",
-      "zh": "当前地址不是生产地址，无法轮换凭证"
+      "en": "This address isn't managed here, so its credential can't be rotated",
+      "zh": "此地址不由本站管理，无法轮换凭证"
     },
     "labelRotateCredential": {
       "en": "credential rotation",
@@ -4304,8 +4312,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "已轮换 {address} 的凭证"
     },
     "addressNotProductionRevoke": {
-      "en": "The current address is not a production address, so its access packages cannot be revoked",
-      "zh": "当前地址不是生产地址，无法撤销访问包"
+      "en": "This address isn't managed here, so its access packages can't be revoked",
+      "zh": "此地址不由本站管理，无法撤销访问包"
     },
     "labelRevokeSharePackages": {
       "en": "revoke access packages",
@@ -4324,16 +4332,16 @@ export const MESSAGE_REGISTRY = {
       "zh": "已撤销 {address} 的访问包"
     },
     "addressNotProductionClearInbox": {
-      "en": "The current address is not a production address, so its inbox cannot be cleared",
-      "zh": "当前地址不是生产地址，无法清空收件"
+      "en": "This address isn't managed here, so its inbox can't be cleared",
+      "zh": "此地址不由本站管理，无法清空收件箱"
     },
     "labelClearInbox": {
       "en": "clear address inbox",
       "zh": "清空地址收件"
     },
     "confirmClearInbox": {
-      "en": "Clear the production inbox for {address}? This removes that address's raw_mails and read state, and cannot be undone from the console.",
-      "zh": "确认清空 {address} 的生产收件箱？此操作会删除该地址 raw_mails 和已读状态，无法在后台撤销。"
+      "en": "Clear the inbox for {address}? This can't be undone.",
+      "zh": "清空 {address} 的收件箱？删除后无法恢复。"
     },
     "clearInboxFailed": {
       "en": "Failed to clear address inbox",
@@ -4344,8 +4352,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "已清空 {address} 的收件箱"
     },
     "domainFromPublicSettingsCheck": {
-      "en": "The current domain comes from public settings, so production checks cannot run",
-      "zh": "当前域名来自公开设置，无法执行生产检查"
+      "en": "This domain comes from public settings and can't be checked",
+      "zh": "此域名来自公开设置，无法检查"
     },
     "labelDomainRouteCheck": {
       "en": "domain routing check",
@@ -4364,12 +4372,12 @@ export const MESSAGE_REGISTRY = {
       "zh": "域名路由检查失败"
     },
     "domainFromPublicSettingsImpact": {
-      "en": "The current domain comes from public settings, so the production disable impact cannot be calculated",
-      "zh": "当前域名来自公开设置，无法计算生产停用影响"
+      "en": "This domain comes from public settings, so the impact can't be calculated",
+      "zh": "此域名来自公开设置，无法计算停用影响"
     },
     "signInBeforeImpactCheck": {
-      "en": "Sign in to an administrator session before checking the disable impact",
-      "zh": "请先登录管理员会话后再检查停用影响"
+      "en": "Sign in as an administrator to check the impact",
+      "zh": "请先登录管理员账号再检查停用影响"
     },
     "disableImpact": {
       "en": "Disable impact: {addressCount} addresses, {mailCount} messages",
@@ -4464,8 +4472,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "新增域名失败"
     },
     "signInBeforeHealthCheck": {
-      "en": "Sign in to an administrator session before running a health check",
-      "zh": "请先登录管理员会话后再执行健康检查"
+      "en": "Sign in as an administrator to run a health check",
+      "zh": "请先登录管理员账号再执行健康检查"
     },
     "healthCheckDone": {
       "en": "Health check finished: Worker {worker}, D1 {database}",
@@ -4476,8 +4484,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "健康检查失败"
     },
     "syncDone": {
-      "en": "Sync finished. Your current selection was kept",
-      "zh": "同步完成，当前选中项已保留"
+      "en": "Synced",
+      "zh": "已同步"
     },
     "filtersCleared": {
       "en": "Filters cleared",
@@ -4488,8 +4496,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "当前域名"
     },
     "unsupportedAction": {
-      "en": "This action has no verifiable production write contract",
-      "zh": "该操作缺少可验证的生产写入合同"
+      "en": "This action isn't supported",
+      "zh": "暂不支持此操作"
     },
     "cloudflareConfiguredStartVerification": {
       "en": "Cloudflare is configured; start domain verification",

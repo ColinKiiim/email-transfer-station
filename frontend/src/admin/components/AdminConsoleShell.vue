@@ -130,11 +130,12 @@ defineExpose({
                 </section>
             </nav>
 
-            <div class="sidebar-foot" :title="`Worker / D1 ${model.workerStatusLabel} · DB_VERSION ${model.dbVersionLabel}`">
+            <div class="sidebar-foot"
+                :title="`${t('serviceStatus', { status: model.workerStatusLabel })} · ${t('versionLabel', { version: model.dbVersionLabel })}`">
                 <span class="health-dot">
-                    <span class="foot-text">Worker / D1 {{ model.workerStatusLabel }}</span>
+                    <span class="foot-text">{{ t('serviceStatus', { status: model.workerStatusLabel }) }}</span>
                 </span>
-                <span class="mono foot-text">DB_VERSION {{ model.dbVersionLabel }}</span>
+                <span class="mono foot-text">{{ t('versionLabel', { version: model.dbVersionLabel }) }}</span>
             </div>
         </aside>
 

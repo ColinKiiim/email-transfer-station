@@ -267,7 +267,15 @@ onBeforeUnmount(() => {
 
         <!-- Empty state or Items list -->
         <div v-if="!rows.length" class="empty-pad">
-            <AdminEmptyState :title="t('empty')" />
+            <AdminEmptyState :title="t('empty')" :description="t('description')"
+                :action-label="isCreating ? '' : t('create')" @action="isCreating = true">
+                <template #icon>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="4" y="11" width="16" height="10" rx="2" />
+                        <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+                    </svg>
+                </template>
+            </AdminEmptyState>
         </div>
         <ul v-else class="items">
             <li v-for="row in rows" :key="row.id" class="item">

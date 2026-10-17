@@ -243,7 +243,7 @@ const isPrimaryPanel = (panel) => (
                             <dt>{{ t('d1Database') }}</dt>
                             <dd>
                                 <span class="badge mono badge-ok">
-                                    <span>DB_VERSION {{ model.dbVersionLabel }}</span>
+                                    <span>{{ model.dbVersionLabel }}</span>
                                 </span>
                             </dd>
                         </div>
@@ -330,16 +330,6 @@ const isPrimaryPanel = (panel) => (
                             <line x1="5" y1="12" x2="19" y2="12" />
                         </svg>
                         <span>{{ t('newDomain') }}</span>
-                    </button>
-                    <button v-else-if="panel.id === 'channels'" class="btn small" type="button"
-                        :disabled="!!model.actionBusy" @click="actions.handleAction('refresh')">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                            <path d="M3 3v5h5" />
-                            <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
-                            <path d="M16 21h5v-5" />
-                        </svg>
-                        <span>{{ t('refreshChannels') }}</span>
                     </button>
                     <button v-else-if="panel.id === 'users'" class="btn small primary" type="button"
                         :disabled="!!model.actionBusy" @click="actions.openActionModal('new-user')">

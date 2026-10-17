@@ -72,7 +72,7 @@ test.describe('Admin console', () => {
       await page.locator('.mail-detail-panel .panel-head .danger').click();
       await expect(page.getByTestId('confirm-dialog-backdrop')).toBeVisible();
       await page.getByTestId('confirm-submit').click();
-      await expect(page.locator('.toast')).toContainText('已删除 1 封生产邮件');
+      await expect(page.locator('.toast')).toContainText('已删除 1 封邮件');
       await expect(page.locator('.mail-row', { hasText: subject })).toHaveCount(0);
 
       await page.goto('/zh/admin?view=identity');
