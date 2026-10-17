@@ -300,8 +300,14 @@ Free-text search and the attachment queue remain client-side over loaded rows
 
 Validation: frontend `admin-api` and `AdminNext` tests (17), Worker
 `admin_api_routes` and `mail_read_state` tests (13), Worker typecheck, and
-`git diff --check` passed. The domain/address filters work with the deployed
-Worker; `unread=true` needs the Worker change to be deployed.
+`git diff --check` passed.
+
+Delivery: Worker version `531ba220-10f6-483f-ab64-ccb6fa1d2fc2` deployed; the
+Immediate Pages release for `ff1ee97` (which also carries the `e69d3c6` HIG
+review) was ACCEPTED at https://edd8eb85.email-transfer-station.pages.dev .
+Live check on colin.fnrry.com: 280 matching mails (previously 16 of 485),
+page 2 shows 26-50, and `status=unread` sends `unread=true` and shows 150. The
+user now authorizes push plus Worker and Pages deployment by default.
 
 ## Admin HIG / Material review — 2026-10-18
 
@@ -330,5 +336,14 @@ Changed (UI only; no API, data flow, permission or mail-filter code):
 
 Validation: Pages production build and `git diff --check` passed; CSS effects
 were measured on the live page with the stylesheet injected locally in the
-browser, and the edited sources render the local admin login. Unit tests were
-not run, per the task brief. Local commit only; no push or deployment.
+browser, and the edited sources render the local admin login. Before release,
+the two affected frontend test files passed (38 tests) after their delete
+button selector was updated (`ff1ee97`).
+
+Delivery: the user authorized push and Pages release in this session. `main`
+was pushed through `ff1ee97` (includes `7b3cd53` server-side mail filtering,
+whose Worker was already deployed). One Immediate Pages release for source
+`ff1ee978d2187e72063b4e73c2cf00be2f5feed6`: status ACCEPTED, acceptance
+passed on all configured targets, deployment
+https://4aebc8f1.email-transfer-station.pages.dev . No Worker deployment, D1
+migration, DNS or secret change was part of this frontend release.

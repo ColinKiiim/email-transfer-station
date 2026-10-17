@@ -1,7 +1,7 @@
 # Admin HIG / Material 3 review
 
-Date: 2026-10-18 (Asia/Singapore). Status: first pass committed locally; no
-push or deployment.
+Date: 2026-10-18 (Asia/Singapore). Status: first pass released to Pages
+(source `ff1ee97`, deployment https://4aebc8f1.email-transfer-station.pages.dev).
 
 Basis: the live admin console (`/admin`, logged in) measured in the built-in
 browser at 1366, 1024 and 375 px, dark and light. Checks covered target size
@@ -127,7 +127,7 @@ English `mark read` label, and the rest of the product outside `/admin`.
 - Local dev server renders the admin login with the edited sources. Signed-in
   local preview is not possible without entering the production admin
   credential, which was not done.
-- Per the task brief, unit tests were not run; five test expectations were
-  updated to the new copy (`admin-console-actions.test.js`,
-  `AdminNext.test.js`, `e2e/tests/browser/admin-console.spec.ts`) and are
-  unverified.
+- Five test expectations follow the new copy and the delete button selector
+  follows its new class (`ff1ee97`). Before release,
+  `admin-console-actions.test.js` and `AdminNext.test.js` passed (38 tests);
+  the e2e spec was not run.
