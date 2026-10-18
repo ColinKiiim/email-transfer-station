@@ -28,8 +28,8 @@ test.describe('Inbox Browser Flow', () => {
       // Login via JWT query param with /en/ path to force English locale
       await page.goto(`${FRONTEND_URL}/en/?jwt=${jwt}`);
 
-      // The mail subject should be visible in the inbox list item
-      const mailItem = page.getByRole('listitem').getByText(subject);
+      // The mail subject should be visible in the inbox row (rows are role="button")
+      const mailItem = page.getByRole('button').getByText(subject);
       await expect(mailItem).toBeVisible({ timeout: 10_000 });
 
       // Click to open the email

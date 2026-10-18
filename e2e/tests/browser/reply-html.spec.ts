@@ -55,9 +55,9 @@ test.describe('Reply HTML & XSS Sanitization', () => {
       // Login with English locale
       await page.goto(`${FRONTEND_URL}/en/?jwt=${jwt}`);
 
-      // Open the email (use listitem to avoid strict mode violation
+      // Open the email (scope to the row button to avoid strict mode violation
       // when detail panel also shows the subject)
-      const mailItem = page.getByRole('listitem').getByText('XSS Test Email');
+      const mailItem = page.getByRole('button').getByText('XSS Test Email');
       await expect(mailItem).toBeVisible({ timeout: 10_000 });
       await mailItem.click();
 
