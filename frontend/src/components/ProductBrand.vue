@@ -15,12 +15,7 @@ const displayTitle = computed(() => props.title || openSettings.value.title || '
 
 <template>
   <div class="product-brand" :class="{ 'is-compact': compact }">
-    <span class="product-brand-mark" aria-hidden="true">
-      <svg viewBox="0 0 24 24">
-        <path d="M3.5 6.5h17v11h-17z" />
-        <path d="m4 7 8 6 8-6" />
-      </svg>
-    </span>
+    <img class="product-brand-mark" src="/email-transfer-station-logo.svg" alt="" aria-hidden="true">
     <span class="product-brand-copy">
       <strong>{{ displayTitle }}</strong>
       <span v-if="contextLabel">{{ contextLabel }}</span>
@@ -41,24 +36,9 @@ const displayTitle = computed(() => props.title || openSettings.value.title || '
 }
 
 .product-brand-mark {
-  display: grid;
-  place-items: center;
+  display: block;
   width: 40px;
   height: 40px;
-  border-radius: 10px;
-  background: var(--ets-brand-soft);
-  color: var(--ets-brand);
-  box-shadow: var(--ets-shadow-card);
-}
-
-.product-brand-mark svg {
-  width: 18px;
-  height: 18px;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1.8;
 }
 
 .product-brand-copy {
@@ -95,6 +75,5 @@ const displayTitle = computed(() => props.title || openSettings.value.title || '
 .is-compact .product-brand-mark {
   width: 34px;
   height: 34px;
-  border-radius: 8px;
 }
 </style>
