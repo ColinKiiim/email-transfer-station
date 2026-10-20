@@ -695,6 +695,13 @@ try {
         if (-not $DryRun -and $PreflightFixturePath) { Stop-Release @('fixture_forbidden_for_live_deploy') }
         if (-not $DryRun -and -not $AuthorizeDeploy) { Stop-Release @('explicit_deploy_authorization_switch_required') }
         $root = $script:CanonicalProductRoot
+        if (-not $DryRun) {
+            # Rebuild so the uploaded dist always matches the checked-out HEAD.
+            $corepack = (Get-Command $(if ($IsWindows) { 'corepack.cmd' } else { 'corepack' }) -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
+            $build = Invoke-ProcessCapture -FilePath $corepack -Arguments @('pnpm', 'run', 'build:pages') `
+                -WorkingDirectory (Join-Path $root 'frontend') -TimeoutSeconds 300
+            if ($build.TimedOut -or $build.ExitCode -ne 0) { Stop-Release @('frontend_build_failed') }
+        }
         $snapshot = Get-CandidateSnapshot $root -Canonical
         $initialSnapshotIdentity = Get-SnapshotIdentity $snapshot
         $manifest = New-ReadinessRecord -Snapshot $snapshot -Evidence @('same-task development validation confirmed')

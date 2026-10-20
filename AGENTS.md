@@ -84,7 +84,8 @@ pwsh -NoProfile -File skills/email-transfer-station-release-check/scripts/pages-
 ```
 
 Use the Immediate release command once for a same-task product release. It
-performs the required live preflight, one upload, and bounded acceptance; do
+rebuilds `frontend/dist` from the checked-out tree, then performs the required
+live preflight, one upload, and bounded acceptance; do
 not manually chain `Prepare`, `Verify`, `Preflight`, a second build, or a
 second deploy around it. Use the Deferred manifest flow only for a deliberate
 handoff across tasks or days. The Pages package command remains a low-level
