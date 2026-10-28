@@ -21,5 +21,5 @@ public maintenance records that apply to the single product repository.
 
 Operational output, browser state, release receipts, private credentials,
 governance history, and reference repositories are excluded from the product
-source. Release and UI-review Skills live under `skills/`; QA tooling lives under
+source. The release Skill lives under `skills/`; QA tooling lives under
 `scripts/qa/`.
