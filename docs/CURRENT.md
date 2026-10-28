@@ -13,7 +13,12 @@ the duplicate credential/share choices, and the address copy-button placement;
 the current implementation now addresses those four items. ISSUE-005 through
 ISSUE-007 record remaining user-center credential paths, legacy direct-authority
 APIs, and historical access-package rows that were reviewed but intentionally
-left for a separate migration decision. Production acceptance is pending.
+left for a separate migration decision. The runtime release is accepted:
+Pages deployment `https://07c4ecc6.email-transfer-station.pages.dev` was
+accepted for source `d32c5d1`, and Worker version
+`9bed7c1d-724f-4a71-9c5e-1fedded96cfd` is deployed to
+`mail-api.20030405.xyz`. Browser-level resource-flow confirmation remains a
+follow-up.
 
 ## Public mailbox interaction cleanup — 2026-10-28
 
