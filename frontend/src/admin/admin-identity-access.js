@@ -163,7 +163,9 @@ export const buildAdminAddressRail = (address) => address ? ({
         [t('kvAddressPassword'), address.password],
     ],
     actions: [
-        { label: t('actionCreateSharePackage'), modal: 'share-package', primary: true },
+        { label: t('actionShowCredential'), action: 'show-credential', primary: true },
+        { label: t('actionRotateCredential'), action: 'rotate' },
+        { label: t('actionCreateSharePackage'), modal: 'share-package' },
         { label: t('actionRevokeSharePackage'), action: 'revoke' },
         { label: t('actionClearInbox'), action: 'clear-inbox', danger: true },
         { label: t('actionDeleteAddress'), action: 'delete-address', danger: true },

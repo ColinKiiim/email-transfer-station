@@ -68,7 +68,7 @@ export const createAdminApi = (fetcher, { requestIdFactory = createAdminRequestI
     listAuthenticatorAssignments: (id) => fetcher(`/api/admin/authenticators/${pathId(id)}/assignments`),
     assignAuthenticator: (id, userId) => fetcher(`/api/admin/authenticators/${pathId(id)}/assignments`, writeOptions('POST', { user_id: userId, confirm: true })),
     unassignAuthenticator: (id, userId) => fetcher(`/api/admin/authenticators/${pathId(id)}/assignments/${pathId(userId)}`, writeOptions('DELETE', { confirm: true })),
-    createAuthenticatorShare: (id, expiresAt) => fetcher(`/api/admin/authenticators/${pathId(id)}/shares`, writeOptions('POST', { expires_at: expiresAt || null, confirm: true })),
+    createAuthenticatorShare: (id) => fetcher(`/api/admin/authenticators/${pathId(id)}/shares`, writeOptions('POST', { expires_at: null, confirm: true })),
     listAuthenticatorShares: (id) => fetcher(`/api/admin/authenticators/${pathId(id)}/shares`),
     revokeAuthenticatorShare: (id, shareId) => fetcher(`/api/admin/authenticators/${pathId(id)}/shares/${pathId(shareId)}`, writeOptions('DELETE', { confirm: true })),
 
@@ -110,10 +110,10 @@ export const createAdminApi = (fetcher, { requestIdFactory = createAdminRequestI
         enablePrefix,
         enableRandomSubdomain,
     })),
-    createShareToken: (id, { label, expiresAt }) => fetcher(`/api/admin/address/${pathId(id)}/share_tokens`, writeOptions('POST', {
+    createShareToken: (id, { label }) => fetcher(`/api/admin/address/${pathId(id)}/share_tokens`, writeOptions('POST', {
         label,
         scopes: ['read'],
-        expires_at: expiresAt,
+        expires_at: null,
     })),
     deleteAddress: (id, { credentialVersion, mailCount, sentCount, shareCount }) => fetcher(`/api/admin/delete_address/${pathId(id)}`, writeOptions('DELETE', {
         confirm: true,

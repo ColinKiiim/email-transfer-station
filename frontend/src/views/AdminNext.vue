@@ -846,7 +846,7 @@ const {
     userBoundAddresses,
     userBoundAddressesLoading,
     userRolesList,
-    oneTimeResult,
+    credentialResult,
     domainActivationOpen,
     domainActivationBusy,
     domainActivationForm,
@@ -916,7 +916,7 @@ const modalTitle = computed(() => {
         'edit-role': t('modalEditRole'),
         'user-addresses': t('modalUserAddresses'),
     }
-    return actionModal.value === 'one-time-result' ? oneTimeResult.title : titles[actionModal.value] || t('modalFallbackTitle')
+    return actionModal.value === 'credential-result' ? credentialResult.title : titles[actionModal.value] || t('modalFallbackTitle')
 })
 
 const modalPrimaryLabel = computed(() => {
@@ -1045,7 +1045,7 @@ const overlayModel = computed(() => ({
     domainActivationForm,
     actionModal: actionModal.value,
     modalTitle: modalTitle.value,
-    oneTimeResult,
+    credentialResult,
     addressCreateForm,
     addressDomainOptions: addressDomainOptions.value,
     openSettings: openSettings.value,

@@ -16,7 +16,6 @@ const { t: tRes } = useScopedI18n('admin.resource')
 const rows = ref([])
 const input = ref('')
 const label = ref('')
-const shareExpiry = ref('')
 const sharingId = ref(null)
 const busy = ref('')
 const error = ref('')
@@ -161,14 +160,12 @@ const revokeShare = (row, link) => run(`revoke-${link.id}`, async () => {
 
 const beginShare = (row) => {
     sharingId.value = sharingId.value === row.id ? null : row.id
-    shareExpiry.value = ''
 }
 
 const share = (row) => run(`share-${row.id}`, async () => {
-    const result = await adminApi.createAuthenticatorShare(row.id, shareExpiry.value ? new Date(shareExpiry.value).toISOString() : null)
+    const result = await adminApi.createAuthenticatorShare(row.id, null)
     await props.copyText(`${location.origin}/a/${result.token}`)
     sharingId.value = null
-    shareExpiry.value = ''
     if (shares.value[row.id]) await showShares(row)
 })
 
@@ -266,8 +263,6 @@ onBeforeUnmount(() => {
                 <span class="meta">{{ t('shared', { count: row.share_count }) }}</span>
                 <div class="actions">
                     <template v-if="sharingId === row.id">
-                        <input v-model="shareExpiry" class="share-expiry" type="datetime-local"
-                            :aria-label="t('shareExpiry')" />
                         <button class="btn-action primary" type="button" :disabled="!!busy"
                             @click="share(row)">
                             {{ t('create') }}
@@ -450,10 +445,6 @@ select:focus {
     display: flex;
     gap: 6px;
     align-items: center;
-}
-
-.share-expiry {
-    width: 168px;
 }
 
 .assignment-list {

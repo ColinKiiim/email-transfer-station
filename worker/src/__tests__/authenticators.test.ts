@@ -50,10 +50,11 @@ describe('authenticator distribution on real SQLite', () => {
         expect(sqlite.prepare('SELECT COUNT(*) AS count FROM authenticator_share_tokens').get()?.count).toBe(0);
     });
 
-    it('saves an expiring real link and denies codes after revocation or expiry', async () => {
+    it('saves a persistent real link and denies codes after revocation or legacy expiry', async () => {
         const { request, create, sqlite } = fixture();
         const id = await create();
         const share = await (await request(`/api/admin/authenticators/${id}/shares`, 'POST', {})).json() as any;
+        expect(share.expires_at).toBeNull();
         const replacement = await (await request(`/api/admin/authenticators/${id}/shares`, 'POST', {})).json() as any;
         expect((await request('/open_api/authenticator_share', 'POST', { token: share.token })).status).toBe(404);
         expect((await request('/open_api/authenticator_share', 'POST', { token: replacement.token })).status).toBe(200);

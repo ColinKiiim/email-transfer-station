@@ -317,14 +317,14 @@ onBeforeUnmount(() => {
                 </button>
             </div>
             <div class="modal-body">
-                <template v-if="model.actionModal === 'one-time-result'">
+                <template v-if="model.actionModal === 'credential-result'">
                     <div id="action-modal-description" class="notice modal-notice">
-                        <strong>{{ t('oneTimeOnlyTitle') }}</strong>
-                        <span>{{ model.oneTimeResult.note }}</span>
+                        <strong>{{ t('credentialResultTitle') }}</strong>
+                        <span>{{ model.credentialResult.note }}</span>
                     </div>
                     <label class="form-field full">
-                        <span>{{ t('oneTimeResultLabel') }}</span>
-                        <textarea data-testid="one-time-result" data-autofocus :value="model.oneTimeResult.value"
+                        <span>{{ t('credentialResultLabel') }}</span>
+                        <textarea data-testid="credential-result" data-autofocus :value="model.credentialResult.value"
                             rows="6" readonly />
                     </label>
                 </template>
@@ -369,11 +369,6 @@ onBeforeUnmount(() => {
                             <span>{{ t('label') }}</span>
                             <input v-model="model.shareCreateForm.label" data-testid="share-label" data-autofocus
                                 class="field" :placeholder="t('labelPlaceholder')" autocomplete="off" />
-                        </label>
-                        <label class="form-field">
-                            <span>{{ t('expiresAt') }}</span>
-                            <input v-model="model.shareCreateForm.expiresAt" data-testid="share-expiry" class="field"
-                                type="datetime-local" />
                         </label>
                     </div>
                 </template>
@@ -494,10 +489,10 @@ onBeforeUnmount(() => {
                 </template>
             </div>
             <div class="modal-actions">
-                <template v-if="model.actionModal === 'one-time-result'">
-                    <button class="btn" type="button" @click="actions.closeActionModal">{{ t('savedSecurely') }}</button>
-                    <button class="btn primary" type="button" :disabled="!model.oneTimeResult.value"
-                        @click="actions.copyText(model.oneTimeResult.value)">{{ t('copyResult') }}</button>
+                <template v-if="model.actionModal === 'credential-result'">
+                    <button class="btn" type="button" @click="actions.closeActionModal">{{ t('close') }}</button>
+                    <button class="btn primary" type="button" :disabled="!model.credentialResult.value"
+                        @click="actions.copyText(model.credentialResult.value)">{{ t('copyResult') }}</button>
                 </template>
                 <template v-else-if="model.actionModal === 'user-addresses'">
                     <button class="btn primary" data-testid="user-addresses-close" type="button" @click="actions.closeActionModal">{{ t('close') }}</button>

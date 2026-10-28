@@ -507,6 +507,20 @@ const isPrimaryPanel = (panel) => (
                                             :aria-label="t('moreActions')">
                                             <button class="action-menu-item" role="menuitem" type="button"
                                                 :disabled="!row.sourceId || !!model.actionBusy"
+                                                :title="t('showCredential')"
+                                                :aria-label="t('showCredential')"
+                                                @click="actions.handleAddressRowAction(row, 'show-credential'); closeAddressMenu()">
+                                                {{ t('showCredential') }}
+                                            </button>
+                                            <button class="action-menu-item" role="menuitem" type="button"
+                                                :disabled="!row.sourceId || !!model.actionBusy"
+                                                :title="t('rotateCredential')"
+                                                :aria-label="t('rotateCredential')"
+                                                @click="actions.handleAddressRowAction(row, 'rotate'); closeAddressMenu()">
+                                                {{ t('rotateCredential') }}
+                                            </button>
+                                            <button class="action-menu-item" role="menuitem" type="button"
+                                                :disabled="!row.sourceId || !!model.actionBusy"
                                                 :title="t('share')"
                                                 :aria-label="t('share')"
                                                 @click="actions.openSharePackage(row); closeAddressMenu()">

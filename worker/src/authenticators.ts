@@ -40,13 +40,6 @@ async function findShare(c: Context<HonoCustomType>, token: unknown) {
         WHERE s.token_hash = ? AND ${activeShare}`).bind(await hashShareToken(token)).first<Item & { share_id: string }>();
 }
 
-function parseExpiry(body: Record<string, unknown> | null): string | null | 'invalid' {
-    if (!body || body.expires_at == null || body.expires_at === '') return null;
-    const date = typeof body.expires_at === 'string' ? Date.parse(body.expires_at) : NaN;
-    if (!Number.isFinite(date) || date <= Date.now()) return 'invalid';
-    return new Date(date).toISOString().slice(0, 19).replace('T', ' ');
-}
-
 authenticatorApi.get('/user_api/authenticators', async c => {
     const { results } = await c.env.DB.prepare(`SELECT a.*,
         CASE WHEN x.direct_assigned = 1 THEN NULL ELSE s.expires_at END AS expires_at
@@ -155,8 +148,6 @@ authenticatorApi.delete('/api/admin/authenticators/:id/assignments/:userId', asy
 });
 
 authenticatorApi.post('/api/admin/authenticators/:id/shares', async c => {
-    const expiresAt = parseExpiry(await readBody(c));
-    if (expiresAt === 'invalid') return c.json({ error: 'invalid_expiry' }, 400);
     const item = await c.env.DB.prepare('SELECT id FROM user_authenticators WHERE id = ?').bind(c.req.param('id')).first('id');
     if (!item) return c.json({ error: 'authenticator_not_found' }, 404);
     const id = crypto.randomUUID(), token = generateShareToken();
@@ -168,8 +159,8 @@ authenticatorApi.post('/api/admin/authenticators/:id/shares', async c => {
         + ` AND (expires_at IS NULL OR expires_at > datetime('now'))`
     ).bind(c.req.param('id')).run();
     await c.env.DB.prepare(`INSERT INTO authenticator_share_tokens (id, authenticator_id, token_hash, expires_at)
-        VALUES (?, ?, ?, ?)`).bind(id, c.req.param('id'), await hashShareToken(token), expiresAt).run();
-    return c.json({ id, token, expires_at: expiresAt }, 201);
+        VALUES (?, ?, ?, NULL)`).bind(id, c.req.param('id'), await hashShareToken(token)).run();
+    return c.json({ id, token, expires_at: null }, 201);
 });
 
 authenticatorApi.get('/api/admin/authenticators/:id/shares', async c => {

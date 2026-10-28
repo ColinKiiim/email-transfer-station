@@ -142,7 +142,7 @@ describe('admin console action controller', () => {
         expect(harness.showToast).toHaveBeenCalledWith('请先登录管理员账号再新增地址', 'warning')
     })
 
-    it('creates an address through the canonical adapter and exposes credentials once', async () => {
+    it('creates an address through the canonical adapter and exposes a persistent credential', async () => {
         apiMocks.createAddress.mockResolvedValue({
             address: 'team@example.test',
             jwt: 'fixture-jwt',
@@ -166,9 +166,9 @@ describe('admin console action controller', () => {
             enableRandomSubdomain: true,
         })
         expect(harness.refreshAll).toHaveBeenCalledOnce()
-        expect(harness.actions.actionModal.value).toBe('one-time-result')
-        expect(harness.actions.oneTimeResult.title).toBe('地址已创建：team@example.test')
-        expect(harness.actions.oneTimeResult.value).toContain('JWT: fixture-jwt')
+        expect(harness.actions.actionModal.value).toBe('credential-result')
+        expect(harness.actions.credentialResult.title).toBe('地址已创建：team@example.test')
+        expect(harness.actions.credentialResult.value).toContain('JWT: fixture-jwt')
     })
 
     it('deletes the selected fixture row after confirmation and repairs selection and route state', async () => {
@@ -681,8 +681,8 @@ describe('admin console action controller', () => {
             await confirmPromise
 
             expect(apiMocks.rotateAddressCredential).toHaveBeenCalledWith(3, 2)
-            expect(harness.actions.actionModal.value).toBe('one-time-result')
-            expect(harness.actions.oneTimeResult.title).toBe('凭证已轮换：qa@example.test')
+            expect(harness.actions.actionModal.value).toBe('credential-result')
+            expect(harness.actions.credentialResult.title).toBe('凭证已轮换：qa@example.test')
         })
 
         it('revokes access packages with warning confirmation and aborts on cancel', async () => {

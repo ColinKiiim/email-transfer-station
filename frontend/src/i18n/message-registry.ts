@@ -3875,21 +3875,17 @@ export const MESSAGE_REGISTRY = {
       "en": "Add and start",
       "zh": "新增并启动"
     },
-    "oneTimeOnlyTitle": {
+    "credentialResultTitle": {
       "en": "Credential info",
       "zh": "凭证信息"
     },
-    "oneTimeResultLabel": {
+    "credentialResultLabel": {
       "en": "Credential details",
       "zh": "凭证详情"
     },
     "copyResult": {
       "en": "Copy result",
       "zh": "复制结果"
-    },
-    "savedSecurely": {
-      "en": "Saved securely",
-      "zh": "已安全保存"
     },
     "productionAddressTitle": {
       "en": "Production address",
@@ -4215,9 +4211,9 @@ export const MESSAGE_REGISTRY = {
       "en": "Address created: {address}",
       "zh": "地址已创建：{address}"
     },
-    "credentialShownOnce": {
-      "en": "Address created. Credential stays valid and can be viewed anytime.",
-      "zh": "地址已创建，凭证长期有效，可随时在列表中查看与复用。"
+    "credentialPersistent": {
+      "en": "This credential remains valid until you rotate or revoke it.",
+      "zh": "此凭证会持续有效，直到你主动轮换或撤销。"
     },
     "addressCreatedNoCredential": {
       "en": "The address was created, but no credential was returned.",
@@ -4247,9 +4243,9 @@ export const MESSAGE_REGISTRY = {
       "en": "Access package created: {address}",
       "zh": "访问包已创建：{address}"
     },
-    "shareLinkShownOnce": {
-      "en": "The access link is ready; anyone holding it gets read-only access to this address.",
-      "zh": "访问链接已生成；持有者可只读查看该地址。"
+    "shareLinkPersistent": {
+      "en": "This access credential remains valid until you revoke or refresh it.",
+      "zh": "此访问凭证会持续有效，直到你主动撤销或刷新。"
     },
     "sharePackageCreatedNoToken": {
       "en": "The access package was created, but no link was returned.",

@@ -18,12 +18,13 @@ export const statusOptionsForView = (view) => {
 export const createInitialAdminRouteState = (query = {}, storage) => {
     const queryView = queryValue(query.view)
     const storedView = storage?.getItem?.(VIEW_STORAGE_KEY) || ''
+    const initialView = VIEW_META[queryView] ? queryView : (VIEW_META[storedView] ? storedView : 'overview')
     return {
-        view: VIEW_META[queryView] ? queryView : (VIEW_META[storedView] ? storedView : 'overview'),
+        view: initialView,
         query: queryValue(query.q),
         domain: queryValue(query.domain, 'all'),
         address: queryValue(query.address, 'all'),
-        status: queryValue(query.status, 'all'),
+        status: queryValue(query.status, initialView === 'access' ? 'active' : 'all'),
         flowMode: queryValue(query.mode, 'list'),
         detailKind: '',
         selected: {

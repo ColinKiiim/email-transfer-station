@@ -319,7 +319,7 @@ describe('AdminNext behavior baseline', () => {
         wrapper.unmount()
     })
 
-    it('creates a production address and exposes its share link exactly once', async () => {
+    it('creates a production address and exposes a persistent credential', async () => {
         runtime.domains = [{
             id: 1,
             domain: 'example.test',
@@ -346,10 +346,11 @@ describe('AdminNext behavior baseline', () => {
             enablePrefix: false,
             enableRandomSubdomain: true,
         })
-        const oneTimeResult = wrapper.get('[data-testid="one-time-result"]').element.value
-        expect(oneTimeResult).toContain('/i/fixture-share-token')
-        expect(oneTimeResult).not.toContain('fixture-address-jwt')
-        expect(oneTimeResult).not.toContain('fixture-address-password')
+        const credentialResult = wrapper.get('[data-testid="credential-result"]').element.value
+        expect(credentialResult).toContain('team@example.test')
+        expect(credentialResult).toContain('fixture-address-jwt')
+        expect(credentialResult).toContain('fixture-address-password')
+        expect(credentialResult).toContain('/?jwt=fixture-address-jwt')
         wrapper.unmount()
     })
 
@@ -386,13 +387,21 @@ describe('AdminNext behavior baseline', () => {
         wrapper.unmount()
     })
 
-    it('does not expose the address credential as a distribution action', async () => {
+    it('keeps the address credential available for persistent reuse', async () => {
         runtime.addresses = [{ id: 3, name: 'ops@example.test', credential_version: 2 }]
         const { wrapper } = await mountAdmin({ path: '/admin?view=identity' })
 
         const revealButton = wrapper.findAll('.cell-actions button')
             .find((button) => button.text().includes('凭证'))
-        expect(revealButton).toBeFalsy()
+        expect(revealButton).toBeTruthy()
+        await revealButton.trigger('click')
+        await settle()
+        expect(mocks.fetch).toHaveBeenCalledWith('/api/admin/address/3/credential', expect.objectContaining({
+            method: 'POST',
+            body: JSON.stringify({ confirm: true, expected_credential_version: 2 }),
+            headers: expect.objectContaining({ 'x-admin-request-id': expect.any(String) }),
+        }))
+        expect(wrapper.get('[data-testid="credential-result"]').element.value).toContain('fixture-current-jwt')
         wrapper.unmount()
     })
 
@@ -405,16 +414,15 @@ describe('AdminNext behavior baseline', () => {
         expect(shareButton).toBeTruthy()
         await shareButton.trigger('click')
         await wrapper.get('[data-testid="share-label"]').setValue('外部审阅')
-        await wrapper.get('[data-testid="share-expiry"]').setValue('2026-07-16T18:30')
         await wrapper.get('[data-testid="action-submit"]').trigger('click')
         await settle()
 
         expect(runtime.lastShareCreate).toEqual({
             label: '外部审阅',
             scopes: ['read'],
-            expires_at: '2026-07-16 18:30:00',
+            expires_at: null,
         })
-        expect(wrapper.get('[data-testid="one-time-result"]').element.value).toContain('/i/fixture-share-token')
+        expect(wrapper.get('[data-testid="credential-result"]').element.value).toContain('/i/fixture-share-token')
         wrapper.unmount()
     })
 

@@ -2,7 +2,7 @@ import { computed, nextTick, reactive, ref, watch } from 'vue'
 
 import { hashPassword } from '../utils'
 import { adminApi } from './admin-api'
-import { formatAddressCredential, toD1DateTime } from './admin-formatters'
+import { formatAddressCredential } from './admin-formatters'
 import { adminT } from './admin-i18n'
 
 const t = adminT('admin.actions')
@@ -50,7 +50,6 @@ export const useAdminConsoleActions = ({
     })
     const shareCreateForm = reactive({
         label: '',
-        expiresAt: '',
     })
     const userCreateForm = reactive({
         email: '',
@@ -71,7 +70,7 @@ export const useAdminConsoleActions = ({
     const userBoundAddresses = ref([])
     const userBoundAddressesLoading = ref(false)
     const userRolesList = ref([])
-    const oneTimeResult = reactive({
+    const credentialResult = reactive({
         title: '',
         value: '',
         note: '',
@@ -129,14 +128,14 @@ export const useAdminConsoleActions = ({
     const showSuccess = (text) => showToast(text, 'success')
     const showWarning = (text) => showToast(text, 'warning')
 
-    const clearOneTimeResult = () => {
-        oneTimeResult.title = ''
-        oneTimeResult.value = ''
-        oneTimeResult.note = ''
+    const clearCredentialResult = () => {
+        credentialResult.title = ''
+        credentialResult.value = ''
+        credentialResult.note = ''
     }
 
     const openActionModal = (type) => {
-        clearOneTimeResult()
+        clearCredentialResult()
         if (type === 'new-address' || type === 'quick-create') {
             addressCreateForm.name = ''
             addressCreateForm.domain = currentDomain.value?.isEnabled
@@ -147,7 +146,6 @@ export const useAdminConsoleActions = ({
         }
         if (type === 'share-package') {
             shareCreateForm.label = ''
-            shareCreateForm.expiresAt = ''
         }
         if (type === 'new-user') {
             userCreateForm.email = ''
@@ -176,7 +174,7 @@ export const useAdminConsoleActions = ({
         actionModal.value = ''
         userCreateForm.password = ''
         userResetPasswordForm.password = ''
-        clearOneTimeResult()
+        clearCredentialResult()
     }
 
     const openSharePackage = (row = currentAddress.value) => {
@@ -413,11 +411,11 @@ export const useAdminConsoleActions = ({
         }
     }
 
-    const showOneTimeResult = (title, value, note) => {
-        oneTimeResult.title = title
-        oneTimeResult.value = value
-        oneTimeResult.note = note
-        actionModal.value = 'one-time-result'
+    const showCredentialResult = (title, value, note) => {
+        credentialResult.title = title
+        credentialResult.value = value
+        credentialResult.note = note
+        actionModal.value = 'credential-result'
     }
 
     const createAddressIdentity = async () => {
@@ -442,15 +440,11 @@ export const useAdminConsoleActions = ({
             })
             await refreshAll()
             const address = result?.address || `${name}@${domain}`
-            const share = await adminApi.createShareToken(result.address_id, {
-                label: '',
-                expiresAt: null,
-            })
-            const shareUrl = share?.token ? `${window.location.origin}/i/${encodeURIComponent(share.token)}` : ''
-            showOneTimeResult(
+            const credential = formatAddressCredential(address, result?.jwt, result?.password, window.location.origin)
+            showCredentialResult(
                 t('addressCreatedTitle', { address }),
-                shareUrl,
-                shareUrl ? t('shareLinkShownOnce') : t('sharePackageCreatedNoToken'),
+                credential,
+                result?.jwt || result?.password ? t('credentialPersistent') : t('addressCreatedNoCredential'),
             )
             showSuccess(t('addressCreated'))
         } catch (error) {
@@ -475,14 +469,13 @@ export const useAdminConsoleActions = ({
         try {
             const result = await adminApi.createShareToken(row.sourceId, {
                 label: shareCreateForm.label.trim(),
-                expiresAt: toD1DateTime(shareCreateForm.expiresAt),
             })
             await refreshAll()
             const shareUrl = result?.token ? `${window.location.origin}/i/${encodeURIComponent(result.token)}` : ''
-            showOneTimeResult(
+            showCredentialResult(
                 t('sharePackageCreatedTitle', { address: row.address }),
                 shareUrl,
-                shareUrl ? t('shareLinkShownOnce') : t('sharePackageCreatedNoToken'),
+                shareUrl ? t('shareLinkPersistent') : t('sharePackageCreatedNoToken'),
             )
             showSuccess(t('sharePackageCreated'))
         } catch (error) {
@@ -594,7 +587,7 @@ export const useAdminConsoleActions = ({
             '',
             async () => {
                 const result = await adminApi.showAddressCredential(row.sourceId, row.credentialVersion)
-                showOneTimeResult(
+                showCredentialResult(
                     t('credentialTitle', { address: row.address }),
                     formatAddressCredential(row.address, result?.jwt, '', window.location.origin),
                     t('credentialNote'),
@@ -624,7 +617,7 @@ export const useAdminConsoleActions = ({
                 const result = await adminApi.rotateAddressCredential(row.sourceId, row.credentialVersion)
                 await refreshAll()
                 if (result?.jwt) {
-                    showOneTimeResult(
+                    showCredentialResult(
                         t('credentialRotatedTitle', { address: row.address }),
                         formatAddressCredential(result?.address || row.address, result.jwt, '', window.location.origin),
                         t('credentialRotatedNote'),
@@ -1351,7 +1344,7 @@ export const useAdminConsoleActions = ({
         userBoundAddresses,
         userBoundAddressesLoading,
         userRolesList,
-        oneTimeResult,
+        credentialResult,
         domainActivationOpen,
         domainActivationBusy,
         domainActivationForm,

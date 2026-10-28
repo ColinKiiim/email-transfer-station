@@ -66,7 +66,7 @@ describe('admin API adapter', () => {
         await client.bindUserAddress({ userId: 12, addressId: 3, address: 'qa@example.test' })
         await client.unbindUserAddress({ userId: 12, addressId: 3, address: 'qa@example.test' })
         await client.createAddress({ name: 'qa', domain: 'example.test', enablePrefix: true, enableRandomSubdomain: false })
-        await client.createShareToken(8, { label: 'readonly', expiresAt: '2026-07-16 10:00:00' })
+        await client.createShareToken(8, { label: 'readonly' })
         await client.deleteAddress(8, { credentialVersion: 2, mailCount: 3, sentCount: 4, shareCount: 1 })
         await client.getDomainImpact(9)
         await client.disableDomain(9, { configVersion: 3 })
@@ -100,7 +100,7 @@ describe('admin API adapter', () => {
             ['/api/admin/users/bind_address', write('POST', { user_id: 12, address_id: 3, address: 'qa@example.test', confirm: true })],
             ['/api/admin/users/bind_address', write('DELETE', { user_id: 12, address_id: 3, address: 'qa@example.test', confirm: true })],
             ['/api/admin/new_address', write('POST', { name: 'qa', domain: 'example.test', enablePrefix: true, enableRandomSubdomain: false })],
-            ['/api/admin/address/8/share_tokens', write('POST', { label: 'readonly', scopes: ['read'], expires_at: '2026-07-16 10:00:00' })],
+            ['/api/admin/address/8/share_tokens', write('POST', { label: 'readonly', scopes: ['read'], expires_at: null })],
             ['/api/admin/delete_address/8', write('DELETE', {
                 confirm: true,
                 expected_credential_version: 2,

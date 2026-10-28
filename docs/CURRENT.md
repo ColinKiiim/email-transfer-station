@@ -2,6 +2,15 @@
 
 Updated: 2026-10-18 (Asia/Singapore)
 
+## Persistent credential policy correction — 2026-10-29
+
+The sharing flow is being corrected to use persistent address and authenticator
+credentials. No one-time display, automatic expiry, or automatic invalidation is
+allowed in this repository; refresh and revoke remain explicit administrator
+actions. Address creation again returns the durable address credential, and
+share creation forces a null expiry. This correction is validated locally and
+awaits its production release.
+
 ## Issue backlog — 2026-10-28
 
 Created [`ISSUES_TO_RESOLVE.md`](ISSUES_TO_RESOLVE.md). ISSUE-001 records the

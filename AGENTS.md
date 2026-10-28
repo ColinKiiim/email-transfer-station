@@ -42,6 +42,10 @@ Independent local Codex/Antigravity sessions follow this file and
   or commit secrets, runtime configuration, mailbox contents, or browser state.
 - Preserve unrelated dirty work. Do not reset, clean, stash, delete, or broaden
   cleanup without explicit authorization.
+- For this repository, address and authenticator access uses persistent
+  credentials. Do not add one-time display, one-time retrieval, automatic
+  expiry, or automatic invalidation behavior; credentials remain usable until
+  the administrator explicitly refreshes or revokes them.
 
 ## Source and configuration rules
 

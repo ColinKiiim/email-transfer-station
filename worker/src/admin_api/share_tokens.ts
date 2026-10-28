@@ -54,9 +54,7 @@ const create = async (c: Context<HonoCustomType>) => {
     const body = await c.req.json().catch(() => ({}));
     const label = typeof body.label === "string" ? body.label.trim().slice(0, 128) : "";
     const scopes = normalizeShareScopes(body.scopes);
-    const expiresAt = typeof body.expires_at === "string" && body.expires_at.trim()
-        ? body.expires_at.trim()
-        : null;
+    const expiresAt = null;
     const token = generateShareToken();
     const tokenHash = await hashShareToken(token);
     // Keep one active administrator share per address. Historical rows remain
@@ -108,9 +106,7 @@ const update = async (c: Context<HonoCustomType>) => {
     const body = await c.req.json().catch(() => ({}));
     const label = typeof body.label === "string" ? body.label.trim().slice(0, 128) : "";
     const scopes = body.scopes === undefined ? null : normalizeShareScopes(body.scopes);
-    const expiresAt = typeof body.expires_at === "string" && body.expires_at.trim()
-        ? body.expires_at.trim()
-        : null;
+    const expiresAt = null;
     const existing = await c.env.DB.prepare(
         `SELECT id FROM address_share_tokens WHERE id = ?`
     ).bind(token_id).first("id");
