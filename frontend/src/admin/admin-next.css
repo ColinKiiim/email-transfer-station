@@ -600,6 +600,16 @@ body:has(.admin-next) .n-message-container {
     content: "";
 }
 
+.admin-next-host .health-dot--warn::before {
+    background: var(--warn);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--warn) 18%, transparent);
+}
+
+.admin-next-host .health-dot--neutral::before {
+    background: var(--muted);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--muted) 18%, transparent);
+}
+
 .admin-next-host .workspace {
     grid-row: 2;
     grid-column: 2;
@@ -2970,6 +2980,9 @@ html.dark .admin-next-host .gmail-loading-pill {
 }
 
 .admin-next-host .cell-main strong {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     min-width: 0;
     overflow: hidden;
     overflow-wrap: anywhere;
@@ -2977,6 +2990,41 @@ html.dark .admin-next-host .gmail-loading-pill {
     text-overflow: ellipsis;
     font-weight: 600;
     color: var(--fg);
+}
+
+.admin-next-host .cell-copy-btn {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-xs, 4px);
+    color: var(--muted);
+    background: transparent;
+    cursor: pointer;
+}
+
+.admin-next-host .cell-copy-btn:hover {
+    color: var(--accent);
+    background: var(--accent-subtle);
+}
+
+.admin-next-host .cell-copy-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+
+.admin-next-host .cell-copy-btn svg {
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
 .admin-next-host .cell-sub {

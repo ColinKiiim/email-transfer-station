@@ -241,18 +241,24 @@ export const loadAdminSnapshot = async (client = adminApi, seed = {}) => {
 
 export const VIEW_SNAPSHOT_KEYS = {
     overview: ['overview', 'statistics', 'domains', 'domainAutomation', 'mailDomains', 'mails', 'mailTotalCount', 'mailUnreadCount', 'auditEvents', 'accessEvents', 'workerConfig', 'dbVersion'],
-    flow: ['domains', 'domainAutomation', 'mailDomains', 'mailAddresses', 'mails', 'mailTotalCount', 'mailUnreadCount'],
-    identity: ['domains', 'domainAutomation', 'addresses', 'users', 'userTotalCount'],
-    routing: ['overview', 'domains', 'domainAutomation', 'mailDomains', 'workerConfig'],
-    delivery: ['mailWebhook', 'globalWebhook', 'telegram', 'aiSettings', 'senderAccess', 'sendBox'],
-    users: ['users', 'userTotalCount', 'addresses'],
-    access: ['accessPackages', 'auditEvents', 'accessEvents'],
+    flow: ['workerConfig', 'dbVersion', 'domains', 'domainAutomation', 'mailDomains', 'mailAddresses', 'mails', 'mailTotalCount', 'mailUnreadCount'],
+    identity: ['workerConfig', 'dbVersion', 'domains', 'domainAutomation', 'addresses', 'users', 'userTotalCount'],
+    routing: ['overview', 'workerConfig', 'dbVersion', 'domains', 'domainAutomation', 'mailDomains'],
+    delivery: ['workerConfig', 'dbVersion', 'mailWebhook', 'globalWebhook', 'telegram', 'aiSettings', 'senderAccess', 'sendBox'],
+    users: ['workerConfig', 'dbVersion', 'users', 'userTotalCount', 'addresses'],
+    access: ['workerConfig', 'dbVersion', 'accessPackages', 'auditEvents', 'accessEvents'],
     ops: ['workerConfig', 'dbVersion', 'mailWebhook', 'globalWebhook', 'telegram', 'aiSettings'],
-    authenticators: [],
+    authenticators: ['workerConfig', 'dbVersion'],
 }
+
+const SHARED_STATUS_READS = [
+    ['workerConfig', 'worker configs', 'getWorkerConfig'],
+    ['dbVersion', 'db version', 'getDbVersion'],
+]
 
 const VIEW_READS = {
     overview: [
+        ...SHARED_STATUS_READS,
         ['overview', 'overview', 'getOverview'],
         ['statistics', 'statistics', 'getStatistics'],
         ['domains', 'domains', 'listDomains'],
@@ -260,27 +266,28 @@ const VIEW_READS = {
         ['mails', 'mails', 'listMails'],
         ['auditEvents', 'audit events', 'listAuditEvents'],
         ['accessEvents', 'access events', 'listAccessEvents'],
-        ['workerConfig', 'worker configs', 'getWorkerConfig'],
-        ['dbVersion', 'db version', 'getDbVersion'],
     ],
     flow: [
+        ...SHARED_STATUS_READS,
         ['domains', 'domains', 'listDomains'],
         ['mailDomains', 'mail domains', 'listMailDomains'],
         ['mailAddresses', 'mail addresses', 'listMailAddresses'],
         ['mails', 'mails', 'listMails'],
     ],
     identity: [
+        ...SHARED_STATUS_READS,
         ['domains', 'domains', 'listDomains'],
         ['addresses', 'addresses', 'listAddresses'],
         ['users', 'users', 'listUsers'],
     ],
     routing: [
+        ...SHARED_STATUS_READS,
         ['overview', 'overview', 'getOverview'],
         ['domains', 'domains', 'listDomains'],
         ['mailDomains', 'mail domains', 'listMailDomains'],
-        ['workerConfig', 'worker configs', 'getWorkerConfig'],
     ],
     delivery: [
+        ...SHARED_STATUS_READS,
         ['mailWebhook', 'mail webhook', 'getMailWebhook'],
         ['globalWebhook', 'global webhook', 'getGlobalWebhook'],
         ['telegram', 'telegram', 'getTelegramStatus', false],
@@ -289,23 +296,24 @@ const VIEW_READS = {
         ['sendBox', 'sendbox', 'listSendBox'],
     ],
     users: [
+        ...SHARED_STATUS_READS,
         ['users', 'users', 'listUsers'],
         ['addresses', 'addresses', 'listAddresses'],
     ],
     access: [
+        ...SHARED_STATUS_READS,
         ['accessPackages', 'access packages', 'listAccessPackages'],
         ['auditEvents', 'audit events', 'listAuditEvents'],
         ['accessEvents', 'access events', 'listAccessEvents'],
     ],
     ops: [
-        ['workerConfig', 'worker configs', 'getWorkerConfig'],
-        ['dbVersion', 'db version', 'getDbVersion'],
+        ...SHARED_STATUS_READS,
         ['mailWebhook', 'mail webhook', 'getMailWebhook'],
         ['globalWebhook', 'global webhook', 'getGlobalWebhook'],
         ['telegram', 'telegram', 'getTelegramStatus', false],
         ['aiSettings', 'ai extract', 'getAiSettings'],
     ],
-    authenticators: [],
+    authenticators: [...SHARED_STATUS_READS],
 }
 
 export const loadAdminViewSnapshot = async (client = adminApi, view = 'overview', args = {}) => {

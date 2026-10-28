@@ -110,9 +110,10 @@ const fixtureResponse = async (path, options = {}) => {
         runtime.addresses.push({ id: 9, name: address, credential_version: 1 })
         return { address_id: 9, address, jwt: 'fixture-address-jwt', password: 'fixture-address-password' }
     }
-    if (path === '/api/admin/address/3/share_tokens' && options.method === 'POST') {
+    if (path.match(/^\/api\/admin\/address\/\d+\/share_tokens$/) && options.method === 'POST') {
         runtime.lastShareCreate = JSON.parse(options.body)
-        runtime.accessPackages.push({ id: 11, address_id: 3, address: 'ops@example.test', scopes: 'read' })
+        const addressId = Number(path.match(/address\/(\d+)/)?.[1])
+        runtime.accessPackages.push({ id: 11, address_id: addressId, address: addressId === 3 ? 'ops@example.test' : 'team@example.test', scopes: 'read' })
         return { id: 11, address: 'ops@example.test', token: 'fixture-share-token' }
     }
     if (path === '/api/admin/address/3/credential' && options.method === 'POST') {
@@ -318,7 +319,7 @@ describe('AdminNext behavior baseline', () => {
         wrapper.unmount()
     })
 
-    it('creates a production address and exposes its credentials exactly once', async () => {
+    it('creates a production address and exposes its share link exactly once', async () => {
         runtime.domains = [{
             id: 1,
             domain: 'example.test',
@@ -346,11 +347,9 @@ describe('AdminNext behavior baseline', () => {
             enableRandomSubdomain: true,
         })
         const oneTimeResult = wrapper.get('[data-testid="one-time-result"]').element.value
-        expect(oneTimeResult).toContain('team@example.test')
-        expect(oneTimeResult).toContain('fixture-address-jwt')
-        expect(oneTimeResult).toContain('fixture-address-password')
-        expect(oneTimeResult).toContain('/?jwt=fixture-address-jwt')
-        expect(wrapper.text()).toContain('凭证信息')
+        expect(oneTimeResult).toContain('/i/fixture-share-token')
+        expect(oneTimeResult).not.toContain('fixture-address-jwt')
+        expect(oneTimeResult).not.toContain('fixture-address-password')
         wrapper.unmount()
     })
 
@@ -387,24 +386,13 @@ describe('AdminNext behavior baseline', () => {
         wrapper.unmount()
     })
 
-    it('reveals the selected address credential directly', async () => {
+    it('does not expose the address credential as a distribution action', async () => {
         runtime.addresses = [{ id: 3, name: 'ops@example.test', credential_version: 2 }]
         const { wrapper } = await mountAdmin({ path: '/admin?view=identity' })
 
         const revealButton = wrapper.findAll('.cell-actions button')
             .find((button) => button.text().includes('凭证'))
-        expect(revealButton).toBeTruthy()
-        await revealButton.trigger('click')
-        await settle()
-
-        expect(mocks.fetch).toHaveBeenCalledWith('/api/admin/address/3/credential', expect.objectContaining({
-            method: 'POST',
-            body: JSON.stringify({ confirm: true, expected_credential_version: 2 }),
-            headers: expect.objectContaining({ 'x-admin-request-id': expect.any(String) }),
-        }))
-        const oneTimeResult = wrapper.get('[data-testid="one-time-result"]').element.value
-        expect(oneTimeResult).toContain('fixture-current-jwt')
-        expect(oneTimeResult).toContain('/?jwt=fixture-current-jwt')
+        expect(revealButton).toBeFalsy()
         wrapper.unmount()
     })
 
@@ -412,6 +400,7 @@ describe('AdminNext behavior baseline', () => {
         runtime.addresses = [{ id: 3, name: 'ops@example.test', credential_version: 1 }]
         const { wrapper } = await mountAdmin({ path: '/admin?view=identity' })
 
+        expect(wrapper.find('.table-addresses .cell-copy-btn').exists()).toBe(true)
         const shareButton = wrapper.findAll('.cell-actions button').find((button) => button.text() === '分享')
         expect(shareButton).toBeTruthy()
         await shareButton.trigger('click')

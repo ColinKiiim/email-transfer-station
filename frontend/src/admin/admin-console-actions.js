@@ -442,13 +442,15 @@ export const useAdminConsoleActions = ({
             })
             await refreshAll()
             const address = result?.address || `${name}@${domain}`
-            const credential = formatAddressCredential(address, result?.jwt, result?.password, window.location.origin)
+            const share = await adminApi.createShareToken(result.address_id, {
+                label: '',
+                expiresAt: null,
+            })
+            const shareUrl = share?.token ? `${window.location.origin}/i/${encodeURIComponent(share.token)}` : ''
             showOneTimeResult(
                 t('addressCreatedTitle', { address }),
-                credential,
-                result?.jwt || result?.password
-                    ? t('credentialShownOnce')
-                    : t('addressCreatedNoCredential'),
+                shareUrl,
+                shareUrl ? t('shareLinkShownOnce') : t('sharePackageCreatedNoToken'),
             )
             showSuccess(t('addressCreated'))
         } catch (error) {

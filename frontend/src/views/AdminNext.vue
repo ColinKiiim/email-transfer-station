@@ -196,13 +196,23 @@ const pageTitle = computed(() => `${tNav(activeView.value)} · Email Transfer St
 const detailContext = computed(() => ui.detailKind || activeView.value)
 const workerStatusLabel = computed(() => {
     if (!showAdminPage.value) return t('signInRequired')
+    if (ui.syncing || !live.fetchedAdmin) return t('pendingSync')
     const database = live.workerConfig?.DIAGNOSTICS?.database
-    if (!live.workerConfig) return live.fetchedAdmin ? t('unknown') : t('pendingSync')
+    if (!live.workerConfig) return t('needsInspection')
     return database?.ok === false ? t('needsInspection') : t('available')
 })
 const dbVersionLabel = computed(() => {
     if (!showAdminPage.value) return t('signInRequired')
-    return live.dbVersion?.code_db_version || live.workerConfig?.DIAGNOSTICS?.database?.code_version || t('unknown')
+    if (ui.syncing || !live.fetchedAdmin) return t('pendingSync')
+    return live.dbVersion?.code_db_version || live.workerConfig?.DIAGNOSTICS?.database?.code_version || t('needsInspection')
+})
+const workerStatusTone = computed(() => {
+    if (!showAdminPage.value || ui.syncing || !live.fetchedAdmin) return 'neutral'
+    const hasStatusError = live.errors.some((error) => /worker configs|db version/i.test(String(error)))
+    if (hasStatusError || !live.workerConfig || !live.dbVersion) return 'warn'
+    return live.workerConfig?.DIAGNOSTICS?.database?.ok === false || live.dbVersion?.need_migration
+        ? 'warn'
+        : 'ok'
 })
 const syncLabel = computed(() => {
     if (ui.syncing) return t('syncing')
@@ -972,6 +982,7 @@ const shellModel = computed(() => ({
     domainOptions: domainOptions.value,
     ui,
     workerStatusLabel: workerStatusLabel.value,
+    workerStatusTone: workerStatusTone.value,
     dbVersionLabel: dbVersionLabel.value,
     syncLabel: syncLabel.value,
     navBadges: navBadges.value,
@@ -1018,6 +1029,7 @@ const workspaceModel = computed(() => ({
     addressRows: addressRows.value,
     blockingLoadErrors: blockingLoadErrors.value,
     workerStatusLabel: workerStatusLabel.value,
+    workerStatusTone: workerStatusTone.value,
     dbVersionLabel: dbVersionLabel.value,
     activePanels: activePanels.value,
     routingActivationRows: routingActivationRows.value,

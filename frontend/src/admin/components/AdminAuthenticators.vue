@@ -14,12 +14,10 @@ const { t } = useScopedI18n('admin.authenticators')
 const { t: tRes } = useScopedI18n('admin.resource')
 
 const rows = ref([])
-const users = ref([])
 const input = ref('')
 const label = ref('')
-const expiry = ref('')
-const selectedUsers = ref({})
-const assignments = ref({})
+const shareExpiry = ref('')
+const sharingId = ref(null)
 const busy = ref('')
 const error = ref('')
 const isCreating = ref(false)
@@ -52,17 +50,7 @@ const handleDocumentKeydown = (event) => {
 }
 
 const load = async () => {
-    const [codesResult, userResult] = await Promise.allSettled([
-        refreshCodes(),
-        adminApi.listUsers({ limit: 100 }),
-    ])
-    if (!disposed && userResult.status === 'fulfilled') {
-        users.value = userResult.value.results || []
-    }
-    if (userResult.status === 'rejected' && !disposed) {
-        error.value = userResult.reason?.message || t('failed')
-    }
-    if (codesResult.status === 'rejected') throw codesResult.reason
+    await refreshCodes()
 }
 
 const clearScheduledTimer = () => {
@@ -149,7 +137,6 @@ const create = () => run('create', async () => {
     await adminApi.createAuthenticator({ input: input.value, label: label.value })
     input.value = ''
     label.value = ''
-    expiry.value = ''
     isCreating.value = false
 })
 
@@ -157,25 +144,6 @@ const remove = async (row) => {
     if (!await props.requestConfirm({ tone: 'danger', title: t('deleteTitle'), message: t('deleteConfirm', { label: row.label }) })) return
     await run(`delete-${row.id}`, () => adminApi.deleteAuthenticator(row.id))
 }
-
-const assign = (row) => {
-    const userId = Number(selectedUsers.value[row.id])
-    if (userId) return run(`assign-${row.id}`, () => adminApi.assignAuthenticator(row.id, userId))
-}
-
-const showAssignments = async (row) => {
-    try {
-        const result = await adminApi.listAuthenticatorAssignments(row.id)
-        assignments.value[row.id] = result.results || []
-    } catch (reason) {
-        error.value = reason?.message || t('failed')
-    }
-}
-
-const unassign = (row, user) => run(`unassign-${row.id}-${user.id}`, async () => {
-    await adminApi.unassignAuthenticator(row.id, user.id)
-    await showAssignments(row)
-})
 
 const showShares = async (row) => {
     try {
@@ -189,16 +157,20 @@ const showShares = async (row) => {
 const revokeShare = (row, link) => run(`revoke-${link.id}`, async () => {
     await adminApi.revokeAuthenticatorShare(row.id, link.id)
     await showShares(row)
-    if (assignments.value[row.id]) await showAssignments(row)
 })
+
+const beginShare = (row) => {
+    sharingId.value = sharingId.value === row.id ? null : row.id
+    shareExpiry.value = ''
+}
 
 const share = (row) => run(`share-${row.id}`, async () => {
-    const result = await adminApi.createAuthenticatorShare(row.id, expiry.value ? new Date(expiry.value).toISOString() : null)
+    const result = await adminApi.createAuthenticatorShare(row.id, shareExpiry.value ? new Date(shareExpiry.value).toISOString() : null)
     await props.copyText(`${location.origin}/a/${result.token}`)
+    sharingId.value = null
+    shareExpiry.value = ''
     if (shares.value[row.id]) await showShares(row)
 })
-
-const labelForUser = (user) => user.display_name || user.username || user.user_email
 
 onMounted(() => {
     load().catch((reason) => {
@@ -257,10 +229,6 @@ onBeforeUnmount(() => {
                     <span>{{ t('secret') }}</span>
                     <input v-model="input" :placeholder="t('secretPlaceholder')" autocomplete="off" required />
                 </label>
-                <label class="expiry">
-                    <span>{{ t('shareExpiry') }}</span>
-                    <input v-model="expiry" type="datetime-local" />
-                </label>
                 <div class="create-actions">
                     <button class="btn small" type="button" @click="isCreating = false">
                         {{ t('cancel') }}
@@ -295,20 +263,21 @@ onBeforeUnmount(() => {
                 <button class="code" type="button" :aria-label="t('copyCode')" @click="props.copyText(row.code)">
                     {{ row.code.slice(0, 3) }} {{ row.code.slice(3) }}
                 </button>
-                <span class="meta">
-                    {{ t('assigned', { count: row.assigned_count }) }} · {{ t('shared', { count: row.share_count }) }}
-                </span>
-                <div class="assign">
-                    <select v-model="selectedUsers[row.id]" :aria-label="t('selectUser')">
-                        <option value="">{{ t('selectUser') }}</option>
-                        <option v-for="user in users" :key="user.id" :value="user.id">{{ labelForUser(user) }}</option>
-                    </select>
-                    <button class="btn-action primary" type="button" :disabled="!!busy || !selectedUsers[row.id]" @click="assign(row)">
-                        {{ t('assign') }}
-                    </button>
-                </div>
+                <span class="meta">{{ t('shared', { count: row.share_count }) }}</span>
                 <div class="actions">
-                    <button class="btn-action" type="button" :disabled="!!busy" @click="share(row)">
+                    <template v-if="sharingId === row.id">
+                        <input v-model="shareExpiry" class="share-expiry" type="datetime-local"
+                            :aria-label="t('shareExpiry')" />
+                        <button class="btn-action primary" type="button" :disabled="!!busy"
+                            @click="share(row)">
+                            {{ t('create') }}
+                        </button>
+                        <button class="btn-action" type="button" :disabled="!!busy"
+                            @click="beginShare(row)">
+                            {{ t('cancel') }}
+                        </button>
+                    </template>
+                    <button v-else class="btn-action" type="button" :disabled="!!busy" @click="beginShare(row)">
                         {{ t('share') }}
                     </button>
                     <div class="action-dropdown" :class="{ 'is-open': activeMenuId === row.id }">
@@ -327,10 +296,6 @@ onBeforeUnmount(() => {
                         </button>
                         <div v-show="activeMenuId === row.id" class="action-dropdown-menu" role="menu" :aria-label="tRes('moreActions')">
                             <button class="action-menu-item" role="menuitem" type="button" :disabled="!!busy"
-                                @click="showAssignments(row); closeMenu()">
-                                {{ t('viewAssignments') }}
-                            </button>
-                            <button class="action-menu-item" role="menuitem" type="button" :disabled="!!busy"
                                 @click="showShares(row); closeMenu()">
                                 {{ t('viewLinks') }}
                             </button>
@@ -341,15 +306,6 @@ onBeforeUnmount(() => {
                         </div>
                     </div>
                 </div>
-                <ul v-if="assignments[row.id]" class="assignment-list">
-                    <li v-for="user in assignments[row.id]" :key="user.id">
-                        <span>{{ labelForUser(user) }}</span>
-                        <button class="btn-action danger" type="button" :disabled="!!busy" @click="unassign(row, user)">
-                            {{ t('unassign') }}
-                        </button>
-                    </li>
-                    <li v-if="!assignments[row.id].length">{{ t('noAssignments') }}</li>
-                </ul>
                 <ul v-if="shares[row.id]" class="assignment-list">
                     <li v-for="link in shares[row.id]" :key="link.id">
                         <span>{{ link.created_at }} · {{ link.expires_at || t('noExpiry') }}</span>
@@ -384,7 +340,7 @@ onBeforeUnmount(() => {
 
 .create-grid {
     display: grid;
-    grid-template-columns: 1fr 2fr 180px auto;
+    grid-template-columns: 1fr 2fr auto;
     gap: 12px;
     align-items: end;
 }
@@ -490,15 +446,14 @@ select:focus {
     border-color: var(--accent);
 }
 
-.assign,
 .actions {
     display: flex;
     gap: 6px;
     align-items: center;
 }
 
-.assign select {
-    flex: 1;
+.share-expiry {
+    width: 168px;
 }
 
 .assignment-list {
@@ -532,7 +487,6 @@ select:focus {
         grid-template-columns: 1fr auto;
     }
     .meta,
-    .assign,
     .actions {
         grid-column: 1 / -1;
     }

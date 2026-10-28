@@ -100,16 +100,16 @@ describe('pending frontend review regressions', () => {
         expect(mocks.listAuthenticators).toHaveBeenCalledTimes(2)
         await vi.advanceTimersByTimeAsync(1)
         expect(mocks.listAuthenticators).toHaveBeenCalledTimes(3)
-        expect(mocks.listUsers).toHaveBeenCalledTimes(1)
+        expect(mocks.listUsers).not.toHaveBeenCalled()
         expect(wrapper.find('[role="alert"]').exists()).toBe(false)
     })
 
-    it('keeps users available when the authenticator list is temporarily unavailable', async () => {
+    it('uses the share-link flow without loading a user assignment dropdown', async () => {
         mocks.listAuthenticators.mockRejectedValueOnce(new Error('offline'))
-        mocks.listUsers.mockResolvedValueOnce({ results: [{ id: 7, user_email: 'user@example.test' }] })
         const wrapper = mount(AdminAuthenticators, { requestConfirm: vi.fn(), copyText: vi.fn() })
         await settle()
-        expect(wrapper.vm.$.setupState.users).toEqual([{ id: 7, user_email: 'user@example.test' }])
+        expect(mocks.listUsers).not.toHaveBeenCalled()
+        expect(wrapper.find('select').exists()).toBe(false)
     })
 
     it('deduplicates visibility refreshes and never reschedules an unmounted admin view', async () => {

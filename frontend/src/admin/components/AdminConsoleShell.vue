@@ -132,7 +132,7 @@ defineExpose({
 
             <div class="sidebar-foot"
                 :title="`${t('serviceStatus', { status: model.workerStatusLabel })} · ${t('versionLabel', { version: model.dbVersionLabel })}`">
-                <span class="health-dot">
+                <span class="health-dot" :class="`health-dot--${model.workerStatusTone || 'neutral'}`">
                     <span class="foot-text">{{ t('serviceStatus', { status: model.workerStatusLabel }) }}</span>
                 </span>
                 <span class="mono foot-text">{{ t('versionLabel', { version: model.dbVersionLabel }) }}</span>

@@ -126,7 +126,6 @@ export const TABLE_SPECS = {
         { labelKey: 'sent', key: 'sent', type: 'number' },
         { labelKey: 'packages', key: 'packages', type: 'number' },
         { labelKey: 'password', key: 'password', type: 'status' },
-        { labelKey: 'credential', key: 'credential', type: 'status' },
         { labelKey: 'actions', key: 'actions', type: 'addressActions' },
     ],
     users: [

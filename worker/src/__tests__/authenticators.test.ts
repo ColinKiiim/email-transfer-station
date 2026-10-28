@@ -54,9 +54,11 @@ describe('authenticator distribution on real SQLite', () => {
         const { request, create, sqlite } = fixture();
         const id = await create();
         const share = await (await request(`/api/admin/authenticators/${id}/shares`, 'POST', {})).json() as any;
-        expect((await request('/open_api/authenticator_share', 'POST', { token: share.token })).status).toBe(200);
-        expect((await request('/user_api/authenticators/save-share', 'POST', { token: share.token })).status).toBe(200);
-        await request(`/api/admin/authenticators/${id}/shares/${share.id}`, 'DELETE', { confirm: true });
+        const replacement = await (await request(`/api/admin/authenticators/${id}/shares`, 'POST', {})).json() as any;
+        expect((await request('/open_api/authenticator_share', 'POST', { token: share.token })).status).toBe(404);
+        expect((await request('/open_api/authenticator_share', 'POST', { token: replacement.token })).status).toBe(200);
+        expect((await request('/user_api/authenticators/save-share', 'POST', { token: replacement.token })).status).toBe(200);
+        await request(`/api/admin/authenticators/${id}/shares/${replacement.id}`, 'DELETE', { confirm: true });
         expect((await request('/open_api/authenticator_share', 'POST', { token: share.token })).status).toBe(404);
         expect((await (await request('/user_api/authenticators')).json() as any).results).toHaveLength(0);
         sqlite.prepare("UPDATE authenticator_share_tokens SET revoked_at = NULL, expires_at = '2000-01-01 00:00:00'").run();

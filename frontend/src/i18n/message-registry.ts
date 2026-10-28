@@ -3038,6 +3038,10 @@ export const MESSAGE_REGISTRY = {
       "en": "Copy",
       "zh": "复制"
     },
+    "copyAddress": {
+      "en": "Copy address",
+      "zh": "复制地址"
+    },
     "more": {
       "en": "More",
       "zh": "更多"

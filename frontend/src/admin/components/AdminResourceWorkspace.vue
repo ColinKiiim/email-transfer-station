@@ -413,7 +413,18 @@ const isPrimaryPanel = (panel) => (
                                 ]">
                                 <template v-if="column.type === 'entity'">
                                     <div class="cell-main">
-                                        <strong>{{ cellText(row, column.main) }}</strong>
+                                        <strong>
+                                            {{ cellText(row, column.main) }}
+                                            <button v-if="panel.id === 'addresses' && column.main === 'address'"
+                                                class="cell-copy-btn" type="button"
+                                                :title="t('copyAddress')" :aria-label="t('copyAddress')"
+                                                @click.stop="actions.copyText(row.address)">
+                                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                    <path d="M8 8h11v11H8z" />
+                                                    <path d="M5 16H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h11a1 1 0 0 1 1 1v1" />
+                                                </svg>
+                                            </button>
+                                        </strong>
                                         <span v-if="row[column.sub]" class="cell-sub">{{ cellText(row, column.sub) }}</span>
                                         <span v-if="column.tags && row[column.tags]?.length" class="tag-row">
                                             <span v-for="tag in row[column.tags]" :key="tag" class="tag">{{ tag }}</span>
@@ -478,10 +489,6 @@ const isPrimaryPanel = (panel) => (
                                         :title="t('viewMail')" :aria-label="t('viewMail')">
                                         {{ t('viewMail') }}
                                     </button>
-                                    <button class="btn-action" type="button" @click="actions.copyText(row.address)"
-                                        :title="t('copy')" :aria-label="t('copy')">
-                                        {{ t('copy') }}
-                                    </button>
                                     <div class="action-dropdown" :class="{ 'is-open': activeMenuAddressId === row.id }">
                                         <button class="btn-action btn-action-more" type="button"
                                             :aria-expanded="activeMenuAddressId === row.id ? 'true' : 'false'"
@@ -498,20 +505,6 @@ const isPrimaryPanel = (panel) => (
                                         </button>
                                         <div v-show="activeMenuAddressId === row.id" class="action-dropdown-menu" role="menu"
                                             :aria-label="t('moreActions')">
-                                            <button class="action-menu-item" role="menuitem" type="button"
-                                                :disabled="!row.sourceId || !!model.actionBusy"
-                                                :title="t('showCredential')"
-                                                :aria-label="t('showCredential')"
-                                                @click="actions.handleAddressRowAction(row, 'show-credential'); closeAddressMenu()">
-                                                {{ t('showCredential') }}
-                                            </button>
-                                            <button class="action-menu-item" role="menuitem" type="button"
-                                                :disabled="!row.sourceId || !!model.actionBusy"
-                                                :title="t('rotateCredential')"
-                                                :aria-label="t('rotateCredential')"
-                                                @click="actions.handleAddressRowAction(row, 'rotate'); closeAddressMenu()">
-                                                {{ t('rotateCredential') }}
-                                            </button>
                                             <button class="action-menu-item" role="menuitem" type="button"
                                                 :disabled="!row.sourceId || !!model.actionBusy"
                                                 :title="t('share')"

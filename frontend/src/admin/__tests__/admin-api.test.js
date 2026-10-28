@@ -179,10 +179,17 @@ describe('admin snapshot DTO', () => {
         const client = createAdminApi(fetcher)
 
         await loadAdminViewSnapshot(client, 'authenticators')
-        expect(fetcher).not.toHaveBeenCalled()
+        expect(fetcher.mock.calls.map(([path]) => path)).toEqual([
+            '/api/admin/worker/configs',
+            '/api/admin/db_version',
+        ])
 
         await loadAdminViewSnapshot(client, 'identity')
         expect(fetcher.mock.calls.map(([path]) => path)).toEqual([
+            '/api/admin/worker/configs',
+            '/api/admin/db_version',
+            '/api/admin/worker/configs',
+            '/api/admin/db_version',
             '/api/admin/domains',
             '/api/admin/address?limit=50&offset=0',
             '/api/admin/users?limit=20&offset=0',

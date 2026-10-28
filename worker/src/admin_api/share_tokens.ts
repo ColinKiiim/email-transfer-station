@@ -59,6 +59,13 @@ const create = async (c: Context<HonoCustomType>) => {
         : null;
     const token = generateShareToken();
     const tokenHash = await hashShareToken(token);
+    // Keep one active administrator share per address. Historical rows remain
+    // available for audit, while a new distribution replaces the old link.
+    await c.env.DB.prepare(
+        `UPDATE address_share_tokens SET revoked_at = datetime('now')`
+        + ` WHERE address_id = ? AND revoked_at IS NULL`
+        + ` AND (expires_at IS NULL OR expires_at > datetime('now'))`
+    ).bind(address.id).run();
     const { success } = await c.env.DB.prepare(
         `INSERT INTO address_share_tokens`
         + ` (address_id, token_hash, label, scopes, expires_at)`

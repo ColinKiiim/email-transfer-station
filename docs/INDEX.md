@@ -19,6 +19,7 @@ public maintenance records that apply to the single product repository.
 - Admin HIG / Material review and copy pass:
   [`plans/PLAN_2026-10-18_admin-hig-review.md`](plans/PLAN_2026-10-18_admin-hig-review.md)
 - Public mailbox interaction cleanup: [`CURRENT.md`](CURRENT.md#public-mailbox-interaction-cleanup--2026-10-28)
+- Issues to resolve: [`ISSUES_TO_RESOLVE.md`](ISSUES_TO_RESOLVE.md)
 
 Operational output, browser state, release receipts, private credentials,
 governance history, and reference repositories are excluded from the product

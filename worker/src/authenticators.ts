@@ -160,6 +160,13 @@ authenticatorApi.post('/api/admin/authenticators/:id/shares', async c => {
     const item = await c.env.DB.prepare('SELECT id FROM user_authenticators WHERE id = ?').bind(c.req.param('id')).first('id');
     if (!item) return c.json({ error: 'authenticator_not_found' }, 404);
     const id = crypto.randomUUID(), token = generateShareToken();
+    // Keep one active administrator share per authenticator. Historical rows
+    // remain for audit, while a new distribution replaces the old link.
+    await c.env.DB.prepare(
+        `UPDATE authenticator_share_tokens SET revoked_at = datetime('now')`
+        + ` WHERE authenticator_id = ? AND revoked_at IS NULL`
+        + ` AND (expires_at IS NULL OR expires_at > datetime('now'))`
+    ).bind(c.req.param('id')).run();
     await c.env.DB.prepare(`INSERT INTO authenticator_share_tokens (id, authenticator_id, token_hash, expires_at)
         VALUES (?, ?, ?, ?)`).bind(id, c.req.param('id'), await hashShareToken(token), expiresAt).run();
     return c.json({ id, token, expires_at: expiresAt }, 201);

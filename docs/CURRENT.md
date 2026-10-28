@@ -2,6 +2,19 @@
 
 Updated: 2026-10-18 (Asia/Singapore)
 
+## Issue backlog — 2026-10-28
+
+Created [`ISSUES_TO_RESOLVE.md`](ISSUES_TO_RESOLVE.md). ISSUE-001 records the
+analysis of the admin console sidebar showing “服务未知 / 版本未知”: the
+labels are frontend fallbacks for missing or unread worker/database data, and
+the green dot is currently fixed CSS rather than a live health result. ISSUE-002
+through ISSUE-004 record the split authenticator/address distribution models,
+the duplicate credential/share choices, and the address copy-button placement;
+the current implementation now addresses those four items. ISSUE-005 through
+ISSUE-007 record remaining user-center credential paths, legacy direct-authority
+APIs, and historical access-package rows that were reviewed but intentionally
+left for a separate migration decision. Production acceptance is pending.
+
 ## Public mailbox interaction cleanup — 2026-10-28
 
 The public mailbox now has quiet automatic refresh in simple mode: background
