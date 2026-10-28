@@ -9,7 +9,10 @@ credentials. No one-time display, automatic expiry, or automatic invalidation is
 allowed in this repository; refresh and revoke remain explicit administrator
 actions. Address creation again returns the durable address credential, and
 share creation forces a null expiry. This correction is validated locally and
-awaits its production release.
+released in Pages source `4df8506` at
+`https://54f34822.email-transfer-station.pages.dev`; Worker version
+`52c803b5-6a8c-4f81-88d7-528f6dd848f7` is deployed to
+`mail-api.20030405.xyz`. The direct Worker health check returned 200/`OK`.
 
 ## Issue backlog — 2026-10-28
 
