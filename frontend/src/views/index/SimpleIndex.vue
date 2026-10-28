@@ -29,6 +29,7 @@ const currentMail = ref(null)
 const showAccountSettingsCard = ref(false)
 const currentAutoRefreshInterval = ref(60)
 const timer = ref(null)
+const isRefreshing = ref(false)
 
 const { t } = useScopedI18n('views.index.SimpleIndex')
 
@@ -45,16 +46,21 @@ const copyAddress = async () => {
 // 获取邮件数据
 const fetchMails = async () => {
     if (!settings.value.address) return
+    isRefreshing.value = true
     try {
         const { results, count } = await api.fetch(`/api/mails?limit=1&offset=${currentPage.value - 1}`)
-        totalCount.value = count > 0 ? count : totalCount.value;
+        totalCount.value = Number.isFinite(count) ? count : 0;
         const rawMail = results && results.length > 0 ? results[0] : null
         const nextMail = rawMail ? await processItem(rawMail) : null
         revokeMailObjectUrls(currentMail.value)
         currentMail.value = nextMail
+        return true
     } catch (error) {
         console.error('Failed to fetch mails:', error)
         message.error(t('fetchMailsFailed'))
+        return false
+    } finally {
+        isRefreshing.value = false
     }
 }
 
@@ -74,13 +80,13 @@ const deleteMail = async () => {
 }
 
 // 刷新邮件
-const refreshMails = async () => {
-    if (loading.value) return
+const refreshMails = async (notify = true) => {
+    if (loading.value || isRefreshing.value) return
     currentPage.value = 1
     showAccountSettingsCard.value = false
     currentAutoRefreshInterval.value = 60
-    await fetchMails()
-    message.success(t('refreshSuccess'))
+    const refreshed = await fetchMails()
+    if (notify && refreshed) message.success(t('refreshSuccess'))
 }
 
 // 分页控制
@@ -119,7 +125,7 @@ onMounted(async () => {
         }
 
         if (--currentAutoRefreshInterval.value <= 0) {
-            await refreshMails()
+            await refreshMails(false)
         }
     }, 1000)
 })
@@ -144,7 +150,7 @@ onBeforeUnmount(() => {
                     <AddressSelect :showCopy="false" size="small" />
                 </div>
                 <n-flex justify="center">
-                    <n-button @click="refreshMails" :loading="loading" type="primary" tertiary size="small">
+                    <n-button @click="refreshMails" :loading="loading || isRefreshing" type="primary" tertiary size="small">
                         <template #icon>
                             <n-icon>
                                 <RefreshFilled />
@@ -177,7 +183,7 @@ onBeforeUnmount(() => {
                         {{ t('accountSettings') }}
                     </n-button>
                 </n-flex>
-                <div v-if="isFirstPage" style="text-align: center; margin-top: 12px;">
+                <div v-if="isFirstPage && !isRefreshing" style="text-align: center; margin-top: 12px;">
                     <n-text depth="3" size="12">
                         {{ t('refreshAfter', { msg: Math.max(0, currentAutoRefreshInterval) }) }}
                     </n-text>

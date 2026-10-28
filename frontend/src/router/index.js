@@ -29,29 +29,50 @@ const router = createRouter({
     routes: [
         {
             path: '/',
-            alias: '/:lang/',
+            component: Index
+        },
+        {
+            path: '/:lang/',
             component: Index
         },
         {
             path: '/user',
-            alias: '/:lang/user',
+            component: User,
+            meta: { fullScreen: true }
+        },
+        {
+            path: '/:lang/user',
             component: User,
             meta: { fullScreen: true }
         },
         {
             path: '/user/oauth2/callback',
-            alias: '/:lang/user/oauth2/callback',
+            component: UserOauth2Callback
+        },
+        {
+            path: '/:lang/user/oauth2/callback',
             component: UserOauth2Callback
         },
         {
             path: '/admin',
-            alias: '/:lang/admin',
+            meta: { fullScreen: true },
+            component: () => import('../views/AdminNext.vue')
+        },
+        {
+            path: '/:lang/admin',
             meta: { fullScreen: true },
             component: () => import('../views/AdminNext.vue')
         },
         {
             path: '/i/:token',
-            alias: '/:lang/i/:token',
+            component: () => import('../views/TokenInbox.vue'),
+            meta: {
+                shareOnly: true,
+                fullScreen: true
+            }
+        },
+        {
+            path: '/:lang/i/:token',
             component: () => import('../views/TokenInbox.vue'),
             meta: {
                 shareOnly: true,
@@ -65,7 +86,10 @@ const router = createRouter({
         },
         {
             path: '/telegram_mail',
-            alias: '/:lang/telegram_mail',
+            component: () => import('../views/telegram/Mail.vue')
+        },
+        {
+            path: '/:lang/telegram_mail',
             component: () => import('../views/telegram/Mail.vue')
         },
         {

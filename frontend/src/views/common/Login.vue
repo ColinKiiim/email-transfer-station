@@ -16,7 +16,6 @@ const props = defineProps({
     bindUserAddress: {
         type: Function,
         default: async () => { await api.bindUserAddress(); },
-        required: true
     },
     newAddressPath: {
         type: Function,
@@ -31,7 +30,6 @@ const props = defineProps({
                 }),
             });
         },
-        required: true
     },
 })
 

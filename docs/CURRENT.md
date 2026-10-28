@@ -2,6 +2,19 @@
 
 Updated: 2026-10-18 (Asia/Singapore)
 
+## Public mailbox interaction cleanup — 2026-10-28
+
+The public mailbox now has quiet automatic refresh in simple mode: background
+refreshes do not emit success toasts, manual refreshes show a loading state, and
+failed refreshes no longer report success. Empty mailbox responses also reset the
+message count correctly. Login's default callback props no longer produce Vue
+missing-prop warnings, and localized routes use explicit records so the router
+starts without alias-parameter warnings.
+
+Validation: focused `Login.test.js` (6 tests), frontend lint for the three
+changed sources, `git diff --check`, a production frontend build, and a local
+desktop/mobile browser smoke check with zero console warnings.
+
 ## Maintainability refactor — WP1–WP7 complete
 
 Decision: `REFACTOR_COMPLETE`. WP1, WP2, WP2S, WP3, WP4, WP5, WP6, and WP7
