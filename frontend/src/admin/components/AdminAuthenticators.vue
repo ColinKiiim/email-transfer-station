@@ -52,8 +52,17 @@ const handleDocumentKeydown = (event) => {
 }
 
 const load = async () => {
-    const [, userResult] = await Promise.all([refreshCodes(), adminApi.listUsers({ limit: 100 })])
-    if (!disposed) users.value = userResult.results || []
+    const [codesResult, userResult] = await Promise.allSettled([
+        refreshCodes(),
+        adminApi.listUsers({ limit: 100 }),
+    ])
+    if (!disposed && userResult.status === 'fulfilled') {
+        users.value = userResult.value.results || []
+    }
+    if (userResult.status === 'rejected' && !disposed) {
+        error.value = userResult.reason?.message || t('failed')
+    }
+    if (codesResult.status === 'rejected') throw codesResult.reason
 }
 
 const clearScheduledTimer = () => {

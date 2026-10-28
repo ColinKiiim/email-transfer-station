@@ -104,6 +104,14 @@ describe('pending frontend review regressions', () => {
         expect(wrapper.find('[role="alert"]').exists()).toBe(false)
     })
 
+    it('keeps users available when the authenticator list is temporarily unavailable', async () => {
+        mocks.listAuthenticators.mockRejectedValueOnce(new Error('offline'))
+        mocks.listUsers.mockResolvedValueOnce({ results: [{ id: 7, user_email: 'user@example.test' }] })
+        const wrapper = mount(AdminAuthenticators, { requestConfirm: vi.fn(), copyText: vi.fn() })
+        await settle()
+        expect(wrapper.vm.$.setupState.users).toEqual([{ id: 7, user_email: 'user@example.test' }])
+    })
+
     it('deduplicates visibility refreshes and never reschedules an unmounted admin view', async () => {
         const wrapper = mount(AdminAuthenticators, { requestConfirm: vi.fn(), copyText: vi.fn() })
         await settle()
