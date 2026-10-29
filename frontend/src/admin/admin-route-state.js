@@ -131,6 +131,11 @@ export const useAdminRouteState = ({ route, router, ui, detailOpen, storage }) =
         if (value !== undefined) replaceRouteQuery({}, ['demo'])
     }, { immediate: true })
 
+    const initialQueryView = queryValue(route.query.view)
+    if (initialQueryView && !VIEW_META[initialQueryView]) {
+        replaceRouteQuery({ view: 'overview' }, ['mailId', 'item', 'mode'])
+    }
+
     return {
         applyView,
         persistView,
