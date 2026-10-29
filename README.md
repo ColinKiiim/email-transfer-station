@@ -83,7 +83,7 @@ skills/email-transfer-station-agent-mail/
 
 ## 无秘密本地验证
 
-需要 Node.js 22、Corepack 和 pnpm 10.10.0。以下命令只做安装、测试和构建，不需要
+需要 Node.js 22、Corepack 和 pnpm 11.24.0。以下命令只做安装、测试和构建，不需要
 Cloudflare 凭据：
 
 ```bash

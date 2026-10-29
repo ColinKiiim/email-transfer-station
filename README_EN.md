@@ -94,7 +94,7 @@ skills/email-transfer-station-agent-mail/
 
 ## Secret-free local validation
 
-Use Node.js 22, Corepack, and pnpm 10.10.0. These commands only install, test,
+Use Node.js 22, Corepack, and pnpm 11.24.0. These commands only install, test,
 and build; they do not require Cloudflare credentials:
 
 ```bash
