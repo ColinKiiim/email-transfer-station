@@ -16,7 +16,9 @@ export const statusOptionsForView = (view) => {
 export const createInitialAdminRouteState = (query = {}, storage) => {
     const queryView = queryValue(query.view)
     const storedView = storage?.getItem?.(VIEW_STORAGE_KEY) || ''
-    const initialView = VIEW_META[queryView] ? queryView : (VIEW_META[storedView] ? storedView : 'overview')
+    const initialView = VIEW_META[queryView]
+        ? queryView
+        : (queryView ? 'overview' : (VIEW_META[storedView] ? storedView : 'overview'))
     return {
         view: initialView,
         query: queryValue(query.q),
@@ -107,6 +109,12 @@ export const useAdminRouteState = ({ route, router, ui, detailOpen, storage }) =
 
     watch(() => route.query.view, (value) => {
         const nextView = queryValue(value)
+        if (!VIEW_META[nextView]) {
+            applyView('overview')
+            persistView('overview')
+            replaceRouteQuery({ view: 'overview' }, ['mailId', 'item', 'mode'])
+            return
+        }
         if (nextView !== ui.view) applyView(nextView)
     })
     watch(() => route.query.q, (value) => { ui.query = queryValue(value) })
