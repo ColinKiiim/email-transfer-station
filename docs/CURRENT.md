@@ -1,6 +1,6 @@
 # Current project state
 
-Updated: 2026-10-18 (Asia/Singapore)
+Updated: 2026-10-29 (Asia/Singapore)
 
 ## Corepack / pnpm tooling alignment — 2026-10-29
 
@@ -40,7 +40,11 @@ is intentionally distinguished because its open reader needs a current-mail
 indicator. ISSUE-009 records the unclear role of the access-package page and
 its placeholder-only copy action; the current correction removes the online
 access-package page and its management API instead of keeping an archive view
-online. The next Pages and Worker release will carry this removal.
+online. Commit `7a1d4c1` is deployed to Pages at
+`https://dc546848.email-transfer-station.pages.dev`; Worker version
+`91407b2b-9b80-4be0-b87a-80f1ee70be92` is deployed to
+`mail-api.20030405.xyz`. The live admin URL with `?view=access` now resolves to
+the 总览 page and the sidebar no longer contains 访问包.
 
 ## Public mailbox interaction cleanup — 2026-10-28
 
