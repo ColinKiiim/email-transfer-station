@@ -21,6 +21,7 @@ import {
     buildAdminAddressRail,
     buildAdminAddressRows,
     buildAdminAuditRows,
+    buildAdminAuthenticatorCredentialRows,
     buildAdminExceptionRail,
     buildAdminProcessingRows,
     buildAdminShareRows,
@@ -162,6 +163,7 @@ const live = reactive({
     unknownMails: [],
     addresses: [],
     accessPackages: [],
+    authenticators: [],
     auditEvents: [],
     accessEvents: [],
     users: [],
@@ -243,6 +245,7 @@ const clearAdminSessionState = () => {
     live.unknownMails = []
     live.addresses = []
     live.accessPackages = []
+    live.authenticators = []
     live.auditEvents = []
     live.accessEvents = []
     live.users = []
@@ -550,7 +553,10 @@ const routingActivationRows = computed(() => buildRoutingActivationRows(
     live.domainAutomation,
 ))
 
-const shareRows = computed(() => buildAdminShareRows(live.accessPackages))
+const shareRows = computed(() => [
+    ...buildAdminShareRows(live.accessPackages),
+    ...buildAdminAuthenticatorCredentialRows(live.authenticators),
+])
 const senderAccessRows = computed(() => buildAdminSenderAccessRows(live.senderAccess))
 const sendBoxRows = computed(() => buildAdminSendBoxRows(live.sendBox))
 const userRows = computed(() => buildAdminUserRows(live.users))

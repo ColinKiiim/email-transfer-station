@@ -37,7 +37,10 @@ APIs, and historical access-package rows that were reviewed but intentionally
 left for a separate migration decision. ISSUE-008 records the resource-table
 selection highlight that remains after a detail drawer closes; the inbox case
 is intentionally distinguished because its open reader needs a current-mail
-indicator. The runtime release is accepted:
+indicator. ISSUE-009 records the unclear role of the access-package page and
+its placeholder-only copy action; the local implementation now turns it into
+a combined address/authenticator credential overview and removes that copy
+action. The runtime release is accepted:
 Pages deployment `https://07c4ecc6.email-transfer-station.pages.dev` was
 accepted for source `d32c5d1`, and Worker version
 `9bed7c1d-724f-4a71-9c5e-1fedded96cfd` is deployed to

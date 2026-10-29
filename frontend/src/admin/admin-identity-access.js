@@ -77,10 +77,27 @@ export const buildAdminShareRows = (rows = []) => rows.map((row) => {
         status: rawStatus,
         statusLabel: statusMeta.label,
         statusLabelTone: statusMeta.tone,
-        expires: formatDate(row.expires_at),
+        expires: row.expires_at ? formatDate(row.expires_at) : t('noExpiry'),
         last: formatDate(row.last_used_at),
-        path: '/i/:token',
         pathLabel: t('sharePathLabel'),
+    }
+})
+
+export const buildAdminAuthenticatorCredentialRows = (rows = []) => rows.map((row) => {
+    const issued = Number(row.share_count) > 0
+    return {
+        id: `auth-${row.id}`,
+        sourceId: row.id,
+        label: row.label || row.issuer || row.id,
+        address: row.issuer || t('credentialAuthenticator'),
+        scopes: 'credential',
+        scopeLabel: t('credentialPersistent'),
+        status: issued ? 'active' : 'unavailable',
+        statusLabel: issued ? t('shareStatusActive') : t('shareStatusUnavailable'),
+        statusLabelTone: issued ? 'ok' : 'neutral',
+        expires: t('noExpiry'),
+        last: '-',
+        pathLabel: t('credentialAuthenticator'),
     }
 })
 

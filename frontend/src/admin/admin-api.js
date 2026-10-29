@@ -184,6 +184,7 @@ export const normalizeAdminSnapshot = (raw, errors = []) => ({
     unknownMails: [],
     addresses: resultRows(raw.addresses),
     accessPackages: resultRows(raw.accessPackages),
+    authenticators: resultRows(raw.authenticators),
     auditEvents: resultRows(raw.auditEvents),
     accessEvents: resultRows(raw.accessEvents),
     users: resultRows(raw.users),
@@ -246,7 +247,7 @@ export const VIEW_SNAPSHOT_KEYS = {
     routing: ['overview', 'workerConfig', 'dbVersion', 'domains', 'domainAutomation', 'mailDomains'],
     delivery: ['workerConfig', 'dbVersion', 'mailWebhook', 'globalWebhook', 'telegram', 'aiSettings', 'senderAccess', 'sendBox'],
     users: ['workerConfig', 'dbVersion', 'users', 'userTotalCount', 'addresses'],
-    access: ['workerConfig', 'dbVersion', 'accessPackages', 'auditEvents', 'accessEvents'],
+    access: ['workerConfig', 'dbVersion', 'accessPackages', 'authenticators', 'auditEvents', 'accessEvents'],
     ops: ['workerConfig', 'dbVersion', 'mailWebhook', 'globalWebhook', 'telegram', 'aiSettings'],
     authenticators: ['workerConfig', 'dbVersion'],
 }
@@ -303,6 +304,7 @@ const VIEW_READS = {
     access: [
         ...SHARED_STATUS_READS,
         ['accessPackages', 'access packages', 'listAccessPackages'],
+        ['authenticators', 'authenticators', 'listAuthenticators'],
         ['auditEvents', 'audit events', 'listAuditEvents'],
         ['accessEvents', 'access events', 'listAccessEvents'],
     ],

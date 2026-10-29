@@ -2251,8 +2251,24 @@ export const MESSAGE_REGISTRY = {
       "zh": "已过期"
     },
     "sharePathLabel": {
-      "en": "Temporary share link",
-      "zh": "临时分享链接"
+      "en": "Persistent credential",
+      "zh": "持久凭证"
+    },
+    "credentialAuthenticator": {
+      "en": "Authenticator credential",
+      "zh": "验证器凭证"
+    },
+    "credentialPersistent": {
+      "en": "Persistent credential",
+      "zh": "持久凭证"
+    },
+    "noExpiry": {
+      "en": "No expiry",
+      "zh": "不过期"
+    },
+    "shareStatusUnavailable": {
+      "en": "Not issued",
+      "zh": "未生成"
     },
     "addressCount": {
       "en": "{count} addresses",
@@ -3666,8 +3682,8 @@ export const MESSAGE_REGISTRY = {
       "zh": "发送箱"
     },
     "panelAccessPackages": {
-      "en": "Access packages",
-      "zh": "访问包"
+      "en": "Credential overview",
+      "zh": "凭证总览"
     },
     "panelAuditAndAccessLogs": {
       "en": "Audit & access logs",

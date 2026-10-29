@@ -173,7 +173,6 @@ export const TABLE_SPECS = {
         { labelKey: 'status', key: 'statusLabel', type: 'status' },
         { labelKey: 'expires', key: 'expires', type: 'time' },
         { labelKey: 'lastUsed', key: 'last', type: 'time' },
-        { labelKey: 'actions', key: 'actions', type: 'shareActions' },
     ],
     audit: [
         { labelKey: 'time', key: 'time', type: 'time' },
