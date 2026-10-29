@@ -92,7 +92,6 @@ const fixtureResponse = async (path, options = {}) => {
     }
     if (path === '/api/admin/mails_unknow?limit=100&offset=0&include_raw=false') return { results: [] }
     if (path === '/api/admin/address?limit=50&offset=0') return { results: runtime.addresses }
-    if (path === '/api/admin/access_packages?limit=50&offset=0') return { results: runtime.accessPackages }
     if (path === '/api/admin/audit_events?limit=20&offset=0') return { results: [] }
     if (path === '/api/admin/access_events?limit=20&offset=0') return { results: [] }
     if (path === '/api/admin/users?limit=20&offset=0') return { results: [] }
@@ -113,7 +112,6 @@ const fixtureResponse = async (path, options = {}) => {
     if (path.match(/^\/api\/admin\/address\/\d+\/share_tokens$/) && options.method === 'POST') {
         runtime.lastShareCreate = JSON.parse(options.body)
         const addressId = Number(path.match(/address\/(\d+)/)?.[1])
-        runtime.accessPackages.push({ id: 11, address_id: addressId, address: addressId === 3 ? 'ops@example.test' : 'team@example.test', scopes: 'read' })
         return { id: 11, address: 'ops@example.test', token: 'fixture-share-token' }
     }
     if (path === '/api/admin/address/3/credential' && options.method === 'POST') {
@@ -185,7 +183,6 @@ beforeEach(() => {
     runtime = {
         mails: [mail()],
         addresses: [],
-        accessPackages: [],
         domains: [],
         loginError: null,
         failPath: null,
