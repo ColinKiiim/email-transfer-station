@@ -20,7 +20,6 @@ import ai_extract_settings from './ai_extract_settings'
 import e2e_test_api from './e2e_test_api'
 import share_tokens from './share_tokens'
 import events from './events'
-import access_packages from './access_packages'
 import domains from './domains'
 
 export const api = new Hono<HonoCustomType>()
@@ -42,7 +41,6 @@ api.post('/admin/address/:id/share_tokens', share_tokens.create)
 api.delete('/admin/address/:id/share_tokens', share_tokens.revokeAll)
 api.patch('/admin/address_share_tokens/:token_id', share_tokens.update)
 api.delete('/admin/address_share_tokens/:token_id', share_tokens.revoke)
-api.get('/admin/access_packages', access_packages.list)
 api.get('/admin/domains', domains.list)
 api.post('/admin/domains', domains.create)
 api.patch('/admin/domains/:id', domains.update)

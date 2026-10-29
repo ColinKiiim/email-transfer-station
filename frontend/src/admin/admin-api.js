@@ -41,7 +41,6 @@ export const createAdminApi = (fetcher, { requestIdFactory = createAdminRequestI
     getMail: (id) => fetcher(`/api/admin/mails/${pathId(id)}`),
     listUnknownMails: () => fetcher('/api/admin/mails_unknow?limit=100&offset=0&include_raw=false'),
     listAddresses: () => fetcher('/api/admin/address?limit=50&offset=0'),
-    listAccessPackages: () => fetcher('/api/admin/access_packages?limit=50&offset=0'),
     listAuditEvents: () => fetcher('/api/admin/audit_events?limit=20&offset=0'),
     listAccessEvents: () => fetcher('/api/admin/access_events?limit=20&offset=0'),
     listUsers: ({ limit = 20, offset = 0, query } = {}) => {
@@ -183,8 +182,6 @@ export const normalizeAdminSnapshot = (raw, errors = []) => ({
     mailUnreadCount: finiteNumber(raw.mails?.unread_count),
     unknownMails: [],
     addresses: resultRows(raw.addresses),
-    accessPackages: resultRows(raw.accessPackages),
-    authenticators: resultRows(raw.authenticators),
     auditEvents: resultRows(raw.auditEvents),
     accessEvents: resultRows(raw.accessEvents),
     users: resultRows(raw.users),
@@ -221,7 +218,6 @@ export const loadAdminSnapshot = async (client = adminApi, seed = {}) => {
         ['mailAddresses', 'mail addresses', () => client.listMailAddresses()],
         ['mails', 'mails', () => client.listMails({ limit: ADMIN_MAIL_PAGE_LIMIT, offset: 0 })],
         ['addresses', 'addresses', () => client.listAddresses()],
-        ['accessPackages', 'access packages', () => client.listAccessPackages()],
         ['auditEvents', 'audit events', () => client.listAuditEvents()],
         ['accessEvents', 'access events', () => client.listAccessEvents()],
         ['users', 'users', () => client.listUsers()],
@@ -247,7 +243,6 @@ export const VIEW_SNAPSHOT_KEYS = {
     routing: ['overview', 'workerConfig', 'dbVersion', 'domains', 'domainAutomation', 'mailDomains'],
     delivery: ['workerConfig', 'dbVersion', 'mailWebhook', 'globalWebhook', 'telegram', 'aiSettings', 'senderAccess', 'sendBox'],
     users: ['workerConfig', 'dbVersion', 'users', 'userTotalCount', 'addresses'],
-    access: ['workerConfig', 'dbVersion', 'accessPackages', 'authenticators', 'auditEvents', 'accessEvents'],
     ops: ['workerConfig', 'dbVersion', 'mailWebhook', 'globalWebhook', 'telegram', 'aiSettings'],
     authenticators: ['workerConfig', 'dbVersion'],
 }
@@ -300,13 +295,6 @@ const VIEW_READS = {
         ...SHARED_STATUS_READS,
         ['users', 'users', 'listUsers'],
         ['addresses', 'addresses', 'listAddresses'],
-    ],
-    access: [
-        ...SHARED_STATUS_READS,
-        ['accessPackages', 'access packages', 'listAccessPackages'],
-        ['authenticators', 'authenticators', 'listAuthenticators'],
-        ['auditEvents', 'audit events', 'listAuditEvents'],
-        ['accessEvents', 'access events', 'listAccessEvents'],
     ],
     ops: [
         ...SHARED_STATUS_READS,

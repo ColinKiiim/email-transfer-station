@@ -2,7 +2,6 @@ import { watch } from 'vue'
 
 import { queryValue } from './admin-formatters'
 import {
-    ACCESS_STATUS_OPTIONS,
     FLOW_STATUS_OPTIONS,
     VIEW_META,
 } from './admin-view-config'
@@ -11,7 +10,6 @@ const VIEW_STORAGE_KEY = 'ets-admin-next-view'
 
 export const statusOptionsForView = (view) => {
     if (view === 'flow') return FLOW_STATUS_OPTIONS
-    if (view === 'access') return ACCESS_STATUS_OPTIONS
     return ['all']
 }
 

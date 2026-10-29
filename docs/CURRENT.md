@@ -38,13 +38,9 @@ left for a separate migration decision. ISSUE-008 records the resource-table
 selection highlight that remains after a detail drawer closes; the inbox case
 is intentionally distinguished because its open reader needs a current-mail
 indicator. ISSUE-009 records the unclear role of the access-package page and
-its placeholder-only copy action; the local implementation now turns it into
-a combined address/authenticator credential overview and removes that copy
-action. The runtime release is accepted:
-Pages deployment `https://6f417303.email-transfer-station.pages.dev` was
-accepted for source `c7076a8`, and the Worker remains unchanged because this
-release only changes the frontend overview. Browser-level resource-flow
-confirmation remains a follow-up.
+its placeholder-only copy action; the current correction removes the online
+access-package page and its management API instead of keeping an archive view
+online. The next Pages and Worker release will carry this removal.
 
 ## Public mailbox interaction cleanup — 2026-10-28
 

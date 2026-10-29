@@ -2230,46 +2230,6 @@ export const MESSAGE_REGISTRY = {
       "en": "Address identity record",
       "zh": "地址身份记录"
     },
-    "sharePackageLabel": {
-      "en": "Access package #{id}",
-      "zh": "访问包 #{id}"
-    },
-    "shareScopeRead": {
-      "en": "Read-only",
-      "zh": "只读"
-    },
-    "shareStatusActive": {
-      "en": "Active",
-      "zh": "有效"
-    },
-    "shareStatusRevoked": {
-      "en": "Revoked",
-      "zh": "已失效"
-    },
-    "shareStatusExpired": {
-      "en": "Expired",
-      "zh": "已过期"
-    },
-    "sharePathLabel": {
-      "en": "Persistent credential",
-      "zh": "持久凭证"
-    },
-    "credentialAuthenticator": {
-      "en": "Authenticator credential",
-      "zh": "验证器凭证"
-    },
-    "credentialPersistent": {
-      "en": "Persistent credential",
-      "zh": "持久凭证"
-    },
-    "noExpiry": {
-      "en": "No expiry",
-      "zh": "不过期"
-    },
-    "shareStatusUnavailable": {
-      "en": "Not issued",
-      "zh": "未生成"
-    },
     "addressCount": {
       "en": "{count} addresses",
       "zh": "{count} 个地址"
@@ -3680,14 +3640,6 @@ export const MESSAGE_REGISTRY = {
     "panelSendBox": {
       "en": "Send box",
       "zh": "发送箱"
-    },
-    "panelAccessPackages": {
-      "en": "Credential overview",
-      "zh": "凭证总览"
-    },
-    "panelAuditAndAccessLogs": {
-      "en": "Audit & access logs",
-      "zh": "审计与访问日志"
     },
     "panelOperations": {
       "en": "Operations",

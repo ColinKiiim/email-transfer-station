@@ -21,10 +21,8 @@ import {
     buildAdminAddressRail,
     buildAdminAddressRows,
     buildAdminAuditRows,
-    buildAdminAuthenticatorCredentialRows,
     buildAdminExceptionRail,
     buildAdminProcessingRows,
-    buildAdminShareRows,
     buildAdminUserRail,
     buildAdminUserRows,
 } from '../admin/admin-identity-access'
@@ -94,7 +92,6 @@ const ui = reactive({
         identity: 'addr-ops',
         routing: 'domain-cloudflare',
         delivery: 'notify-mailhook',
-        access: 'risk-html',
         ops: 'worker',
         logs: '',
         users: '',
@@ -162,8 +159,6 @@ const live = reactive({
     mailUnreadCount: null,
     unknownMails: [],
     addresses: [],
-    accessPackages: [],
-    authenticators: [],
     auditEvents: [],
     accessEvents: [],
     users: [],
@@ -244,8 +239,6 @@ const clearAdminSessionState = () => {
     live.mailUnreadCount = null
     live.unknownMails = []
     live.addresses = []
-    live.accessPackages = []
-    live.authenticators = []
     live.auditEvents = []
     live.accessEvents = []
     live.users = []
@@ -553,10 +546,6 @@ const routingActivationRows = computed(() => buildRoutingActivationRows(
     live.domainAutomation,
 ))
 
-const shareRows = computed(() => [
-    ...buildAdminShareRows(live.accessPackages),
-    ...buildAdminAuthenticatorCredentialRows(live.authenticators),
-])
 const senderAccessRows = computed(() => buildAdminSenderAccessRows(live.senderAccess))
 const sendBoxRows = computed(() => buildAdminSendBoxRows(live.sendBox))
 const userRows = computed(() => buildAdminUserRows(live.users))
@@ -596,9 +585,6 @@ const pageLoadErrors = computed(() => {
     if (activeView.value === 'identity') {
         return pick([/^addresses:/, /^users:/])
     }
-    if (activeView.value === 'access') {
-        return pick([/^access packages:/, /^audit events:/, /^access events:/])
-    }
     if (activeView.value === 'delivery') {
         return pick([/^mail webhook:/, /^global webhook:/, /^ai extract:/, /^sender access:/, /^sendbox:/])
     }
@@ -613,7 +599,6 @@ const navBadges = computed(() => ({
     addresses: null,
     domains: null,
     delivery: null,
-    access: null,
     ops: blockingLoadErrors.value.length > 0 ? { dot: true, label: t('backendPartiallyUnavailable') } : null,
 }))
 const activeStatusOptions = computed(() => {
@@ -626,11 +611,6 @@ const activeStatusOptions = computed(() => {
         { value: 'attachment', label: t('statusAttachment') },
         { value: 'saved', label: t('statusSaved') },
         { value: 'unknown', label: t('statusUnknownAddress') },
-    ]
-    if (activeView.value === 'access') return [
-        { value: 'all', label: t('statusAll') },
-        { value: 'active', label: 'active' },
-        { value: 'success', label: 'success' },
     ]
     return []
 })
@@ -742,12 +722,6 @@ const activePanels = computed(() => {
             { id: 'channels', title: t('panelOutboundChannels'), columns: tableSpecs.notifications, rows: filterRows(notificationRows.value), kind: 'delivery' },
             { id: 'sender', title: t('panelAddressLevelSending'), columns: tableSpecs.sender, rows: filterRows(senderAccessRows.value), kind: 'delivery', layout: 'split' },
             { id: 'sendbox', title: t('panelSendBox'), columns: tableSpecs.mails, rows: filterRows(sendBoxRows.value), kind: 'delivery', layout: 'split' },
-        ]
-    }
-    if (view === 'access') {
-        return [
-            { id: 'shares', title: t('panelAccessPackages'), columns: tableSpecs.shares, rows: filterRows(shareRows.value), kind: 'access' },
-            { id: 'audit', title: t('panelAuditAndAccessLogs'), columns: tableSpecs.audit, rows: filterRows(auditRows.value), kind: 'audit' },
         ]
     }
     if (view === 'ops') {
