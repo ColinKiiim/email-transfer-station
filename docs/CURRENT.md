@@ -2,6 +2,15 @@
 
 Updated: 2026-10-18 (Asia/Singapore)
 
+## Corepack / pnpm tooling alignment — 2026-10-29
+
+The repository now consistently targets pnpm 11.24.0, matching the Corepack
+runtime used by the checked-in workspaces and E2E Dockerfiles. Worker patch
+configuration moved from the ignored `package.json.pnpm` field to
+`worker/pnpm-workspace.yaml`. Frozen-lockfile installs for frontend, Worker and
+Pages, the Pages build, Worker typecheck and Pages checks all pass through
+Corepack pnpm 11.24.0.
+
 ## Persistent credential policy correction — 2026-10-29
 
 The sharing flow is being corrected to use persistent address and authenticator
