@@ -34,7 +34,10 @@ the duplicate credential/share choices, and the address copy-button placement;
 the current implementation now addresses those four items. ISSUE-005 through
 ISSUE-007 record remaining user-center credential paths, legacy direct-authority
 APIs, and historical access-package rows that were reviewed but intentionally
-left for a separate migration decision. The runtime release is accepted:
+left for a separate migration decision. ISSUE-008 records the resource-table
+selection highlight that remains after a detail drawer closes; the inbox case
+is intentionally distinguished because its open reader needs a current-mail
+indicator. The runtime release is accepted:
 Pages deployment `https://07c4ecc6.email-transfer-station.pages.dev` was
 accepted for source `d32c5d1`, and Worker version
 `9bed7c1d-724f-4a71-9c5e-1fedded96cfd` is deployed to
