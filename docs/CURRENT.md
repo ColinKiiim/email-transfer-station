@@ -31,10 +31,12 @@ labels are frontend fallbacks for missing or unread worker/database data, and
 the green dot is currently fixed CSS rather than a live health result. ISSUE-002
 through ISSUE-004 record the split authenticator/address distribution models,
 the duplicate credential/share choices, and the address copy-button placement;
-the current implementation now addresses those four items. ISSUE-005 through
-ISSUE-007 record remaining user-center credential paths, legacy direct-authority
-APIs, and historical access-package rows that were reviewed but intentionally
-left for a separate migration decision. ISSUE-008 records the resource-table
+the current implementation now addresses those four items. ISSUE-005 and
+ISSUE-006 record remaining user-center credential paths and legacy
+direct-authority APIs that were reviewed but intentionally left for a separate
+migration decision. ISSUE-007 is superseded by ISSUE-009: its historical
+database rows remain, while the online access-package list and API were removed.
+ISSUE-008 records the resource-table
 selection highlight that remains after a detail drawer closes; the inbox case
 is intentionally distinguished because its open reader needs a current-mail
 indicator. ISSUE-009 records the unclear role of the access-package page and
