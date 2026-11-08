@@ -34,7 +34,7 @@ Independent local Codex/Antigravity sessions follow this file and
   authentication and resource-level authorization boundaries.
 - Change requests authorize local edits and the smallest validation needed for
   the changed behavior. For every ordinary commit, the default delivery is:
-  commit, push the current branch, and deploy production in the same task.
+  commit and push; a push to `main` deploys production through GitHub Actions.
   An explicit local-only, no-push, or no-deploy instruction overrides that
   default. D1 migrations, DNS/domain changes, secret or credential rotation,
   destructive remote actions, rollback, force-push, and non-production writes
@@ -77,23 +77,35 @@ focused change into a repository-wide validation pass.
 
 The normal product delivery path is:
 
-```powershell
+```bash
 # Run only the one check required by the changed behavior, if any.
 git diff --check
 git add <task-owned-files>
 git commit -m "<message>"
-git push
+git push   # on main
+```
+
+Pushing `main` runs CI; when CI passes, `.github/workflows/deploy.yml` deploys
+the Worker and then Pages from GitHub Actions with the repository secrets
+`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, and `WORKER_WRANGLER_TOML`
+(the full real `worker/wrangler.toml`). No local credentials are needed, and
+no session should deploy again by hand on top of it. After pushing, check the
+Deploy workflow result and record it in `docs/CURRENT.md`. The workflow never
+runs D1 migrations. Documentation-only commits use `[skip ci]` so they do not
+redeploy.
+
+The local Immediate release remains a fallback when Actions cannot be used:
+
+```powershell
 pwsh -NoProfile -File skills/email-transfer-station-release-check/scripts/pages-release.ps1 `
   -Action Immediate -ConfirmDevelopmentValidated -AuthorizeDeploy
 ```
 
-Use the Immediate release command once for a same-task product release. It
-rebuilds `frontend/dist` from the checked-out tree, then performs the required
-live preflight, one upload, and bounded acceptance; do
-not manually chain `Prepare`, `Verify`, `Preflight`, a second build, or a
-second deploy around it. Use the Deferred manifest flow only for a deliberate
-handoff across tasks or days. The Pages package command remains a low-level
-fallback, not a second default release path.
+It rebuilds `frontend/dist` from the checked-out tree, then performs the
+required live preflight, one upload, and bounded acceptance; do not manually
+chain `Prepare`, `Verify`, `Preflight`, a second build, or a second deploy
+around it. Use the Deferred manifest flow only for a deliberate handoff across
+tasks or days.
 
 Use `docs/CURRENT.md`, `docs/INDEX.md`, and the active plan as the current
 maintenance record. Update them once at delivery for material work. Work in

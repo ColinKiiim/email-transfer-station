@@ -1,6 +1,21 @@
 # Current project state
 
-Updated: 2026-10-29 (Asia/Singapore)
+Updated: 2026-11-08 (Asia/Singapore)
+
+## GitHub Actions production deploy — 2026-11-08
+
+CI had failed on every push since the pnpm 11 move: pnpm 11 rejects installs
+whose dependency build scripts are not explicitly approved
+(`ERR_PNPM_IGNORED_BUILDS`). `allowBuilds` now lists them in the Worker,
+frontend and Pages `pnpm-workspace.yaml` files (esbuild and workerd allowed;
+sharp, core-js-pure and es5-ext declined). Every CI step passed locally with
+Corepack pnpm 11.24.0.
+
+Production deploys now run from `.github/workflows/deploy.yml`, following the
+WANdrop model: after CI passes on a push to `main`, it deploys the Worker and
+then Pages using the repository secrets `CLOUDFLARE_API_TOKEN`,
+`CLOUDFLARE_ACCOUNT_ID` and `WORKER_WRANGLER_TOML`. Those secrets must be added
+in GitHub before the first run. Not yet run against production.
 
 ## Corepack / pnpm tooling alignment — 2026-10-29
 

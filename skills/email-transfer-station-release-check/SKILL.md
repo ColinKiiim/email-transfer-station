@@ -1,6 +1,6 @@
 ---
 name: email-transfer-station-release-check
-description: Prepare, verify, preflight, and run Immediate or Deferred Cloudflare Pages releases for Email Transfer Station. Use for the default product release path, Pages readiness, exact prepared-artifact verification, or Cloudflare Pages preflight; ordinary Worker, frontend, E2E, and documentation development does not trigger it. This skill never grants authority for protected remote writes.
+description: Prepare, verify, preflight, and run Immediate or Deferred Cloudflare Pages releases for Email Transfer Station. Use as the local fallback when the GitHub Actions deploy (the default release path) cannot be used, for Pages readiness, exact prepared-artifact verification, or Cloudflare Pages preflight; ordinary Worker, frontend, E2E, and documentation development does not trigger it. This skill never grants authority for protected remote writes.
 ---
 
 # Email Transfer Station release check

@@ -1,0 +1,5 @@
+allowBuilds:
+  es5-ext: false
+  esbuild: true
+  sharp: false
+  workerd: true
