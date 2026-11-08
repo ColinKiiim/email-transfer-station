@@ -82,11 +82,11 @@ test.describe('Admin console', () => {
       const addressDetails = page.getByRole('dialog', { name: '地址详情' });
       await expect(addressDetails).toBeVisible();
       await addressDetails.getByRole('button', { name: '显示凭证', exact: true }).click();
-      const oneTimeResult = page.getByTestId('one-time-result');
-      await expect(oneTimeResult).toBeVisible();
-      await expect(oneTimeResult).not.toHaveValue('');
+      const credentialResult = page.getByTestId('credential-result');
+      await expect(credentialResult).toBeVisible();
+      await expect(credentialResult).not.toHaveValue('');
       await page.keyboard.press('Escape');
-      await expect(oneTimeResult).toBeHidden();
+      await expect(credentialResult).toBeHidden();
     } finally {
       if (!page.isClosed()) await deleteAddress(request, address.jwt);
     }
