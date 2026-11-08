@@ -89,8 +89,8 @@ describe('ShadowHtmlComponent mail safety boundary', () => {
 
         const shadow = wrapper.get('div').element.shadowRoot
         const styles = [...shadow.querySelectorAll('style')].map((style) => style.textContent).join('\n')
-        expect(styles).toContain('background-color: #fff')
-        expect(styles).toContain('color: #202124')
+        expect(styles).toContain('background-color: var(--ets-mail-canvas, #fff)')
+        expect(styles).toContain('color: var(--ets-mail-text, #1d1d1f)')
         expect(shadow.innerHTML).toContain('transparent background')
         expect(shadow.innerHTML).toContain('background-color: rgb(255, 255, 255)')
         expect(shadow.innerHTML).toContain('background-color: rgb(32, 33, 36)')

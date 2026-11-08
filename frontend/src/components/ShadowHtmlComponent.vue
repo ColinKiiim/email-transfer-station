@@ -29,8 +29,11 @@ const mailRenderGuardStyle = `<style>
         display: block;
         min-width: 0;
         max-width: 100%;
-        background-color: #fff;
-        color: #202124;
+        padding: 20px 24px;
+        border-radius: 10px;
+        background-color: var(--ets-mail-canvas, #fff);
+        color: var(--ets-mail-text, #1d1d1f);
+        font: 14px/1.55 var(--ets-font-ui, -apple-system, sans-serif);
         overflow-wrap: break-word;
     }
     *, *::before, *::after {
@@ -78,12 +81,7 @@ const renderShadowDom = () => {
 
         // Update content if Shadow DOM exists
         if (shadowRoot) {
-            const darkModeStyle = props.isDark
-                ? `<style>
-                    a { color: #A8C7FA; }
-                   </style>`
-                : '';
-            shadowRoot.innerHTML = safeHtml.value + mailRenderGuardStyle + darkModeStyle;
+            shadowRoot.innerHTML = safeHtml.value + mailRenderGuardStyle;
         }
     } catch (error) {
         console.error('Failed to render Shadow DOM, falling back to v-html:', error);
@@ -121,8 +119,10 @@ watch(() => [safeHtml.value, props.isDark], () => {
 .fallback-mail-html {
     min-width: 0;
     max-width: 100%;
-    background-color: #fff;
-    color: #202124;
+    padding: 20px 24px;
+    border-radius: 10px;
+    background-color: var(--ets-mail-canvas, #fff);
+    color: var(--ets-mail-text, #1d1d1f);
     overflow-wrap: break-word;
 }
 

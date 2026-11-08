@@ -55,7 +55,7 @@ body:has(.admin-next) .n-message-container {
     --mix-bg: var(--ets-mix-bg);
     --mix-fg: var(--ets-mix-fg);
     --scrim: var(--ets-scrim);
-    --mail-canvas: #161920;
+    --mail-canvas: var(--ets-mail-canvas);
     --shadow-border: var(--ets-shadow-card);
     --shadow-pop: var(--ets-shadow-raised);
     --radius: var(--ets-radius-md);
@@ -2638,9 +2638,12 @@ html.dark .admin-next-host .gmail-loading-pill {
     }
 }
 
+/* The rendered message is its own paper (ShadowHtmlComponent); no second frame. */
 .admin-next-host .html-body {
     max-height: none;
-    background: var(--surface-soft);
+    padding: 0;
+    border: 0;
+    background: transparent;
 }
 
 .admin-next-host .html-body :deep(.mail-content-renderer) {

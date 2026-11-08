@@ -6,9 +6,13 @@
  * admin console (`/admin`). Surfaces map these tokens onto their own local
  * variable names, so a palette change here reaches all of them.
  *
- * The ramp is calibrated against mainstream mail clients: Outlook web's
- * communication-blue accent and neutral chrome, Gmail's tinted selection and
- * generous list rhythm.
+ * The system follows Apple's Human Interface Guidelines:
+ * - Color: system blue accent, neutral system grays, semantic colors that keep
+ *   at least 4.5:1 contrast for text up to 17pt (3:1 for bold text).
+ * - Typography: the platform system font, a fixed text-style ramp derived from
+ *   the macOS built-in styles for pointer layouts and the iOS Dynamic Type
+ *   "Large" defaults for touch layouts; nothing below 11px.
+ * - Controls: 28/32px controls with a pointer, 44px hit targets with touch.
  *
  * Dark mode is driven by `html.dark`, which `useDark()` from @vueuse/core
  * toggles, so it stays in sync with the Naive UI `darkTheme` used by App.vue.
@@ -17,65 +21,66 @@
 :root {
     color-scheme: light;
 
-    /* Brand ramp */
-    --ets-brand: #0f6cbd;
-    --ets-brand-hover: #115ea3;
-    --ets-brand-pressed: #0c4a80;
-    --ets-brand-soft: #ebf3fc;
-    --ets-brand-soft-strong: #d7e8fa;
+    /* Accent — systemBlue */
+    --ets-brand: #007aff;
+    --ets-brand-hover: #0068d9;
+    --ets-brand-pressed: #0059ba;
+    --ets-brand-soft: #e5f1ff;
+    --ets-brand-soft-strong: #cfe5ff;
     --ets-brand-contrast: #ffffff;
-    --ets-on-brand-soft: #0a4f8f;
+    --ets-on-brand-soft: #0058b8;
 
-    /* Neutral surfaces */
-    --ets-bg: #f3f6fb;
+    /* Backgrounds — window, content, grouped */
+    --ets-bg: #f5f5f7;
     --ets-bg-elevated: #ffffff;
     --ets-surface: #ffffff;
     --ets-surface-card: #ffffff;
-    --ets-surface-alt: #f7f9fc;
-    --ets-surface-sunken: #eef2f8;
-    --ets-scrim: rgba(11, 22, 38, 0.44);
+    --ets-surface-alt: #f9f9fb;
+    --ets-surface-sunken: #efeff2;
+    --ets-scrim: rgba(0, 0, 0, 0.32);
 
-    /* Text */
-    --ets-text: #1b1b1f;
-    --ets-text-strong: #0b1220;
-    --ets-text-muted: #5f6368;
-    --ets-text-subtle: #80868b;
+    /* Labels — primary, secondary, tertiary */
+    --ets-text: #1d1d1f;
+    --ets-text-strong: #000000;
+    --ets-text-muted: #6e6e73;
+    --ets-text-subtle: #8e8e93;
     --ets-text-on-accent: #ffffff;
 
-    /* Lines */
-    --ets-border: #e1e4e9;
-    --ets-border-strong: #c7cbd1;
-    --ets-divider: rgba(11, 22, 38, 0.08);
+    /* Separators */
+    --ets-border: #e3e3e8;
+    --ets-border-strong: #c7c7cc;
+    --ets-divider: rgba(60, 60, 67, 0.12);
 
     /* Interaction */
-    --ets-hover: #f1f3f4;
-    --ets-selected: #e8f0fe;
-    --ets-selected-strong: #d3e3fd;
-    --ets-focus-ring: #2b88d8;
+    --ets-hover: #f0f0f3;
+    --ets-selected: #e5f1ff;
+    --ets-selected-strong: #cfe5ff;
+    --ets-focus-ring: rgba(0, 122, 255, 0.5);
 
-    /* Semantic */
-    --ets-success: #107c41;
-    --ets-success-soft: #dff6e7;
-    --ets-warn: #a15c07;
-    --ets-warn-soft: #fdf1d3;
-    --ets-danger: #c4314b;
-    --ets-danger-soft: #fde7e9;
-    --ets-info: #0f6cbd;
-    --ets-info-soft: #ebf3fc;
+    /* Semantic (accessible variants for text on light backgrounds) */
+    --ets-success: #248a3d;
+    --ets-success-soft: #e3f5e8;
+    --ets-warn: #b25000;
+    --ets-warn-soft: #fff1e0;
+    --ets-danger: #d70015;
+    --ets-danger-soft: #ffe8ea;
+    --ets-info: #007aff;
+    --ets-info-soft: #e5f1ff;
 
-    /* Elevation — flat hairline, resting card, floating overlay */
+    /* Elevation — hairline, resting card, floating popover/sheet */
     --ets-shadow-hairline: 0 0 0 1px var(--ets-border);
+    --ets-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
     --ets-shadow-card:
         0 0 0 1px var(--ets-border),
-        0 1px 2px rgba(11, 22, 38, 0.06);
+        0 1px 2px rgba(0, 0, 0, 0.04);
     --ets-shadow-raised:
         0 0 0 1px var(--ets-border),
-        0 2px 4px rgba(11, 22, 38, 0.06),
-        0 8px 16px -12px rgba(11, 22, 38, 0.28);
+        0 2px 6px rgba(0, 0, 0, 0.06),
+        0 8px 24px -12px rgba(0, 0, 0, 0.18);
     --ets-shadow-overlay:
-        0 0 0 1px var(--ets-border),
-        0 12px 32px -8px rgba(11, 22, 38, 0.24),
-        0 2px 6px rgba(11, 22, 38, 0.08);
+        0 0 0 1px rgba(0, 0, 0, 0.06),
+        0 12px 40px -8px rgba(0, 0, 0, 0.22),
+        0 2px 8px rgba(0, 0, 0, 0.08);
 
     /*
      * Blend endpoints. Surfaces tint *toward the page* and text tints *toward
@@ -86,118 +91,193 @@
     --ets-mix-bg: var(--ets-surface);
     --ets-mix-fg: #000000;
 
-    /*
-     * Inverted chrome (toasts, tooltips): a surface that contrasts with the
-     * page in both modes rather than following it.
-     */
-    --ets-inverted: #1f2937;
-    --ets-inverted-strong: #111827;
+    /* Inverted chrome (toasts, tooltips): contrasts with the page in both modes. */
+    --ets-inverted: #1d1d1f;
+    --ets-inverted-strong: #000000;
     --ets-on-inverted: #ffffff;
 
     /*
-     * Canvas for sender-authored mail HTML. Mail bodies assume a light page,
-     * so this stays light unless the reader is explicitly rendering dark —
-     * ShadowHtmlComponent injects its own dark styles inside the shadow root.
+     * Canvas for sender-authored mail HTML. Mail bodies assume a light page and
+     * carry their own text colours, so the canvas stays light in both modes;
+     * dark mode only softens it (HIG: "Soften the color of white backgrounds").
      */
     --ets-mail-canvas: #ffffff;
+    --ets-mail-text: #1d1d1f;
 
     /* Shape */
     --ets-radius-xs: 4px;
     --ets-radius-sm: 6px;
     --ets-radius-md: 8px;
     --ets-radius-lg: 12px;
+    --ets-radius-xl: 16px;
     --ets-radius-pill: 999px;
 
-    /* Layout & Surface Geometry */
-    --ets-header-height: 56px;
-    --ets-sidebar-width: 240px;
-    --ets-sidebar-collapsed-width: 68px;
-    --ets-content-max-width: 1400px;
-    --ets-glass-bg: rgba(255, 255, 255, 0.88);
-    --ets-glass-border: rgba(225, 228, 233, 0.85);
+    /* Spacing — 4pt grid */
+    --ets-space-1: 4px;
+    --ets-space-2: 8px;
+    --ets-space-3: 12px;
+    --ets-space-4: 16px;
+    --ets-space-5: 20px;
+    --ets-space-6: 24px;
+    --ets-space-8: 32px;
 
-    /* Type */
-    --ets-font-ui: "Segoe UI Variable", "Segoe UI", "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", "Helvetica Neue", Arial, sans-serif;
-    --ets-font-mono: "Cascadia Mono", "SFMono-Regular", "Consolas", "Liberation Mono", "Menlo", monospace;
+    /* Controls — pointer sizes; touch layouts raise these to 44px below. */
+    --ets-control-sm: 28px;
+    --ets-control: 32px;
+    --ets-control-lg: 40px;
+    --ets-hit-min: 28px;
+
+    /* Layout & surface geometry */
+    --ets-header-height: 52px;
+    --ets-sidebar-width: 240px;
+    --ets-sidebar-collapsed-width: 72px;
+    --ets-content-max-width: 1400px;
+    --ets-glass-bg: rgba(255, 255, 255, 0.82);
+    --ets-glass-border: rgba(0, 0, 0, 0.08);
+
+    /* Type — system font first, CJK system fonts next, then Windows/Linux. */
+    --ets-font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", "Segoe UI Variable Text", "Segoe UI", "Microsoft YaHei UI", "Noto Sans CJK SC", system-ui, sans-serif;
+    --ets-ui-font: var(--ets-font-ui);
+    --ets-font-mono: "SF Mono", ui-monospace, Menlo, "Cascadia Mono", Consolas, "Liberation Mono", monospace;
+
+    /*
+     * Text styles (size / line height). Pointer layouts follow the macOS
+     * built-in styles scaled one step up for the web; touch layouts switch to
+     * the iOS Dynamic Type defaults below.
+     */
+    --text-large-title: 26px;
+    --text-large-title-lh: 32px;
+    --text-title1: 22px;
+    --text-title1-lh: 28px;
+    --text-title2: 17px;
+    --text-title2-lh: 22px;
+    --text-title3: 15px;
+    --text-title3-lh: 20px;
+    --text-headline: 14px;
+    --text-headline-lh: 20px;
+    --text-body: 14px;
+    --text-body-lh: 20px;
+    --text-callout: 13px;
+    --text-callout-lh: 18px;
+    --text-subheadline: 12px;
+    --text-subheadline-lh: 16px;
+    --text-footnote: 11px;
+    --text-footnote-lh: 14px;
+    --text-caption: 11px;
+    --text-caption-lh: 13px;
 
     /* Motion — short for state, medium for layout */
     --ets-motion-fast: 120ms;
-    --ets-motion-base: 180ms;
-    --ets-motion-ease: cubic-bezier(0.33, 0, 0.13, 1);
+    --ets-motion-base: 200ms;
+    --ets-motion-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
 
     /* Scrollbar */
-    --ets-scrollbar-thumb: color-mix(in oklch, var(--ets-text-muted) 48%, transparent);
-    --ets-scrollbar-thumb-hover: color-mix(in oklch, var(--ets-text-muted) 68%, transparent);
+    --ets-scrollbar-thumb: color-mix(in oklch, var(--ets-text-muted) 40%, transparent);
+    --ets-scrollbar-thumb-hover: color-mix(in oklch, var(--ets-text-muted) 64%, transparent);
     --ets-scrollbar-track: transparent;
 }
 
 html.dark {
     color-scheme: dark;
 
-    --ets-brand: #479ef5;
-    --ets-brand-hover: #62abf5;
-    --ets-brand-pressed: #2886de;
-    --ets-brand-soft: #10304f;
-    --ets-brand-soft-strong: #17436d;
-    --ets-brand-contrast: #06182b;
-    --ets-on-brand-soft: #a9d3f8;
+    --ets-brand: #0a84ff;
+    --ets-brand-hover: #409cff;
+    --ets-brand-pressed: #0071e3;
+    --ets-brand-soft: #0f2a47;
+    --ets-brand-soft-strong: #163a61;
+    --ets-brand-contrast: #ffffff;
+    --ets-on-brand-soft: #9ecbff;
 
-    --ets-bg: #16181c;
-    --ets-bg-elevated: #202226;
-    --ets-surface: #202226;
-    --ets-surface-card: #22252a;
-    --ets-surface-alt: #26282d;
-    --ets-surface-sunken: #1a1c20;
-    --ets-scrim: rgba(0, 0, 0, 0.62);
+    --ets-bg: #161618;
+    --ets-bg-elevated: #232325;
+    --ets-surface: #1c1c1e;
+    --ets-surface-card: #1c1c1e;
+    --ets-surface-alt: #232325;
+    --ets-surface-sunken: #121214;
+    --ets-scrim: rgba(0, 0, 0, 0.56);
 
-    --ets-text: #e8eaed;
+    --ets-text: #f5f5f7;
     --ets-text-strong: #ffffff;
-    --ets-text-muted: #a2a9b0;
-    --ets-text-subtle: #868d95;
-    --ets-text-on-accent: #06182b;
+    --ets-text-muted: #a1a1a6;
+    --ets-text-subtle: #8e8e93;
+    --ets-text-on-accent: #ffffff;
 
-    --ets-border: #33363b;
-    --ets-border-strong: #4a4e55;
-    --ets-divider: rgba(255, 255, 255, 0.09);
+    --ets-border: #333336;
+    --ets-border-strong: #48484a;
+    --ets-divider: rgba(255, 255, 255, 0.08);
 
-    --ets-hover: #2a2d33;
-    --ets-selected: #1c3550;
-    --ets-selected-strong: #24466b;
-    --ets-focus-ring: #7bb8f2;
+    --ets-hover: #2a2a2d;
+    --ets-selected: #0f2a47;
+    --ets-selected-strong: #163a61;
+    --ets-focus-ring: rgba(10, 132, 255, 0.6);
 
-    --ets-success: #5cc08a;
-    --ets-success-soft: #123324;
-    --ets-warn: #e2a03f;
-    --ets-warn-soft: #3a2b0e;
-    --ets-danger: #f1707b;
-    --ets-danger-soft: #40191f;
-    --ets-info: #479ef5;
-    --ets-info-soft: #10304f;
+    --ets-success: #30d158;
+    --ets-success-soft: #0f2e18;
+    --ets-warn: #ff9f0a;
+    --ets-warn-soft: #3a2608;
+    --ets-danger: #ff453a;
+    --ets-danger-soft: #3d1311;
+    --ets-info: #0a84ff;
+    --ets-info-soft: #0f2a47;
 
     --ets-mix-bg: var(--ets-surface);
     --ets-mix-fg: #ffffff;
 
-    --ets-inverted: #e8eaed;
-    --ets-inverted-strong: #f5f6f8;
-    --ets-on-inverted: #16181c;
+    --ets-inverted: #f5f5f7;
+    --ets-inverted-strong: #ffffff;
+    --ets-on-inverted: #1d1d1f;
 
-    --ets-mail-canvas: var(--ets-surface);
+    --ets-mail-canvas: #ececee;
+    --ets-mail-text: #1d1d1f;
 
-    --ets-glass-bg: rgba(32, 34, 38, 0.88);
-    --ets-glass-border: rgba(51, 54, 59, 0.85);
+    --ets-glass-bg: rgba(28, 28, 30, 0.82);
+    --ets-glass-border: rgba(255, 255, 255, 0.08);
 
     --ets-shadow-hairline: 0 0 0 1px var(--ets-border);
+    --ets-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
     --ets-shadow-card:
         0 0 0 1px var(--ets-border),
-        0 1px 2px rgba(0, 0, 0, 0.4);
+        0 1px 2px rgba(0, 0, 0, 0.32);
     --ets-shadow-raised:
         0 0 0 1px var(--ets-border),
-        0 2px 4px rgba(0, 0, 0, 0.36),
-        0 8px 16px -12px rgba(0, 0, 0, 0.6);
+        0 2px 6px rgba(0, 0, 0, 0.36),
+        0 8px 24px -12px rgba(0, 0, 0, 0.6);
     --ets-shadow-overlay:
-        0 0 0 1px var(--ets-border),
-        0 12px 32px -8px rgba(0, 0, 0, 0.6),
-        0 2px 6px rgba(0, 0, 0, 0.44);
+        0 0 0 1px rgba(255, 255, 255, 0.08),
+        0 12px 40px -8px rgba(0, 0, 0, 0.7),
+        0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* Touch layouts: iOS Dynamic Type "Large" defaults and 44pt hit targets. */
+@media (pointer: coarse), (max-width: 640px) {
+    :root {
+        --ets-control-sm: 36px;
+        --ets-control: 44px;
+        --ets-control-lg: 48px;
+        --ets-hit-min: 44px;
+
+        --text-large-title: 28px;
+        --text-large-title-lh: 34px;
+        --text-title1: 22px;
+        --text-title1-lh: 28px;
+        --text-title2: 20px;
+        --text-title2-lh: 25px;
+        --text-title3: 17px;
+        --text-title3-lh: 22px;
+        --text-headline: 16px;
+        --text-headline-lh: 21px;
+        /* 16px keeps iOS Safari from zooming into focused fields. */
+        --text-body: 16px;
+        --text-body-lh: 22px;
+        --text-callout: 15px;
+        --text-callout-lh: 20px;
+        --text-subheadline: 14px;
+        --text-subheadline-lh: 19px;
+        --text-footnote: 13px;
+        --text-footnote-lh: 18px;
+        --text-caption: 12px;
+        --text-caption-lh: 16px;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -205,4 +285,10 @@ html.dark {
         --ets-motion-fast: 1ms;
         --ets-motion-base: 1ms;
     }
+}
+
+/* One focus treatment for every surface (HIG: keyboard focus must be visible). */
+:focus-visible {
+    outline: 2px solid var(--ets-focus-ring);
+    outline-offset: 2px;
 }
