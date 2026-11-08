@@ -14,6 +14,7 @@ const { t } = useScopedI18n('admin.authenticators')
 const { t: tRes } = useScopedI18n('admin.resource')
 
 const rows = ref([])
+const loaded = ref(false)
 const input = ref('')
 const label = ref('')
 const sharingId = ref(null)
@@ -89,11 +90,13 @@ const refreshCodes = () => {
         .then((result) => {
             if (disposed) return
             rows.value = result.results || []
+            loaded.value = true
             retryCount = 0
             error.value = ''
         })
         .catch((reason) => {
             if (disposed) return
+            loaded.value = true
             error.value = reason?.message || t('failed')
             retryCount += 1
             throw reason
@@ -240,7 +243,7 @@ onBeforeUnmount(() => {
         <p v-if="error" class="error" role="alert">{{ error }}</p>
 
         <!-- Empty state or Items list -->
-        <div v-if="!rows.length" class="empty-pad">
+        <div v-if="loaded && !rows.length" class="empty-pad">
             <AdminEmptyState :title="t('empty')" :description="t('description')"
                 :action-label="isCreating ? '' : t('create')" @action="isCreating = true">
                 <template #icon>
@@ -251,7 +254,7 @@ onBeforeUnmount(() => {
                 </template>
             </AdminEmptyState>
         </div>
-        <ul v-else class="items">
+        <ul v-else-if="rows.length" class="items">
             <li v-for="row in rows" :key="row.id" class="item">
                 <div class="identity">
                     <strong>{{ row.label }}</strong>
