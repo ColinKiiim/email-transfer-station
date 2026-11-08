@@ -454,6 +454,10 @@ export const MESSAGE_REGISTRY = {
     }
   },
   "views.TokenInbox": {
+    "readOnlyBadge": {
+      "en": "Read only",
+      "zh": "只读"
+    },
     "surfaceLinksLabel": {
       "en": "Product areas",
       "zh": "产品区域"
@@ -729,6 +733,30 @@ export const MESSAGE_REGISTRY = {
     }
   },
   "views.User": {
+    "signedInAs": {
+      "en": "Signed in as",
+      "zh": "当前账户"
+    },
+    "toggleSidebar": {
+      "en": "Toggle sidebar",
+      "zh": "显示或隐藏侧边栏"
+    },
+    "mainNav": {
+      "en": "Main navigation",
+      "zh": "主导航"
+    },
+    "sync": {
+      "en": "Sync",
+      "zh": "同步"
+    },
+    "navGroupAccount": {
+      "en": "Account",
+      "zh": "账户"
+    },
+    "navGroupMail": {
+      "en": "Mail",
+      "zh": "邮件"
+    },
     "authenticators": {
       "en": "Authenticators",
       "zh": "验证器"

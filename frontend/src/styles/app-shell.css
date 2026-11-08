@@ -1,0 +1,599 @@
+/*
+ * Shared application frame (AppShell.vue). Every signed-in surface — admin
+ * console, user workspace, shared-inbox link — draws its chrome from this
+ * sheet, so their top bar, sidebar and workspace stay identical.
+ *
+ * Only shell geometry and shell controls live here. Page content keeps its
+ * own styles; the generic `.shell-*` helpers at the end give non-admin pages
+ * the same toolbar and page rhythm as admin views.
+ */
+
+html:has(.ets-shell),
+body:has(.ets-shell),
+#app:has(.ets-shell) {
+    height: 100%;
+    overflow: hidden;
+    background: var(--ets-bg);
+}
+
+.ets-shell {
+    --shell-chrome-height: var(--ets-header-height);
+    --shell-sidebar-width: var(--ets-sidebar-width);
+    --shell-rail-width: var(--shell-sidebar-width);
+
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: var(--shell-chrome-height) minmax(0, 1fr);
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--ets-bg);
+    color: var(--ets-text);
+    font: var(--text-body) / var(--text-body-lh) var(--ets-font-ui);
+    letter-spacing: 0;
+    text-align: left;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.ets-shell *,
+.ets-shell *::before,
+.ets-shell *::after {
+    box-sizing: border-box;
+}
+
+.ets-shell.has-nav {
+    grid-template-columns: var(--shell-rail-width) minmax(0, 1fr);
+}
+
+.ets-shell.is-sidebar-collapsed {
+    --shell-rail-width: var(--ets-sidebar-collapsed-width);
+}
+
+/* ---------- Top bar ---------- */
+
+.ets-shell .shell-chrome {
+    z-index: 20;
+    display: grid;
+    grid-row: 1;
+    grid-column: 1 / -1;
+    /* The brand column keeps the expanded width, so the logo and search never
+       move when only the rail below collapses. */
+    grid-template-columns: var(--shell-sidebar-width) minmax(0, 1fr);
+    align-items: center;
+    min-width: 0;
+    height: var(--shell-chrome-height);
+    border-bottom: 1px solid var(--ets-border);
+    background: var(--ets-bg);
+}
+
+.ets-shell .shell-brand {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    min-width: 0;
+    height: 100%;
+    padding: 0 12px;
+}
+
+.ets-shell .shell-product-brand {
+    grid-template-columns: 32px minmax(0, 1fr);
+    gap: 8px;
+}
+
+.ets-shell .shell-product-brand :is(img) {
+    width: 32px;
+    height: 32px;
+}
+
+.ets-shell .shell-product-brand .product-brand-copy strong {
+    color: var(--ets-text);
+    font-size: var(--text-title2);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+.ets-shell .shell-product-brand .product-brand-copy span {
+    color: var(--ets-text-muted);
+    font-size: var(--text-footnote);
+    font-weight: 500;
+}
+
+.ets-shell .shell-sidebar-toggle {
+    display: grid;
+    flex: 0 0 auto;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    min-height: 36px;
+    margin: 0 4px 0 6px;
+    border: 0;
+    border-radius: var(--ets-radius-md);
+    padding: 0;
+    background: transparent;
+    color: var(--ets-text-muted);
+    cursor: pointer;
+    transition: background-color var(--ets-motion-fast) ease, color var(--ets-motion-fast) ease;
+}
+
+.ets-shell .shell-sidebar-toggle:hover {
+    background: var(--ets-hover);
+    color: var(--ets-text);
+}
+
+.ets-shell .shell-sidebar-toggle svg,
+.ets-shell .shell-nav-link svg,
+.ets-shell .shell-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.75;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.ets-shell .shell-topbar {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    justify-content: flex-end;
+    min-width: 0;
+    height: 100%;
+    padding: 0 16px 0 12px;
+}
+
+.ets-shell .shell-search {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    min-width: 0;
+}
+
+.ets-shell .shell-actions {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 6px;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.ets-shell .shell-divider {
+    width: 1px;
+    height: 18px;
+    margin: 0 4px;
+    background: var(--ets-border);
+}
+
+/* Toolbar buttons: borderless by default, a hairline for the primary action (HIG toolbars). */
+.ets-shell .shell-btn {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    justify-content: center;
+    height: var(--ets-control);
+    min-height: var(--ets-control);
+    border: 1px solid transparent;
+    border-radius: var(--ets-radius-md);
+    padding: 0 10px;
+    background: transparent;
+    color: var(--ets-text-muted);
+    font: 500 var(--text-callout) / 1 var(--ets-font-ui);
+    white-space: nowrap;
+    text-decoration: none;
+    cursor: pointer;
+    box-shadow: none;
+    transition: background-color var(--ets-motion-fast) ease, color var(--ets-motion-fast) ease,
+        border-color var(--ets-motion-fast) ease;
+}
+
+.ets-shell .shell-btn:hover:not(:disabled) {
+    background: var(--ets-hover);
+    color: var(--ets-text);
+}
+
+.ets-shell .shell-btn:active:not(:disabled) {
+    background: var(--ets-surface-sunken);
+}
+
+.ets-shell .shell-btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.ets-shell .shell-btn.is-bordered {
+    border-color: var(--ets-border);
+    background: var(--ets-surface);
+    color: var(--ets-text);
+}
+
+.ets-shell .shell-btn.is-destructive:hover:not(:disabled) {
+    color: var(--ets-danger);
+}
+
+.ets-shell .shell-btn.is-icon {
+    width: var(--ets-control);
+    padding: 0;
+}
+
+/* ---------- Sidebar ---------- */
+
+.ets-shell .shell-sidebar {
+    z-index: 15;
+    display: grid;
+    grid-row: 2;
+    grid-column: 1;
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: 12px;
+    min-height: 0;
+    overflow: hidden;
+    padding: 8px 10px 12px;
+    background: var(--ets-bg);
+    color: var(--ets-text);
+}
+
+.ets-shell .shell-nav {
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 4px 0;
+}
+
+.ets-shell .shell-nav-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 16px;
+}
+
+.ets-shell .shell-nav-group-title {
+    padding: 4px 12px 4px;
+    overflow: hidden;
+    color: var(--ets-text-muted);
+    font-size: var(--text-subheadline);
+    font-weight: 600;
+    line-height: var(--text-subheadline-lh);
+    white-space: nowrap;
+}
+
+.ets-shell .shell-nav-link {
+    position: relative;
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+    width: 100%;
+    height: var(--ets-control);
+    min-height: var(--ets-control);
+    border: 0;
+    border-radius: var(--ets-radius-md);
+    padding: 0 12px;
+    background: transparent;
+    color: var(--ets-text);
+    font: 500 var(--text-callout) / 1 var(--ets-font-ui);
+    text-align: left;
+    cursor: pointer;
+    transition: background-color var(--ets-motion-fast) ease, color var(--ets-motion-fast) ease;
+}
+
+.ets-shell .shell-nav-link svg {
+    color: var(--ets-text-muted);
+}
+
+@media (hover: hover) {
+    .ets-shell .shell-nav-link:hover:not(.is-active) {
+        background: var(--ets-hover);
+    }
+}
+
+/* Selected item: tinted fill and accent symbol, like a macOS source list. */
+.ets-shell .shell-nav-link.is-active {
+    background: var(--ets-selected);
+    color: var(--ets-on-brand-soft);
+    font-weight: 600;
+}
+
+.ets-shell .shell-nav-link.is-active svg {
+    color: var(--ets-brand);
+}
+
+.ets-shell .shell-nav-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ets-shell .shell-nav-badge {
+    color: var(--ets-text-muted);
+    font-size: var(--text-subheadline);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.ets-shell .shell-nav-link.is-active .shell-nav-badge {
+    color: var(--ets-on-brand-soft);
+}
+
+.ets-shell .shell-nav-dot {
+    justify-self: end;
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: var(--ets-brand);
+}
+
+.ets-shell .shell-sidebar-foot {
+    min-width: 0;
+    border-radius: var(--ets-radius-lg);
+    padding: 10px 12px;
+    background: var(--ets-surface-alt);
+    box-shadow: var(--ets-shadow-hairline);
+    color: var(--ets-text-muted);
+    font-size: var(--text-footnote);
+    line-height: var(--text-footnote-lh);
+}
+
+/* Collapsed rail: only text hides, so every icon keeps its position. */
+.ets-shell.is-sidebar-collapsed .shell-nav-group-title {
+    visibility: hidden;
+}
+
+.ets-shell.is-sidebar-collapsed .shell-nav-link {
+    width: 52px;
+}
+
+.ets-shell.is-sidebar-collapsed .shell-nav-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+.ets-shell.is-sidebar-collapsed .shell-nav-badge,
+.ets-shell.is-sidebar-collapsed .shell-nav-dot {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+}
+
+.ets-shell.is-sidebar-collapsed .shell-nav-badge {
+    min-width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    padding: 0 4px;
+    background: var(--ets-brand);
+    color: var(--ets-brand-contrast);
+    font-size: 10px;
+    line-height: 16px;
+    text-align: center;
+}
+
+.ets-shell.is-sidebar-collapsed .shell-sidebar-foot {
+    display: none;
+}
+
+/* ---------- Workspace ---------- */
+
+.ets-shell .shell-workspace {
+    display: flex;
+    flex-direction: column;
+    grid-row: 2;
+    grid-column: -2 / -1;
+    min-width: 0;
+    min-height: 0;
+    margin: 0 12px 12px 0;
+    overflow: hidden;
+    border-radius: var(--ets-radius-lg);
+    background: var(--ets-surface);
+    box-shadow: var(--ets-shadow-card);
+}
+
+.ets-shell:not(.has-nav) .shell-workspace {
+    margin-left: 12px;
+}
+
+.ets-shell .shell-scrim {
+    display: none;
+}
+
+/* ---------- Generic page helpers for non-admin surfaces ---------- */
+
+/* 48px toolbar at the top of the workspace: title on the leading side, actions trailing. */
+.ets-shell .shell-toolbar {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+    min-width: 0;
+    min-height: 48px;
+    padding: 6px 16px;
+    border-bottom: 1px solid var(--ets-divider);
+}
+
+.ets-shell .shell-toolbar-title {
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    color: var(--ets-text);
+    font-size: var(--text-title3);
+    font-weight: 600;
+    line-height: var(--text-title3-lh);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ets-shell .shell-toolbar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.ets-shell .shell-page {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+    padding: 20px 24px 32px;
+}
+
+.ets-shell .shell-page-narrow {
+    max-width: 760px;
+}
+
+.ets-shell .shell-page-intro {
+    margin: 0 0 16px;
+    color: var(--ets-text-muted);
+    font-size: var(--text-callout);
+    line-height: var(--text-callout-lh);
+}
+
+/* ---------- Narrow screens: sidebar becomes a drawer ---------- */
+
+@media (max-width: 900px) {
+    .ets-shell,
+    .ets-shell.has-nav {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .ets-shell .shell-chrome {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .ets-shell .shell-brand {
+        padding-right: 4px;
+    }
+
+    .ets-shell .shell-product-brand .product-brand-copy span {
+        display: none;
+    }
+
+    .ets-shell .shell-topbar {
+        gap: 8px;
+        padding: 0 8px 0 4px;
+    }
+
+    .ets-shell .shell-sidebar {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 40;
+        width: min(300px, 84vw);
+        padding-top: calc(12px + env(safe-area-inset-top));
+        padding-bottom: calc(12px + env(safe-area-inset-bottom));
+        background: var(--ets-surface);
+        box-shadow: var(--ets-shadow-overlay);
+        transform: translateX(-105%);
+        transition: transform var(--ets-motion-base) var(--ets-motion-ease);
+    }
+
+    .ets-shell.is-drawer-open .shell-sidebar {
+        transform: none;
+    }
+
+    .ets-shell .shell-scrim {
+        position: fixed;
+        inset: 0;
+        z-index: 30;
+        display: block;
+        background: var(--ets-scrim);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity var(--ets-motion-base) ease;
+    }
+
+    .ets-shell.is-drawer-open .shell-scrim {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .ets-shell .shell-nav-link {
+        height: 44px;
+        min-height: 44px;
+        font-size: var(--text-body);
+    }
+
+    .ets-shell .shell-workspace,
+    .ets-shell:not(.has-nav) .shell-workspace {
+        grid-column: 1;
+        margin: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .ets-shell .shell-page {
+        padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
+    }
+
+    .ets-shell .shell-toolbar {
+        padding: 6px 12px;
+    }
+
+    /* Labels collapse to icons; each button keeps its accessible name. */
+    .ets-shell .shell-actions .shell-btn .shell-btn-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+    }
+
+    .ets-shell .shell-actions .shell-btn {
+        width: var(--ets-control);
+        padding: 0;
+    }
+}
+
+/* Phones: the search field moves to its own row under the top bar. */
+@media (max-width: 640px) {
+    .ets-shell.has-search {
+        grid-template-rows: auto minmax(0, 1fr);
+    }
+
+    .ets-shell.has-search .shell-chrome {
+        grid-template-columns: auto minmax(0, 1fr);
+        height: auto;
+        min-height: var(--shell-chrome-height);
+    }
+
+    .ets-shell.has-search .shell-brand {
+        height: var(--shell-chrome-height);
+    }
+
+    .ets-shell.has-search .shell-topbar {
+        display: contents;
+    }
+
+    .ets-shell.has-search .shell-actions {
+        grid-row: 1;
+        grid-column: 2;
+        justify-self: end;
+        padding-right: 8px;
+    }
+
+    .ets-shell.has-search .shell-search {
+        grid-row: 2;
+        grid-column: 1 / -1;
+        padding: 0 12px 10px;
+    }
+
+    .ets-shell .shell-product-brand .product-brand-copy {
+        display: none;
+    }
+}
+
+@media (pointer: coarse) {
+    .ets-shell .shell-sidebar-toggle {
+        width: 44px;
+        height: 44px;
+        min-height: 44px;
+    }
+}

@@ -44,7 +44,7 @@ test.describe('Admin console', () => {
       expect(seeded.ok()).toBe(true);
 
       await page.goto('/zh/admin?view=flow');
-      await expect(page.locator('.admin-next.app')).toBeVisible();
+      await expect(page.locator('.admin-next.ets-shell')).toBeVisible();
       const row = page.locator('.mail-row', { hasText: subject });
       await expect(row).toBeVisible();
       await row.click();

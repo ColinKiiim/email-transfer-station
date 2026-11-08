@@ -5,7 +5,9 @@ import { useScopedI18n } from '@/i18n/app'
 import { api } from '../api'
 import { clearSessionStorageKeys } from '../utils/session'
 import { useGlobalState } from '../store'
-import AccessShell from '../components/AccessShell.vue'
+import { useStorage } from '@vueuse/core'
+import AppShell from '../components/AppShell.vue'
+import AppUtilityMenu from '../components/AppUtilityMenu.vue'
 import AccessMailWorkbench from '../components/AccessMailWorkbench.vue'
 import ProductSurfaceLinks from '../components/ProductSurfaceLinks.vue'
 import { getRouterPathWithLang } from '../utils'
@@ -43,31 +45,48 @@ const canCreateOrBindAddress = computed(() =>
   || userSettings.value.can_create_address === true
 )
 
-const railItems = computed(() => {
+const iconPaths = {
+  mailbox: ['M4 6h16v12H4z', 'm4 7 8 6 8-6'],
+  addresses: ['M4 7h16v10H4z', 'M8 11h5M8 14h8'],
+  account: ['M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8', 'M4 21a8 8 0 0 1 16 0'],
+  bind: ['M12 5v14M5 12h14'],
+  lock: ['M6 10V8a6 6 0 0 1 12 0v2', 'M5 10h14v10H5z'],
+}
+const navGroups = computed(() => {
   if (!isSignedIn.value) return []
   return [
-    { id: 'user_mail_box_tab', label: t('user_mail_box_tab'), icon: 'mailbox' },
-    { id: 'address_management', label: t('address_management'), icon: 'addresses', badge: String(addressFilterOptions.value.length || '') },
-    { id: 'user_settings', label: t('user_settings'), icon: 'account' },
-    { id: 'authenticators', label: t('authenticators'), icon: 'lock' },
-    ...(canCreateOrBindAddress.value ? [{ id: 'bind_address', label: t('bind_address'), icon: 'bind' }] : []),
+    {
+      id: 'mail',
+      label: t('navGroupMail'),
+      items: [
+        { id: 'user_mail_box_tab', label: t('user_mail_box_tab'), icon: iconPaths.mailbox },
+        { id: 'address_management', label: t('address_management'), icon: iconPaths.addresses, badge: String(addressFilterOptions.value.length || '') },
+        ...(canCreateOrBindAddress.value ? [{ id: 'bind_address', label: t('bind_address'), icon: iconPaths.bind }] : []),
+      ],
+    },
+    {
+      id: 'account',
+      label: t('navGroupAccount'),
+      items: [
+        { id: 'user_settings', label: t('user_settings'), icon: iconPaths.account },
+        { id: 'authenticators', label: t('authenticators'), icon: iconPaths.lock },
+      ],
+    },
   ]
 })
-
-const shellTitle = computed(() => isSignedIn.value ? t('shellTitleSignedIn') : t('shellTitleGuest'))
-const shellKicker = computed(() => isSignedIn.value ? t('shellKickerSignedIn') : t('shellKickerGuest'))
+const sidebarCollapsed = useStorage('ets-user-sidebar-collapsed', false)
+const pageTitle = computed(() => t(userTab.value === 'bind_address' && !canCreateOrBindAddress.value ? 'address_management' : userTab.value))
+const mailboxKey = ref(0)
+const sync = async () => {
+  await fetchAddressOptions()
+  if (userTab.value === 'user_mail_box_tab') mailboxKey.value += 1
+}
 const surfaceItems = computed(() => [
   { id: 'home', label: t('home'), to: getRouterPathWithLang('/', locale.value) },
   ...(showAdminPage.value
     ? [{ id: 'admin', label: t('adminConsole'), to: getRouterPathWithLang('/admin', locale.value) }]
     : []),
 ])
-const statusLabel = computed(() => {
-  if (!userOpenSettings.value.fetched || !userSettings.value.fetched) return t('statusSyncing')
-  return isSignedIn.value ? t('statusSignedIn') : t('statusNeedsSignIn')
-})
-const statusTone = computed(() => isSignedIn.value ? 'success' : 'warning')
-const identityLabel = computed(() => isSignedIn.value ? userSettings.value.user_email : 'Email Transfer Station')
 const identityMeta = computed(() => {
   if (!isSignedIn.value) return t('identityMetaGuest')
   if (userSettings.value.is_admin) return t('identityMetaAdmin', { role: roleLabel.value })
@@ -184,42 +203,53 @@ onMounted(async () => {
     </div>
   </div>
 
-  <AccessShell
+  <AppShell
     v-else
-    :title="shellTitle"
-    :kicker="shellKicker"
-    :brand-context="t('brandContext')"
-    :identity-label="identityLabel"
-    :identity-meta="identityMeta"
-    :status-label="statusLabel"
-    :status-tone="statusTone"
-    :rail-items="railItems"
+    class="user-shell"
+    :nav-groups="navGroups"
     :active-id="userTab"
+    :collapsed="sidebarCollapsed"
+    :brand-context="t('brandContext')"
+    :nav-label="t('mainNav')"
+    :toggle-label="t('toggleSidebar')"
     @select="userTab = $event"
+    @toggle-sidebar="sidebarCollapsed = !sidebarCollapsed"
   >
     <template #actions>
       <ProductSurfaceLinks :items="surfaceItems" :aria-label="t('surfaceLinksLabel')" />
-      <n-button tertiary @click="fetchAddressOptions">
-        {{ t('refreshAddresses') }}
-      </n-button>
-      <n-button tertiary type="error" @click="showLogoutConfirm = true">
-        {{ t('signOut') }}
-      </n-button>
+      <AppUtilityMenu />
+      <div class="shell-divider" role="separator"></div>
+      <button class="shell-btn is-bordered" type="button" :aria-label="t('sync')" @click="sync">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20 11a8 8 0 0 0-14.9-4M4 4v4h4" />
+          <path d="M4 13a8 8 0 0 0 14.9 4M20 20v-4h-4" />
+        </svg>
+        <span class="shell-btn-label">{{ t('sync') }}</span>
+      </button>
+      <button class="shell-btn is-destructive" type="button" :aria-label="t('signOut')" @click="showLogoutConfirm = true">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" />
+          <path d="M10 17l-5-5 5-5M5 12h11" />
+        </svg>
+        <span class="shell-btn-label">{{ t('signOut') }}</span>
+      </button>
     </template>
 
-    <template #rail-footer>
-      <div class="user-rail-summary">
-        <span>{{ t('accessScope') }}</span>
-        <strong>{{ t('addressCount', { count: addressFilterOptions.length || 0 }) }}</strong>
+    <template #sidebar-footer>
+      <div class="user-identity" :title="userSettings.user_email">
+        <span class="user-identity-label">{{ t('signedInAs') }}</span>
+        <strong>{{ userSettings.user_email }}</strong>
+        <span>{{ identityMeta }}</span>
       </div>
     </template>
 
-    <section v-if="!userSettings.fetched || !userOpenSettings.fetched" class="access-card">
+    <div v-if="!userSettings.fetched || !userOpenSettings.fetched" class="shell-page">
       <n-skeleton text :repeat="8" />
-    </section>
+    </div>
 
     <AccessMailWorkbench
       v-else-if="userTab === 'user_mail_box_tab'"
+      :key="mailboxKey"
       v-model:address-filter="addressFilter"
       :title="t('myInbox')"
       :address-options="addressFilterOptions"
@@ -231,38 +261,20 @@ onMounted(async () => {
       :show-filter-input="true"
     />
 
-    <section v-else-if="userTab === 'address_management'" class="access-card">
-      <div class="module-head">
-        <span>{{ t('addressOwnership') }}</span>
-        <h2>{{ t('address_management') }}</h2>
+    <template v-else>
+      <div class="shell-toolbar">
+        <h2 class="shell-toolbar-title">{{ pageTitle }}</h2>
       </div>
-      <AddressMangement />
-    </section>
-
-    <section v-else-if="userTab === 'user_settings'" class="access-card">
-      <div class="module-head">
-        <span>{{ t('accountSecurity') }}</span>
-        <h2>{{ t('user_settings') }}</h2>
+      <div class="shell-page">
+        <div class="shell-page-narrow" :class="{ 'is-wide': userTab === 'address_management' }">
+          <AddressMangement v-if="userTab === 'address_management'" />
+          <UserSettingsPage v-else-if="userTab === 'user_settings'" />
+          <UserAuthenticators v-else-if="userTab === 'authenticators'" />
+          <BindAddress v-else-if="canCreateOrBindAddress" />
+        </div>
       </div>
-      <UserSettingsPage />
-    </section>
-
-    <section v-else-if="userTab === 'authenticators'" class="access-card">
-      <div class="module-head">
-        <span>{{ t('accountSecurity') }}</span>
-        <h2>{{ t('authenticators') }}</h2>
-      </div>
-      <UserAuthenticators />
-    </section>
-
-    <section v-else-if="canCreateOrBindAddress" class="access-card">
-      <div class="module-head">
-        <span>{{ t('addressOnboarding') }}</span>
-        <h2>{{ t('bind_address') }}</h2>
-      </div>
-      <BindAddress />
-    </section>
-  </AccessShell>
+    </template>
+  </AppShell>
 
     <n-modal v-model:show="showLogoutConfirm" preset="dialog" :title="t('signOut')">
       <p>{{ t('logoutConfirm') }}</p>
@@ -280,62 +292,35 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.user-rail-summary,
-.access-card {
-  min-width: 0;
-  border-radius: 8px;
-  background: var(--ets-surface);
-  border: 1px solid var(--ets-border);
-  box-shadow: var(--ets-shadow-card);
-}
-
-.user-rail-summary {
+.user-identity {
   display: grid;
-  gap: 4px;
-  padding: 12px;
-  background: var(--ets-surface-alt);
-  border: 1px solid var(--ets-border);
+  gap: 2px;
+  min-width: 0;
 }
 
-.user-rail-summary span,
-.module-head span {
-  color: var(--ets-text-muted);
-  font-size: 12px;
-  font-weight: 650;
-}
-
-.user-rail-summary strong {
+.user-identity strong {
+  overflow: hidden;
   color: var(--ets-text);
-  font-size: 14px;
-  font-weight: 760;
+  font-size: var(--text-callout);
+  font-weight: 600;
+  line-height: var(--text-callout-lh);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.user-rail-summary p {
-  margin: 0;
-  color: var(--ets-text-muted);
-  font-size: 12px;
-  line-height: 1.4;
-  text-wrap: pretty;
+.user-identity span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.access-card {
-  padding: 18px;
+.user-identity-label {
+  color: var(--ets-text-subtle);
 }
 
-.module-head {
-  margin-bottom: 14px;
+.shell-page-narrow.is-wide {
+  max-width: 1080px;
 }
-
-.module-head h2 {
-  margin: 3px 0 0;
-  color: var(--ets-text-strong);
-  font-size: 20px;
-  font-weight: 760;
-  line-height: 1.2;
-  text-wrap: balance;
-}
-
-
 
 .inline-warning {
   border-radius: 8px;

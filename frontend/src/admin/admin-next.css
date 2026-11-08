@@ -69,7 +69,7 @@ body:has(.admin-next) .n-message-container {
     min-height: 0;
     background: var(--bg);
     color: var(--fg);
-    font: 14px/1.5 var(--ets-font-ui);
+    font: var(--text-body)/1.5 var(--ets-font-ui);
     letter-spacing: 0;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -245,39 +245,6 @@ body:has(.admin-next) .n-message-container {
     background: color-mix(in srgb, var(--accent) 90%, white);
 }
 
-.admin-next-host .app {
-    /* The top bar always reserves the expanded width (Gmail-style), so the
-       logo and search box never move when only the rail below collapses. */
-    --sidebar-width: 240px;
-    --rail-width: var(--sidebar-width);
-
-    display: grid;
-    grid-template-columns: var(--rail-width) minmax(0, 1fr);
-    grid-template-rows: 56px minmax(0, 1fr);
-    justify-content: start;
-    height: 100dvh;
-    min-height: 0;
-    overflow: hidden;
-    background: var(--bg);
-}
-
-.admin-next-host .app.is-sidebar-collapsed {
-    --rail-width: 72px;
-}
-
-.admin-next-host .app-chrome {
-    z-index: 10;
-    display: grid;
-    grid-row: 1;
-    grid-column: 1 / -1;
-    grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
-    height: 56px;
-    align-items: center;
-    min-width: 0;
-    background: var(--bg);
-    border-bottom: 1px solid var(--border);
-}
-
 .admin-next-host button,
 .admin-next-host input,
 .admin-next-host select,
@@ -304,7 +271,6 @@ body:has(.admin-next) .n-message-container {
 }
 
 .admin-next-host button:focus-visible,
-.admin-next-host .nav-link:focus-visible,
 .admin-next-host .field:focus-visible,
 .admin-next-host .select:focus-visible,
 .admin-next-host textarea:focus-visible,
@@ -323,246 +289,22 @@ body:has(.admin-next) .n-message-container {
     fill: none;
 }
 
-.admin-next-host .sidebar {
-    display: grid;
-    grid-row: 2;
-    grid-column: 1;
-    grid-template-rows: minmax(0, 1fr) auto;
-    gap: 16px;
-    min-height: 0;
-    overflow: hidden;
-    padding: 8px 10px 16px;
-    background: var(--bg);
-    color: var(--fg);
-    border-right: none;
-    box-sizing: border-box;
-}
-
-.admin-next-host .brand {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    height: 100%;
-    /* Centers the toggle on the nav icon axis (31px) in both rail states. */
-    padding: 0 12px;
-}
-
-.admin-next-host .admin-product-brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 0;
-}
-
-.admin-next-host .admin-product-brand .product-brand-copy strong {
-    font-size: 17px;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    color: var(--fg);
-}
-
-.admin-next-host .sidebar-toggle {
-    display: grid;
-    place-items: center;
-    width: 38px;
-    height: 38px;
-    min-height: 38px;
-    border: 0;
-    border-radius: 9999px;
-    background: transparent;
-    color: var(--muted);
-    transition: all 120ms ease;
-}
-
-.admin-next-host .sidebar-toggle:hover {
-    background: var(--surface-hover);
-    color: var(--fg);
-}
-
-.admin-next-host .nav-scroll {
-    min-height: 0;
-    overflow-x: hidden;
-    overflow-y: auto;
-    padding: 6px 0;
-}
-
-.admin-next-host .nav-group {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    margin-bottom: 16px;
-}
-
-.admin-next-host .nav-group-title {
-    padding: 6px 16px 4px;
-    color: var(--muted);
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-}
-
-.admin-next-host .nav-link {
-    position: relative;
-    display: grid;
-    grid-template-columns: 20px minmax(0, 1fr) auto;
-    gap: 10px;
-    align-items: center;
-    width: 100%;
-    min-height: 36px;
-    height: 36px;
-    border: 1px solid transparent;
-    border-radius: var(--radius-sm, 8px);
-    padding: 0 12px;
-    background: transparent;
-    color: var(--muted);
-    font-size: 13px;
-    font-weight: 500;
-    text-align: left;
-    transition-property: background-color, color, border-color, box-shadow;
-    transition-duration: 120ms;
-    transition-timing-function: ease;
-}
-
-.admin-next-host .nav-link.is-active {
-    background: var(--surface);
-    color: var(--accent);
-    font-weight: 600;
-    border-color: var(--border);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-}
-
-.admin-next-host .nav-link.is-active svg {
-    color: var(--accent);
-}
-
-@media (hover: hover) {
-    .admin-next-host .nav-link:hover:not(.is-active) {
-        background: var(--surface-hover);
-        color: var(--fg);
-    }
-}
-
-.admin-next-host .nav-text {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.admin-next-host .nav-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: flex-end;
-    color: var(--fg);
-    font-size: 12px;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-}
-
-.admin-next-host .nav-dot {
-    justify-self: end;
-    width: 7px;
-    height: 7px;
-    border-radius: 999px;
-    background: var(--accent);
-    box-shadow: 0 0 6px color-mix(in srgb, var(--accent) 50%, transparent);
-}
-
-.admin-next-host .sidebar-foot {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
-    padding: 10px 14px;
-    border-radius: 10px;
-    background: var(--surface-soft);
-    border: 1px solid var(--border);
-    color: var(--muted);
-    font-size: 11px;
-    line-height: 1.4;
-    min-width: 0;
-    cursor: default;
-}
-
-.admin-next-host .sidebar-foot .health-dot {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    min-width: 0;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.admin-next-host .sidebar-foot .mono {
-    display: inline-block;
-    min-width: 0;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    color: color-mix(in srgb, var(--muted) 85%, transparent);
-    font-size: 11px;
-}
-
 /* Collapsing only hides text: padding, row height, gaps and icon size stay
    the same, so every icon keeps its exact position (Gmail-style). */
-.admin-next-host .is-sidebar-collapsed .sidebar {
-    overflow: visible;
-}
-
-.admin-next-host .is-sidebar-collapsed .nav-group-title {
-    overflow: hidden;
-    white-space: nowrap;
-    visibility: hidden;
-}
-
-.admin-next-host .is-sidebar-collapsed .sidebar-foot {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 8px 0;
-    width: 44px;
-    border-radius: 999px;
-}
-
-.admin-next-host .is-sidebar-collapsed .sidebar-foot .foot-text {
-    display: none;
-}
-
-.admin-next-host .is-sidebar-collapsed .nav-link {
-    width: 46px;
-    max-width: 46px;
-}
-
-.admin-next-host .is-sidebar-collapsed .nav-text {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-}
-
-.admin-next-host .is-sidebar-collapsed .nav-badge,
-.admin-next-host .is-sidebar-collapsed .nav-dot {
-    position: absolute;
-    top: -2px;
-    right: -4px;
-}
 
 /* Collapsed rail: a compact pill, since there is no room for the full count. */
-.admin-next-host .is-sidebar-collapsed .nav-badge {
-    justify-content: center;
-    min-width: 18px;
-    height: 18px;
-    padding: 0 5px;
-    border-radius: 9999px;
-    background: var(--accent);
-    color: var(--accent-contrast, #fff);
-    font-size: 10px;
+
+.admin-next-host .admin-health {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.admin-next-host .admin-health .mono {
+    overflow: hidden;
+    color: var(--muted);
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .admin-next-host .health-dot {
@@ -589,40 +331,6 @@ body:has(.admin-next) .n-message-container {
 .admin-next-host .health-dot--neutral::before {
     background: var(--muted);
     box-shadow: 0 0 0 4px color-mix(in srgb, var(--muted) 18%, transparent);
-}
-
-.admin-next-host .workspace {
-    grid-row: 2;
-    grid-column: 2;
-    min-width: 0;
-    min-height: 0;
-    height: calc(100% - 12px);
-    margin: 0 12px 12px 0;
-    border-radius: var(--radius-lg, 12px);
-    background: var(--surface);
-    border: 1px solid var(--border);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-}
-
-.admin-next-host .topbar {
-    display: flex;
-    align-items: center;
-    height: 100%;
-    padding: 0 24px 0 16px;
-    background: transparent;
-    border-bottom: none;
-}
-
-.admin-next-host .topbar-controls {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 24px;
-    width: 100%;
-    min-width: 0;
 }
 
 .admin-next-host .domain-select {
@@ -791,49 +499,6 @@ html.dark .admin-next-host .gmail-loading-pill {
     background: var(--accent-soft);
 }
 
-.admin-next-host .top-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-    justify-content: flex-end;
-}
-
-.admin-next-host .topbar-divider {
-    width: 1px;
-    height: 18px;
-    background: var(--border);
-    margin: 0 4px;
-}
-
-.admin-next-host .topbar-action-group {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.admin-next-host .top-actions .btn {
-    min-height: 32px;
-    height: 32px;
-    border-radius: var(--radius-sm, 6px);
-    padding: 0 12px;
-    font-size: 13px;
-    font-weight: 500;
-}
-
-.admin-next-host .top-actions .btn.btn-signout {
-    background: transparent;
-    color: var(--muted);
-    border-color: transparent;
-    box-shadow: none;
-}
-
-.admin-next-host .top-actions .btn.btn-signout:hover {
-    background: var(--surface-soft);
-    color: var(--danger);
-    border-color: var(--border);
-}
-
 .admin-next-host .toolbar,
 .admin-next-host .tag-row,
 .admin-next-host .modal-actions {
@@ -907,7 +572,7 @@ html.dark .admin-next-host .gmail-loading-pill {
     background: var(--surface);
 }
 
-.admin-next-host .app.is-flow-view .view {
+.admin-next-host .admin-next.is-flow-view .view {
     display: flex;
     flex-direction: column;
     gap: 0;
@@ -1182,7 +847,7 @@ html.dark .admin-next-host .gmail-loading-pill {
     display: none !important;
 }
 
-.admin-next-host .app.is-flow-view .toolbar {
+.admin-next-host .admin-next.is-flow-view .toolbar {
     display: none !important;
 }
 
@@ -1405,14 +1070,14 @@ html.dark .admin-next-host .gmail-loading-pill {
     display: none;
 }
 
-.admin-next-host .app.is-flow-view .toolbar {
+.admin-next-host .admin-next.is-flow-view .toolbar {
     min-height: 44px;
     margin-bottom: 0;
     padding: 6px;
 }
 
-.admin-next-host .app.is-flow-view .toolbar .btn,
-.admin-next-host .app.is-flow-view .toolbar .select {
+.admin-next-host .admin-next.is-flow-view .toolbar .btn,
+.admin-next-host .admin-next.is-flow-view .toolbar .select {
     min-height: 36px;
 }
 
@@ -2609,7 +2274,8 @@ html.dark .admin-next-host .gmail-loading-pill {
 }
 
 @keyframes mail-skeleton-pulse {
-    0%, 100% {
+    0%,
+    100% {
         opacity: 0.65;
     }
     50% {
@@ -3598,9 +3264,6 @@ html.dark .admin-next-host .gmail-loading-pill {
 }
 
 @media (max-width: 1600px) {
-    .admin-next-host .app {
-        --sidebar-width: 232px;
-    }
 
     .admin-next-host .sync-state {
         display: none;
@@ -3627,18 +3290,6 @@ html.dark .admin-next-host .gmail-loading-pill {
 }
 
 @media (max-width: 1180px) {
-    .admin-next-host .topbar {
-        grid-template-columns: 1fr;
-    }
-
-    .admin-next-host .topbar-controls {
-        grid-template-columns: minmax(150px, 200px) minmax(240px, 1fr);
-    }
-
-    .admin-next-host .top-actions {
-        grid-column: 1 / -1;
-        justify-content: flex-start;
-    }
 
     .admin-next-host .panel.split,
     .admin-next-host .panel.third {
@@ -3654,9 +3305,6 @@ html.dark .admin-next-host .gmail-loading-pill {
 }
 
 @media (max-width: 1360px) {
-    .admin-next-host .topbar-controls {
-        grid-template-columns: minmax(140px, 180px) minmax(260px, 1fr) auto;
-    }
 
     .admin-next-host .mail-workbench {
         height: 100%;
@@ -3741,74 +3389,11 @@ html.dark .admin-next-host .gmail-loading-pill {
         overflow: hidden;
     }
 
-    .admin-next-host .app {
-        display: grid;
-        grid-template-rows: auto auto auto minmax(0, 1fr);
-        grid-template-columns: minmax(0, 1fr) !important;
-        width: 100%;
-        max-width: 100vw;
-        height: 100dvh;
-        min-height: 0;
-        overflow: hidden;
-    }
-
     .admin-next-host .admin-next {
         width: 100%;
         max-width: 100vw;
         height: 100dvh;
         min-height: 0;
-    }
-
-    .admin-next-host .workspace {
-        grid-row: 4;
-        grid-column: 1;
-        display: grid;
-        height: auto;
-        min-height: 0;
-        overflow: hidden;
-    }
-
-    .admin-next-host .sidebar {
-        grid-row: 2;
-        grid-column: 1;
-        z-index: 10;
-        display: block;
-        padding: 0 12px 12px;
-    }
-
-    .admin-next-host .app-chrome {
-        display: contents;
-    }
-
-    .admin-next-host .brand {
-        z-index: 11;
-        grid-row: 1;
-        grid-column: 1;
-        width: 208px;
-        margin: 12px 12px 10px;
-    }
-
-    .admin-next-host .nav-scroll {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
-        gap: 8px;
-        overflow-x: hidden;
-        overflow-y: auto;
-        max-width: 100%;
-    }
-
-    .admin-next-host .nav-group {
-        display: contents;
-    }
-
-    .admin-next-host .nav-group-title,
-    .admin-next-host .sidebar-foot {
-        display: none;
-    }
-
-    .admin-next-host .nav-link {
-        min-width: 0;
-        width: 100%;
     }
 
     /*
@@ -3823,54 +3408,6 @@ html.dark .admin-next-host .gmail-loading-pill {
      * The collapsed state has no meaning for a horizontal band, so at this
      * breakpoint it simply keeps the expanded band layout.
      */
-    .admin-next-host .is-sidebar-collapsed .sidebar {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr);
-        gap: 10px;
-        width: auto;
-        height: auto;
-        padding: 12px;
-    }
-
-    .admin-next-host .is-sidebar-collapsed .brand {
-        margin: 12px 12px 10px;
-    }
-
-    .admin-next-host .is-sidebar-collapsed .nav-scroll {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
-        gap: 8px;
-        width: auto;
-        max-width: 100%;
-        overflow-x: hidden;
-        overflow-y: auto;
-    }
-
-    .admin-next-host .is-sidebar-collapsed .nav-group {
-        display: contents;
-    }
-
-    .admin-next-host .is-sidebar-collapsed .nav-link {
-        min-width: 0;
-        width: 100%;
-        max-width: none;
-    }
-
-    .admin-next-host .is-sidebar-collapsed .nav-text {
-        position: static;
-        width: auto;
-        height: auto;
-        overflow: hidden;
-        clip: auto;
-    }
-
-    .admin-next-host .topbar {
-        z-index: 10;
-        grid-row: 3;
-        grid-column: 1;
-        grid-template-columns: 1fr;
-        padding: 12px;
-    }
 
     .admin-next-host .login-topbar {
         padding: 12px;
@@ -3881,23 +3418,12 @@ html.dark .admin-next-host .gmail-loading-pill {
         margin-top: 32px;
     }
 
-    .admin-next-host .topbar-controls,
     .admin-next-host .mail-facets {
         grid-template-columns: 1fr;
     }
 
-    .admin-next-host .topbar-controls > *,
-    .admin-next-host .toolbar > *,
-    .admin-next-host .top-actions > * {
+    .admin-next-host .toolbar > * {
         min-width: 0;
-    }
-
-    .admin-next-host .top-actions {
-        justify-content: flex-start;
-    }
-
-    .admin-next-host .top-actions .btn {
-        flex: 1 1 132px;
     }
 
     .admin-next-host .notice {
@@ -4059,35 +3585,35 @@ html.dark .admin-next-host .gmail-loading-pill {
         padding: 12px;
     }
 
-    .admin-next-host .app.is-flow-view .view {
+    .admin-next-host .admin-next.is-flow-view .view {
         display: grid;
         grid-template-rows: auto minmax(0, 1fr);
         gap: 8px;
         overflow: hidden;
     }
 
-    .admin-next-host .app.is-flow-view .toolbar {
+    .admin-next-host .admin-next.is-flow-view .toolbar {
         display: none;
     }
 
-    .admin-next-host .app.is-flow-view .mail-workbench {
+    .admin-next-host .admin-next.is-flow-view .mail-workbench {
         min-height: 0;
         height: auto;
     }
 
-    .admin-next-host .app.is-flow-view .mail-list-panel,
-    .admin-next-host .app.is-flow-view .mail-detail-panel,
-    .admin-next-host .app.is-flow-view .mail-facets {
+    .admin-next-host .admin-next.is-flow-view .mail-list-panel,
+    .admin-next-host .admin-next.is-flow-view .mail-detail-panel,
+    .admin-next-host .admin-next.is-flow-view .mail-facets {
         min-height: 0;
         height: 100%;
     }
 
-    .admin-next-host .app.is-flow-view .mail-list {
+    .admin-next-host .admin-next.is-flow-view .mail-list {
         min-height: 0;
         height: auto;
     }
 
-    .admin-next-host .app.is-flow-view .detail-pane-body {
+    .admin-next-host .admin-next.is-flow-view .detail-pane-body {
         min-height: 0;
     }
 
@@ -4707,7 +4233,6 @@ html.dark .admin-next-host .gmail-loading-pill {
 
 /* Touch input: raise compact desktop controls to a 44px target. */
 @media (pointer: coarse) {
-    .admin-next-host .nav-link,
     .admin-next-host .btn,
     .admin-next-host .btn.small,
     .admin-next-host .compact-btn,
@@ -4721,8 +4246,7 @@ html.dark .admin-next-host .gmail-loading-pill {
     .admin-next-host .admin-refresh-btn,
     .admin-next-host .mail-page-btn,
     .admin-next-host .mail-view-toggle-btn,
-    .admin-next-host .mail-row-action-btn,
-    .admin-next-host .sidebar-toggle {
+    .admin-next-host .mail-row-action-btn {
         min-width: 44px;
         min-height: 44px;
     }
@@ -4735,32 +4259,6 @@ html.dark .admin-next-host .gmail-loading-pill {
 @media (max-width: 900px) {
     /* Nine destinations do not fit a bottom bar; use one scrolling row
        instead of a two-column grid that pushed content below the fold. */
-    .admin-next-host .nav-scroll,
-    .admin-next-host .is-sidebar-collapsed .nav-scroll {
-        display: flex;
-        gap: 4px;
-        overflow-x: auto;
-        overflow-y: hidden;
-        scrollbar-width: none;
-        overscroll-behavior-x: contain;
-    }
-
-    .admin-next-host .nav-link,
-    .admin-next-host .is-sidebar-collapsed .nav-link {
-        flex: 0 0 auto;
-        grid-template-columns: 18px auto auto;
-        gap: 6px;
-        width: auto;
-        max-width: none;
-        min-height: 40px;
-        height: 40px;
-        padding: 0 12px;
-    }
-
-    .admin-next-host .topbar-controls {
-        flex-wrap: wrap;
-        gap: 8px;
-    }
 
     .admin-next-host .topbar-search-wrap {
         flex: 1 1 100%;

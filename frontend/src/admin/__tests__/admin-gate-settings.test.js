@@ -82,7 +82,7 @@ describe('admin gate settings are loaded before the gate is evaluated', () => {
         const wrapper = await mountAdmin()
         await flushPromises()
         // console shell rendered, not the password form
-        expect(wrapper.find('.admin-next.app').exists()).toBe(true)
+        expect(wrapper.find('.admin-next.ets-shell').exists()).toBe(true)
         expect(wrapper.find('#admin-auth-title').exists()).toBe(false)
         wrapper.unmount()
     })

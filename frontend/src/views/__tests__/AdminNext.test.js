@@ -226,7 +226,7 @@ describe('AdminNext behavior baseline', () => {
             body: JSON.stringify({ username: 'admin', password: 'hashed-password', cf_token: '' }),
         }))
         expect(state.adminAuth.value).toBe('fixture-admin-session')
-        expect(wrapper.find('.admin-next.app').exists()).toBe(true)
+        expect(wrapper.find('.admin-next.ets-shell').exists()).toBe(true)
         expect(wrapper.get('.toast').text()).toContain('管理员会话已建立')
         expect(wrapper.get('.toast').attributes('role')).toBe('status')
         wrapper.unmount()
@@ -279,7 +279,7 @@ describe('AdminNext behavior baseline', () => {
         state.showAdminAuth.value = true
         await nextTick()
         expect(failed.wrapper.find('#admin-auth-title').exists()).toBe(true)
-        expect(failed.wrapper.find('.admin-next.app').exists()).toBe(false)
+        expect(failed.wrapper.find('.admin-next.ets-shell').exists()).toBe(false)
         failed.wrapper.unmount()
     })
 
@@ -502,7 +502,7 @@ describe('AdminNext behavior baseline', () => {
         expect(wrapper.text()).toContain('收件')
         expect(wrapper.find('.mail-row').exists()).toBe(true)
 
-        const identityNavLink = wrapper.findAll('.nav-link').find((link) => link.text().includes('地址'))
+        const identityNavLink = wrapper.findAll('.shell-nav-link').find((link) => link.text().includes('地址'))
         expect(identityNavLink).toBeTruthy()
         await identityNavLink.trigger('click')
         await nextTick()

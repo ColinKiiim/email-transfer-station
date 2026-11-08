@@ -4,7 +4,8 @@ import { useRoute } from 'vue-router'
 import { useScopedI18n } from '@/i18n/app'
 
 import { api } from '../api'
-import AccessShell from '../components/AccessShell.vue'
+import AppShell from '../components/AppShell.vue'
+import AppUtilityMenu from '../components/AppUtilityMenu.vue'
 import AccessMailWorkbench from '../components/AccessMailWorkbench.vue'
 import ProductSurfaceLinks from '../components/ProductSurfaceLinks.vue'
 import { getRouterPathWithLang } from '../utils'
@@ -32,13 +33,6 @@ const token = computed(() => {
 })
 
 const title = computed(() => label.value || address.value || t('mailbox'))
-const identityLabel = computed(() => address.value || t('mailbox'))
-const statusLabel = computed(() => {
-  if (resolving.value) return t('verifying')
-  if (errorText.value) return t('invalidLink')
-  return shareJwt.value ? t('readOnlyShare') : t('awaitingVerification')
-})
-const statusTone = computed(() => errorText.value ? 'error' : (shareJwt.value ? 'success' : 'warning'))
 
 const resolveToken = async () => {
   try {
@@ -88,54 +82,42 @@ onMounted(resolveToken)
 </script>
 
 <template>
-  <AccessShell
-    :title="title"
-    :kicker="t('shellKicker')"
-    :brand-context="t('brandContext')"
-    :identity-label="identityLabel"
-    :identity-meta="t('identityMeta')"
-    :status-label="statusLabel"
-    :status-tone="statusTone"
-  >
+  <AppShell class="token-shell" :brand-context="t('brandContext')">
     <template #actions>
       <ProductSurfaceLinks :items="surfaceItems" :aria-label="t('surfaceLinksLabel')" />
+      <AppUtilityMenu />
     </template>
 
-    <template #rail-footer>
-      <div class="share-summary">
-        <span>{{ t('accessMode') }}</span>
-        <strong>Read only</strong>
-        <p>{{ t('accessModeDesc') }}</p>
-      </div>
-    </template>
-
-    <section v-if="resolving" class="token-state-card">
+    <div v-if="resolving" class="shell-page">
       <n-skeleton text :repeat="8" />
-    </section>
+    </div>
 
-    <section v-else-if="errorText" class="token-state-card is-error">
-      <span>{{ t('shareTokenLabel') }}</span>
-      <h2>{{ t('invalidToken') }}</h2>
-      <p>{{ errorText }}</p>
-      <div class="token-next-steps">
-        <strong>{{ t('errorHint') }}</strong>
-        <ul>
-          <li>{{ t('errorHintAdmin') }}</li>
-          <li>{{ t('errorHintUser') }}</li>
-          <li>{{ t('errorHintTemporary') }}</li>
-        </ul>
-      </div>
-      <div class="token-actions">
-        <n-button tertiary type="primary" @click="resolveToken">{{ t('retryVerify') }}</n-button>
-        <n-button tag="a" :href="userPath" tertiary>{{ t('goToUserPortal') }}</n-button>
-        <n-button tag="a" :href="homePath" tertiary>{{ t('backToHome') }}</n-button>
-      </div>
-    </section>
+    <div v-else-if="errorText" class="shell-page">
+      <section class="token-state-card is-error shell-page-narrow" role="alert">
+        <span>{{ t('shareTokenLabel') }}</span>
+        <h2>{{ t('invalidToken') }}</h2>
+        <p>{{ errorText }}</p>
+        <div class="token-next-steps">
+          <strong>{{ t('errorHint') }}</strong>
+          <ul>
+            <li>{{ t('errorHintAdmin') }}</li>
+            <li>{{ t('errorHintUser') }}</li>
+            <li>{{ t('errorHintTemporary') }}</li>
+          </ul>
+        </div>
+        <div class="token-actions">
+          <n-button type="primary" @click="resolveToken">{{ t('retryVerify') }}</n-button>
+          <n-button tag="a" :href="userPath" secondary>{{ t('goToUserPortal') }}</n-button>
+          <n-button tag="a" :href="homePath" quaternary>{{ t('backToHome') }}</n-button>
+        </div>
+      </section>
+    </div>
 
     <AccessMailWorkbench
       v-else-if="shareJwt"
       :key="mailBoxKey"
-      :title="t('mailbox')"
+      :title="title"
+      :badge="t('readOnlyBadge')"
       :show-e-mail-to="false"
       :show-reply="false"
       :show-save-s3="false"
@@ -147,18 +129,19 @@ onMounted(resolveToken)
     <!-- Belt and braces: even if some future state escapes the three branches
          above, the recipient sees an explanation and a way forward rather than
          an empty page. -->
-    <section v-else class="token-state-card is-error">
-      <h2>{{ t('invalidToken') }}</h2>
-      <div class="token-actions">
-        <n-button tertiary type="primary" @click="resolveToken">{{ t('retryVerify') }}</n-button>
-        <n-button tag="a" :href="homePath" tertiary>{{ t('backToHome') }}</n-button>
-      </div>
-    </section>
-  </AccessShell>
+    <div v-else class="shell-page">
+      <section class="token-state-card is-error shell-page-narrow" role="alert">
+        <h2>{{ t('invalidToken') }}</h2>
+        <div class="token-actions">
+          <n-button type="primary" @click="resolveToken">{{ t('retryVerify') }}</n-button>
+          <n-button tag="a" :href="homePath" quaternary>{{ t('backToHome') }}</n-button>
+        </div>
+      </section>
+    </div>
+  </AppShell>
 </template>
 
 <style scoped>
-.share-summary,
 .token-state-card {
   min-width: 0;
   border-radius: 8px;
@@ -166,27 +149,12 @@ onMounted(resolveToken)
   box-shadow: var(--ets-shadow-card);
 }
 
-.share-summary {
-  display: grid;
-  gap: 3px;
-  padding: 12px;
-  background: var(--ets-surface-alt);
-}
-
-.share-summary span,
 .token-state-card span {
   color: var(--ets-text-muted);
   font-size: 12px;
   font-weight: 650;
 }
 
-.share-summary strong {
-  color: var(--ets-text);
-  font-size: 14px;
-  font-weight: 760;
-}
-
-.share-summary p,
 .token-state-card p {
   margin: 0;
   color: var(--ets-text-muted);

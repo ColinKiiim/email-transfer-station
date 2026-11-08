@@ -19,6 +19,10 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  badge: {
+    type: String,
+    default: '',
+  },
   addressOptions: {
     type: Array,
     default: () => [],
@@ -430,7 +434,10 @@ onBeforeUnmount(() => {
   <div class="access-mail-workbench">
     <section class="mail-command-surface">
       <div class="command-copy">
-        <span class="command-section-label">{{ title }}</span>
+        <span class="command-section-label">
+          {{ title }}
+          <span v-if="badge" class="command-badge">{{ badge }}</span>
+        </span>
         <div class="filter-chips-row">
           <button
             type="button"
@@ -695,6 +702,20 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.command-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  margin-left: 6px;
+  border-radius: 999px;
+  padding: 0 8px;
+  background: var(--ets-surface-sunken);
+  color: var(--ets-text-muted);
+  font-size: var(--text-footnote);
+  font-weight: 600;
+  vertical-align: middle;
+}
+
 .access-mail-workbench {
   display: grid;
   gap: 12px;
