@@ -35,6 +35,7 @@ const props = defineProps({
 
 const { isDark, mailboxSplitSize, loading, useUTCDate } = useGlobalState()
 const data = ref([])
+const isLoaded = ref(false)
 
 const count = ref(0)
 const page = ref(1)
@@ -92,6 +93,8 @@ const refresh = async () => {
   } catch (error) {
     message.error(error.message || "error");
     console.error(error);
+  } finally {
+    isLoaded.value = true;
   }
 };
 
@@ -245,7 +248,7 @@ onMounted(async () => {
         :on-update:size="onSpiltSizeChange" class="sendbox-split">
         <template #1>
           <div class="sendbox-list-scroll">
-            <n-empty v-if="data.length === 0" class="empty-list" :description="t('emptySent')" />
+            <n-empty v-if="isLoaded && data.length === 0" class="empty-list" :description="t('emptySent')" />
             <n-list v-else hoverable clickable class="sendbox-list">
               <n-list-item
                 v-for="row in data"
@@ -319,7 +322,7 @@ onMounted(async () => {
             </div>
           </div>
           <div class="empty-detail" v-else>
-            <n-result status="info" :title="count === 0 ? t('emptySent') : t('pleaseSelectMail')">
+            <n-result status="info" :title="isLoaded && count === 0 ? t('emptySent') : t('pleaseSelectMail')">
               <template #icon>
                 <n-icon :component="SendRound" :size="72" />
               </template>
@@ -338,7 +341,7 @@ onMounted(async () => {
         </n-button>
       </div>
       <div class="sendbox-list-scroll">
-        <n-empty v-if="data.length === 0" class="empty-list" :description="t('emptySent')" />
+        <n-empty v-if="isLoaded && data.length === 0" class="empty-list" :description="t('emptySent')" />
         <n-list v-else hoverable clickable class="sendbox-list">
           <n-list-item
             v-for="row in data"

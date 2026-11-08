@@ -73,6 +73,7 @@ const rawData = ref([])
 const timer = ref(null)
 
 const count = ref(0)
+const isLoaded = ref(false)
 const page = ref(1)
 const pageSize = ref(20)
 
@@ -201,6 +202,7 @@ const refresh = async () => {
     console.error(error);
   } finally {
     loading.value = false;
+    isLoaded.value = true;
   }
 };
 
@@ -532,7 +534,7 @@ onBeforeUnmount(() => {
             </div>
           </n-list-item>
         </n-list>
-        <div v-if="count === 0" style="padding: 48px 16px; text-align: center;">
+        <div v-if="isLoaded && count === 0" style="padding: 48px 16px; text-align: center;">
           <n-result status="info" :title="t('emptyInbox')">
             <template #icon>
               <n-icon :component="InboxRound" :size="80" />

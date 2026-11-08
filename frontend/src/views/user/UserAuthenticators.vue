@@ -7,6 +7,7 @@ import { api } from '../../api'
 const { t } = useScopedI18n('views.user.UserAuthenticators')
 const message = useMessage()
 const rows = ref([])
+const isLoaded = ref(false)
 const now = ref(Date.now())
 let timer = null
 let refreshing = false
@@ -45,6 +46,8 @@ onMounted(async () => {
     await load()
   } catch (error) {
     message.error(error.message)
+  } finally {
+    isLoaded.value = true
   }
   timer = window.setInterval(async () => {
     now.value = Date.now()
@@ -69,10 +72,10 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="authenticator-panel">
-    <div v-if="!rows.length" class="empty-state">
+    <div v-if="isLoaded && !rows.length" class="empty-state">
       <n-empty :description="t('empty')" />
     </div>
-    <ul v-else class="items" aria-live="polite">
+    <ul v-else-if="rows.length" class="items" aria-live="polite">
       <li v-for="row in rows" :key="row.id" class="item">
         <div class="item-meta">
           <strong>{{ row.label }}</strong>

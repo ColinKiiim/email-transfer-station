@@ -215,7 +215,7 @@ const isPrimaryPanel = (panel) => (
                             </tr>
                         </tbody>
                     </table>
-                    <div v-else class="empty-pad">
+                    <div v-else-if="model.isLoaded" class="empty-pad">
                         <p class="text-muted">{{ t('noRecentLogs') }}</p>
                     </div>
                 </div>
@@ -619,7 +619,7 @@ const isPrimaryPanel = (panel) => (
                                 <span v-else>{{ cellText(row, column.key) }}</span>
                             </td>
                         </tr>
-                        <tr v-if="panel.rows.length === 0">
+                        <tr v-if="model.isLoaded && panel.rows.length === 0">
                             <td :colspan="panel.columns.length">
                                 <AdminEmptyState v-if="model.hasActiveFilters" :action-label="t('clearFilters')"
                                     @action="actions.handleAction('reset-filters')" />

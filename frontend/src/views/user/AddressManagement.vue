@@ -17,6 +17,7 @@ const router = useRouter()
 const { locale, t } = useScopedI18n('views.user.AddressManagement')
 
 const data = ref([])
+const isLoaded = ref(false)
 const showTranferAddress = ref(false)
 const currentAddress = ref("")
 const currentAddressId = ref(0)
@@ -109,6 +110,8 @@ const fetchData = async () => {
     } catch (error) {
         console.log(error)
         message.error(error.message || "error");
+    } finally {
+        isLoaded.value = true
     }
 }
 
@@ -226,7 +229,7 @@ onMounted(async () => {
                 <div class="address-table-scroll">
                     <n-data-table :columns="columns" :data="data" :bordered="false" embedded />
                 </div>
-                <n-empty v-if="data.length === 0" class="empty-addresses" :description="t('emptyAssignedAddress')" />
+                <n-empty v-if="isLoaded && data.length === 0" class="empty-addresses" :description="t('emptyAssignedAddress')" />
             </n-tab-pane>
             <n-tab-pane v-if="canCreateOrBindAddress" name="create_or_bind" :tab="t('create_or_bind')">
                 <Login />

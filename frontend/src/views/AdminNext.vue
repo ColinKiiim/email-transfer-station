@@ -981,6 +981,7 @@ const workspaceModel = computed(() => ({
     hasActiveFilters: hasActiveFilters.value,
     pageLoadErrors: pageLoadErrors.value,
     showAdminPage: showAdminPage.value,
+    isLoaded: live.fetchedAdmin,
     opsBoundaryItems: opsBoundaryItems.value,
     mailGridStyle: mailGridStyle.value,
     mailHierarchy: mailHierarchy.value,

@@ -30,6 +30,7 @@ const showAccountSettingsCard = ref(false)
 const currentAutoRefreshInterval = ref(60)
 const timer = ref(null)
 const isRefreshing = ref(false)
+const isLoaded = ref(false)
 
 const { t } = useScopedI18n('views.index.SimpleIndex')
 
@@ -61,6 +62,7 @@ const fetchMails = async () => {
         return false
     } finally {
         isRefreshing.value = false
+        isLoaded.value = true
     }
 }
 
@@ -222,10 +224,10 @@ onBeforeUnmount(() => {
                     </n-flex>
                 </div>
 
-                <div v-if="!currentMail" class="no-mail">
+                <div v-if="!currentMail && isLoaded" class="no-mail">
                     <n-empty :description="t('noMails')" />
                 </div>
-                <div v-else>
+                <div v-else-if="currentMail">
                     <h3 v-if="currentMail.subject">{{ currentMail.subject }}</h3>
                     <div style="margin-top: 16px;">
                         <MailContentRenderer :mail="currentMail" :showEMailTo="false" :showReply="false"
