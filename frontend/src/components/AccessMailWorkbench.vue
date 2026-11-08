@@ -78,6 +78,7 @@ const pageSize = ref(20)
 const count = ref(0)
 const localFilterKeyword = ref('')
 const isRefreshing = ref(false)
+const isLoaded = ref(false)
 const isBatchOperating = ref(false)
 const isRowActionBusy = ref(false)
 const timer = ref(null)
@@ -219,6 +220,7 @@ const refresh = async ({ keepPage = true } = {}) => {
     message.error(error.message || 'error')
   } finally {
     isRefreshing.value = false
+    isLoaded.value = true
     loading.value = false
   }
 }
@@ -628,8 +630,8 @@ onBeforeUnmount(() => {
             </div>
           </div>
 
-          <n-empty v-if="!isRefreshing && data.length === 0" class="empty-list" :description="t('emptyInbox')" />
-          <n-skeleton v-if="isRefreshing && data.length === 0" text :repeat="8" />
+          <n-empty v-if="isLoaded && !isRefreshing && data.length === 0" class="empty-list" :description="t('emptyInbox')" />
+          <n-skeleton v-if="(!isLoaded || isRefreshing) && data.length === 0" text :repeat="8" />
         </div>
       </section>
 
@@ -660,7 +662,7 @@ onBeforeUnmount(() => {
 
         <div v-else class="empty-detail">
           <n-icon :component="InboxRound" :size="56" />
-          <h2>{{ count === 0 ? t('emptyInbox') : t('pleaseSelectMail') }}</h2>
+          <h2>{{ isLoaded && count === 0 ? t('emptyInbox') : t('pleaseSelectMail') }}</h2>
           <p>{{ tw('emptyDetailHint') }}</p>
         </div>
       </section>

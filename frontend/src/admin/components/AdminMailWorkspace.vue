@@ -477,7 +477,7 @@ defineExpose({
                     </span>
                 </div>
 
-                <AdminEmptyState v-if="model.filteredMailRows.length === 0"
+                <AdminEmptyState v-if="model.isLoaded && model.filteredMailRows.length === 0"
                     :action-label="model.hasActiveFilters ? t('clearFilters') : ''"
                     @action="actions.handleAction('reset-filters')" />
             </div>
