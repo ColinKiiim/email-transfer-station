@@ -14,8 +14,12 @@ Corepack pnpm 11.24.0.
 Production deploys now run from `.github/workflows/deploy.yml`, following the
 WANdrop model: after CI passes on a push to `main`, it deploys the Worker and
 then Pages using the repository secrets `CLOUDFLARE_API_TOKEN`,
-`CLOUDFLARE_ACCOUNT_ID` and `WORKER_WRANGLER_TOML`. Those secrets must be added
-in GitHub before the first run. Not yet run against production.
+`CLOUDFLARE_ACCOUNT_ID` and `WORKER_WRANGLER_TOML`. The first two are set;
+`WORKER_WRANGLER_TOML` is still pending, so the Worker step is skipped with a
+warning until it is added. The Default cloud environment also holds the
+Cloudflare token as a network secret for `api.cloudflare.com`; it is verified
+for API reads, but cannot run `wrangler pages deploy` because the proxy
+overwrites the Pages upload JWT.
 
 ## Corepack / pnpm tooling alignment — 2026-10-29
 

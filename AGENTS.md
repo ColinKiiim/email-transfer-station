@@ -88,11 +88,15 @@ git push   # on main
 Pushing `main` runs CI; when CI passes, `.github/workflows/deploy.yml` deploys
 the Worker and then Pages from GitHub Actions with the repository secrets
 `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, and `WORKER_WRANGLER_TOML`
-(the full real `worker/wrangler.toml`). No local credentials are needed, and
+(the full real `worker/wrangler.toml`; while it is unset the Worker step is
+skipped with a warning and only Pages deploys). No local credentials are needed, and
 no session should deploy again by hand on top of it. After pushing, check the
 Deploy workflow result and record it in `docs/CURRENT.md`. The workflow never
 runs D1 migrations. Documentation-only commits use `[skip ci]` so they do not
-redeploy.
+redeploy. Cloud sessions may hold a Cloudflare token as a proxy-injected
+network secret for `api.cloudflare.com`; it works for API reads and Worker
+deploys, but not `wrangler pages deploy`, because the proxy also overwrites the
+Pages upload JWT. Pages therefore deploys through the workflow.
 
 The local Immediate release remains a fallback when Actions cannot be used:
 
