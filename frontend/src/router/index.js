@@ -29,11 +29,15 @@ const router = createRouter({
     routes: [
         {
             path: '/',
-            component: Index
+            component: Index,
+            // Full-screen app shell once an address is signed in (see App.vue).
+            meta: { addressWorkspace: true }
         },
         {
             path: '/:lang/',
-            component: Index
+            component: Index,
+            // Full-screen app shell once an address is signed in (see App.vue).
+            meta: { addressWorkspace: true }
         },
         {
             path: '/user',

@@ -7,6 +7,7 @@ import { CloudDownloadRound } from '@vicons/material'
 import { useGlobalState } from '../store'
 import { utcToLocalDate } from '../utils'
 import { formatMailListTime, formatMailReaderTime } from '../admin/admin-formatters'
+import { buildReplyModel, buildForwardModel } from '../utils/mail-actions'
 import { formatSenderDisplay, processItem, revokeMailObjectUrls, revokeObjectUrl, stripHtmlForPreview } from '../utils/email-parser'
 import MailContentRenderer from './MailContentRenderer.vue'
 import AiExtractInfo from './AiExtractInfo.vue'
@@ -74,7 +75,7 @@ const emit = defineEmits(['update:addressFilter'])
 const message = useMessage()
 const { t } = useScopedI18n('components.MailBox')
 const { t: tw, locale } = useScopedI18n('components.AccessMailWorkbench')
-const { autoRefresh, configAutoRefreshInterval, useUTCDate, loading } = useGlobalState()
+const { autoRefresh, configAutoRefreshInterval, useUTCDate, loading, sendMailModel, indexTab } = useGlobalState()
 
 const rawData = ref([])
 const curMail = ref(null)
@@ -292,7 +293,26 @@ const handleRowKey = (event, row) => {
   if (event.key === 'Enter' || event.key === ' ') {
     event.preventDefault()
     clickRow(row, { shiftKey: event.shiftKey })
+  } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    event.preventDefault()
+    const sibling = event.key === 'ArrowDown'
+      ? event.currentTarget.nextElementSibling
+      : event.currentTarget.previousElementSibling
+    if (sibling && typeof sibling.focus === 'function') sibling.focus()
   }
+}
+
+// Reply / forward prefill the compose page of the address mailbox.
+const replyMail = () => {
+  if (!curMail.value) return
+  Object.assign(sendMailModel.value, buildReplyModel(curMail.value, t('reply')))
+  indexTab.value = 'sendmail'
+}
+
+const forwardMail = () => {
+  if (!curMail.value) return
+  Object.assign(sendMailModel.value, buildForwardModel(curMail.value, t('forwardMail')))
+  indexTab.value = 'sendmail'
 }
 
 const deleteSingleMail = async (row) => {
@@ -716,6 +736,8 @@ onBeforeUnmount(() => {
             :showReply="showReply"
             :showSaveS3="showSaveS3"
             :onDelete="deleteCurrentMail"
+            :onReply="replyMail"
+            :onForward="forwardMail"
             :onSaveToS3="saveToS3Proxy"
           />
         </div>
@@ -1499,6 +1521,13 @@ onBeforeUnmount(() => {
   .mw-reader-toolbar .mw-btn.is-icon {
     width: 44px;
     height: 44px;
+  }
+}
+
+/* Smallest phones: arrows and the unread count carry the position; the labels would wrap. */
+@media (max-width: 420px) {
+  .mw-range {
+    display: none;
   }
 }
 

@@ -545,6 +545,42 @@ export const MESSAGE_REGISTRY = {
     }
   },
   "views.Index": {
+    "admin": {
+      "en": "Admin",
+      "zh": "管理"
+    },
+    "user": {
+      "en": "User",
+      "zh": "用户"
+    },
+    "home": {
+      "en": "Home",
+      "zh": "主页"
+    },
+    "surfaceLinksLabel": {
+      "en": "Product areas",
+      "zh": "产品区域"
+    },
+    "brandContext": {
+      "en": "Mailbox",
+      "zh": "地址邮箱"
+    },
+    "toggleSidebar": {
+      "en": "Toggle sidebar",
+      "zh": "显示或隐藏侧边栏"
+    },
+    "mainNav": {
+      "en": "Main navigation",
+      "zh": "主导航"
+    },
+    "navGroupSettings": {
+      "en": "Settings",
+      "zh": "设置"
+    },
+    "navGroupMail": {
+      "en": "Mail",
+      "zh": "邮件"
+    },
     "about": {
       "en": "About",
       "zh": "关于"

@@ -72,7 +72,7 @@ test.describe('Browser HTML trust boundaries', () => {
     await expect(notificationLink).toHaveAttribute('rel', 'noopener noreferrer nofollow');
     await expect(notificationLink).toHaveAttribute('referrerpolicy', 'no-referrer');
 
-    await page.locator('.n-tabs-tab').filter({ hasText: 'About' }).click();
+    await page.locator('.shell-nav-link').filter({ hasText: 'About' }).click();
     const about = page.locator('.about-card');
     const aboutAnnouncement = about.getByRole('heading', { name: 'Maintenance window' }).locator('..');
     await expect(aboutAnnouncement).toBeVisible();

@@ -15,7 +15,9 @@ import { DEFAULT_LOCALE, isSupportedLocale } from './i18n/utils'
 import { naiveDarkOverrides, naiveLightOverrides } from './styles/naive-theme'
 
 const {
-  isDark, useSideMargin, telegramApp, isTelegram
+  isDark, useSideMargin, telegramApp, isTelegram,
+  settings,
+  useSimpleIndex,
 } = useGlobalState()
 const adClient = import.meta.env.VITE_GOOGLE_AD_CLIENT;
 const adSlot = import.meta.env.VITE_GOOGLE_AD_SLOT;
@@ -28,7 +30,8 @@ const themeOverrides = computed(() => isDark.value ? naiveDarkOverrides : naiveL
 const localeConfig = computed(() => getNaiveLocaleConfig(isSupportedLocale(locale.value) ? locale.value : DEFAULT_LOCALE))
 const isMobile = useIsMobile()
 const isShareOnlyRoute = computed(() => route.meta?.shareOnly === true)
-const isFullScreenRoute = computed(() => route.meta?.fullScreen === true)
+const isFullScreenRoute = computed(() => route.meta?.fullScreen === true
+  || (route.meta?.addressWorkspace === true && !!settings.value.address && !useSimpleIndex.value))
 const showAppChrome = computed(() => !isShareOnlyRoute.value && !isFullScreenRoute.value)
 const showAd = computed(() => showAppChrome.value && !isMobile.value && Boolean(adClient) && Boolean(adSlot));
 const showSideMargin = computed(() => showAppChrome.value && !isMobile.value && useSideMargin.value && showAd.value);

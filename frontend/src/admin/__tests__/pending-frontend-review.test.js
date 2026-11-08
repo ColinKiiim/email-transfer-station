@@ -18,7 +18,7 @@ vi.mock('naive-ui', async (importOriginal) => ({
 import AdminAuthenticators from '../components/AdminAuthenticators.vue'
 import AdminMailWorkspace from '../components/AdminMailWorkspace.vue'
 import AuthenticatorShare from '../../views/AuthenticatorShare.vue'
-import MailBox from '../../components/MailBox.vue'
+import AccessMailWorkbench from '../../components/AccessMailWorkbench.vue'
 import SendBox from '../../components/SendBox.vue'
 import { cleanMailPreview } from '../admin-formatters'
 import i18n from '../../i18n'
@@ -167,7 +167,7 @@ describe('pending frontend review regressions', () => {
         expect(cleanMailPreview('&nbspword &#82045 &zwnjword', '')).toBe('&nbspword &#82045 &zwnjword')
     })
 
-    it.each([MailBox, SendBox])('supports keyboard row activation without intercepting child controls ($__name)', async (component) => {
+    it.each([AccessMailWorkbench, SendBox])('supports keyboard row activation without intercepting child controls ($__name)', async (component) => {
         const wrapper = mount(component, { fetchMailData: vi.fn().mockResolvedValue({ results: [], count: 0 }) })
         await settle()
         const state = wrapper.vm.$.setupState

@@ -93,7 +93,6 @@ export const useGlobalState = createGlobalState(
         const preferredLocale = useStorage('preferredLocale', '');
         const userTab = useSessionStorage('userTab', 'address_management');
         const indexTab = useSessionStorage('indexTab', 'mailbox');
-        const globalTabplacement = useStorage('globalTabplacement', 'top');
         const useSideMargin = useStorage('useSideMargin', true);
         const useUTCDate = useStorage('useUTCDate', false);
         const autoRefresh = useStorage('autoRefresh', false);
@@ -164,7 +163,6 @@ export const useGlobalState = createGlobalState(
             indexTab,
             userOpenSettings,
             userSettings,
-            globalTabplacement,
             useSideMargin,
             useUTCDate,
             autoRefresh,

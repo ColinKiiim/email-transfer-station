@@ -57,12 +57,13 @@ test.describe('Reply HTML & XSS Sanitization', () => {
 
       // Open the email (scope to the row button to avoid strict mode violation
       // when detail panel also shows the subject)
-      const mailItem = page.getByRole('button').getByText('XSS Test Email');
+      const mailItem = page.getByRole('listitem').getByText('XSS Test Email');
       await expect(mailItem).toBeVisible({ timeout: 10_000 });
       await mailItem.click();
 
       // Wait for Reply button to appear — signals email content has rendered
-      const replyButton = page.locator('button').filter({ hasText: /Reply/i }).first();
+      // Exact name: the sidebar also has an "Auto Reply" item.
+      const replyButton = page.getByRole('button', { name: 'Reply', exact: true }).first();
       await expect(replyButton).toBeVisible({ timeout: 10_000 });
 
       // Click Reply — from here on, dialogs indicate sanitization failure (#857)
