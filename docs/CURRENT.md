@@ -48,6 +48,15 @@ online. Commits `7a1d4c1` and `dd9051f` are deployed to Pages at
 `mail-api.20030405.xyz`. The live admin URL with `?view=access` now resolves to
 the 总览 page and the sidebar no longer contains 访问包.
 
+## Admin sidebar collapse stability — 2026-11-08
+
+Collapsing the admin sidebar again leaves the top bar and rail icons in place,
+as in Gmail: the top bar keeps the expanded brand column, so the menu button,
+logo and search box do not move, and the collapsed rail only hides text, so
+every nav icon keeps its x/y position. Only the workspace card widens. Commit
+`1267ffe` is deployed to Pages at
+`https://6628deaa.email-transfer-station.pages.dev`.
+
 ## Public mailbox interaction cleanup — 2026-10-28
 
 The public mailbox now has quiet automatic refresh in simple mode: background
