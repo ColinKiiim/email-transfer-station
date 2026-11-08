@@ -1008,6 +1008,8 @@ const workspaceModel = computed(() => ({
     explicitUnreadMailCount: explicitUnreadMailCount.value,
     domainRows: domainRows.value,
     addressRows: addressRows.value,
+    // The overview never loads address rows; the statistics read carries the real total.
+    addressTotal: Number.isFinite(Number(live.statistics?.addressCount)) ? Number(live.statistics.addressCount) : addressRows.value.length,
     blockingLoadErrors: blockingLoadErrors.value,
     workerStatusLabel: workerStatusLabel.value,
     workerStatusTone: workerStatusTone.value,

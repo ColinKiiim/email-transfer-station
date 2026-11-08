@@ -151,7 +151,7 @@ const isPrimaryPanel = (panel) => (
                     <span class="card-kicker">{{ t('identityKicker') }}</span>
                 </div>
                 <div class="card-main">
-                    <strong class="card-value">{{ formatNumber(model.addressRows.length) }}</strong>
+                    <strong class="card-value">{{ formatNumber(model.addressTotal) }}</strong>
                     <span class="card-unit">{{ t('addressUnit') }}</span>
                 </div>
                 <div class="card-action">
@@ -253,7 +253,7 @@ const isPrimaryPanel = (panel) => (
                         </div>
                         <div class="kv-item">
                             <dt>{{ t('totalAddresses') }}</dt>
-                            <dd><strong>{{ model.addressRows.length }} {{ t('addressUnit') }}</strong></dd>
+                            <dd><strong>{{ model.addressTotal }} {{ t('addressUnit') }}</strong></dd>
                         </div>
                         <div class="kv-item">
                             <dt>{{ t('inboundNotify') }}</dt>

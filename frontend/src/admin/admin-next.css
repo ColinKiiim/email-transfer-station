@@ -1306,6 +1306,8 @@ html.dark .admin-next-host .gmail-loading-pill {
 .admin-next-host .mail-list-panel,
 .admin-next-host .mail-detail-panel {
     display: grid;
+    /* Explicit column: an implicit auto column let long previews widen the list. */
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
     min-width: 0;
     min-height: 0;
@@ -1785,19 +1787,53 @@ html.dark .admin-next-host .gmail-loading-pill {
     box-sizing: border-box;
 }
 
-.admin-next-host .mail-workbench.flow-mode-detail .mail-row {
-    grid-template-columns: 22px 130px minmax(0, 1fr) 76px;
-    gap: 8px;
-    padding: 0 12px;
+/* Split reading view: three-line cells (sender + time, subject, preview), like the
+   user inbox and a Mail message list, instead of a cramped single line. */
+.admin-next-host .mail-workbench.flow-mode-detail .mail-row:not(.exception) {
+    grid-template-columns: 22px minmax(0, 1fr) auto;
+    /* The preview stays out of the auto-sized time column; spanning into it
+       would size that column to the whole preview and push the time off-screen. */
+    grid-template-areas:
+        "check sender meta"
+        ". main .";
+    gap: 2px 8px;
+    align-items: baseline;
+    height: auto;
+    min-height: 0;
+    padding: 10px 12px;
 }
 
-.admin-next-host .mail-workbench.flow-mode-detail .mail-snippet-sep,
-.admin-next-host .mail-workbench.flow-mode-detail .mail-body-preview {
-    display: none !important;
+.admin-next-host .mail-workbench.flow-mode-detail .mail-row:not(.exception) .mail-select-cell {
+    grid-area: check;
+    align-self: center;
 }
 
+.admin-next-host .mail-workbench.flow-mode-detail .mail-row:not(.exception) .mail-sender { grid-area: sender; }
+.admin-next-host .mail-workbench.flow-mode-detail .mail-row:not(.exception) .mail-meta { grid-area: meta; }
+
+.admin-next-host .mail-workbench.flow-mode-detail .mail-row:not(.exception) .mail-main {
+    display: grid;
+    grid-area: main;
+    gap: 2px;
+}
+
+.admin-next-host .mail-workbench.flow-mode-detail .mail-row:not(.exception) .mail-subject {
+    max-width: none;
+}
+
+.admin-next-host .mail-workbench.flow-mode-detail .mail-snippet-sep {
+    display: none;
+}
+
+/* The reader toolbar already shows the position; in the narrow list toolbar the
+   range label collided with the filter chips. */
+.admin-next-host .mail-workbench.flow-mode-detail .mail-list-panel .mail-range-indicator {
+    display: none;
+}
+
+/* Unread: blue dot + semibold (Apple Mail); read rows stay regular, never faded. */
 .admin-next-host .mail-row.is-unread {
-    background: color-mix(in srgb, var(--accent) 3%, var(--surface));
+    background: var(--surface);
 }
 
 .admin-next-host .mail-row:hover {
@@ -1820,17 +1856,30 @@ html.dark .admin-next-host .gmail-loading-pill {
 .admin-next-host .mail-sender {
     overflow: hidden;
     color: var(--fg);
-    font-size: 13px;
-    font-weight: 500;
+    font-size: var(--text-callout);
+    font-weight: 400;
     text-overflow: ellipsis;
     white-space: nowrap;
-    opacity: 0.85;
+}
+
+.admin-next-host .mail-row:not(.exception) .mail-sender::before {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: 8px;
+    border-radius: 999px;
+    background: transparent;
+    vertical-align: 1px;
+    content: "";
+}
+
+.admin-next-host .mail-row.is-unread .mail-sender::before {
+    background: var(--accent);
 }
 
 .admin-next-host .mail-row.is-unread .mail-sender {
     color: var(--fg);
-    font-weight: 700;
-    opacity: 1;
+    font-weight: 600;
 }
 
 .admin-next-host .mail-main {
@@ -1845,20 +1894,18 @@ html.dark .admin-next-host .gmail-loading-pill {
 
 .admin-next-host .mail-subject {
     flex-shrink: 0;
-    max-width: 50%;
+    max-width: 70%;
     overflow: hidden;
     color: var(--fg);
-    font-size: 13px;
-    font-weight: 500;
-    opacity: 0.92;
+    font-size: var(--text-callout);
+    font-weight: 400;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 .admin-next-host .mail-row.is-unread .mail-subject {
     color: var(--fg);
-    font-weight: 700;
-    opacity: 1;
+    font-weight: 600;
 }
 
 .admin-next-host .mail-snippet-sep {
@@ -1871,7 +1918,7 @@ html.dark .admin-next-host .gmail-loading-pill {
 .admin-next-host .mail-body-preview {
     overflow: hidden;
     color: var(--muted);
-    font-size: 13px;
+    font-size: var(--text-callout);
     font-weight: 400;
     text-overflow: ellipsis;
     white-space: nowrap;
