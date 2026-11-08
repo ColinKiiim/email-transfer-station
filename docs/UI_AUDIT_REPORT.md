@@ -1,3 +1,5 @@
+> **已过时（2026-11-08）**：本报告记录的是旧版界面，相关问题已随 Apple HIG 统一改版处理。当前约定以 [`UI_SPECIFICATION.md`](UI_SPECIFICATION.md) 为准。
+
 # ETS Mail 全盘 UI 深度审阅与待调整清单 (Full UI Audit Report - V2 完整复查版)
 
 > **审计时间**：2026-08-24

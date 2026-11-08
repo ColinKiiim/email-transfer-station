@@ -2,6 +2,24 @@
 
 Updated: 2026-11-08 (Asia/Singapore)
 
+## Apple HIG UI unification — 2026-11-08
+
+All signed-in surfaces now share one design: the admin console, the user
+workspace, the home-page address mailbox (after credential login) and the
+shared-inbox link use one AppShell (top bar, two-level sidebar that becomes a
+drawer on phones, workspace card) and one inbox pattern (one toolbar,
+list-first, split reader, Apple Mail unread rows). Tokens follow Apple HIG
+(systemBlue, system grays, system font, macOS/iOS text-style ramp, 28/32/44px
+controls); mail bodies sit on a softened light paper in dark mode.
+`docs/UI_SPECIFICATION.md` was rewritten to match. Removed: AccessShell,
+MailBox, the unreferenced UserMailBox and the tab-placement preference.
+Fixed on the way: the address filter placeholder, glued previews, the admin
+overview's "0 addresses", the split-view list overflow, and the duplicate
+"create or bind" tab in the user workspace. Shipped in five main pushes, each
+deployed by the Deploy workflow; frontend lint/typecheck/tests/build pass and
+the inbox, html-boundaries, admin-console and reply browser specs pass locally
+against a local Worker.
+
 ## GitHub Actions production deploy — 2026-11-08
 
 CI had failed on every push since the pnpm 11 move: pnpm 11 rejects installs

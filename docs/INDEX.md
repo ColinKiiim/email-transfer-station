@@ -9,8 +9,8 @@ public maintenance records that apply to the single product repository.
 - Product integration: [GitHub PR #5](https://github.com/ColinKiiim/email-transfer-station/pull/5)
 - Maintainability refactor plan:
   [`plans/PLAN_2026-10-05_maintainability-refactor.md`](plans/PLAN_2026-10-05_maintainability-refactor.md)
-- UI specification: [`UI_SPECIFICATION.md`](UI_SPECIFICATION.md)
-- UI audit record: [`UI_AUDIT_REPORT.md`](UI_AUDIT_REPORT.md)
+- UI specification (Apple HIG based): [`UI_SPECIFICATION.md`](UI_SPECIFICATION.md)
+- UI audit record (historical, superseded 2026-11-08): [`UI_AUDIT_REPORT.md`](UI_AUDIT_REPORT.md)
 - Shared admin toolbar controls:
   [`plans/PLAN_2026-10-12_admin-toolbar-controls.md`](plans/PLAN_2026-10-12_admin-toolbar-controls.md)
 

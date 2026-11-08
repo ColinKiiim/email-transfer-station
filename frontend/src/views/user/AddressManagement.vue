@@ -10,6 +10,11 @@ import { getRouterPathWithLang } from '../../utils'
 
 import Login from '../common/Login.vue';
 
+defineProps({
+    // The user workspace links to its own Bind page, so it hides the duplicate tab.
+    showCreateOrBind: { type: Boolean, default: true },
+})
+
 const { jwt, userSettings, loading } = useGlobalState()
 const message = useMessage()
 const router = useRouter()
@@ -224,17 +229,24 @@ onMounted(async () => {
                 </n-button>
             </template>
         </n-modal>
-        <n-tabs type="segment">
+        <n-tabs v-if="showCreateOrBind && canCreateOrBindAddress" type="segment">
             <n-tab-pane name="address" :tab="t('assignedAddress')">
                 <div class="address-table-scroll">
                     <n-data-table :columns="columns" :data="data" :bordered="false" embedded />
                 </div>
                 <n-empty v-if="isLoaded && data.length === 0" class="empty-addresses" :description="t('emptyAssignedAddress')" />
             </n-tab-pane>
-            <n-tab-pane v-if="canCreateOrBindAddress" name="create_or_bind" :tab="t('create_or_bind')">
+            <n-tab-pane name="create_or_bind" :tab="t('create_or_bind')">
                 <Login />
             </n-tab-pane>
         </n-tabs>
+        <!-- Without the bind tab (e.g. the user workspace has its own Bind page) the table stands alone. -->
+        <template v-else>
+            <div class="address-table-scroll">
+                <n-data-table :columns="columns" :data="data" :bordered="false" embedded />
+            </div>
+            <n-empty v-if="isLoaded && data.length === 0" class="empty-addresses" :description="t('emptyAssignedAddress')" />
+        </template>
     </div>
 </template>
 

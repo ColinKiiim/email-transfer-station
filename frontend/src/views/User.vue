@@ -266,7 +266,7 @@ onMounted(async () => {
       </div>
       <div class="shell-page">
         <div class="shell-page-narrow" :class="{ 'is-wide': userTab === 'address_management' }">
-          <AddressMangement v-if="userTab === 'address_management'" />
+          <AddressMangement v-if="userTab === 'address_management'" :show-create-or-bind="false" />
           <UserSettingsPage v-else-if="userTab === 'user_settings'" />
           <UserAuthenticators v-else-if="userTab === 'authenticators'" />
           <BindAddress v-else-if="canCreateOrBindAddress" />
