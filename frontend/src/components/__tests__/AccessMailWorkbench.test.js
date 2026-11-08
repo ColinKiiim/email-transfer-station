@@ -12,35 +12,9 @@ const message = {
 
 vi.mock('naive-ui', async (importOriginal) => {
     const original = await importOriginal()
-    const { defineComponent, h } = await import('vue')
-    const NPagination = defineComponent({
-        name: 'NPagination',
-        props: {
-            page: { type: Number, default: 1 },
-            pageSize: { type: Number, default: 20 },
-            itemCount: { type: Number, default: 0 },
-            pageSizes: { type: Array, default: () => [] },
-            showSizePicker: { type: Boolean, default: false },
-            size: { type: String, default: 'medium' },
-        },
-        emits: ['update:page', 'update:pageSize'],
-        setup(props, { emit }) {
-            return () => h('div', {
-                class: 'n-pagination-mock',
-                'data-page': props.page,
-                'data-item-count': props.itemCount,
-            }, [
-                h('button', {
-                    class: 'next-page-btn',
-                    onClick: () => emit('update:page', 2),
-                }, 'Next'),
-            ])
-        },
-    })
     return {
         ...original,
         useMessage: () => message,
-        NPagination,
     }
 })
 
@@ -113,22 +87,20 @@ describe('AccessMailWorkbench - Pagination count retention across pages', () => 
             },
         })
 
-        // Initial load (Page 1) -> wait for count to be 45 and Page 1
+        // Initial load (Page 1) -> the pager shows the real total
         await vi.waitFor(() => {
-            expect(wrapper.find('.n-pagination-mock').attributes('data-item-count')).toBe('45')
-            expect(wrapper.find('.n-pagination-mock').attributes('data-page')).toBe('1')
-            expect(wrapper.find('.panel-head b').text()).toContain('45')
+            expect(wrapper.find('.mw-range').text()).toContain('1-20')
+            expect(wrapper.find('.mw-range').text()).toContain('45')
         })
 
         // Navigate to Page 2
-        await wrapper.find('.next-page-btn').trigger('click')
+        await wrapper.find('.mw-next-page').trigger('click')
 
-        // On Page 2, even though backend returned count: 0, count.value must retain 45!
+        // On Page 2, even though backend returned count: 0, the total must stay 45
         await vi.waitFor(() => {
             expect(fetchMailData).toHaveBeenCalledWith(20, 20)
-            expect(wrapper.find('.n-pagination-mock').attributes('data-item-count')).toBe('45')
-            expect(wrapper.find('.n-pagination-mock').attributes('data-page')).toBe('2')
-            expect(wrapper.find('.panel-head b').text()).toContain('45')
+            expect(wrapper.find('.mw-range').text()).toContain('21-40')
+            expect(wrapper.find('.mw-range').text()).toContain('45')
         })
 
         wrapper.unmount()
@@ -154,8 +126,8 @@ describe('AccessMailWorkbench - Pagination count retention across pages', () => 
 
         await vi.waitFor(() => {
             expect(fetchMailData).toHaveBeenCalledWith(20, 0)
-            expect(wrapper.find('.n-pagination-mock').attributes('data-item-count')).toBe('0')
-            expect(wrapper.find('.panel-head b').text()).toContain('0')
+            expect(wrapper.find('.mw-range').text()).toContain('0')
+            expect(wrapper.find('.mw-next-page').attributes('disabled')).toBeDefined()
             expect(wrapper.find('.empty-list').exists()).toBe(true)
         })
 
@@ -645,7 +617,7 @@ describe('AccessMailWorkbench - Semantic DOM and Accessibility', () => {
         })
 
         // List container role
-        const mailList = wrapper.find('.mail-list')
+        const mailList = wrapper.find('.mw-list')
         expect(mailList.attributes('role')).toBe('list')
 
         // Row listitem role and tabindex
@@ -656,7 +628,7 @@ describe('AccessMailWorkbench - Semantic DOM and Accessibility', () => {
         expect(mailRow.element.tagName.toLowerCase()).toBe('div')
 
         // Row actions toolbar
-        const toolbar = wrapper.find('.user-mail-row-actions')
+        const toolbar = wrapper.find('.mail-row-actions')
         expect(toolbar.attributes('role')).toBe('toolbar')
         expect(toolbar.attributes('aria-label')).toBe('快捷操作')
 

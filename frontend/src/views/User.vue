@@ -251,7 +251,6 @@ onMounted(async () => {
       v-else-if="userTab === 'user_mail_box_tab'"
       :key="mailboxKey"
       v-model:address-filter="addressFilter"
-      :title="t('myInbox')"
       :address-options="addressFilterOptions"
       :show-address-filter="true"
       :enable-user-delete-email="openSettings.enableUserDeleteEmail"

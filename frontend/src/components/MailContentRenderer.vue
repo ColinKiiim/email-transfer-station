@@ -28,6 +28,12 @@ const props = defineProps({
     type: Boolean,
     default: true
   },
+  // Action row (reply, attachments, download, plain text, full screen).
+  // Follows showMetaBar unless set, so a host with its own sender card keeps the actions.
+  showActions: {
+    type: Boolean,
+    default: null
+  },
   enableUserDeleteEmail: {
     type: Boolean,
     default: false
@@ -57,6 +63,8 @@ const props = defineProps({
     default: () => { }
   }
 })
+
+const actionsVisible = computed(() => (props.showActions === null ? props.showMetaBar : props.showActions))
 
 const getSenderInitial = (sender) => {
   if (!sender) return '✉'
@@ -189,8 +197,8 @@ const handleSaveToS3 = async (filename, blob) => {
 <template>
   <div class="mail-content-renderer">
     <!-- Gmail-Style Sender Card & Action Toolbar -->
-    <div v-if="showMetaBar" class="mail-header-card">
-      <div class="mail-sender-profile">
+    <div v-if="showMetaBar || actionsVisible" class="mail-header-card" :class="{ 'is-actions-only': !showMetaBar }">
+      <div v-if="showMetaBar" class="mail-sender-profile">
         <div class="sender-avatar">
           {{ getSenderInitial(mail.source) }}
         </div>
@@ -215,7 +223,7 @@ const handleSaveToS3 = async (filename, blob) => {
       </div>
 
       <!-- Action Toolbar -->
-      <div class="mail-action-toolbar">
+      <div v-if="actionsVisible" class="mail-action-toolbar">
         <div class="action-group-main">
           <n-button v-if="showReply" size="small" tertiary type="primary" @click="handleReply">
             <template #icon>
@@ -403,10 +411,6 @@ const handleSaveToS3 = async (filename, blob) => {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 12px 14px;
-  background: var(--ets-surface-alt, rgba(255, 255, 255, 0.03));
-  border: 1px solid var(--ets-border);
-  border-radius: 10px;
 }
 
 .mail-sender-profile {
@@ -420,14 +424,13 @@ const handleSaveToS3 = async (filename, blob) => {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #3b82f6, #6366f1);
-  color: #ffffff;
-  font-weight: 700;
-  font-size: 15px;
+  background: var(--ets-brand);
+  color: var(--ets-brand-contrast);
+  font-weight: 600;
+  font-size: var(--text-title3);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
 }
 
 .sender-details {
@@ -446,15 +449,16 @@ const handleSaveToS3 = async (filename, blob) => {
 }
 
 .sender-name {
-  font-size: 14px;
+  font-size: var(--text-body);
   font-weight: 600;
-  color: var(--ets-text, #e2e8f0);
+  color: var(--ets-text);
   word-break: break-all;
 }
 
 .sender-timestamp {
-  font-size: 12px;
-  color: var(--ets-text-muted, #94a3b8);
+  font-size: var(--text-subheadline);
+  color: var(--ets-text-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .mail-id-tag {
@@ -470,8 +474,8 @@ const handleSaveToS3 = async (filename, blob) => {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12.5px;
-  color: var(--ets-text-muted, #94a3b8);
+  font-size: var(--text-subheadline);
+  color: var(--ets-text-muted);
   flex-wrap: wrap;
 }
 
@@ -480,7 +484,7 @@ const handleSaveToS3 = async (filename, blob) => {
 }
 
 .recipient-address {
-  color: var(--ets-text, #cbd5e1);
+  color: var(--ets-text);
   word-break: break-all;
 }
 
@@ -500,8 +504,8 @@ const handleSaveToS3 = async (filename, blob) => {
 }
 
 .mail-copy-button:hover {
-  background: var(--ets-surface, rgba(255, 255, 255, 0.08));
-  color: #60a5fa;
+  background: var(--ets-hover);
+  color: var(--ets-brand);
 }
 
 .mail-copy-button svg {
@@ -520,8 +524,6 @@ const handleSaveToS3 = async (filename, blob) => {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 8px;
-  padding-top: 8px;
-  border-top: 1px solid var(--ets-border);
 }
 
 .action-group-main,
@@ -541,22 +543,19 @@ const handleSaveToS3 = async (filename, blob) => {
   margin-bottom: 10px;
 }
 
+/* Plain-text mail sits on the same paper as HTML mail. */
 .mail-text {
   white-space: pre-wrap;
   overflow-wrap: break-word;
-  word-break: break-all;
+  word-break: break-word;
   margin: 0;
-  padding: 16px;
-  border-radius: 8px;
-  background: var(--ets-surface-sunken, rgba(0, 0, 0, 0.15));
-  border: 1px solid var(--ets-border);
+  padding: 20px 24px;
+  border-radius: 10px;
+  background: var(--ets-mail-canvas);
+  color: var(--ets-mail-text);
   font-family: inherit;
-  font-size: inherit;
+  font-size: var(--text-body);
   line-height: 1.6;
-}
-
-.dark-mode .mail-text {
-  color: #e0e0e0;
 }
 
 .mail-iframe {
@@ -566,8 +565,9 @@ const handleSaveToS3 = async (filename, blob) => {
   min-height: 400px;
 }
 
-.dark-mode .mail-iframe {
-  background-color: #181b22;
+.mail-iframe {
+  border-radius: 10px;
+  background-color: var(--ets-mail-canvas);
 }
 
 .mail-html {

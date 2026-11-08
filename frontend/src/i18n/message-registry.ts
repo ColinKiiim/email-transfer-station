@@ -4037,6 +4037,62 @@ export const MESSAGE_REGISTRY = {
     }
   },
   "components.AccessMailWorkbench": {
+    "unreadFilter": {
+      "en": "Unread only",
+      "zh": "只看未读"
+    },
+    "listLabel": {
+      "en": "Messages",
+      "zh": "邮件列表"
+    },
+    "copied": {
+      "en": "Copied",
+      "zh": "已复制"
+    },
+    "copyRecipient": {
+      "en": "Copy address",
+      "zh": "复制地址"
+    },
+    "sentTo": {
+      "en": "To {address}",
+      "zh": "发送至 {address}"
+    },
+    "refresh": {
+      "en": "Refresh",
+      "zh": "刷新"
+    },
+    "done": {
+      "en": "Done",
+      "zh": "完成"
+    },
+    "selectMode": {
+      "en": "Select",
+      "zh": "选择"
+    },
+    "olderMail": {
+      "en": "Older",
+      "zh": "较旧"
+    },
+    "newerMail": {
+      "en": "Newer",
+      "zh": "较新"
+    },
+    "positionLabel": {
+      "en": "{index} of {total}",
+      "zh": "第 {index} 封，共 {total} 封"
+    },
+    "nextPage": {
+      "en": "Next page",
+      "zh": "下一页"
+    },
+    "previousPage": {
+      "en": "Previous page",
+      "zh": "上一页"
+    },
+    "rangeLabel": {
+      "en": "{start}–{end} of {total}",
+      "zh": "第 {start}-{end} 封，共 {total} 封"
+    },
     "searchHint": {
       "en": "Find mail quickly by sender, subject, preview, and time.",
       "zh": "按发件人、主题、摘要和时间快速定位邮件。"
